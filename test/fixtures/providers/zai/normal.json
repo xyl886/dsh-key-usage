@@ -1,0 +1,17 @@
+{
+  "_source": "非官方文档：Z.AI（docs.z.ai/llms.txt、docs.z.ai/api-reference、openapi.json）与 BigModel（docs.bigmodel.cn/llms.txt）都未收录余额查询端点，本方案路径 /api/paas/v4/balance 与响应体为推断（按 Z.AI 通用端点 https://api.z.ai/api/paas/v4 前缀 + 同类「data.total_balance / data.available_balance」结构构造）。币种按站点判定：Z.AI 海外站文档 https://docs.z.ai/guides/overview/pricing 明确「All prices are in USD」。抓取日期 2026-10-13。",
+  "case": "normal",
+  "httpStatus": 200,
+  "body": {
+    "code": 200,
+    "msg": "操作成功",
+    "success": true,
+    "data": { "total_balance": "99.99", "available_balance": "88.88" }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "totalBalance": "99.99", "availableBalance": "88.88" },
+    "windows": null
+  }
+}

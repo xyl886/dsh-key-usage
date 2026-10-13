@@ -1,0 +1,7 @@
+{
+  "_source": "非官方文档：空 usage 对象按「必填字段全缺 → bad-json」处理；形状取自社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage（MIT）对 usage 的解包逻辑。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 200,
+  "body": { "usage": {} },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

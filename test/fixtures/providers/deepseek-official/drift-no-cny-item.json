@@ -1,0 +1,17 @@
+{
+  "_source": "官方文档 https://api-docs.deepseek.com/api/get-user-balance/：balance_infos[].currency 可能取 CNY 或 USD，文档示例只给 CNY。本例模拟没有 CNY 项（账号按美元结算）时退回第一项，并如实保留 USD 币种。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "is_available": true,
+    "balance_infos": [
+      { "currency": "USD", "total_balance": "3.14", "granted_balance": "0.00", "topped_up_balance": "3.14" }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "totalBalance": "3.14", "giftBalance": "0.00", "topUpBalance": "3.14" },
+    "windows": null
+  }
+}

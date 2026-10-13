@@ -1,0 +1,17 @@
+{
+  "_source": "类型漂移（推断，非官方文档）：余额端点未收录于 Z.AI（https://docs.z.ai/llms.txt）与 BigModel（https://docs.bigmodel.cn/llms.txt）官方文档，见 normal.json 说明；Z.AI 生态接口的金额字段在部分 SDK 与统计层以 number 出现，本例把两个金额改成 number，期望归一成等价字符串。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "code": 200,
+    "msg": "操作成功",
+    "success": true,
+    "data": { "total_balance": 99.99, "available_balance": 88 }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "totalBalance": "99.99", "availableBalance": "88" },
+    "windows": null
+  }
+}

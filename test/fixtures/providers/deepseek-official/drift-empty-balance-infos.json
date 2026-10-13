@@ -1,0 +1,7 @@
+{
+  "_source": "官方文档 https://api-docs.deepseek.com/api/get-user-balance/ 中 balance_infos 是必填数组；本例模拟数组为空（无任何币种条目），按「必填字段全缺 → bad-json」处理而不是成功返回空余额。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "is_available": true, "balance_infos": [] },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

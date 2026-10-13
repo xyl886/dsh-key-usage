@@ -1,0 +1,20 @@
+{
+  "_source": "推断（非官方）：opencode-go 官方文档 https://opencode.ai/docs/go/ 未收录 usage 端点，结构与 normal.json 同源（社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage，MIT）。epoch 秒（10 位）与不可解析的字符串两种重置时间写法都按漂移容错处理；10 位按秒、13 位按毫秒，是社区同类接口的常见写法（智谱 quota 接口也用 nextResetTime 数字时间戳）。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "usage": {
+      "rolling": { "percent": 12, "resetsAt": 1791923400 },
+      "monthly": { "percent": 3, "resetsAt": "soon" }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": null,
+    "windows": [
+      { "key": "5h", "percent": 12, "resetsAt": "2026-10-13T20:30:00.000Z", "status": null },
+      { "key": "month", "percent": 3, "resetsAt": "soon", "status": null }
+    ]
+  }
+}

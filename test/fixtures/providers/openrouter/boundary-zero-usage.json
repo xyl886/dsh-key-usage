@@ -1,0 +1,7 @@
+{
+  "_source": "官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 的字段语义（total_credits 为已购额度、total_usage 为已用量，均为 number）。本例取免费层边界：两者都是 0。抓取日期 2026-10-13。",
+  "case": "boundary",
+  "httpStatus": 200,
+  "body": { "data": { "total_credits": 0, "total_usage": 0 } },
+  "expect": { "ok": true, "error": null, "balance": { "currency": "USD", "totalBalance": "0.00" }, "windows": null }
+}

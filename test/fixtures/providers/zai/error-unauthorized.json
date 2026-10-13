@@ -1,0 +1,7 @@
+{
+  "_source": "非官方文档（推断）：余额端点本身未收录（见 normal.json 说明），错误体形状按 Z.AI 错误码文档 https://docs.z.ai/api-reference/api-code 的 error.code / error.message 结构构造。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 401,
+  "body": { "error": { "code": "1000", "message": "Authorization Token 非法" } },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

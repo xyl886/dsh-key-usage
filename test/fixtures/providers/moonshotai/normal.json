@@ -1,0 +1,17 @@
+{
+  "_source": "官方文档 https://platform.kimi.com/docs/api/balance（响应示例原样照抄：code/scode/status + data.available_balance / voucher_balance / cash_balance；文档说明三者均为 number、单位为人民币元）。抓取日期 2026-10-13。",
+  "case": "normal",
+  "httpStatus": 200,
+  "body": {
+    "code": 0,
+    "data": { "available_balance": 49.58894, "voucher_balance": 46.58893, "cash_balance": 3.00001 },
+    "scode": "0x0",
+    "status": true
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "CNY", "totalBalance": "49.58894", "giftBalance": "46.58893", "topUpBalance": "3.00001" },
+    "windows": null
+  }
+}

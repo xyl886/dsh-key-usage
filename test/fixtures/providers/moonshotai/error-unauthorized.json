@@ -1,0 +1,9 @@
+{
+  "_source": "错误体形状取自 Kimi 开放平台文档 https://platform.kimi.com/docs/api/balance 的 401 / 500 示例（error.message / error.type / error.code）。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 401,
+  "body": {
+    "error": { "message": "Invalid Authentication", "type": "invalid_authentication_error", "code": "invalid_api_key" }
+  },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

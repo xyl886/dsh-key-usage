@@ -1,0 +1,7 @@
+{
+  "_source": "类型漂移：官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 里 total_credits / total_usage 是 number；本例改成字符串（部分代理与统计导出会这样序列化），期望仍能相减。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "data": { "total_credits": "100.5", "total_usage": "25.75" } },
+  "expect": { "ok": true, "error": null, "balance": { "currency": "USD", "totalBalance": "74.75" }, "windows": null }
+}

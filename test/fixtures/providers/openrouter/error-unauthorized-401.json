@@ -1,0 +1,7 @@
+{
+  "_source": "官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 的 401 示例（Missing Authentication header）。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 401,
+  "body": { "error": { "code": 401, "message": "Missing Authentication header" } },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

@@ -1,0 +1,7 @@
+{
+  "_source": "官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits（200 示例 data.total_credits=100.5、data.total_usage=25.75，均为 number；余额需自行相减）。抓取日期 2026-10-13。",
+  "case": "normal",
+  "httpStatus": 200,
+  "body": { "data": { "total_credits": 100.5, "total_usage": 25.75 } },
+  "expect": { "ok": true, "error": null, "balance": { "currency": "USD", "totalBalance": "74.75" }, "windows": null }
+}

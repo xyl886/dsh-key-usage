@@ -1,0 +1,14 @@
+{
+  "_source": "错误体形状取自 DeepSeek 官方错误说明 https://api-docs.deepseek.com/quick_start/error_codes（401 Authentication Fails）与文档页的 401 约定。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 401,
+  "body": {
+    "error": {
+      "message": "Authentication Fails, Your api key: ****abcd is invalid",
+      "type": "authentication_error",
+      "param": null,
+      "code": "invalid_request_error"
+    }
+  },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

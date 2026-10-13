@@ -1,0 +1,17 @@
+{
+  "_source": "类型漂移：官方文档 https://api-docs.deepseek.com/api/get-user-balance/ 把 total_balance / granted_balance / topped_up_balance 标注为 string，但同类网关（自建代理、OpenAI 兼容层）常输出 number。本例三个金额全为 number，期望归一成等价字符串。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "is_available": true,
+    "balance_infos": [
+      { "currency": "CNY", "total_balance": 110.5, "granted_balance": 10, "topped_up_balance": 100.5 }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "CNY", "totalBalance": "110.5", "giftBalance": "10", "topUpBalance": "100.5" },
+    "windows": null
+  }
+}

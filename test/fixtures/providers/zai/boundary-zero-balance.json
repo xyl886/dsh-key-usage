@@ -1,0 +1,17 @@
+{
+  "_source": "非官方文档（推断）：结构与 normal.json 同源（Z.AI 官方文档索引 https://docs.z.ai/llms.txt 与 BigModel https://docs.bigmodel.cn/llms.txt 均未收录余额端点）。本例取余额耗尽边界：两个金额字段都是 0。抓取日期 2026-10-13。",
+  "case": "boundary",
+  "httpStatus": 200,
+  "body": {
+    "code": 200,
+    "msg": "操作成功",
+    "success": true,
+    "data": { "total_balance": "0.00", "available_balance": "0.00" }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "totalBalance": "0.00", "availableBalance": "0.00" },
+    "windows": null
+  }
+}

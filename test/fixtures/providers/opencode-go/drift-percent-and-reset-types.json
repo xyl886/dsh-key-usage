@@ -1,0 +1,20 @@
+{
+  "_source": "非官方文档：字段类型漂移按社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage（MIT）的 pickWindow 分支推断 —— 它把 percent 用 Number() 兜底、resetsAt 只认字符串，说明真实响应出现过字符串形态。本例：percent 为字符串、resetsAt 为 epoch 毫秒数字或纯数字字符串、status 非字符串、weekly 整项缺失。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "usage": {
+      "rolling": { "percent": "19.5", "resetsAt": 1791903600000, "status": 1 },
+      "monthly": { "percent": 4, "resetsAt": "1793491200000" }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": null,
+    "windows": [
+      { "key": "5h", "percent": 19.5, "resetsAt": "2026-10-13T15:00:00.000Z", "status": null },
+      { "key": "month", "percent": 4, "resetsAt": "2026-11-01T00:00:00.000Z", "status": null }
+    ]
+  }
+}

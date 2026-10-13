@@ -1,0 +1,17 @@
+{
+  "_source": "缺项漂移（推断，非官方文档）：余额端点未收录于 Z.AI（https://docs.z.ai/llms.txt）与 BigModel（https://docs.bigmodel.cn/llms.txt）官方文档，见 normal.json 说明。本例只给 available_balance、缺 total_balance，期望仍算成功（有任一金额即可），只输出存在的字段。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "code": 200,
+    "msg": "操作成功",
+    "success": true,
+    "data": { "available_balance": "12.34" }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "availableBalance": "12.34" },
+    "windows": null
+  }
+}

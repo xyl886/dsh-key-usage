@@ -1,0 +1,17 @@
+{
+  "_source": "类型漂移：官方文档 https://platform.kimi.com/docs/api/balance 把 data 下的三个余额标注为 number；本例改成字符串（网关或统计层常见写法），期望原样保留字符串形态。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "code": 0,
+    "data": { "available_balance": "49.59", "voucher_balance": "46.59", "cash_balance": "3.00" },
+    "scode": "0x0",
+    "status": true
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "CNY", "totalBalance": "49.59", "giftBalance": "46.59", "topUpBalance": "3.00" },
+    "windows": null
+  }
+}

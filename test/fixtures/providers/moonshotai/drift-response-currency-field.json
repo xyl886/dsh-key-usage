@@ -1,0 +1,17 @@
+{
+  "_source": "容错（推断）：官方文档 https://platform.kimi.com/docs/api/balance 并未定义 data.currency 字段，接口自带币种时按接口为准；本例模拟接口显式给出 USD，期望覆盖按 host 兜底的 CNY。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": {
+    "code": 0,
+    "data": { "currency": "USD", "available_balance": 12.5, "voucher_balance": 0, "cash_balance": 12.5 },
+    "scode": "0x0",
+    "status": true
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "USD", "totalBalance": "12.5", "giftBalance": "0", "topUpBalance": "12.5" },
+    "windows": null
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "_source": "官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 的 403 示例：账户用的是普通推理 key 时返回「Only management keys can perform this operation」。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 403,
+  "body": { "error": { "code": 403, "message": "Only management keys can perform this operation" } },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

@@ -1,0 +1,7 @@
+{
+  "_source": "结构漂移：官方文档 https://api-docs.deepseek.com/api/get-user-balance/ 规定 balance_infos[] 里的金额字段总是存在；本例只有 currency 没有任何金额字段，必须判 bad-json，不能返回「只有币种」的空壳成功。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "is_available": true, "balance_infos": [{ "currency": "CNY" }] },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

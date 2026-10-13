@@ -1,0 +1,7 @@
+{
+  "_source": "非官方文档：社区实测记录，issue https://github.com/anomalyco/opencode/issues/16017 的评论称早期 GET /zen/go/v1/usage 返回 SPA 的 404 HTML；本例复现该形态（非 JSON + 非 2xx）。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 404,
+  "body": "<!doctype html><html><head><title>404</title></head><body><div id=\"app\">Not Found</div></body></html>",
+  "expect": { "ok": false, "error": "http-404", "balance": null, "windows": null }
+}

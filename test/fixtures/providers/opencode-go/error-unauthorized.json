@@ -1,0 +1,9 @@
+{
+  "_source": "非官方文档：错误体形状按社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage（MIT）的 401 分支（只判状态码，不读 body）推断，非官方文档。抓取日期 2026-10-13。",
+  "case": "error",
+  "httpStatus": 401,
+  "body": {
+    "error": { "message": "Invalid API key", "type": "authentication_error" }
+  },
+  "expect": { "ok": false, "error": "unauthorized", "balance": null, "windows": null }
+}

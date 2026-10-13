@@ -1,9 +1,11 @@
 /**
- * 实时余额 / 订阅窗口的离线测试：方案映射、响应解析、错误分档、缓存与并发。
- * 全部用假 fetch，不发真实网络请求。
+ * 实时余额 / 订阅窗口的离线测试：方案映射、fixture 表驱动的响应解析、错误分档、缓存与并发。
+ * 全部用假 fetch，不发真实网络请求；fixture 依据各厂商官方文档或社区实现构造（见每个文件的 _source）。
  * 运行：node test/live-quota.test.mjs
  */
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createLiveQuotaService, schemeIdOf } from '../lib/live-quota.js'
 
 function channelOf(provider, apiKeyEnv, baseURL = null) {
@@ -98,6 +100,8 @@ const errorCases = [
   [async () => jsonResponse({ usage: {} }), 'bad-json'],
   [async () => { throw new Error('boom') }, 'network'],
   [async () => jsonResponse('x'.repeat(70000)), 'too-large'],
+  // 上限按字节算：中文响应 25000 个字符（UTF-16 码元 25000）但 UTF-8 是 75000 字节，必须同样判超限
+  [async () => jsonResponse('中'.repeat(25000)), 'too-large'],
 ]
 for (const [fakeFetch, expectedError] of errorCases) {
   const service = createLiveQuotaService(resolverOf({ OPENCODE_GO_API_KEY: 'test-key-not-real' }), fakeFetch, 60000)
@@ -147,4 +151,71 @@ const idleResult = await idleService.refreshIfStale([channelOf('sensenova', 'SEN
 assert.equal(idleResult.size, 0)
 assert.equal(idleService.cached().size, 0)
 
-console.log('live-quota.test: 全部通过')
+// ---------------------------------------------------------------------------
+// fixture 表驱动：test/fixtures/providers/<provider>/<case>.json
+// 每个 fixture 用假 fetch 注入 httpStatus + body，走 queryOne → scheme.parse 的真实归一化路径。
+// fixture 可选字段 baseURL 表示该 case 需要通道自定义 baseURL（Z.AI 国内站 / 海外站币种不同）。
+// ---------------------------------------------------------------------------
+const FIXTURE_ROOT = fileURLToPath(new URL('./fixtures/providers/', import.meta.url))
+const PROVIDERS = [
+  { schemeId: 'opencode-go', apiKeyEnv: 'OPENCODE_GO_API_KEY', defaultUrl: 'https://opencode.ai/zen/go/v1/usage', source: '社区' },
+  { schemeId: 'deepseek-official', apiKeyEnv: 'DEEPSEEK_API_KEY', defaultUrl: 'https://api.deepseek.com/user/balance', source: '官方文档' },
+  { schemeId: 'openrouter', apiKeyEnv: 'OPENROUTER_API_KEY', defaultUrl: 'https://openrouter.ai/api/v1/credits', source: '官方文档' },
+  { schemeId: 'moonshotai', apiKeyEnv: 'MOONSHOT_API_KEY', defaultUrl: 'https://api.moonshot.cn/v1/users/me/balance', source: '官方文档' },
+  { schemeId: 'zai', apiKeyEnv: 'ZAI_API_KEY', defaultUrl: 'https://api.z.ai/api/paas/v4/balance', source: '推断' },
+]
+const REQUIRED_CASES = ['normal', 'boundary', 'error']
+const KNOWN_CASES = ['normal', 'boundary', 'error', 'drift']
+
+assert.deepEqual(
+  readdirSync(FIXTURE_ROOT).sort(),
+  PROVIDERS.map((provider) => provider.schemeId).sort(),
+  'fixture 目录必须与 PROVIDERS 表一一对应（新增方案时同步补 fixture 与表项）',
+)
+
+let fixtureCount = 0
+for (const provider of PROVIDERS) {
+  const fixtureDir = new URL(provider.schemeId + '/', new URL('./fixtures/providers/', import.meta.url))
+  const files = readdirSync(fixtureDir).filter((name) => name.endsWith('.json')).sort()
+  const caseTally = new Map()
+  assert.ok(files.length >= 3, provider.schemeId + ' 至少要有 3 个 case')
+  for (const file of files) {
+    const raw = readFileSync(new URL(file, fixtureDir), 'utf8')
+    const fixture = JSON.parse(raw)
+    const label = provider.schemeId + '/' + file.replace(/\.json$/, '')
+
+    // fixture 自身约束：来源可查、case 合法、不得夹带真实凭据
+    assert.ok(typeof fixture._source === 'string' && fixture._source.includes('http'), label + ' 的 _source 必须写明来源链接与抓取日期')
+    assert.ok(fixture._source.includes('2026-10-13'), label + ' 的 _source 必须写明抓取日期')
+    assert.ok(KNOWN_CASES.includes(fixture.case), label + ' 的 case 只能是 ' + KNOWN_CASES.join('/'))
+    assert.equal(typeof fixture.httpStatus, 'number', label + ' 必须写明 httpStatus')
+    assert.equal(typeof fixture.expect, 'object', label + ' 必须写明 expect')
+    assert.ok(!/sk-[A-Za-z0-9]|Bearer /.test(raw), label + ' 不得包含任何真实 key 或认证头')
+    if (provider.source !== '官方文档') {
+      assert.ok(fixture._source.includes('非官方'), label + ' 无官方文档的方案必须在 _source 标注「非官方」')
+      assert.ok(fixture._source.includes('推断') || fixture._source.includes('社区'), label + ' 必须标明来源是社区实现还是推断')
+    }
+    caseTally.set(fixture.case, (caseTally.get(fixture.case) ?? 0) + 1)
+
+    // 真实解析路径：只把 body 与状态码喂给假 fetch
+    const service = createLiveQuotaService(resolverOf({ [provider.apiKeyEnv]: 'test-key-not-real' }), async (url, options) => {
+      assert.equal(options.headers.Authorization, 'Bearer test-key-not-real', label + ' 凭据只作为请求头')
+      const expectedUrl = fixture.baseURL === undefined ? provider.defaultUrl : fixture.baseURL
+      assert.ok(url.startsWith(expectedUrl), label + ' 请求地址应为 ' + expectedUrl + '，实际 ' + url)
+      return jsonResponse(fixture.body, fixture.httpStatus)
+    }, 60000)
+    const entry = (await service.refreshIfStale([channelOf(provider.schemeId, provider.apiKeyEnv, fixture.baseURL ?? null)])).get(provider.schemeId)
+    assert.equal(entry.ok, fixture.expect.ok, label + ' ok 不符')
+    assert.equal(entry.error, fixture.expect.error, label + ' error 不符')
+    assert.deepEqual(entry.balance, fixture.expect.balance, label + ' balance 不符')
+    assert.deepEqual(entry.windows, fixture.expect.windows, label + ' windows 不符')
+    fixtureCount += 1
+  }
+  for (const required of REQUIRED_CASES) {
+    assert.ok(caseTally.has(required), provider.schemeId + ' 缺少 ' + required + ' case')
+  }
+  const tally = [...caseTally.entries()].map(([name, count]) => name + ' ' + count).join(' / ')
+  console.log('  ' + provider.schemeId.padEnd(18) + files.length + ' 个 case（' + tally + '，来源：' + provider.source + '）')
+}
+
+console.log('live-quota.test: 全部通过（含 ' + fixtureCount + ' 个 provider fixture）')

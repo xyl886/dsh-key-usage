@@ -1,0 +1,7 @@
+{
+  "_source": "结构漂移：官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 规定响应必须带 data 对象；本例 data 整体缺失（例如被中间层改写），必须判 bad-json。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "credits": 100.5, "usage": 25.75 },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

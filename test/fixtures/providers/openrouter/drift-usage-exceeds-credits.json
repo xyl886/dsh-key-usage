@@ -1,0 +1,7 @@
+{
+  "_source": "边界/漂移：官方文档 https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits 只保证返回「已购额度」与「已用量」两个数，用量可能大于已购额度（免费层或 BYOK 场景）。余额按原样保留负值，不做 0 截断，交给界面按「余额 ≤0 告警」判定。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "data": { "total_credits": 0, "total_usage": 25.75 } },
+  "expect": { "ok": true, "error": null, "balance": { "currency": "USD", "totalBalance": "-25.75" }, "windows": null }
+}

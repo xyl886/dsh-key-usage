@@ -1,0 +1,7 @@
+{
+  "_source": "结构漂移（推断，非官方文档）：余额端点未收录于 Z.AI（https://docs.z.ai/llms.txt）与 BigModel（https://docs.bigmodel.cn/llms.txt）官方文档，见 normal.json 说明。本例 data 只有 currency 没有金额，必须判 bad-json，不能返回「只有币种」的空壳成功。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "code": 200, "msg": "操作成功", "success": true, "data": { "currency": "USD" } },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

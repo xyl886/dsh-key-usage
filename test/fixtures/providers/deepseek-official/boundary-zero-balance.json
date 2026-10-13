@@ -1,0 +1,17 @@
+{
+  "_source": "官方文档 https://api-docs.deepseek.com/api/get-user-balance/ 的字段语义（is_available 表示当前账户是否有余额可供调用，金额为 string）。本例取全 0 边界：余额耗尽时接口仍返回 200。抓取日期 2026-10-13。",
+  "case": "boundary",
+  "httpStatus": 200,
+  "body": {
+    "is_available": false,
+    "balance_infos": [
+      { "currency": "CNY", "total_balance": "0.00", "granted_balance": "0.00", "topped_up_balance": "0.00" }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "CNY", "totalBalance": "0.00", "giftBalance": "0.00", "topUpBalance": "0.00" },
+    "windows": null
+  }
+}

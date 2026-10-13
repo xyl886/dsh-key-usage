@@ -1,0 +1,7 @@
+{
+  "_source": "结构漂移：官方文档 https://platform.kimi.com/docs/api/balance 规定 data 里必须带三个余额字段；本例只有 currency，必须判 bad-json，不能返回「只有币种」的空壳成功。抓取日期 2026-10-13。",
+  "case": "drift",
+  "httpStatus": 200,
+  "body": { "code": 0, "data": { "currency": "CNY" }, "scode": "0x0", "status": true },
+  "expect": { "ok": false, "error": "bad-json", "balance": null, "windows": null }
+}

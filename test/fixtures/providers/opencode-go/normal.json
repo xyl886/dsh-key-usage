@@ -1,0 +1,22 @@
+{
+  "_source": "非官方文档：opencode.ai 官方文档 https://opencode.ai/docs/go/ 只说明到 console 查看用量，未收录 usage 端点；上游 issue https://github.com/anomalyco/opencode/issues/16017 请求该 API（PR #16513 才合并）。响应结构取自社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage（MIT）index.js 的 usage.rolling|weekly|monthly。抓取日期 2026-10-13。",
+  "case": "normal",
+  "httpStatus": 200,
+  "body": {
+    "usage": {
+      "rolling": { "percent": 19, "resetsAt": "2026-10-13T15:00:00.000Z", "status": "ok" },
+      "weekly": { "percent": 8, "resetsAt": "2026-10-18T00:00:00.000Z", "status": "ok" },
+      "monthly": { "percent": 4, "resetsAt": "2026-11-01T00:00:00.000Z", "status": "ok" }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": null,
+    "windows": [
+      { "key": "5h", "percent": 19, "resetsAt": "2026-10-13T15:00:00.000Z", "status": "ok" },
+      { "key": "week", "percent": 8, "resetsAt": "2026-10-18T00:00:00.000Z", "status": "ok" },
+      { "key": "month", "percent": 4, "resetsAt": "2026-11-01T00:00:00.000Z", "status": "ok" }
+    ]
+  }
+}

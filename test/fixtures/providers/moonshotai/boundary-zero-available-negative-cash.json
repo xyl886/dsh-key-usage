@@ -1,0 +1,17 @@
+{
+  "_source": "官方文档 https://platform.kimi.com/docs/api/balance 的字段语义：available_balance ≤ 0 时无法调用推理 API，cash_balance 可为负表示欠费。本例取该边界。文档同时说明国内站（platform.kimi.com / api.moonshot.cn）以人民币元计价，故默认币种为 CNY。抓取日期 2026-10-13。",
+  "case": "boundary",
+  "httpStatus": 200,
+  "body": {
+    "code": 0,
+    "data": { "available_balance": 0, "voucher_balance": 0, "cash_balance": -3.2 },
+    "scode": "0x0",
+    "status": true
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": { "currency": "CNY", "totalBalance": "0", "giftBalance": "0", "topUpBalance": "-3.2" },
+    "windows": null
+  }
+}

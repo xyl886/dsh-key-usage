@@ -27,7 +27,8 @@ export interface LiveQuota {
 
 interface Scheme {
   url: (baseURL: string | null) => string
-  parse: (body: unknown) => { balance: Record<string, unknown> | null; windows: LiveWindow[] | null }
+  /** parse 同时拿到已解析的请求 URL：Z.AI 国内站与海外站币种不同，只能按 host 判定。 */
+  parse: (body: unknown, requestUrl: string) => { balance: Record<string, unknown> | null; windows: LiveWindow[] | null }
 }
 
 const REQUEST_TIMEOUT_MS = 6000
@@ -44,7 +45,58 @@ function textOf(value: unknown): string | null {
   return null
 }
 
-/** OpenCode Go：GET https://opencode.ai/zen/go/v1/usage → usage.rolling / weekly / monthly。 */
+/** 金额字段：官方既有字符串（DeepSeek）也有数字（Moonshot），两种都接受，统一输出原样字符串。 */
+function amountTextOf(value: unknown): string | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed !== '' && Number.isFinite(Number(trimmed)) ? trimmed : null
+  }
+  return null
+}
+
+/** 金额 / 百分比的数值形态：接受 number 与数字字符串，其它一律 null。 */
+function amountOf(value: unknown): number | null {
+  const text = amountTextOf(value)
+  if (text === null) return null
+  const parsed = Number(text)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+/** epoch → ISO：13 位按毫秒、10 位按秒；越界返回 null。 */
+function isoFromEpoch(value: number): string | null {
+  const milliseconds = value >= 1e11 || value < 1e9 ? value : value * 1000
+  const date = new Date(milliseconds)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+/** 重置时间：官方为 ISO 字符串，兼容 epoch 毫秒 / 秒（数字或纯数字字符串）；识别不出时原样保留。 */
+function resetAtOf(value: unknown): string | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? isoFromEpoch(value) : null
+  if (typeof value !== 'string' || value === '') return null
+  const trimmed = value.trim()
+  if (/^\d{9,14}$/.test(trimmed)) return isoFromEpoch(Number(trimmed))
+  return value
+}
+
+/** 接口没返回币种时的兜底：按站点判定（Z.AI 海外站按美元计价，BigModel / Moonshot 国内站按人民币）。 */
+function currencyFromHost(requestUrl: string, fallback: string | null): string | null {
+  let host = ''
+  try {
+    host = new URL(requestUrl).hostname.toLowerCase()
+  } catch {
+    return fallback
+  }
+  if (host === 'z.ai' || host.endsWith('.z.ai')) return 'USD'
+  if (host === 'bigmodel.cn' || host.endsWith('.bigmodel.cn')) return 'CNY'
+  if (host === 'moonshot.cn' || host.endsWith('.moonshot.cn')) return 'CNY'
+  return fallback
+}
+
+/**
+ * OpenCode Go：GET https://opencode.ai/zen/go/v1/usage → usage.rolling / weekly / monthly。
+ * 该端点未收录于官方文档（opencode.ai/docs/go 只指向 console），字段结构取自社区实现，见 test/fixtures/providers/opencode-go。
+ */
 const OPENCODE_GO_SCHEME: Scheme = {
   url: () => 'https://opencode.ai/zen/go/v1/usage',
   parse: (body) => {
@@ -55,12 +107,13 @@ const OPENCODE_GO_SCHEME: Scheme = {
     for (const [sourceKey, windowKey] of mapping) {
       const raw = usage[sourceKey]
       if (!isObject(raw)) continue
-      const percent = typeof raw.percent === 'number' ? raw.percent : Number(raw.percent)
-      if (!Number.isFinite(percent)) continue
+      // 社区实现里 percent 可能是字符串、resetsAt 可能是 epoch，两者都按漂移兼容处理
+      const percent = amountOf(raw.percent)
+      if (percent === null) continue
       windows.push({
         key: windowKey,
         percent,
-        resetsAt: textOf(raw.resetsAt),
+        resetsAt: resetAtOf(raw.resetsAt),
         status: typeof raw.status === 'string' ? raw.status : null,
       })
     }
@@ -69,10 +122,14 @@ const OPENCODE_GO_SCHEME: Scheme = {
 }
 
 /** 官方余额类接口：GET {origin}<path>，凭据同为 Bearer。 */
-function balanceScheme(path: string, parse: (body: Record<string, unknown>) => Record<string, unknown> | null, fallbackOrigin: string): Scheme {
+function balanceScheme(
+  path: string,
+  parse: (body: Record<string, unknown>, requestUrl: string) => Record<string, unknown> | null,
+  fallbackOrigin: string,
+): Scheme {
   return {
     url: (baseURL) => new URL(path, baseURL ?? fallbackOrigin).href,
-    parse: (body) => ({ balance: isObject(body) ? parse(body) : null, windows: null }),
+    parse: (body, requestUrl) => ({ balance: isObject(body) ? parse(body, requestUrl) : null, windows: null }),
   }
 }
 
@@ -80,54 +137,59 @@ const SCHEMES: Record<string, Scheme> = {
   'opencode-go': OPENCODE_GO_SCHEME,
   // DeepSeek: GET {origin}/user/balance → balance_infos[{currency,total_balance,granted_balance,topped_up_balance}]
   'deepseek-official': balanceScheme('/user/balance', (body) => {
-    const infos = Array.isArray(body.balance_infos) ? body.balance_infos : []
-    const info = infos.find((entry) => isObject(entry) && entry.currency === 'CNY') ?? infos[0]
-    if (!isObject(info)) return null
+    // 文档 balance_infos[].currency 只可能是 CNY / USD：没有 CNY 项时退回第一项，并如实保留它的币种
+    const infos = (Array.isArray(body.balance_infos) ? body.balance_infos : []).filter(isObject)
+    const info = infos.find((entry) => (textOf(entry.currency) ?? '').toUpperCase() === 'CNY') ?? infos[0]
+    if (info === undefined) return null
+    const total = amountTextOf(info.total_balance)
+    const granted = amountTextOf(info.granted_balance)
+    const toppedUp = amountTextOf(info.topped_up_balance)
+    // 三个金额全缺说明结构已经漂移，判 bad-json，不返回「只有币种」的空壳成功
+    if (total === null && granted === null && toppedUp === null) return null
     const balance: Record<string, unknown> = {}
     const currency = textOf(info.currency)
-    const total = textOf(info.total_balance)
-    const granted = textOf(info.granted_balance)
-    const toppedUp = textOf(info.topped_up_balance)
     if (currency !== null) balance.currency = currency
     if (total !== null) balance.totalBalance = total
     if (granted !== null) balance.giftBalance = granted
     if (toppedUp !== null) balance.topUpBalance = toppedUp
-    return Object.keys(balance).length > 0 ? balance : null
+    return balance
   }, 'https://api.deepseek.com'),
   // OpenRouter: GET {origin}/api/v1/credits（需要 Management Key）
   openrouter: balanceScheme('/api/v1/credits', (body) => {
     const data = isObject(body.data) ? body.data : null
     if (data === null) return null
-    const totalCredits = typeof data.total_credits === 'number' ? data.total_credits : null
-    const totalUsage = typeof data.total_usage === 'number' ? data.total_usage : null
+    const totalCredits = amountOf(data.total_credits)
+    const totalUsage = amountOf(data.total_usage)
     if (totalCredits === null || totalUsage === null) return null
     return { currency: 'USD', totalBalance: (totalCredits - totalUsage).toFixed(2) }
   }, 'https://openrouter.ai'),
-  // Moonshot / Kimi: GET {origin}/v1/users/me/balance
-  moonshotai: balanceScheme('/v1/users/me/balance', (body) => {
+  // Moonshot / Kimi: GET {origin}/v1/users/me/balance（文档未定义 currency 字段，国内站按人民币计）
+  moonshotai: balanceScheme('/v1/users/me/balance', (body, requestUrl) => {
     const data = isObject(body.data) ? body.data : null
     if (data === null) return null
+    const available = amountTextOf(data.available_balance)
+    const cash = amountTextOf(data.cash_balance)
+    const voucher = amountTextOf(data.voucher_balance)
+    if (available === null && cash === null && voucher === null) return null
     const balance: Record<string, unknown> = {}
-    const currency = textOf(data.currency)
-    const available = textOf(data.available_balance)
-    const cash = textOf(data.cash_balance)
-    const voucher = textOf(data.voucher_balance)
+    const currency = textOf(data.currency) ?? currencyFromHost(requestUrl, null)
     if (currency !== null) balance.currency = currency
     if (available !== null) balance.totalBalance = available
     if (voucher !== null) balance.giftBalance = voucher
     if (cash !== null) balance.topUpBalance = cash
-    return Object.keys(balance).length > 0 ? balance : null
+    return balance
   }, 'https://api.moonshot.cn'),
-  // Z.AI / GLM: GET {origin}/api/paas/v4/balance
-  zai: balanceScheme('/api/paas/v4/balance', (body) => {
+  // Z.AI / GLM: GET {origin}/api/paas/v4/balance（官方文档未收录，接口自带 currency 时才采信）
+  zai: balanceScheme('/api/paas/v4/balance', (body, requestUrl) => {
     const data = isObject(body.data) ? body.data : null
     if (data === null) return null
-    const balance: Record<string, unknown> = { currency: 'CNY' }
-    const total = textOf(data.total_balance)
-    const available = textOf(data.available_balance)
+    const total = amountTextOf(data.total_balance)
+    const available = amountTextOf(data.available_balance)
+    if (total === null && available === null) return null
+    const balance: Record<string, unknown> = { currency: textOf(data.currency) ?? currencyFromHost(requestUrl, 'CNY') }
     if (total !== null) balance.totalBalance = total
     if (available !== null) balance.availableBalance = available
-    return Object.keys(balance).length > 1 ? balance : null
+    return balance
   }, 'https://api.z.ai'),
 }
 
@@ -164,21 +226,23 @@ async function queryOne(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    const response = await fetchImpl(scheme.url(baseURL), {
+    const requestUrl = scheme.url(baseURL)
+    const response = await fetchImpl(requestUrl, {
       headers: { Authorization: 'Bearer ' + apiKey, Accept: 'application/json' },
       signal: controller.signal,
     })
     if (response.status === 401 || response.status === 403) return { balance: null, windows: null, error: 'unauthorized' }
     if (!response.ok) return { balance: null, windows: null, error: 'http-' + String(response.status) }
     const raw = await response.text()
-    if (raw.length > MAX_RESPONSE_BYTES) return { balance: null, windows: null, error: 'too-large' }
+    // 上限按**字节**算：raw.length 是 UTF-16 码元数，中文响应会因此超限仍被接受
+    if (Buffer.byteLength(raw, 'utf8') > MAX_RESPONSE_BYTES) return { balance: null, windows: null, error: 'too-large' }
     let body: unknown
     try {
       body = JSON.parse(raw)
     } catch {
       return { balance: null, windows: null, error: 'bad-json' }
     }
-    const parsed = scheme.parse(body)
+    const parsed = scheme.parse(body, requestUrl)
     if (parsed.balance === null && parsed.windows === null) return { balance: null, windows: null, error: 'bad-json' }
     return { ...parsed, error: null }
   } catch (error) {

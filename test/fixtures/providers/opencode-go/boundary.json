@@ -1,0 +1,22 @@
+{
+  "_source": "非官方文档：结构与 normal.json 同源（社区实现 https://github.com/xiaoqi20/dsh-opencode-go-usage，MIT；上游 issue https://github.com/anomalyco/opencode/issues/16017）。本例只把三个窗口压到边界取值：0%、100%、resetsAt 缺失、status 缺失。抓取日期 2026-10-13。",
+  "case": "boundary",
+  "httpStatus": 200,
+  "body": {
+    "usage": {
+      "rolling": { "percent": 0 },
+      "weekly": { "percent": 100, "resetsAt": null },
+      "monthly": { "percent": 99.5, "status": "exceeded" }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "error": null,
+    "balance": null,
+    "windows": [
+      { "key": "5h", "percent": 0, "resetsAt": null, "status": null },
+      { "key": "week", "percent": 100, "resetsAt": null, "status": null },
+      { "key": "month", "percent": 99.5, "resetsAt": null, "status": "exceeded" }
+    ]
+  }
+}
