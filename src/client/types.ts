@@ -1,3 +1,9 @@
+/** 客户端计费规则视图模型里的成本来源（与 src/client/pricing.ts 同一套取值）。 */
+import type { CostSource } from './pricing.ts'
+
+/** 计费规则相关的响应类型定义在 pricing.ts（视图模型与响应同源），这里只做转出。 */
+export type { CostSource, PricingConfig, PricingResponse, PricingRule, PricingTemplate } from './pricing.ts'
+
 /** 客户端使用的宿主上下文最小面（与 dsh-plugin / dsh-context 的 slots 契约一致）。 */
 export interface SlotRegistration {
   name: string
@@ -14,12 +20,42 @@ export interface SlotRegistration {
   locale?: string
 }
 
+/**
+ * 宿主设置插件的配置表单服务（`@deepseek-ai/dsh-client-ui-settings` 提供，服务名 `configForms`）。
+ * 命名空间就是 profile 条目 id：本插件在 cordis.patch.yml 里插入的 `dsh-key-usage`。
+ */
+export interface ConfigFormSnapshot {
+  status?: string
+  value?: unknown
+  revision?: number
+  writable?: boolean
+}
+
+export interface ConfigFormBinding {
+  getSnapshot(): ConfigFormSnapshot
+  subscribe(listener: () => void): () => void
+  mutate(ops: Array<{ op: 'set' | 'unset'; path: string[]; value?: unknown }>, expectedRevision?: number): Promise<boolean>
+}
+
+export interface ConfigFormsService {
+  get(entryId: string): ConfigFormBinding
+  /** 命名空间被宿主服务时才注册（返回值即注销器）。 */
+  whileServed(namespaces: string[], register: (served: Set<string>) => unknown): () => void
+}
+
+/** cordis 作用域：`inject` 等服务都是可选的，宿主版本差异下缺了要能降级运行。 */
 export interface SectionContext {
   slots: {
-    /** 在宿主 slot 容器登记一个渲染工厂；参数与返回值由宿主处理。 */
-    inject(slot: string, register: () => unknown): void
+    /** 在宿主 slot 容器登记一个渲染工厂；返回注销器（宿主版本差异下可能不返回）。 */
+    inject(slot: string, register: () => unknown): unknown
     register<TProps>(registration: SlotRegistration, render: (props: TProps) => unknown): unknown
   }
+  /** 取服务：服务就绪后回调子作用域；服务缺失时回调不会触发。 */
+  inject?: (services: string[], callback: (scope: SectionContext) => void) => void
+  /** 把清理函数绑定到插件作用域。 */
+  effect?: (callback: () => unknown, label?: string) => void
+  /** 宿主配置表单服务（只有组配了 ui-settings 的部署才有）。 */
+  configForms?: ConfigFormsService
 }
 
 /** 服务端 /dsh-key-usage/* 端点的响应类型。 */
@@ -55,8 +91,12 @@ export interface DaySummary {
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
+  /** 计费要算、展示口径不算的缓存写 tokens。 */
+  cacheWriteTokens: number
   reasoningTokens: number
   cost: number
+  /** 成本来源角标：官方账单 / 用户规则 / 台账均价 / 无依据。 */
+  costSource?: CostSource
 }
 
 export interface ModelSummary extends DaySummary {
@@ -118,6 +158,8 @@ export interface RangeSummaryRow {
   calls: number
   tokens: number
   cost: number
+  /** 该通道该范围的成本来源角标。 */
+  costSource?: CostSource
 }
 
 export interface SummaryResponse {
@@ -161,6 +203,8 @@ export interface SessionRow {
   models: UsageModelRow[]
   costMode: ChannelCostMode | null
   cost: number | null
+  /** 该行成本的来源角标。 */
+  costSource?: CostSource
 }
 
 export interface SessionsResponse {
@@ -182,6 +226,8 @@ export interface ProjectRow {
   dominantProvider: string | null
   models: UsageModelRow[]
   cost: number | null
+  /** 该行成本的来源角标。 */
+  costSource?: CostSource
 }
 
 export interface ProjectsResponse {
@@ -195,6 +241,8 @@ export interface ModelBuckets {
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
+  /** 只参与计费，不计入展示口径 tokens。 */
+  cacheWriteTokens?: number
 }
 
 export interface ModelAggregateRow {
@@ -205,13 +253,15 @@ export interface ModelAggregateRow {
   /** 展示口径 tokens：输入 + 输出 + 缓存读。 */
   tokens: number
   cacheHitRate: number | null
-  /** 估算成本（台账均价推算），无成本数据时为 null。 */
+  /** 估算成本（用户规则优先，没有规则时按台账均价），无成本数据时为 null。 */
   cost: number | null
   costMode: ChannelCostMode | null
   sessionCount: number
   /** 用到该模型的最晚会话时间（会话事件只有会话级时间戳，是近似值）。 */
   lastTime: number | null
   buckets: ModelBuckets
+  /** 该行成本的来源角标。 */
+  costSource?: CostSource
 }
 
 export interface ModelsResponse {

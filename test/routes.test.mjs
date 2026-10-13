@@ -277,6 +277,73 @@ assert.deepEqual(spanning.body.sessionDates, ['2026-10-20'], '只有台账缺的
 assert.equal(spanning.body.days[1].cost, 0, '台账那两天不重算成本')
 assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带上了用量')
 
+// ===== 计费规则：带规则再挂一份路由，验证四处成本按规则重算与来源角标 =====
+// 台账仍在（下面的 rmSync 才删），所以同一次请求里既有「官方」也有「自定」两种来源
+{
+  const pricedHandlers = new Map()
+  const rules = [{
+    provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY',
+    input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则',
+  }]
+  mountKeyUsageRoutes(
+    { register: (route) => { pricedHandlers.set(route.path, route.handler) } },
+    sessionSource,
+    undefined,
+    undefined,
+    { current: () => ({ config: { version: 1, currency: 'CNY', rules }, writable: true, revision: 7 }) },
+  )
+  const priced = (path) => callHandler(pricedHandlers, path)
+
+  const pricing = await priced('/dsh-key-usage/pricing')
+  assert.equal(pricing.status, 200)
+  assert.equal(pricing.body.writable, true)
+  assert.equal(pricing.body.revision, 7, '修订号透出给界面做乐观锁')
+  assert.equal(pricing.body.rules.length, 1)
+  assert.deepEqual(pricing.body.templates.map((template) => template.id), ['deepseek', 'kimi', 'glm'])
+  assert.equal(pricing.body.offPeakNow.length, 1, '每条规则一个错峰状态')
+  assert.equal(pricing.body.offPeakNow[0], false, '没有错峰窗口的规则永远不是错峰')
+  assert.equal(pricing.body.coverage.ruleModels, 1, 'opencode-go 命中规则')
+  assert.equal(pricing.body.coverage.unpricedModels, 1, 'local 既没规则也没台账成本')
+  // 参照值：近 30 天所有行按规则口径算 = 台账两天（1000+200+8000 与 2000+400+16000）
+  const ledgerDayCost = (1000 * 2 + 200 * 8 + 8000 * 0.2) / 1000 + (2000 * 2 + 400 * 8 + 16000 * 0.2) / 1000
+  assert.ok(Math.abs(pricing.body.coverage.ruleCostByCurrency.CNY - ledgerDayCost) < 1e-9)
+
+  // 台账天保留官方成本，会话补位天按规则算
+  const pricedUsage = await priced('/dsh-key-usage/usage?from=2026-10-12&to=2026-10-20')
+  assert.deepEqual(pricedUsage.body.days.map((day) => day.costSource), ['official', 'official', 'rule'])
+  assert.equal(pricedUsage.body.days[0].models[0].costSource, 'official', '台账天不重算')
+  assert.equal(pricedUsage.body.days[2].cost, 1.12, '规则算出的会话天成本')
+  assert.equal(pricedUsage.body.totals.costSource, 'rule', '总计划到最弱的那一格')
+
+  // /models /sessions /projects 三处同一口径：输入 1400 + 输出 240 + 缓存读 8000
+  const expectedCost = Math.round((1400 * 2 + 240 * 8 + 8000 * 0.2) / 1000 * 100) / 100
+  const pricedModels = await priced('/dsh-key-usage/models')
+  assert.equal(pricedModels.body.rows[0].cost, expectedCost)
+  assert.equal(pricedModels.body.rows[0].costSource, 'rule')
+  assert.equal(pricedModels.body.rows[0].buckets.cacheWriteTokens, 0, '分桶补上 cacheWrite（只用于计费）')
+
+  const pricedSessions = await priced('/dsh-key-usage/sessions')
+  assert.equal(pricedSessions.body.rows[0].cost, expectedCost)
+  assert.equal(pricedSessions.body.rows[0].costSource, 'rule')
+
+  const pricedProjects = await priced('/dsh-key-usage/projects')
+  assert.equal(pricedProjects.body.rows[0].cost, expectedCost)
+  assert.equal(pricedProjects.body.rows[0].costSource, 'rule')
+
+  // 总览「近 30 天」窗口内 opencode-go 只有台账天（10-12/10-13），所以仍然是官方；
+  // 规则路径由上面的 /usage（含 10-20 会话天）覆盖，两处共用同一个 annotateCosts
+  const pricedSummary = await priced('/dsh-key-usage/summary')
+  const pricedChannel = pricedSummary.body.channels.find((row) => row.provider === 'opencode-go')
+  assert.equal(pricedChannel.month.costSource, 'official', '台账覆盖期内标官方，不按规则重算')
+  const localChannelSummary = pricedSummary.body.channels.find((row) => row.provider === 'local')
+  assert.equal(localChannelSummary.month.costSource, 'official', '台账里有官方成本时标官方')
+
+  // 没有规则源（默认）时行为与升级前一致：既没有规则也没有台账成本 → 无依据
+  const unpricedUsage = await callEndpoint('/dsh-key-usage/usage?from=2026-10-20&to=2026-10-20')
+  assert.equal(unpricedUsage.body.days[0].costSource, 'none')
+  assert.equal(unpricedUsage.body.days[0].cost, 0)
+}
+
 // 台账整体缺失时不会变成空态，而是全量走会话事件
 rmSync(join(home, 'dsh-usage', 'usage-ledger.json'))
 const sessionOnlyUsage = await callEndpoint('/dsh-key-usage/usage')

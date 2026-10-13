@@ -37,6 +37,14 @@ export function costCellText(channel: Channel | null, cost: number): { text: str
   return cost > 0 ? { text: '¥' + cost.toFixed(2), dim: false } : { text: '—', dim: true }
 }
 
+/**
+ * 单元格是否该挂来源角标：只有真的显示了金额（`¥…`）时才挂，
+ * `订阅内` / `免费` / `无计费` / `—` 都是占位文案，挂角标只是噪音。
+ */
+export function showsAmount(cell: { text: string }): boolean {
+  return cell.text.startsWith('¥')
+}
+
 /** 状态点的颜色（走宿主告警/成功令牌）。 */
 export function statusColorOf(status: ChannelStatus): string {
   if (status === 'ok') return 'var(--dsw-alias-state-success-primary, #3fb96f)'

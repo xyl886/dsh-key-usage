@@ -50,13 +50,14 @@
     "build:client": "tsdown && node scripts/normalize-client-banner.mjs",
     "build:server": "tsc -p tsconfig.server.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/session-meta.js && node --check lib/quota-snapshots.js && node --check lib/merge.js && node --check lib/live-quota.js",
-    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/session-meta.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/routes.test.mjs",
+    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/session-meta.js && node --check lib/quota-snapshots.js && node --check lib/merge.js && node --check lib/live-quota.js && node --check lib/pricing.js",
+    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/session-meta.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/pricing.test.mjs && node test/routes.test.mjs",
     "verify": "npm run typecheck && npm run build && npm run check && npm run test",
     "pack:dry": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1"
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/schemastery": "^3.18.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -71,7 +72,8 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-slots"
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings"
       ]
     }
   },

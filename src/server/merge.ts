@@ -20,6 +20,7 @@ export interface SessionDayRow {
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
+  cacheWriteTokens: number
 }
 
 /** 把会话记录摊平成按天行（provider 用已知通道名归一）。 */
@@ -37,6 +38,7 @@ export function sessionDayRows(records: SessionUsageRecord[], knownProviders: st
           inputTokens: model.buckets.inputTokens,
           outputTokens: model.buckets.outputTokens,
           cacheReadTokens: model.buckets.cacheReadTokens,
+          cacheWriteTokens: model.buckets.cacheWriteTokens,
         })
       }
     }
@@ -74,11 +76,13 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
   let inputTokens = 0
   let outputTokens = 0
   let cacheReadTokens = 0
+  let cacheWriteTokens = 0
   for (const row of rows) {
     calls += row.calls
     inputTokens += row.inputTokens
     outputTokens += row.outputTokens
     cacheReadTokens += row.cacheReadTokens
+    cacheWriteTokens += row.cacheWriteTokens
     const key = row.provider + '|' + row.model
     const entry = byModel.get(key)
     if (entry === undefined) {
@@ -90,6 +94,7 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
         inputTokens: row.inputTokens,
         outputTokens: row.outputTokens,
         cacheReadTokens: row.cacheReadTokens,
+        cacheWriteTokens: row.cacheWriteTokens,
         reasoningTokens: 0,
         // 会话事件没有官方成本，成本列对这些天留 0，由界面按计费模式展示
         cost: 0,
@@ -100,6 +105,7 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
     entry.inputTokens += row.inputTokens
     entry.outputTokens += row.outputTokens
     entry.cacheReadTokens += row.cacheReadTokens
+    entry.cacheWriteTokens += row.cacheWriteTokens
   }
   const models = [...byModel.values()]
   return {
@@ -109,6 +115,7 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
     inputTokens,
     outputTokens,
     cacheReadTokens,
+    cacheWriteTokens,
     reasoningTokens: 0,
     cost: 0,
     models: models.sort((first, second) =>
@@ -160,15 +167,17 @@ export function totalsOfMerged(days: ChannelDailySummary[]): {
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
+  cacheWriteTokens: number
   reasoningTokens: number
   cost: number
 } {
-  const totals = { date: '', calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, reasoningTokens: 0, cost: 0 }
+  const totals = { date: '', calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, cost: 0 }
   for (const day of days) {
     totals.calls += day.calls
     totals.inputTokens += day.inputTokens
     totals.outputTokens += day.outputTokens
     totals.cacheReadTokens += day.cacheReadTokens
+    totals.cacheWriteTokens += day.cacheWriteTokens
     totals.reasoningTokens += day.reasoningTokens
     totals.cost += day.cost
   }

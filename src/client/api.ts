@@ -4,6 +4,7 @@ import type {
   Channel,
   HeatmapDay,
   ModelsResponse,
+  PricingResponse,
   ProjectsResponse,
   QuotaProvider,
   SessionsResponse,
@@ -78,4 +79,9 @@ export function loadProjects(limit = 200): Promise<ProjectsResponse | null> {
 
 export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
+}
+
+/** 计费规则面板的服务端对照：内置模板、错峰状态与近 30 天覆盖度。 */
+export function loadPricing(): Promise<PricingResponse | null> {
+  return fetchJson<PricingResponse>('/dsh-key-usage/pricing')
 }

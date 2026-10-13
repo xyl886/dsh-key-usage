@@ -25,6 +25,8 @@ export interface DaySummary {
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
+  /** 缓存写 tokens：不计入展示口径 tokens，但计费要算。 */
+  cacheWriteTokens: number
   reasoningTokens: number
   cost: number
 }

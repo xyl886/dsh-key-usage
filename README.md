@@ -18,10 +18,11 @@
 
 装上之后，左侧边栏会多一项「使用情况」，点开就是整页的用量面板：**Key 清单 + 活跃热力图、使用明细、项目用量、会话用量、余额与配额**。全部数据来自你自己的机器，默认不联网。
 
-它和同类插件的两个区别：
+它和同类插件的三个区别：
 
 - **台账 × 会话事件双源合并** —— 宿主台账停更时（很常见），台账没有记录的日期会自动回退到本地会话事件折叠补齐，**按天取舍、不相加**，并在界面上标明来源；
-- **余额与订阅窗口是真·实时** —— 直接查各通道官方接口（opencode-go 的 rolling / weekly / monthly、DeepSeek 的 `/user/balance`），查不到才回落本机快照，并把失败原因写在卡片上。
+- **余额与订阅窗口是真·实时** —— 直接查各通道官方接口（opencode-go 的 rolling / weekly / monthly、DeepSeek 的 `/user/balance`），查不到才回落本机快照，并把失败原因写在卡片上；
+- **成本有据可依** —— 你可以自己维护计费规则（四档单价 + 错峰时段 + 单位），四处成本按规则重算并标出来源角标（**官方 / 自定 / 估算**），还能看到「缓存命中省了多少钱」。
 
 ## 安装
 
@@ -59,8 +60,7 @@ dsh plugin --profile web remove dsh-key-usage
 curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [...] } 即已挂载
 ```
 
-8 个端点全部只读 GET，且只接受 `127.0.0.1` / `::1` 回环请求，非回环一律 403。
-
+9 个端点全部只读 GET，且只接受 `127.0.0.1` / `::1` 回环请求，非回环一律 403。
 ## 功能
 
 **总览**
@@ -97,6 +97,14 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 - 每个通道一张卡片：官方余额（DeepSeek 的总余额 / 赠送 / 充值）或订阅窗口占用（opencode-go 的 5 小时 / 本周 / 本月窗口 + 重置时间）；
 - 实时查询成功的卡片带绿色「实时」标签与查询时间；失败的写明原因（未配置 Key / 网络不可达 / 401 / 超时）并回落快照。
 
+**计费规则**（在「余额与配额」页下半部分，同一个面板也出现在插件页）
+
+- **规则列表** —— 通道 · 模型 · 单位（每百万 / 每千 tokens / 每次调用）· 输入 / 缓存读 / 缓存写 / 输出四档单价 · 币种 · 错峰时段 · 备注；
+- **一键套用厂商模板** —— 内置 DeepSeek（错峰 = peak 半价）、Kimi K3、GLM-5.3 / Flash 的官方价目结构，套用后数值可改；
+- **成本来源角标** —— 四处成本都标 `官方`（台账账单金额）/ `自定`（你的规则）/ `估算`（台账反推均价），没有依据时显示 `—`；
+- **缓存命中省了多少钱** —— `命中 tokens × (未命中价 − 命中价)`，按币种与模型列出；
+- **导入 / 导出 JSON**、**清空规则**（回到台账反推均价）。
+
 ## 界面预览
 
 > 演示数据，由设计稿原型渲染（[`docs/prototype/`](./docs/prototype/)）。
@@ -122,12 +130,18 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 | `$DSH_HOME/profiles/<profile>/cordis.yml` | 通道清单 | 只做文本提取，**不执行**其中的 `!!js` 表达式；取不到时回退 `cordis.patch.yml` |
 | 宿主 `sessionPersistence` 服务 | 项目 / 会话 / 按小时 | 只开只读句柄（`open("read") → read(0) → close`），不自行解压会话文件 |
 | 宿主 `credentials` 服务 / 进程环境变量 | 查余额时的 API Key | 只用于拼 `Authorization` 请求头 |
+| 宿主 `settings` 服务（读） | 计费规则 | 只读 `dsh-key-usage` 命名空间里的规则；**写盘不归插件做**（见下） |
+| 宿主 `configForms` 服务（客户端） | 计费规则的编辑界面 | 复用宿主设置服务：写入由宿主的 config-editor 落到当前 profile 的 cordis patch |
 
 **唯一写入的对象**：
 
 | 写入对象 | 用途 | 说明 |
 | --- | --- | --- |
 | `$DSH_HOME/dsh-key-usage/quota-snapshots.json` | 余额 / 订阅窗口**快照** | 每次实时查询成功即落盘（原子写：临时文件 + 改名，只保留每个通道最新一份）；失败回落时与宿主那份**取更新的**。不含任何密钥，内容就是 `/quota` 返回的余额与窗口 |
+
+> **计费规则不写文件**：规则通过宿主的设置服务保存（命名空间就是本插件在 profile 里的条目 id `dsh-key-usage`，
+> 由宿主的 config-editor 原子写当前 profile 的 `cordis.patch.yml`，并保留文件里的注释）。
+> 插件自己既不写也不改这个文件，仍然只写上面那一个 `quota-snapshots.json`。
 
 **会联网的唯一路径**：打开「余额与配额」时按通道请求官方接口，结果缓存 60 秒（点「刷新」强制重查）：
 
@@ -140,18 +154,18 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 请求 6 秒超时、响应上限 64 KiB、只发 `Authorization` 与 `Accept` 两个头；任何失败都回落本机快照并在卡片上说明原因。
 
 - **不读凭据文件**：从不打开 `.credentials.yaml`；密钥不落盘、不进日志、不返回给前端；界面只显示 `apiKeyEnv` 这类**变量名**。
-- **只写一个自己的文件**：`$DSH_HOME/dsh-key-usage/quota-snapshots.json` —— **每次余额/窗口实时查询成功**后落一份快照，下次查询失败时回落到「最近一次成功」而不是宿主那份可能很旧的快照（本机实测宿主那份已 13 天未更新）。不改宿主配置，不碰宿主的 `provider-snapshots.json`、不写其它任何数据文件。
+- **只写一个自己的文件**：`$DSH_HOME/dsh-key-usage/quota-snapshots.json` —— **每次余额/窗口实时查询成功**后落一份快照，下次查询失败时回落到「最近一次成功」而不是宿主那份可能很旧的快照（本机实测宿主那份已 13 天未更新）。不改宿主配置，不碰宿主的 `provider-snapshots.json`、不写其它任何数据文件。计费规则的保存由宿主的配置服务负责，插件不参与写盘。
 - **仅回环**：所有端点只监听本机回环，非回环 403。
 
 ## 兼容与运行要求
 
 | 项 | 要求 |
 | --- | --- |
-| DeepSeek Harness | 桌面端 0.2.x（客户端 slot：`sidebar.panellist` + `main`）；web profile 同样支持 |
+| DeepSeek Harness | 桌面端 0.2.x（客户端 slot：`sidebar.panellist` + `main`，配置服务 `configForms`）；web profile 同样支持 |
 | Node.js | ≥ 22（宿主内置） |
-| 运行时依赖 | 无。`react` / `react/jsx-runtime` 由宿主注入，服务端只用 Node 内置模块 |
+| 运行时依赖 | 无。`react` / `react/jsx-runtime` 由宿主注入，服务端只用 Node 内置模块；`@deepseek-ai/schemastery`（服务端声明计费规则 Config 用）与 `@deepseek-ai/dsh-client-ui-settings`（客户端规则表单用）由宿主提供 —— 前者按 `peerDependencies` 走宿主的 runtime resolution 解析，缺失时计费规则面板降级为只读 + 导入导出 |
 | 必需服务 | 无 |
-| 可选服务 | `sessionPersistence`（缺失时项目 / 会话 / 按小时降级为空态）、`credentials`（缺失时余额只能读快照） |
+| 可选服务 | `sessionPersistence`（缺失时项目 / 会话 / 按小时降级为空态）、`credentials`（缺失时余额只能读快照）、`settings` / `configForms`（缺失时计费规则只能导入导出、成本按台账均价估算） |
 
 ## 常见问题
 
@@ -177,6 +191,28 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 <summary><b>成本显示为 0 / 「无计费」</b></summary>
 
 免费额度、本地端点没有成本概念；由会话事件补位的日期也没有官方成本。项目 / 会话 / 按小时视图统一不计成本（页脚口径里有说明）。
+想让它有数字，就去「余额与配额」页下半部分的**计费规则**里套一个厂商模板或手填单价。
+</details>
+
+<details>
+<summary><b>成本旁边的「官方 / 自定 / 估算」是什么意思</b></summary>
+
+- **官方**：台账记录的厂商账单金额（最可信，不会被规则覆盖）；
+- **自定**：按你填的计费规则算出；
+- **估算**：没有规则时按台账反推的均价推算；
+- 没有角标、显示 `—`：既没有官方数字，也没有规则和均价。
+</details>
+
+<details>
+<summary><b>填了规则但成本没变</b></summary>
+
+规则按 `通道 id + 模型 id` 匹配，先精确、再 `通道+*`、`*+模型`、`*+*`。先确认规则里的**通道 id 与模型 id 跟页面上显示的一致**（模型 id 可能带尾随空格，从「使用明细」里复制最稳）。另外台账已经记录了官方成本的那些天**不会**被规则覆盖 —— 这是有意的。
+</details>
+
+<details>
+<summary><b>错峰价格什么时候生效</b></summary>
+
+窗口按**本地时间**判定（`起止相同` = 全天，`from > to` = 跨午夜，`24:00` = 当天末尾）。单日范围会用当天的 24 小时用量分布算错峰占比并加权；跨天、会话、项目、按模型这些没有小时分布的地方按标准价计算，属有意保守。
 </details>
 
 <details>
@@ -191,7 +227,7 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
 pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
 pnpm run typecheck    # 客户端 + 服务端类型检查
-pnpm run test         # 9 个离线测试
+pnpm run test         # 11 个离线测试
 pnpm run check        # lib/*.js 语法检查
 pnpm run verify       # 上面全套（CI 跑的就是这条）
 pnpm run pack:dry     # 发布清单自检
@@ -213,16 +249,27 @@ pnpm run pack:dry     # 发布清单自检
 **目录结构**
 
 ```
-src/client/   index.tsx（slot 注册）· UsagePage / UsageIcon · KeyUsageSection（Tab 外壳）
-              tabs/（6 个页面）· components/ · export.ts · styles/（CSS Module，basename 全局唯一）
-src/server/   index.ts（cordis apply）· routes.ts（8 个只读端点）
+src/client/   index.tsx（slot 注册 + configForms 接线）· UsagePage / UsageIcon · KeyUsageSection（Tab 外壳）
+              tabs/（6 个页面）· components/（含 PricingRulesPanel / PricingCard / CostSourceChip）
+              export.ts · pricing.ts + pricingSettings.ts（计费规则视图模型与读写通道）
+              styles/（CSS Module，basename 全局唯一）
+src/server/   index.ts（cordis apply + 计费规则的 Config）· routes.ts（9 个只读端点）
+              pricing.ts（计费规则：匹配 / 错峰 / 单位换算 / 缓存省钱）
               ledger.ts（台账）· collect.ts（通道判定）· merge.ts（台账 × 会话按天合并）
               live-quota.ts（官方余额实时查询 + 缓存）· quota-snapshots.ts（成功即落盘，失败回落）
               sessions.ts / session-usage.ts / session-meta.ts（会话折叠 / 标题 / 归档）
 lib/ client/  构建产物（发布必须带，git 与 npm 都提交）
 ```
 
-客户端注册的是 `sidebar.panellist`（导航项）+ `main`（主区域整页），与官方 `dsh-context`「上下文洞察」同一套写法。
+客户端注册的是 `sidebar.panellist`（导航项）+ `main`（主区域整页），与官方 `dsh-context`「上下文洞察」同一套写法；
+计费规则另外挂一个 `plugins.bundle.config`（插件页配置卡片），用的是宿主 `configForms` 服务。
+
+**验证计费规则的离线自检**（读宿主实现，不联网、不改任何文件）：
+
+```bash
+node test/probe/asar_extract_schemastery.mjs    # 把宿主自带的 schemastery 抽到 test/out/
+node test/probe/dsh_settings_schema_probe.mjs   # 校验 volatile 表单 / 值投影 / 写入路径 / 客户端回放
+```
 
 **延伸文档**：[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [AGENTS.md](./AGENTS.md)
 

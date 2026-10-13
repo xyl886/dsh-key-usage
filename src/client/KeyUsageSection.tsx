@@ -3,9 +3,10 @@
  * 台账类数据（通道 / 台账 / 热力图 / 汇总 / 快照）来自本地文件端点；
  * 项目与会话数据来自宿主会话事件折叠，切到对应 Tab 时才首次拉取。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
+import { pricingSettings } from './pricingSettings.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
@@ -18,6 +19,7 @@ import type {
   Channel,
   HeatmapDay,
   ModelsResponse,
+  PricingResponse,
   ProjectsResponse,
   QuotaProvider,
   SessionsResponse,
@@ -54,9 +56,13 @@ export function KeyUsageSection() {
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
+  const [pricing, setPricing] = useState<PricingResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const tooltip = useTooltip()
+  // 规则改动会经 configForms 推回来，这里跟着重取一次服务端对照（覆盖度 / 错峰状态）
+  const pricingState = useSyncExternalStore(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot)
+  const pricingSignature = JSON.stringify(pricingState.config)
 
   const reload = useCallback(async (includeSessionData: boolean, forceQuota = false) => {
     setLoading(true)
@@ -76,9 +82,18 @@ export function KeyUsageSection() {
       setModels(modelResult)
     }
     setLoading(false)
-  }, [])
+    // pricingSignature 不是被用到的值，而是「规则变了」的失效信号：
+    // 成本在服务端按规则算，规则一改这里就必须整体重取，否则四个页签还是旧数字
+  }, [pricingSignature])
 
   useEffect(() => { void reload(false) }, [reload])
+
+  // 计费规则面板的服务端对照：规则一变就重取，让覆盖度与四个页签的成本角标同步
+  useEffect(() => {
+    let cancelled = false
+    void loadPricing().then((result) => { if (!cancelled) setPricing(result) })
+    return () => { cancelled = true }
+  }, [pricingSignature])
 
   // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时）
   useEffect(() => {
@@ -106,7 +121,7 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [bounds.from, bounds.to, channelFilter])
+  }, [bounds.from, bounds.to, channelFilter, pricingSignature])
 
   const refresh = useCallback(() => {
     void reload(
@@ -167,7 +182,15 @@ export function KeyUsageSection() {
       {activeTab === 'projects' && <ProjectsTab data={projects} channels={channels} />}
       {activeTab === 'models' && <ModelsTab data={models} channels={channels} />}
       {activeTab === 'sessions' && <SessionsTab data={sessions} channels={channels} />}
-      {activeTab === 'quota' && <QuotaTab channels={channels} quotas={quotas} />}
+      {activeTab === 'quota' && (
+        <QuotaTab
+          channels={channels}
+          quotas={quotas}
+          pricing={pricing}
+          pricingState={pricingState}
+          pricingSettings={pricingSettings}
+        />
+      )}
 
       <div className={styles.footnote}>
         <b>口径说明</b>
@@ -181,6 +204,11 @@ export function KeyUsageSection() {
           <li>项目用量、会话用量、按模型与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。</li>
           <li>已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。</li>
           <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
+          <li>
+            成本优先级：<b>台账当天的官方成本</b> &gt; <b>你的计费规则</b> &gt; <b>台账反推均价</b> &gt; 无依据；
+            每个成本单元格旁的角标写明来源（<b>官方</b> / <b>自定</b> / <b>估算</b>，无依据显示 —）。
+            规则在「余额与配额」页下半部分维护，存在宿主设置服务里，改完立即重算。
+          </li>
           <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>
         </ul>
       </div>

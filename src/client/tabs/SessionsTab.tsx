@@ -1,9 +1,11 @@
 /** 会话用量：按会话列出 tokens / 命中率 / 时长，按最近活跃时按日分组。 */
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
-import { channelOf, costCellText, displayNameOf } from '../channels.ts'
+import { channelOf, costCellText, displayNameOf, showsAmount } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
+import { CostSourceChip } from '../components/CostSourceChip.tsx'
+import { COST_SOURCE_LABELS } from '../pricing.ts'
 import type { Channel, SessionRow, SessionsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
@@ -24,7 +26,8 @@ const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
   { key: 'calls', label: '调用', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(估算,元)', value: (row) => row.cost },
+  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+  { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
   { key: 'archived', label: '已归档', value: (row) => row.archived ? '是' : '否' },
 ]
 
@@ -179,7 +182,7 @@ function sessionRowOf(row: SessionRow, channels: Channel[]): ReactNode {
       <td>{row.cacheHitRate === null ? '—' : row.cacheHitRate.toFixed(1) + '%'}</td>
       <td>{row.cost === null || channel === null || channel.costMode !== 'perToken'
         ? <span className={styles.dim}>{costCell.text}</span>
-        : costCell.text}</td>
+        : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} />}</>}</td>
     </tr>
   )
 }

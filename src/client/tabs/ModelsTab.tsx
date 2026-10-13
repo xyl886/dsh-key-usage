@@ -1,10 +1,12 @@
 /** 按模型：`provider + model` 聚合的用量与估算成本（数据来自宿主会话事件折叠）。 */
 import { useMemo, useState, type ReactNode } from 'react'
 import { failureReasonOf } from '../api.ts'
-import { channelColorOf, channelOf, costCellText } from '../channels.ts'
+import { channelColorOf, channelOf, costCellText, showsAmount } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtRelative, fmtTokens } from '../format.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
+import { CostSourceChip } from '../components/CostSourceChip.tsx'
+import { COST_SOURCE_LABELS } from '../pricing.ts'
 import type { Channel, ModelAggregateRow, ModelsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
@@ -25,7 +27,8 @@ const EXPORT_COLUMNS: Array<ExportColumn<ModelAggregateRow>> = [
   { key: 'outputTokens', label: '输出', value: (row) => row.buckets.outputTokens },
   { key: 'cacheReadTokens', label: '缓存读', value: (row) => row.buckets.cacheReadTokens },
   { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(估算,元)', value: (row) => row.cost },
+  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+  { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
   { key: 'costMode', label: '计费模式', value: (row) => row.costMode },
   { key: 'sessionCount', label: '会话数', value: (row) => row.sessionCount },
   { key: 'lastTime', label: '最近活跃', value: (row) => fmtDateTime(row.lastTime) },
@@ -128,7 +131,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
                 <td>{row.cacheHitRate === null ? '—' : row.cacheHitRate.toFixed(1) + '%'}</td>
                 <td>{row.cost === null || channel?.costMode !== 'perToken'
                   ? <span className={styles.dim}>{costCell.text}</span>
-                  : costCell.text}</td>
+                  : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} />}</>}</td>
                 <td>{fmtRelative(row.lastTime, nowMs)}</td>
               </tr>
             )
