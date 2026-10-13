@@ -67,7 +67,9 @@ function dateKeysOf(from: string, to: string): string[] {
 }
 
 function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary {
-  const models: ModelSummary[] = []
+  // 同一天同一模型可能来自多个会话，必须先按 `provider|model` 合并，
+  // 否则热力图与每日细目会出现多条同名重复行。
+  const byModel = new Map<string, ModelSummary>()
   let calls = 0
   let inputTokens = 0
   let outputTokens = 0
@@ -77,19 +79,29 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
     inputTokens += row.inputTokens
     outputTokens += row.outputTokens
     cacheReadTokens += row.cacheReadTokens
-    models.push({
-      date,
-      provider: row.provider,
-      model: row.model,
-      calls: row.calls,
-      inputTokens: row.inputTokens,
-      outputTokens: row.outputTokens,
-      cacheReadTokens: row.cacheReadTokens,
-      reasoningTokens: 0,
-      // 会话事件没有官方成本，成本列对这些天留 0，由界面按计费模式展示
-      cost: 0,
-    })
+    const key = row.provider + '|' + row.model
+    const entry = byModel.get(key)
+    if (entry === undefined) {
+      byModel.set(key, {
+        date,
+        provider: row.provider,
+        model: row.model,
+        calls: row.calls,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+        cacheReadTokens: row.cacheReadTokens,
+        reasoningTokens: 0,
+        // 会话事件没有官方成本，成本列对这些天留 0，由界面按计费模式展示
+        cost: 0,
+      })
+      continue
+    }
+    entry.calls += row.calls
+    entry.inputTokens += row.inputTokens
+    entry.outputTokens += row.outputTokens
+    entry.cacheReadTokens += row.cacheReadTokens
   }
+  const models = [...byModel.values()]
   return {
     date,
     provider: '',

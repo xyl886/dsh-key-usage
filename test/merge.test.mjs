@@ -84,6 +84,23 @@ assert.equal(sessionOnly[0].provider, 'opencode-go')
 assert.equal(sessionOnly[0].tokens, (1000 + 100 + 500) + (2000 + 200 + 1000))
 assert.equal(sessionOnly[0].calls, 2)
 
+// 同一天同一模型的多个会话必须合并成一行（热力图与每日细目都依赖这一点）
+const secondSession = {
+  id: 'session-merge-2',
+  title: null,
+  workspace: 'D:\\EasyJob',
+  summary: summarizeSession(foldSessionEvents([
+    { seq: 0, time: morning + 3600000, type: 'request/header', data: { header: { config: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } } },
+    { seq: 1, time: morning + 3600000, type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 300, outputTokens: 30, cacheReadTokens: 100 } } } },
+  ])),
+}
+const duplicated = mergeDailySeries([], sessionDayRows([sessionRecords[0], secondSession], knownProviders), '2026-10-01', '2026-10-01')
+assert.equal(duplicated.days.length, 1)
+assert.equal(duplicated.days[0].models.length, 1, '同一天同一模型只保留一行')
+assert.equal(duplicated.days[0].models[0].inputTokens, 1300, '合并后的数值是各会话之和')
+assert.equal(duplicated.days[0].models[0].calls, 2)
+assert.equal(duplicated.days[0].inputTokens, 1300, '日级汇总不受合并影响')
+
 // 台账、会话都缺的日期不出现在结果里
 const sparse = mergeDailySeries(ledgerDays, [], '2026-09-28', '2026-09-30')
 assert.deepEqual(sparse.days.map((day) => day.date), ['2026-09-29', '2026-09-30'])
