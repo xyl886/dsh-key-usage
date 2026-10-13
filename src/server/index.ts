@@ -1,9 +1,15 @@
 /**
  * dsh-key-usage 服务端入口：挂载只读 HTTP 路由，向客户端提供
  * 用量台账、通道配置、余额快照与会话用量的聚合数据。
- * 台账与快照来自本地文件；会话用量走宿主 sessionPersistence 的只读 handle。零外网请求。
+ *
+ * 数据来源：
+ * - 台账 / 快照 / 通道配置：本地文件只读；
+ * - 项目、会话、按小时：宿主 sessionPersistence 的只读 handle；
+ * - 余额与订阅窗口：优先查各通道官方接口（凭据经宿主 credentials seam 解析，
+ *   不落盘、不进日志、不返回给客户端），失败时回落到本地快照。
  */
 import { mountKeyUsageRoutes } from './routes.js'
+import { createLiveQuotaService } from './live-quota.js'
 import { createSessionSource } from './sessions.js'
 
 export const name = 'dsh-key-usage'
@@ -19,12 +25,33 @@ interface HostContext {
   get(name: string): unknown
 }
 
+interface CredentialsService {
+  resolve(reference: string): Promise<{ value?: unknown } | null>
+}
+
 export function apply(ctx: HostContext): void {
   // 会话服务是可选依赖：用 get 惰性取，缺了也只是会话相关页面显示空态
   const sessionSource = createSessionSource({
     get: (serviceName) => (typeof ctx.get === 'function' ? ctx.get(serviceName) : undefined),
   })
+  // 凭据同样只在真正查询余额时经宿主 seam 解析；拿不到就回落快照
+  const liveQuota = createLiveQuotaService({
+    resolveCredential: async (reference) => {
+      const credentials = (typeof ctx.get === 'function' ? ctx.get('credentials') : undefined) as CredentialsService | undefined
+      if (credentials !== undefined && typeof credentials.resolve === 'function') {
+        try {
+          const hit = await credentials.resolve(reference)
+          if (hit !== null && typeof hit.value === 'string' && hit.value.trim() !== '') return hit.value.trim()
+        } catch {
+          // 继续尝试进程环境变量
+        }
+      }
+      // 兜底：宿主把凭据放在进程环境里时直接取（只读环境变量，不碰任何凭据文件）
+      const fromEnv = process.env[reference]
+      return typeof fromEnv === 'string' ? fromEnv.trim() : ''
+    },
+  })
   ctx.inject(['webServer'], (host) => {
-    host.effect(() => mountKeyUsageRoutes(host.webServer, sessionSource), 'dsh-key-usage: http routes')
+    host.effect(() => mountKeyUsageRoutes(host.webServer, sessionSource, liveQuota), 'dsh-key-usage: http routes')
   })
 }

@@ -4,7 +4,7 @@
 
 ## 接手顺序（不要跳）
 
-1. [`README.md`](./README.md) —— 定位、状态、命令、**三条「改了没反应 / 数据面降级」的坑**。
+1. [`README.md`](./README.md) —— 定位、安装、权限说明、构建命令与**三个「改了没反应」的坑**。
 2. [`docs/01-架构与数据契约.md`](./docs/01-架构与数据契约.md) —— 端点字段与统计口径，改数据前必读。
 3. 动手前的差异表：[`docs/02-原型差异与优化清单.md`](./docs/02-原型差异与优化清单.md)。
 4. 要动 `KeyUsageSection.tsx` 结构时读 [`docs/03-按Tab拆分重构方案.md`](./docs/03-按Tab拆分重构方案.md)。
@@ -12,12 +12,12 @@
 
 ## 入口位置（2026-10-13 起）
 
-插件注册为**侧边栏导航项 + 主区域整页**：`sidebar.panellist`（`id` + `label` + 图标）与 `main`（同一标识放在 `key` 上）配对，写法对齐已装的 dsh-context「上下文洞察」。改 UI 前先读 README 的「入口位置与 slot 选择」——里面有历史方案（设置页、页脚浮层）为什么被弃用，以及回退改法。页面组件 `UsagePage` 不绑定具体 slot，换容器不用改内容。
+插件注册为**侧边栏导航项 + 主区域整页**：`sidebar.panellist`（`id` + `label` + 图标）与 `main`（同一标识放在 `key` 上）配对，写法对齐已装的 dsh-context「上下文洞察」。历史方案（`settings.section` 太挤、`sidebar.footer.action` 落到页脚且只能弹浮层）的教训见 [`docs/02-原型差异与优化清单.md`](./docs/02-原型差异与优化清单.md)。页面组件 `UsagePage` 不绑定具体 slot，换容器不用改内容。
 
 ## 硬约束
 
-- **零外网**：服务端只读本机文件；不要给客户端加任何外部请求、CDN 字体或图标库。
-- **不碰凭据**：不读 `.credentials.yaml`；界面里**不展示** `apiKeyEnv`（只允许服务端内部判定用），禁止出现密钥值、Authorization、cookie。
+- **默认零外网**：只有「余额与配额」允许请求各通道**官方**接口（`src/server/live-quota.ts`），且必须 6 秒超时、64 KiB 上限、失败回落本机快照；其它任何位置都不许加外部请求，客户端不许加 CDN 字体或图标库。
+- **不碰凭据文件**：不读 `.credentials.yaml`、不读 opencode 的 `auth.json`；查余额只许走宿主 `credentials` seam（`resolve(apiKeyEnv)`）或进程环境变量，Key 不落盘、不进日志、不返回给客户端。界面里**不展示** `apiKeyEnv`（只允许服务端内部判定用），禁止出现密钥值、Authorization、cookie。
 - **仅回环**：新增端点必须复用 `requireLoopback`，非回环一律 403。
 - **会话数据只走官方 read handle**：`sessionPersistence.open(id, "read") → read(0) → close`。**不要**自行解压 `~/.dsh/sessions/**/session.v4.jsonl.zstd`（多帧 zstd，Node 内置 zlib 逐帧解不出来），也不要读写/修复历史日志。服务缺失或读失败一律降级为 `coverage.status = "unavailable" | "partial"`，不许抛错、不许影响台账类端点。
 - **两套数据源不许混算**：台账（天 × 通道 × 模型）负责总览 / 使用明细 / 热力图；会话事件负责项目 / 会话 / 单日按小时。界面必须标注来源，页脚口径说明要同步更新。

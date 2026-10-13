@@ -5,6 +5,11 @@
 .quotaTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .quotaEnv { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 8px; }
 .quotaProvider { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-left: auto; }
+/* 「实时」小标签：与快照来源区分开，避免用户以为还是 12 天前的旧数据 */
+.liveChip {
+  border: 1px solid var(--dsw-alias-state-success-primary, #3fb950); color: var(--dsw-alias-state-success-primary, #3fb950);
+  border-radius: 999px; padding: 1px 7px; font-size: 10px; line-height: 1.6;
+}
 .balanceStrip { display: flex; gap: 10px 44px; flex-wrap: wrap; align-items: baseline; }
 .balanceItem .bsLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 2px; }
 .balanceItem .bsValue { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }

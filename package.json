@@ -27,8 +27,8 @@
   ],
   "scripts": {
     "build:client": "tsdown && node scripts/normalize-client-banner.mjs",
-    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/merge.js",
-    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/routes.test.mjs"
+    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/merge.js && node --check lib/live-quota.js",
+    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/routes.test.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.1"

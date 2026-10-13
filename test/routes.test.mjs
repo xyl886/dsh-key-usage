@@ -78,7 +78,7 @@ const handlers = new Map()
 process.env.DSH_HOME = home
 mountKeyUsageRoutes({ register: (route) => { handlers.set(route.path, route.handler) } }, sessionSource)
 
-async function callEndpoint(path, remoteAddress = '127.0.0.1') {
+async function callHandler(handlers, path, remoteAddress = '127.0.0.1') {
   const handler = handlers.get(path.split('?')[0])
   assert.ok(handler !== undefined, '端点应已注册：' + path)
   let status = 0
@@ -88,6 +88,10 @@ async function callEndpoint(path, remoteAddress = '127.0.0.1') {
     { writeHead: (code) => { status = code }, end: (body) => { payload = body } },
   )
   return { status, body: payload === '' ? null : JSON.parse(payload) }
+}
+
+async function callEndpoint(path, remoteAddress = '127.0.0.1') {
+  return callHandler(handlers, path, remoteAddress)
 }
 
 // 通道：本地端点判定 + 订阅窗口判定
@@ -126,10 +130,46 @@ assert.equal(heatmap.body.days[2].date, '2026-10-20')
 assert.equal(heatmap.body.days[2].totalTokens, 440, '台账缺的日期由会话事件补进热力图')
 assert.deepEqual(heatmap.body.sessionDates, ['2026-10-20'])
 
-// 快照
+// 余额 / 窗口：按配置的通道逐个返回；实时不可用时回落快照并标出来源
 const quota = await callEndpoint('/dsh-key-usage/quota')
-assert.equal(quota.body.providers.length, 1)
-assert.equal(quota.body.providers[0].plan.windows.length, 2)
+assert.equal(quota.body.providers.length, 2, '每个通道一条')
+const opencodeQuota = quota.body.providers.find((row) => row.provider === 'opencode-go')
+assert.equal(opencodeQuota.source, 'snapshot', '未注入实时服务时回落快照')
+assert.equal(opencodeQuota.plan.windows.length, 2)
+const localQuota = quota.body.providers.find((row) => row.provider === 'local')
+assert.equal(localQuota.source, 'snapshot')
+assert.equal(localQuota.error, 'no-snapshot', '既无实时也无快照时给出原因')
+
+// 实时优先：注入 stub 实时服务后，成功的通道标 live，失败的仍回落快照
+const liveHandlers = new Map()
+const liveCache = new Map([['opencode-go', {
+  provider: 'opencode-go',
+  ok: true,
+  error: null,
+  fetchedAt: 1791000900000,
+  balance: null,
+  windows: [
+    { key: '5h', percent: 19, resetsAt: '2026-10-13T15:00:00.000Z', status: null },
+    { key: 'week', percent: 8, resetsAt: null, status: null },
+    { key: 'month', percent: 4, resetsAt: null, status: null },
+  ],
+}]])
+const stubLiveQuota = { cached: () => liveCache, refreshIfStale: async () => liveCache }
+mountKeyUsageRoutes({ register: (route) => { liveHandlers.set(route.path, route.handler) } }, sessionSource, stubLiveQuota)
+
+const liveQuotaBody = await callHandler(liveHandlers, '/dsh-key-usage/quota')
+const liveOpencode = liveQuotaBody.body.providers.find((row) => row.provider === 'opencode-go')
+assert.equal(liveOpencode.source, 'live', '实时成功时用实时值')
+assert.equal(liveOpencode.fetchedAt, 1791000900000)
+assert.deepEqual(liveOpencode.plan.windows.map((window) => window.key), ['5h', 'week', 'month'])
+const liveLocal = liveQuotaBody.body.providers.find((row) => row.provider === 'local')
+assert.equal(liveLocal.source, 'snapshot', '实时没有结果的通道继续回落快照')
+
+// 通道判定要吃实时值：快照里峰值是 month 76%，实时峰值是 rolling 19%
+const liveChannels = await callHandler(liveHandlers, '/dsh-key-usage/channels')
+const liveOpencodeChannel = liveChannels.body.channels.find((channel) => channel.provider === 'opencode-go')
+assert.equal(liveOpencodeChannel.quotaPercent, 19, '额度百分比取实时窗口')
+assert.equal(liveOpencodeChannel.quotaWindowKey, '5h')
 
 // 总览汇总：今日与近 30 天
 const summary = await callEndpoint('/dsh-key-usage/summary')

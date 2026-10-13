@@ -30,6 +30,7 @@ export function QuotaTab(props: { channels: Channel[]; quotas: QuotaProvider[] }
         const snapshot = snapshotOf(channel.provider)
         const balance = snapshot?.balance ?? null
         const plan = snapshot?.plan ?? null
+        const isLive = snapshot?.source === 'live'
         const windows = plan !== null && Array.isArray((plan as { windows?: unknown }).windows)
           ? (plan as { windows: Array<{ key?: unknown; percent?: unknown; resetsAt?: unknown }> }).windows
           : null
@@ -38,6 +39,7 @@ export function QuotaTab(props: { channels: Channel[]; quotas: QuotaProvider[] }
             <div className={quotaStyles.quotaHead}>
               <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
               <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
+              {isLive && <span className={quotaStyles.liveChip}>实时</span>}
               <span className={quotaStyles.quotaProvider}>{channel.provider} · {channel.costLabel}</span>
             </div>
 
@@ -74,13 +76,18 @@ export function QuotaTab(props: { channels: Channel[]; quotas: QuotaProvider[] }
             )}
 
             {balance === null && (windows === null || windows.length === 0) && (
-              <div className={styles.dim}>{emptyReasonOf(channel)}</div>
+              <div className={styles.dim}>{emptyReasonOf(channel, snapshot)}</div>
             )}
 
-            {snapshot?.updatedAt !== null && snapshot?.updatedAt !== undefined && (
+            {isLive && (
+              <div className={quotaStyles.snapshotHint}>
+                实时查询于 {freshTextOf(snapshot?.fetchedAt ?? null)}（来自官方接口，最多缓存 1 分钟）
+              </div>
+            )}
+            {snapshot !== null && !isLive && (
               <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
-                快照时间 {fmtDateTime(snapshot.updatedAt)}
-                {staleDaysOf(snapshot.updatedAt) >= 1 ? ' · 已 ' + staleDaysOf(snapshot.updatedAt) + ' 天未更新（宿主未刷新）' : ''}
+                实时查询未成功（{errorTextOf(snapshot.error)}），显示本机快照
+                {snapshot.updatedAt === null ? '' : ' · 快照时间 ' + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? '，已 ' + staleDaysOf(snapshot.updatedAt) + ' 天未更新' : '')}
               </div>
             )}
           </div>
@@ -91,8 +98,33 @@ export function QuotaTab(props: { channels: Channel[]; quotas: QuotaProvider[] }
   )
 }
 
+/** 实时结果的相对时间文案。 */
+function freshTextOf(fetchedAt: number | null): string {
+  if (fetchedAt === null) return '刚刚'
+  const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1000))
+  if (seconds < 60) return '刚刚'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return minutes + ' 分钟前'
+  return Math.floor(minutes / 60) + ' 小时前'
+}
+
+/** 实时查询失败原因的展示文案。 */
+function errorTextOf(error: string | null): string {
+  if (error === null) return '未启用实时查询'
+  if (error === 'no-key') return '该通道未配置 API Key'
+  if (error === 'no-snapshot') return '没有快照可用'
+  if (error === 'network') return '网络不可达'
+  if (error === 'timeout') return '请求超时'
+  if (error === 'unauthorized') return '凭据被拒绝（401/403）'
+  if (error === 'bad-json') return '接口响应无法解析'
+  if (error === 'too-large') return '接口响应异常大'
+  if (error.startsWith('http-')) return '接口返回 HTTP ' + error.slice(5)
+  return error
+}
+
 /** 快照距今天数（向下取整）；用于把「宿主很久没刷新」显式标出来。 */
-function staleDaysOf(updatedAt: number): number {
+function staleDaysOf(updatedAt: number | null): number {
+  if (updatedAt === null) return 0
   return Math.floor((Date.now() - updatedAt) / 86400000)
 }
 
@@ -118,10 +150,12 @@ function orderedWindows(windows: Array<{ key?: unknown }>): Array<{ key?: unknow
   })
 }
 
-/** 无快照时的分档说明：区分未配置 / 免费额度 / 本地端点 / 宿主未查询。 */
-function emptyReasonOf(channel: Channel): string {
+/** 无数据时的分档说明：区分未配置凭据 / 免费额度 / 本地端点 / 无查询能力。 */
+function emptyReasonOf(channel: Channel, snapshot: QuotaProvider | null): string {
+  if (snapshot?.source === 'snapshot' && snapshot.error === 'no-key') return '该通道未配置 API Key，无法查询余额'
+  if (snapshot?.source === 'snapshot' && snapshot.error === 'unauthorized') return '凭据被通道拒绝，无法查询余额'
   if (channel.status === 'off') return '凭据引用存在，Key 未填写'
   if (channel.costMode === 'none') return '本地端点，无余额查询接口'
   if (channel.costMode === 'free') return '该通道无余额查询接口（免费额度）'
-  return '宿主尚未查询该通道的余额 / 配额'
+  return '该通道暂无可查询的余额 / 配额接口'
 }

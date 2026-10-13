@@ -71,8 +71,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const result = await fetchJson("/dsh-key-usage/heatmap");
 			return result === null ? null : result.days;
 		}
-		async function loadQuota() {
-			const result = await fetchJson("/dsh-key-usage/quota");
+		/**
+		* 余额与订阅窗口：服务端实时优先、失败回落本机快照。
+		* @param fresh - 用户手动刷新时传 true，强制重新查一次官方接口
+		*/
+		async function loadQuota(fresh = false) {
+			const result = await fetchJson("/dsh-key-usage/quota" + (fresh ? "?fresh=1" : ""));
 			return result === null ? null : result.providers;
 		}
 		function loadSummary() {
@@ -159,47 +163,47 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$5
 		});
 		var shared_module_css_default = {
-			"groupLabel": "LhdpGW_groupLabel",
-			"blockLabel": "LhdpGW_blockLabel",
-			"section": "LhdpGW_section",
-			"statusDot": "LhdpGW_statusDot",
-			"empty": "LhdpGW_empty",
 			"footnote": "LhdpGW_footnote",
-			"card": "LhdpGW_card",
 			"legend": "LhdpGW_legend",
-			"disabled": "LhdpGW_disabled",
-			"cardGrid3": "LhdpGW_cardGrid3",
-			"statLabel": "LhdpGW_statLabel",
-			"statValue": "LhdpGW_statValue",
-			"sortable": "LhdpGW_sortable",
-			"total": "LhdpGW_total",
-			"tabBar": "LhdpGW_tabBar",
-			"clickable": "LhdpGW_clickable",
-			"warning": "LhdpGW_warning",
-			"mono": "LhdpGW_mono",
-			"statExtra": "LhdpGW_statExtra",
-			"chipRow": "LhdpGW_chipRow",
-			"dim": "LhdpGW_dim",
-			"sortArrow": "LhdpGW_sortArrow",
-			"chip": "LhdpGW_chip",
-			"title": "LhdpGW_title",
-			"titleActions": "LhdpGW_titleActions",
+			"tipSub": "LhdpGW_tipSub",
 			"cardGrid4": "LhdpGW_cardGrid4",
-			"tooltip": "LhdpGW_tooltip",
+			"tabBar": "LhdpGW_tabBar",
+			"chipRow": "LhdpGW_chipRow",
+			"empty": "LhdpGW_empty",
+			"section": "LhdpGW_section",
+			"warning": "LhdpGW_warning",
+			"blockLabel": "LhdpGW_blockLabel",
+			"cardGridAuto": "LhdpGW_cardGridAuto",
+			"disabled": "LhdpGW_disabled",
+			"title": "LhdpGW_title",
+			"tipName": "LhdpGW_tipName",
+			"tipRate": "LhdpGW_tipRate",
+			"statValue": "LhdpGW_statValue",
+			"tipAmount": "LhdpGW_tipAmount",
+			"tipDivider": "LhdpGW_tipDivider",
+			"total": "LhdpGW_total",
+			"groupLabel": "LhdpGW_groupLabel",
+			"sortActive": "LhdpGW_sortActive",
+			"chip": "LhdpGW_chip",
+			"refreshBtn": "LhdpGW_refreshBtn",
+			"table": "LhdpGW_table",
 			"tipTitle": "LhdpGW_tipTitle",
+			"statusDot": "LhdpGW_statusDot",
+			"sortArrow": "LhdpGW_sortArrow",
+			"tooltip": "LhdpGW_tooltip",
+			"cardGrid3": "LhdpGW_cardGrid3",
+			"clickable": "LhdpGW_clickable",
 			"tipRow": "LhdpGW_tipRow",
-			"tipBar": "LhdpGW_tipBar",
+			"statLabel": "LhdpGW_statLabel",
+			"titleActions": "LhdpGW_titleActions",
+			"sortable": "LhdpGW_sortable",
 			"active": "LhdpGW_active",
 			"ghost": "LhdpGW_ghost",
-			"tipRate": "LhdpGW_tipRate",
-			"sortActive": "LhdpGW_sortActive",
-			"tipDivider": "LhdpGW_tipDivider",
-			"tipAmount": "LhdpGW_tipAmount",
-			"table": "LhdpGW_table",
-			"refreshBtn": "LhdpGW_refreshBtn",
-			"tipName": "LhdpGW_tipName",
-			"cardGridAuto": "LhdpGW_cardGridAuto",
-			"tipSub": "LhdpGW_tipSub"
+			"tipBar": "LhdpGW_tipBar",
+			"statExtra": "LhdpGW_statExtra",
+			"mono": "LhdpGW_mono",
+			"dim": "LhdpGW_dim",
+			"card": "LhdpGW_card"
 		};
 		//#endregion
 		//#region src/client/tooltip.tsx
@@ -365,35 +369,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$4
 		});
 		var overview_module_css_default = {
-			"empty": "J7Idbq_empty",
 			"warn": "J7Idbq_warn",
-			"danger": "J7Idbq_danger",
-			"heatmapHead": "J7Idbq_heatmapHead",
-			"disabledRow": "J7Idbq_disabledRow",
-			"quotaText": "J7Idbq_quotaText",
+			"heatmapWrap": "J7Idbq_heatmapWrap",
+			"cellKey": "J7Idbq_cellKey",
+			"keyEnv": "J7Idbq_keyEnv",
+			"sub": "J7Idbq_sub",
 			"heatmapCard": "J7Idbq_heatmapCard",
-			"heatmapTitle": "J7Idbq_heatmapTitle",
+			"heatMonths": "J7Idbq_heatMonths",
+			"heatmapHead": "J7Idbq_heatmapHead",
+			"idle": "J7Idbq_idle",
+			"heatGrid": "J7Idbq_heatGrid",
 			"free": "J7Idbq_free",
+			"keyDisplay": "J7Idbq_keyDisplay",
+			"dim": "J7Idbq_dim",
 			"heatWeek": "J7Idbq_heatWeek",
 			"rowLink": "J7Idbq_rowLink",
-			"clickable": "J7Idbq_clickable",
-			"idle": "J7Idbq_idle",
-			"sub": "J7Idbq_sub",
-			"heatWeekdays": "J7Idbq_heatWeekdays",
-			"cellKey": "J7Idbq_cellKey",
-			"off": "J7Idbq_off",
-			"heatScale": "J7Idbq_heatScale",
-			"heatmapWrap": "J7Idbq_heatmapWrap",
 			"keyTable": "J7Idbq_keyTable",
+			"danger": "J7Idbq_danger",
+			"off": "J7Idbq_off",
 			"miniBar": "J7Idbq_miniBar",
+			"heatmapTitle": "J7Idbq_heatmapTitle",
 			"quotaCell": "J7Idbq_quotaCell",
-			"dim": "J7Idbq_dim",
-			"keyDisplay": "J7Idbq_keyDisplay",
-			"heatMonths": "J7Idbq_heatMonths",
-			"tag": "J7Idbq_tag",
-			"keyEnv": "J7Idbq_keyEnv",
+			"heatScale": "J7Idbq_heatScale",
+			"disabledRow": "J7Idbq_disabledRow",
+			"heatWeekdays": "J7Idbq_heatWeekdays",
+			"quotaText": "J7Idbq_quotaText",
 			"heatCell": "J7Idbq_heatCell",
-			"heatGrid": "J7Idbq_heatGrid"
+			"empty": "J7Idbq_empty",
+			"tag": "J7Idbq_tag",
+			"clickable": "J7Idbq_clickable"
 		};
 		//#endregion
 		//#region src/client/components/Heatmap.tsx
@@ -729,29 +733,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$3
 		});
 		var detail_module_css_default = {
-			"segCache": "V9QVRa_segCache",
-			"chartTitle": "V9QVRa_chartTitle",
-			"segOut": "V9QVRa_segOut",
-			"rangeLeft": "V9QVRa_rangeLeft",
-			"barColumn": "V9QVRa_barColumn",
-			"rangeBar": "V9QVRa_rangeBar",
-			"subRow": "V9QVRa_subRow",
-			"subName": "V9QVRa_subName",
-			"bars": "V9QVRa_bars",
-			"segIn": "V9QVRa_segIn",
-			"subChannel": "V9QVRa_subChannel",
-			"active": "V9QVRa_active",
-			"subHead": "V9QVRa_subHead",
-			"rangeCaption": "V9QVRa_rangeCaption",
-			"subRowCell": "V9QVRa_subRowCell",
-			"rangeTabs": "V9QVRa_rangeTabs",
-			"subModel": "V9QVRa_subModel",
-			"subNumber": "V9QVRa_subNumber",
-			"barsDense": "V9QVRa_barsDense",
 			"toggleArrow": "V9QVRa_toggleArrow",
-			"shareBar": "V9QVRa_shareBar",
+			"bars": "V9QVRa_bars",
+			"subModel": "V9QVRa_subModel",
+			"rangeTabs": "V9QVRa_rangeTabs",
+			"rangeLeft": "V9QVRa_rangeLeft",
+			"segOut": "V9QVRa_segOut",
 			"barLabels": "V9QVRa_barLabels",
-			"rangeInput": "V9QVRa_rangeInput"
+			"subChannel": "V9QVRa_subChannel",
+			"subHead": "V9QVRa_subHead",
+			"active": "V9QVRa_active",
+			"barColumn": "V9QVRa_barColumn",
+			"subRowCell": "V9QVRa_subRowCell",
+			"subName": "V9QVRa_subName",
+			"chartTitle": "V9QVRa_chartTitle",
+			"subNumber": "V9QVRa_subNumber",
+			"segCache": "V9QVRa_segCache",
+			"rangeBar": "V9QVRa_rangeBar",
+			"rangeCaption": "V9QVRa_rangeCaption",
+			"subRow": "V9QVRa_subRow",
+			"rangeInput": "V9QVRa_rangeInput",
+			"segIn": "V9QVRa_segIn",
+			"barsDense": "V9QVRa_barsDense",
+			"shareBar": "V9QVRa_shareBar"
 		};
 		//#endregion
 		//#region src/client/components/ShareBar.tsx
@@ -1399,15 +1403,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$2
 		});
 		var lists_module_css_default = {
-			"filterBar": "QpFKma_filterBar",
-			"searchInput": "QpFKma_searchInput",
-			"listSub": "QpFKma_listSub",
+			"filterSelect": "QpFKma_filterSelect",
 			"sessionDay": "QpFKma_sessionDay",
-			"listMain": "QpFKma_listMain",
-			"listBar": "QpFKma_listBar",
-			"dayCount": "QpFKma_dayCount",
+			"filterBar": "QpFKma_filterBar",
 			"listTitle": "QpFKma_listTitle",
-			"filterSelect": "QpFKma_filterSelect"
+			"dayCount": "QpFKma_dayCount",
+			"listMain": "QpFKma_listMain",
+			"searchInput": "QpFKma_searchInput",
+			"listBar": "QpFKma_listBar",
+			"listSub": "QpFKma_listSub"
 		};
 		//#endregion
 		//#region src/client/tabs/ProjectsTab.tsx
@@ -1570,7 +1574,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:D:\EasyJob\.plugin\dsh-key-usage\src\client\styles\quota.module.css.mjs
-		const css$1 = ".F7iUHa_quotaList{flex-direction:column;gap:12px;display:flex}.F7iUHa_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:16px 18px}.F7iUHa_quotaHead{flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;display:flex}.F7iUHa_quotaTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.F7iUHa_quotaEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.F7iUHa_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}.F7iUHa_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;display:flex}.F7iUHa_balanceItem .F7iUHa_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.F7iUHa_balanceItem .F7iUHa_bsValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:16px;font-weight:650}.F7iUHa_windowRow{flex-wrap:wrap;gap:18px;display:flex}.F7iUHa_windowItem{flex:1;min-width:150px}.F7iUHa_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.F7iUHa_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.F7iUHa_windowValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:12px;font-weight:600}.F7iUHa_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.F7iUHa_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.F7iUHa_windowBar>i{border-radius:4px;height:100%;display:block}.F7iUHa_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:10px;font-size:10.5px}.F7iUHa_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-top:10px;font-size:10.5px}";
+		const css$1 = ".F7iUHa_quotaList{flex-direction:column;gap:12px;display:flex}.F7iUHa_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:16px 18px}.F7iUHa_quotaHead{flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;display:flex}.F7iUHa_quotaTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.F7iUHa_quotaEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.F7iUHa_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}.F7iUHa_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);border-radius:999px;padding:1px 7px;font-size:10px;line-height:1.6}.F7iUHa_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;display:flex}.F7iUHa_balanceItem .F7iUHa_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.F7iUHa_balanceItem .F7iUHa_bsValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:16px;font-weight:650}.F7iUHa_windowRow{flex-wrap:wrap;gap:18px;display:flex}.F7iUHa_windowItem{flex:1;min-width:150px}.F7iUHa_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.F7iUHa_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.F7iUHa_windowValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:12px;font-weight:600}.F7iUHa_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.F7iUHa_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.F7iUHa_windowBar>i{border-radius:4px;height:100%;display:block}.F7iUHa_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:10px;font-size:10.5px}.F7iUHa_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-top:10px;font-size:10.5px}";
 		const tagId$1 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1585,25 +1589,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$1
 		});
 		var quota_module_css_default = {
+			"quotaProvider": "F7iUHa_quotaProvider",
 			"quotaTitle": "F7iUHa_quotaTitle",
-			"balanceStrip": "F7iUHa_balanceStrip",
-			"quotaEnv": "F7iUHa_quotaEnv",
-			"quotaHead": "F7iUHa_quotaHead",
-			"quotaCard": "F7iUHa_quotaCard",
-			"balanceItem": "F7iUHa_balanceItem",
-			"windowRow": "F7iUHa_windowRow",
-			"windowBar": "F7iUHa_windowBar",
-			"windowItem": "F7iUHa_windowItem",
-			"snapshotStale": "F7iUHa_snapshotStale",
 			"quotaList": "F7iUHa_quotaList",
+			"windowName": "F7iUHa_windowName",
+			"windowBar": "F7iUHa_windowBar",
+			"snapshotStale": "F7iUHa_snapshotStale",
+			"windowHead": "F7iUHa_windowHead",
 			"bsValue": "F7iUHa_bsValue",
-			"windowReset": "F7iUHa_windowReset",
+			"balanceStrip": "F7iUHa_balanceStrip",
+			"balanceItem": "F7iUHa_balanceItem",
+			"quotaCard": "F7iUHa_quotaCard",
+			"quotaHead": "F7iUHa_quotaHead",
+			"bsLabel": "F7iUHa_bsLabel",
+			"windowRow": "F7iUHa_windowRow",
 			"windowValue": "F7iUHa_windowValue",
 			"snapshotHint": "F7iUHa_snapshotHint",
-			"quotaProvider": "F7iUHa_quotaProvider",
-			"bsLabel": "F7iUHa_bsLabel",
-			"windowName": "F7iUHa_windowName",
-			"windowHead": "F7iUHa_windowHead"
+			"quotaEnv": "F7iUHa_quotaEnv",
+			"windowReset": "F7iUHa_windowReset",
+			"windowItem": "F7iUHa_windowItem",
+			"liveChip": "F7iUHa_liveChip"
 		};
 		//#endregion
 		//#region src/client/tabs/QuotaTab.tsx
@@ -1649,6 +1654,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					const snapshot = snapshotOf(channel.provider);
 					const balance = snapshot?.balance ?? null;
 					const plan = snapshot?.plan ?? null;
+					const isLive = snapshot?.source === "live";
 					const windows = plan !== null && Array.isArray(plan.windows) ? plan.windows : null;
 					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: quota_module_css_default.quotaCard,
@@ -1663,6 +1669,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: quota_module_css_default.quotaTitle,
 										children: channel.displayName
+									}),
+									isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: quota_module_css_default.liveChip,
+										children: "实时"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 										className: quota_module_css_default.quotaProvider,
@@ -1722,14 +1732,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}),
 							balance === null && (windows === null || windows.length === 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: shared_module_css_default.dim,
-								children: emptyReasonOf(channel)
+								children: emptyReasonOf(channel, snapshot)
 							}),
-							snapshot?.updatedAt !== null && snapshot?.updatedAt !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: quota_module_css_default.snapshotHint,
+								children: [
+									"实时查询于 ",
+									freshTextOf(snapshot?.fetchedAt ?? null),
+									"（来自官方接口，最多缓存 1 分钟）"
+								]
+							}),
+							snapshot !== null && !isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: staleDaysOf(snapshot.updatedAt) >= 1 ? quota_module_css_default.snapshotStale : quota_module_css_default.snapshotHint,
 								children: [
-									"快照时间 ",
-									fmtDateTime(snapshot.updatedAt),
-									staleDaysOf(snapshot.updatedAt) >= 1 ? " · 已 " + staleDaysOf(snapshot.updatedAt) + " 天未更新（宿主未刷新）" : ""
+									"实时查询未成功（",
+									errorTextOf(snapshot.error),
+									"），显示本机快照",
+									snapshot.updatedAt === null ? "" : " · 快照时间 " + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? "，已 " + staleDaysOf(snapshot.updatedAt) + " 天未更新" : "")
 								]
 							})
 						]
@@ -1740,8 +1759,31 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})]
 			});
 		}
+		/** 实时结果的相对时间文案。 */
+		function freshTextOf(fetchedAt) {
+			if (fetchedAt === null) return "刚刚";
+			const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1e3));
+			if (seconds < 60) return "刚刚";
+			const minutes = Math.floor(seconds / 60);
+			if (minutes < 60) return minutes + " 分钟前";
+			return Math.floor(minutes / 60) + " 小时前";
+		}
+		/** 实时查询失败原因的展示文案。 */
+		function errorTextOf(error) {
+			if (error === null) return "未启用实时查询";
+			if (error === "no-key") return "该通道未配置 API Key";
+			if (error === "no-snapshot") return "没有快照可用";
+			if (error === "network") return "网络不可达";
+			if (error === "timeout") return "请求超时";
+			if (error === "unauthorized") return "凭据被拒绝（401/403）";
+			if (error === "bad-json") return "接口响应无法解析";
+			if (error === "too-large") return "接口响应异常大";
+			if (error.startsWith("http-")) return "接口返回 HTTP " + error.slice(5);
+			return error;
+		}
 		/** 快照距今天数（向下取整）；用于把「宿主很久没刷新」显式标出来。 */
 		function staleDaysOf(updatedAt) {
+			if (updatedAt === null) return 0;
 			return Math.floor((Date.now() - updatedAt) / 864e5);
 		}
 		function orderedBalanceEntries(balance) {
@@ -1761,12 +1803,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return (firstIndex < 0 ? 99 : firstIndex) - (secondIndex < 0 ? 99 : secondIndex);
 			});
 		}
-		/** 无快照时的分档说明：区分未配置 / 免费额度 / 本地端点 / 宿主未查询。 */
-		function emptyReasonOf(channel) {
+		/** 无数据时的分档说明：区分未配置凭据 / 免费额度 / 本地端点 / 无查询能力。 */
+		function emptyReasonOf(channel, snapshot) {
+			if (snapshot?.source === "snapshot" && snapshot.error === "no-key") return "该通道未配置 API Key，无法查询余额";
+			if (snapshot?.source === "snapshot" && snapshot.error === "unauthorized") return "凭据被通道拒绝，无法查询余额";
 			if (channel.status === "off") return "凭据引用存在，Key 未填写";
 			if (channel.costMode === "none") return "本地端点，无余额查询接口";
 			if (channel.costMode === "free") return "该通道无余额查询接口（免费额度）";
-			return "宿主尚未查询该通道的余额 / 配额";
+			return "该通道暂无可查询的余额 / 配额接口";
 		}
 		//#endregion
 		//#region src/client/tabs/SessionsTab.tsx
@@ -2002,11 +2046,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [available, setAvailable] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(false);
 			const tooltip = useTooltip();
-			const reload = (0, react.useCallback)(async (includeSessionData) => {
+			const reload = (0, react.useCallback)(async (includeSessionData, forceQuota = false) => {
 				setLoading(true);
-				const [channelResult, quotaResult, summaryResult, heatmapResult] = await Promise.all([
+				const quotaResult = await loadQuota(forceQuota);
+				const [channelResult, summaryResult, heatmapResult] = await Promise.all([
 					loadChannels(),
-					loadQuota(),
 					loadSummary(),
 					loadHeatmap()
 				]);
@@ -2079,7 +2123,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				channelFilter
 			]);
 			const refresh = (0, react.useCallback)(() => {
-				reload(activeTab === "sessions" || activeTab === "projects" || sessions !== null || projects !== null);
+				reload(activeTab === "sessions" || activeTab === "projects" || sessions !== null || projects !== null, true);
 				loadUsage(bounds.from, bounds.to, channelFilter).then((result) => {
 					if (result !== null) setUsage(result);
 				});

@@ -35,8 +35,13 @@ export async function loadHeatmap(): Promise<HeatmapDay[] | null> {
   return result === null ? null : result.days
 }
 
-export async function loadQuota(): Promise<QuotaProvider[] | null> {
-  const result = await fetchJson<{ providers: QuotaProvider[] }>('/dsh-key-usage/quota')
+/**
+ * 余额与订阅窗口：服务端实时优先、失败回落本机快照。
+ * @param fresh - 用户手动刷新时传 true，强制重新查一次官方接口
+ */
+export async function loadQuota(fresh = false): Promise<QuotaProvider[] | null> {
+  const query = fresh ? '?fresh=1' : ''
+  const result = await fetchJson<{ providers: QuotaProvider[] }>('/dsh-key-usage/quota' + query)
   return result === null ? null : result.providers
 }
 

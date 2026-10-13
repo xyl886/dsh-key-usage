@@ -9,7 +9,10 @@
  * - /dsh-key-usage/projects  项目（工作目录）用量
  *
  * 台账已停更时（本机停在 2026-09-30），按天序列会用会话事件补齐缺的日期（见 merge.ts），
- * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403；零外网。
+ * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403。
+ *
+ * 网络：只有「余额与订阅窗口」会访问各通道**官方**接口（见 live-quota.ts），
+ * 失败即回落本地快照；其余端点零外网。
  */
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -29,7 +32,9 @@ import {
   quotaWindowLabel,
   readProviderSnapshots,
   type ChannelInfo,
+  type ProviderSnapshot,
 } from './collect.js'
+import { type LiveQuota, type LiveQuotaService } from './live-quota.js'
 import {
   hoursOfDate,
   projectRowsOf,
@@ -58,6 +63,12 @@ export const unavailableSessionSource: SessionSource = {
     records: [],
     coverage: { status: 'unavailable', totalSessions: 0, countedSessions: 0, skippedSessions: 0 },
   }),
+}
+
+/** 关闭实时查询时的空实现（离线测试与降级用）。 */
+export const disabledLiveQuota: LiveQuotaService = {
+  cached: () => new Map<string, LiveQuota>(),
+  refreshIfStale: async () => new Map<string, LiveQuota>(),
 }
 
 const EMPTY_LEDGER: UsageLedger = { version: 0, days: {} }
@@ -96,7 +107,11 @@ function channelPayload(channel: ChannelInfo): Record<string, unknown> {
   }
 }
 
-export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: SessionSource = unavailableSessionSource): void {
+export function mountKeyUsageRoutes(
+  webServer: WebServer,
+  sessionSource: SessionSource = unavailableSessionSource,
+  liveQuota: LiveQuotaService = disabledLiveQuota,
+): void {
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
 
@@ -104,12 +119,14 @@ export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: Session
     try { return readFileSync(path, 'utf8') } catch { return null }
   }) ?? EMPTY_LEDGER
 
-  const loadChannels = (): ChannelInfo[] => {
+  const readSnapshots = (): ProviderSnapshot[] => readProviderSnapshots(snapshotPath).providers
+
+  const loadChannels = (live: Map<string, LiveQuota> = new Map()): ChannelInfo[] => {
     // cordis.yml 是应用按需重写的组合产物：插件集变化期间会短暂变成空模板，
     // 因此先读它，取不到再回退到用户 patch 层 cordis.patch.yml。
     // 两个文件都含 !!js 表达式，只做文本提取，不执行任何表达式。
     const profileDir = join(dshHomePath(), 'profiles', 'desktop')
-    const snapshots = readProviderSnapshots(snapshotPath).providers
+    const snapshots = mergeLiveSnapshots(readSnapshots(), live)
     const composed = readTextFile(join(profileDir, 'cordis.yml'))
     if (composed !== null) {
       const channels = classifyChannels(extractChannels(composed), snapshots)
@@ -124,7 +141,8 @@ export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: Session
     path: '/dsh-key-usage/channels',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      sendJson(response, 200, { channels: loadChannels().map(channelPayload) })
+      // 只用缓存：状态判定不该为了一次刷新去等网络，实时结果由 /quota 预热
+      sendJson(response, 200, { channels: loadChannels(liveQuota.cached()).map(channelPayload) })
     },
   })
 
@@ -203,7 +221,43 @@ export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: Session
     path: '/dsh-key-usage/quota',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      sendJson(response, 200, readProviderSnapshots(snapshotPath))
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const channels = loadChannels()
+      // 打开「余额与配额」时才等网络：缓存过期就刷新一次，失败一律回落快照
+      const live = url.searchParams.get('fresh') === '1'
+        ? await liveQuota.refreshIfStale(channels, true)
+        : await liveQuota.refreshIfStale(channels)
+      const snapshots = readSnapshots()
+      const providers = channels.map((channel) => {
+        const liveEntry = live.get(channel.provider)
+        const snapshot = snapshots.find((entry) => entry.provider === channel.provider) ?? null
+        if (liveEntry !== undefined && liveEntry.ok) {
+          return {
+            provider: channel.provider,
+            displayName: channel.displayName,
+            credential: channel.apiKeyEnv,
+            source: 'live',
+            fetchedAt: liveEntry.fetchedAt,
+            updatedAt: liveEntry.fetchedAt,
+            error: null,
+            balance: liveEntry.balance,
+            plan: liveEntry.windows === null ? null : { windows: liveEntry.windows },
+          }
+        }
+        return {
+          provider: channel.provider,
+          displayName: snapshot?.displayName ?? channel.displayName,
+          credential: snapshot?.credential ?? channel.apiKeyEnv,
+          source: 'snapshot',
+          fetchedAt: null,
+          updatedAt: snapshot?.updatedAt ?? null,
+          // 实时失败的原因要透出（未配置凭据 / 网络 / 鉴权），界面据此提示
+          error: liveEntry?.error ?? (snapshot === null ? 'no-snapshot' : null),
+          balance: snapshot?.balance ?? null,
+          plan: snapshot?.plan ?? null,
+        }
+      })
+      sendJson(response, 200, { providers })
     },
   })
 
@@ -283,8 +337,29 @@ export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: Session
   })
 }
 
-function minKey(first: string | undefined, second: string | undefined): string | undefined {
-  if (first === undefined) return second
+/**
+ * 把实时余额 / 窗口合并进快照数组，供通道状态判定（额度百分比、余额文案）使用。
+ * 只覆盖查询成功的条目，失败条目保持快照原值。
+ */
+function mergeLiveSnapshots(snapshots: ProviderSnapshot[], live: Map<string, LiveQuota>): ProviderSnapshot[] {
+  if (live.size === 0) return snapshots
+  const byProvider = new Map(snapshots.map((entry) => [entry.provider, entry]))
+  for (const [provider, result] of live) {
+    if (!result.ok) continue
+    const existing = byProvider.get(provider)
+    byProvider.set(provider, {
+      provider,
+      displayName: existing?.displayName ?? null,
+      credential: existing?.credential ?? null,
+      updatedAt: result.fetchedAt,
+      balance: result.balance ?? existing?.balance ?? null,
+      plan: result.windows === null ? (existing?.plan ?? null) : { windows: result.windows },
+    })
+  }
+  return [...byProvider.values()]
+}
+
+function minKey(first: string | undefined, second: string | undefined): string | undefined {  if (first === undefined) return second
   if (second === undefined) return first
   return first < second ? first : second
 }

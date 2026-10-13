@@ -54,10 +54,12 @@ export function KeyUsageSection() {
   const [loading, setLoading] = useState(false)
   const tooltip = useTooltip()
 
-  const reload = useCallback(async (includeSessionData: boolean) => {
+  const reload = useCallback(async (includeSessionData: boolean, forceQuota = false) => {
     setLoading(true)
-    const [channelResult, quotaResult, summaryResult, heatmapResult] = await Promise.all([
-      loadChannels(), loadQuota(), loadSummary(), loadHeatmap(),
+    // 先查余额：服务端会借这次调用预热实时结果，随后 /channels 的状态判定就能用上
+    const quotaResult = await loadQuota(forceQuota)
+    const [channelResult, summaryResult, heatmapResult] = await Promise.all([
+      loadChannels(), loadSummary(), loadHeatmap(),
     ])
     setChannels(channelResult ?? [])
     setQuotas(quotaResult ?? [])
@@ -101,7 +103,7 @@ export function KeyUsageSection() {
   }, [bounds.from, bounds.to, channelFilter])
 
   const refresh = useCallback(() => {
-    void reload(activeTab === 'sessions' || activeTab === 'projects' || sessions !== null || projects !== null)
+    void reload(activeTab === 'sessions' || activeTab === 'projects' || sessions !== null || projects !== null, true)
     void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => { if (result !== null) setUsage(result) })
   }, [reload, activeTab, sessions, projects, bounds.from, bounds.to, channelFilter])
 

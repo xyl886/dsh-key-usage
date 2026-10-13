@@ -101,6 +101,12 @@ export interface QuotaProvider {
   displayName: string | null
   credential: string | null
   updatedAt: number | null
+  /** live = 刚从官方接口查到；snapshot = 实时失败后回落到本机快照。 */
+  source: 'live' | 'snapshot'
+  /** 实时查询完成时间（source=live 时有效）。 */
+  fetchedAt: number | null
+  /** 实时失败原因：no-key / network / timeout / unauthorized / http-<code> / bad-json / no-snapshot。 */
+  error: string | null
   balance: Record<string, unknown> | null
   plan: Record<string, unknown> | null
 }
