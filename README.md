@@ -59,7 +59,7 @@ dsh plugin --profile web remove dsh-key-usage
 curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [...] } 即已挂载
 ```
 
-7 个端点全部只读 GET，且只接受 `127.0.0.1` / `::1` 回环请求，非回环一律 403。
+8 个端点全部只读 GET，且只接受 `127.0.0.1` / `::1` 回环请求，非回环一律 403。
 
 ## 功能
 
@@ -80,9 +80,17 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 
 - 按工作目录聚合的调用数、Tokens、占比、成本与最近活跃时间，支持搜索、按通道筛选、按列排序。
 
+**按模型**
+
+- 按 `通道 + 模型` 聚合的调用数、Tokens、占比、缓存命中率、成本与会话数，支持搜索、按通道筛选、按列排序。
+
 **会话用量**
 
 - 按会话列出时间、时长、Tokens、命中率与成本，按日期分组，同样支持搜索 / 筛选 / 排序。
+
+**导出**
+
+- 使用明细 / 按模型 / 项目用量 / 会话用量四处都能把**当前筛选后的数据**导出成 CSV 或 JSON；CSV 带 UTF-8 BOM，Excel 打开中文不乱码。
 
 **余额与配额**
 
@@ -115,6 +123,12 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 | 宿主 `sessionPersistence` 服务 | 项目 / 会话 / 按小时 | 只开只读句柄（`open("read") → read(0) → close`），不自行解压会话文件 |
 | 宿主 `credentials` 服务 / 进程环境变量 | 查余额时的 API Key | 只用于拼 `Authorization` 请求头 |
 
+**唯一写入的对象**：
+
+| 写入对象 | 用途 | 说明 |
+| --- | --- | --- |
+| `$DSH_HOME/dsh-key-usage/quota-snapshots.json` | 余额 / 订阅窗口**快照** | 每次实时查询成功即落盘（原子写：临时文件 + 改名，只保留每个通道最新一份）；失败回落时与宿主那份**取更新的**。不含任何密钥，内容就是 `/quota` 返回的余额与窗口 |
+
 **会联网的唯一路径**：打开「余额与配额」时按通道请求官方接口，结果缓存 60 秒（点「刷新」强制重查）：
 
 | 通道 | 接口 |
@@ -126,7 +140,7 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 请求 6 秒超时、响应上限 64 KiB、只发 `Authorization` 与 `Accept` 两个头；任何失败都回落本机快照并在卡片上说明原因。
 
 - **不读凭据文件**：从不打开 `.credentials.yaml`；密钥不落盘、不进日志、不返回给前端；界面只显示 `apiKeyEnv` 这类**变量名**。
-- **不写文件**：不改宿主配置，不写任何数据文件。
+- **只写一个自己的文件**：`$DSH_HOME/dsh-key-usage/quota-snapshots.json` —— **每次余额/窗口实时查询成功**后落一份快照，下次查询失败时回落到「最近一次成功」而不是宿主那份可能很旧的快照（本机实测宿主那份已 13 天未更新）。不改宿主配置，不碰宿主的 `provider-snapshots.json`、不写其它任何数据文件。
 - **仅回环**：所有端点只监听本机回环，非回环 403。
 
 ## 兼容与运行要求
@@ -174,35 +188,43 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 ## 开发
 
 ```bash
-node node_modules/tsdown/dist/run.mjs && node scripts/normalize-client-banner.mjs   # 构建客户端 → client/client.js
-node node_modules/typescript/bin/tsc -p tsconfig.server.json                        # 构建服务端 → lib/
-node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit                      # 类型检查
-node test/ledger.test.mjs    # 其余：collect / channels / session-usage / sessions / merge / live-quota / routes
+pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
+pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
+pnpm run typecheck    # 客户端 + 服务端类型检查
+pnpm run test         # 9 个离线测试
+pnpm run check        # lib/*.js 语法检查
+pnpm run verify       # 上面全套（CI 跑的就是这条）
+pnpm run pack:dry     # 发布清单自检
 ```
+
+> 本目录的 `node_modules` 目前是 pnpm 10.32.1 装的；用**不同大版本**的 pnpm 执行 `pnpm run` 会触发「清空 modules 目录」而中止。此时改用 `npm run <script>`（等价），或先按 `packageManager` 字段对齐 pnpm 版本再重装依赖。
 
 **改动生效条件**（最容易踩的坑）：
 
 | 改动 | 生效方式 |
 | --- | --- |
-| `src/client/**` | 重新构建 → **刷新页面** |
-| `src/server/**` | 重新编译 `lib/` → **退出重开 DSH**（无热重载） |
+| `src/client/**` | `pnpm run build` → **刷新页面** |
+| `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
 
 另外两个坑：`tsc --noEmit` **不会**更新 `lib/`，而测试读的是 `lib/*.js`；`cordis.yml` 是应用重写的组合产物，插件集变化期间会短暂变成空模板，因此通道提取会回退到 `cordis.patch.yml`。
+
+**CI**：[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) 在 push / PR 上跑 `pnpm run verify`，另加两道闸：**构建产物必须与源码同步**（`lib/`、`client/` 是要提交的）与**发布包必须含三件套**（`lib/index.js`、`client/client.js`、`cordis.patch.yml`）。发布仍是人工动作。
 
 **目录结构**
 
 ```
 src/client/   index.tsx（slot 注册）· UsagePage / UsageIcon · KeyUsageSection（Tab 外壳）
-              tabs/（5 个页面）· components/ · styles/（CSS Module，basename 全局唯一）
-src/server/   index.ts（cordis apply）· routes.ts（7 个只读端点）
+              tabs/（6 个页面）· components/ · export.ts · styles/（CSS Module，basename 全局唯一）
+src/server/   index.ts（cordis apply）· routes.ts（8 个只读端点）
               ledger.ts（台账）· collect.ts（通道判定）· merge.ts（台账 × 会话按天合并）
-              live-quota.ts（官方余额实时查询 + 缓存）· sessions.ts / session-usage.ts（会话折叠）
+              live-quota.ts（官方余额实时查询 + 缓存）· quota-snapshots.ts（成功即落盘，失败回落）
+              sessions.ts / session-usage.ts / session-meta.ts（会话折叠 / 标题 / 归档）
 lib/ client/  构建产物（发布必须带，git 与 npm 都提交）
 ```
 
 客户端注册的是 `sidebar.panellist`（导航项）+ `main`（主区域整页），与官方 `dsh-context`「上下文洞察」同一套写法。
 
-**延伸文档**：[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [AGENTS.md](./AGENTS.md)
+**延伸文档**：[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [AGENTS.md](./AGENTS.md)
 
 ## 许可证
 

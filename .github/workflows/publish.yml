@@ -1,0 +1,72 @@
+name: Publish
+
+# 手动触发：只有明确点「Run workflow」才会动作（发版由人决定，见 AGENTS.md「发版与推送」）。
+# 默认 dry_run=true，先跑一遍构建 + 校验 + 打包清单，确认无误后再把 dry_run 设为 false 真正发布。
+# 需要仓库 Secret：NPM_TOKEN（Settings → Secrets and variables → Actions）。
+#   - Granular token：Packages 只勾 dsh-key-usage、Permissions Read and write、勾 Bypass 2FA（否则要 OTP）
+#   - 本机不再需要放 token；撤销本机 token 后仍可从 CI 发布
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只校验与打包，不真正发布
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance（可信发布，来源可溯）
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: 校验 · 打包 · 发布
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm（版本取自 package.json 的 packageManager）
+        uses: pnpm/action-setup@v4
+
+      - name: 安装 Node.js（带 npm registry 配置）
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查 + 构建 + 测试
+        run: pnpm run verify
+
+      - name: 产物必须与源码同步
+        run: git diff --exit-code -- lib client
+
+      - name: 版本号检查（不能重复发布已用过的版本）
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "准备发布 dsh-key-usage@$VERSION"
+          if npm view "dsh-key-usage@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::dsh-key-usage@$VERSION 已经发布过；npm 版本号不可复用，请先改 package.json"
+            exit 1
+          fi
+
+      - name: 打包清单
+        run: npm pack --dry-run
+
+      - name: 发布到 npm
+        if: ${{ inputs.dry_run == false }}
+        run: pnpm publish --access public --provenance --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 干跑提示
+        if: ${{ inputs.dry_run == true }}
+        run: echo "dry_run=true：已完成校验，未发布。把 dry_run 设为 false 再跑一次即可发布。"

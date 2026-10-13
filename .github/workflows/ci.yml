@@ -1,0 +1,54 @@
+name: CI
+
+# 只做「构建 + 类型检查 + 测试 + 产物同步」四件事，不发布。
+# 发布动作保持人工（见 AGENTS.md「发版与推送」），需要自动化时再加独立的发布工作流。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 构建 · 类型检查 · 测试
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm（版本取自 package.json 的 packageManager）
+        uses: pnpm/action-setup@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查 + 构建 + 语法检查 + 测试
+        run: pnpm run verify
+
+      - name: 发布产物必须与源码同步（lib/ 与 client/ 是要提交的）
+        run: |
+          if ! git diff --exit-code -- lib client; then
+            echo "::error::lib/ 或 client/ 与源码不同步 —— 本地跑 pnpm run build 后一起提交"
+            exit 1
+          fi
+
+      - name: 发布清单自检（产物三件套必须在包里）
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.log
+          for required in lib/index.js client/client.js cordis.patch.yml; do
+            grep -q "$required" /tmp/pack.log || { echo "::error::发布包里缺少 $required"; exit 1; }
+          done
