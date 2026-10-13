@@ -95,11 +95,11 @@ export function KeyUsageSection() {
     return () => { cancelled = true }
   }, [pricingSignature])
 
-  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时）
+  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时；余额页也需要按模型用量给「最值得补规则」排序）
   useEffect(() => {
     if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
     if (activeTab === 'projects' && projects === null) void loadProjects().then(setProjects)
-    if (activeTab === 'models' && models === null) void loadModels().then(setModels)
+    if ((activeTab === 'models' || activeTab === 'quota') && models === null) void loadModels().then(setModels)
   }, [activeTab, sessions, projects, models])
 
   const bounds = useMemo(() => {
@@ -189,6 +189,7 @@ export function KeyUsageSection() {
           pricing={pricing}
           pricingState={pricingState}
           pricingSettings={pricingSettings}
+          models={models}
         />
       )}
 

@@ -5,7 +5,7 @@
 import { type ReactNode } from 'react'
 import { quotaBarColor, statusColorOf } from '../channels.ts'
 import { fmtDateTime } from '../format.ts'
-import type { Channel, PricingResponse, QuotaProvider } from '../types.ts'
+import type { Channel, ModelsResponse, PricingResponse, QuotaProvider } from '../types.ts'
 import type { PricingSettingsState, PricingSettingsStore } from '../pricingSettings.ts'
 import { PricingRulesPanel } from '../components/PricingRulesPanel.tsx'
 import styles from '../styles/shared.module.css'
@@ -33,6 +33,7 @@ export function QuotaTab(props: {
   pricing: PricingResponse | null
   pricingState: PricingSettingsState
   pricingSettings: PricingSettingsStore
+  models: ModelsResponse | null
 }): ReactNode {
   const snapshotOf = (provider: string): QuotaProvider | null => props.quotas.find((item) => item.provider === provider) ?? null
   return (
@@ -113,6 +114,8 @@ export function QuotaTab(props: {
         state={props.pricingState}
         pricing={props.pricing}
         channels={props.channels}
+        // 按模型用量交给抽屉里的「最值得补规则的模型」排序用
+        models={props.models}
       />
     </div>
   )

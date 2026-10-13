@@ -48,15 +48,23 @@
 }
 .sourceOfficial { color: var(--dsw-alias-label-tertiary, #67676f); }
 .sourceRule { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+/* 内置官方价目：比「自定」弱、比「估算」强，用次级文本色而非对错语义色 */
+.sourceCatalog { color: var(--dsw-alias-label-secondary, #9a9aa2); }
 .sourceEstimate { color: var(--dsw-alias-state-warning-primary, #e0a13c); }
+
+/* 内置官方价目说明：只读信息，不需要用户操作 */
+.catalogNote {
+  margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.7;
+  color: var(--dsw-alias-label-secondary, #9a9aa2);
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+}
 
 .offPeakChip {
   display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
   border: 1px solid var(--dsw-alias-state-success-primary, #3fb96f); color: var(--dsw-alias-state-success-primary, #3fb96f);
 }
 
-.editor { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
-.editorGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.editor { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }.editorGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
 .field input, .field select {
@@ -75,5 +83,50 @@
 .empty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; padding: 12px 0; }
 .warning { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 11.5px; margin: 6px 0; }
 .error { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-size: 11.5px; margin: 6px 0; }
-.savingsList { margin: 6px 0 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; line-height: 1.7; }
+.savingsList { margin: 6px 0 0; padding: 0; list-style: none; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.7; }
 .hiddenFile { display: none; }
+
+/* ===== 摘要行：默认收起的全部内容，一行说清「钱凭什么 + 省了多少 + 怎么改」 ===== */
+.summaryStrip {
+  display: flex; align-items: center; gap: 12px 28px; flex-wrap: wrap;
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+  border-radius: 12px; padding: 12px 16px;
+}
+.summaryBasis { flex: 1 1 320px; min-width: 0; }
+.summarySaving { flex: 0 0 auto; }
+.summaryActions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.summaryStrip .summaryName { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 3px; }
+.summaryStrip .summaryValue {
+  font-size: 12.5px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec);
+  font-variant-numeric: tabular-nums; line-height: 1.5;
+}
+.summaryStrip .summaryValue.saving { color: var(--dsw-alias-state-success-primary, #3fb96f); }
+.infoBtn {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
+  color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+}
+.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
+
+/* 口径说明：点 ⓘ 才展开，不再占摘要正文 */
+.explanation {
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+  border-radius: 10px; padding: 10px 14px; margin-top: 8px;
+}
+.explanationTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
+.explanationList { margin: 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.75; }
+.explanationList b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
+
+/* ===== 抽屉：点「配置规则」才展开 ===== */
+.drawer {
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px;
+  padding: 12px 16px 14px; margin-top: 8px;
+}
+.sectionBlock { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); }
+.statItem .statNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 3px; }
+
+.worthList { margin: 6px 0 0; padding: 0; list-style: none; font-size: 11.5px; line-height: 1.9; }
+.worthList li, .savingsList li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.worthMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
+.savingsList .saving { color: var(--dsw-alias-state-success-primary, #3fb96f); font-weight: 600; margin-left: auto; }
+.linkBtn:disabled { opacity: .5; cursor: default; }
