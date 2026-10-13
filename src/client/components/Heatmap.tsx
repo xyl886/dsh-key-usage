@@ -1,7 +1,8 @@
 /**
- * 年度活跃热力图：53 周滚动窗口（含未来格 ghost 占位）。
- * 强度分档取活跃日的三分位（p33 / p67），并在卡片底部标出实际阈值 ——
- * 固定绝对值在低用量下会全暗、高用量下会全亮，分位数能保证三档都有区分度。
+ * 活跃热力图：最近约 9 个月的滚动窗口（含未来格占位）。
+ * 强度分档取活跃日的三分位（p33 / p67），阈值随可见区间自动变化，
+ * 具体数值并入页面底部的口径说明，不再单独占一行。
+ * 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
  */
 import { useMemo, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../channels.ts'
@@ -11,7 +12,8 @@ import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.ts
 import styles from '../styles/overview.module.css'
 import shared from '../styles/shared.module.css'
 
-const WEEK_COUNT = 53
+/** 9 个月 ≈ 39 周；配合 18px 方形格子，窄窗口下横向滚动。 */
+const WEEK_COUNT = 39
 const DAY_MS = 86400000
 
 interface HeatCell {
@@ -82,7 +84,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
   return (
     <div className={styles.heatmapCard}>
       <div className={styles.heatmapHead}>
-        <span className={styles.heatmapTitle}>活跃热力图 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
+        <span className={styles.heatmapTitle}>活跃热力图 · 近 9 个月 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
         <span className={shared.legend}>
           <span><i className="ghost" />无数据</span>
           <span><i style={{ background: LEVEL_COLORS[0] }} />无用量</span>
@@ -91,37 +93,38 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
           <span><i style={{ background: LEVEL_COLORS[3] }} />高</span>
         </span>
       </div>
-      <div className={styles.heatmapWrap}>
-        <div className={styles.heatWeekdays}>
-          <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-        </div>
-        <div className={styles.heatGrid}>
-          {columns.map((week, weekIndex) => (
-            <div className={styles.heatWeek} key={weekIndex}>
-              {week.map((cell) => {
-                const day = cell.state === 'active' ? heatmapByDate.get(cell.date) : undefined
-                const className = cell.state === 'active'
-                  ? styles.heatCell
-                  : cell.state === 'idle' ? styles.heatCell + ' ' + styles.idle : styles.heatCell + ' ' + styles.empty
-                return (
-                  <div
-                    key={cell.date}
-                    className={className}
-                    style={cell.state === 'active' ? { background: LEVEL_COLORS[cell.level] } : undefined}
-                    onMouseMove={(event) => tooltip.show(event, tipOf(cell, day, channels))}
-                    onMouseLeave={tooltip.hide}
-                  />
-                )
-              })}
+      <div className={styles.heatmapScroll}>
+        <div className={styles.heatmapBody}>
+          <div className={styles.heatWeekdays}>
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div className={styles.heatGridCol}>
+            <div className={styles.heatGrid}>
+              {columns.map((week, weekIndex) => (
+                <div className={styles.heatWeek} key={weekIndex}>
+                  {week.map((cell) => {
+                    const day = cell.state === 'active' ? heatmapByDate.get(cell.date) : undefined
+                    const className = cell.state === 'active'
+                      ? styles.heatCell
+                      : cell.state === 'idle' ? styles.heatCell + ' ' + styles.idle : styles.heatCell + ' ' + styles.empty
+                    return (
+                      <div
+                        key={cell.date}
+                        className={className}
+                        style={cell.state === 'active' ? { background: LEVEL_COLORS[cell.level] } : undefined}
+                        onMouseMove={(event) => tooltip.show(event, tipOf(cell, day, channels))}
+                        onMouseLeave={tooltip.hide}
+                      />
+                    )
+                  })}
+                </div>
+              ))}
             </div>
-          ))}
+            <div className={styles.heatMonths}>
+              {monthLabels.map((label, index) => <span key={index}>{label}</span>)}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className={styles.heatMonths}>
-        {monthLabels.map((label, index) => <span key={index}>{label}</span>)}
-      </div>
-      <div className={styles.heatScale}>
-        分档按活跃日三分位：少 &lt; {fmtTokens(thresholds[0])} · 中 &lt; {fmtTokens(thresholds[1])} · 高 ≥ {fmtTokens(thresholds[1])}
       </div>
     </div>
   )

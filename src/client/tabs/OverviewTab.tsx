@@ -64,11 +64,6 @@ export function OverviewTab(props: {
       {summary === null && (
         <div className={styles.empty}>台账读取中或不可用，今日 / 近 30 天列为空</div>
       )}
-      {summary !== null && summary.todaySource === 'session' && (
-        <div className={styles.statExtra}>
-          今日数据来自会话事件（宿主台账已停更，最近 {summary.sessionDates.length} 天由会话补位；这些天没有官方成本）
-        </div>
-      )}
       {props.quotas.length === 0 && channels.length > 0 && (
         <div className={styles.empty}>未读取到余额快照，余额 / 窗口列显示为 —</div>
       )}

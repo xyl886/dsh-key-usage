@@ -76,6 +76,9 @@
   color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.8;
 }
 .footnote b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
+/* 口径说明分点分行：每条一句话，避免挤成一段 */
+.footnoteList { margin: 4px 0 0; padding-left: 18px; }
+.footnoteList li { margin: 1px 0; }
 
 /* ===== 浮层 ===== */
 .tooltip {

@@ -159,10 +159,18 @@ export function KeyUsageSection() {
       {activeTab === 'quota' && <QuotaTab channels={channels} quotas={quotas} />}
 
       <div className={styles.footnote}>
-        <b>口径说明</b>：按天数据优先取宿主用量台账（有官方成本）；台账没有记录的日期回退到本地会话事件折叠
-        （那些天没有官方成本，界面上会标注来源）—— 两套来源按天取舍、不相加，避免重复计数；
-        项目用量与会话用量全部来自会话事件，每个结算样本计一次调用，单日「按小时」视图同理（不含成本）；
-        命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）；余额与订阅窗口原样展示官方接口返回的数据，不做换算与建议。
+        <b>口径说明</b>
+        <ul className={styles.footnoteList}>
+          <li>
+            按天数据优先取宿主用量台账（含官方成本）；台账无记录的日期回退本地会话事件折叠，那些天没有官方成本
+            {summary !== null && summary.todaySource === 'session' ? '（当前有 ' + summary.sessionDates.length + ' 天由会话补位）' : ''}
+            。两套来源按天取舍、不相加。
+          </li>
+          <li>热力图按可见区间内活跃日的三分位分档（少 / 中 / 高）。</li>
+          <li>项目用量、会话用量与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。</li>
+          <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
+          <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>
+        </ul>
       </div>
 
       <TooltipView tooltip={tooltip.tooltip} />
