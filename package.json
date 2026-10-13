@@ -1,7 +1,7 @@
 {
   "name": "dsh-key-usage",
   "description": "DeepSeek Harness 侧边栏「使用情况」：按通道展示用量明细、活跃热力图、项目/会话用量与官方余额/配额（实时优先，失败回落快照）",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "type": "module",
   "keywords": [
