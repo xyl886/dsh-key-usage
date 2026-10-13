@@ -21,6 +21,17 @@ import { normalizeSessionId } from './session-meta.js'
  */
 const MAX_SESSIONS = 200
 
+/**
+ * 同时在读的会话数：宿主的 `open(id,"read")` 与随后的 `read(0)` 共用一条容量 2 的解析
+ * memo（后端注释写明「只装处于两步之间的会话」），2 路正好把两次「找路径 + 读文件」的
+ * 等待叠起来；3 路会把先到的会话挤出 memo、逼它整段重解压。
+ * 本机实测（133 会话 / 119 MB）：串行 7.4~7.9 s，2 路 6.0~6.4 s，3 路反而 7.8~8.2 s。
+ */
+const READ_CONCURRENCY = 2
+
+/** 超过这个体积的会话改为串行：它们的耗时主要在主线程解压，叠不出等待，却会放大 memo 被第三方挤掉时的重解压代价。 */
+const SERIAL_SESSION_BYTES = 1024 * 1024
+
 export interface SessionUsageRecord {
   id: string
   title: string | null
@@ -48,9 +59,17 @@ interface SessionHandle {
 
 interface PersistenceService {
   identity?: unknown
-  list(): Promise<Array<{ header: Record<string, unknown>; revision?: unknown; eventCount?: number }>>
+  list(): Promise<Array<{ header: Record<string, unknown>; revision?: unknown; eventCount?: number; sizeBytes?: unknown }>>
   open?(id: string, access: string): Promise<SessionHandle>
   readFrom?(id: string, fromSeq: number): Promise<{ events: SessionEvent[] }>
+}
+
+/** 待读取的会话：`revision`/`eventCount` 与 `list()` 快照一一对应，读完直接写进缓存。 */
+interface PendingSession {
+  id: string
+  header: Record<string, unknown>
+  revision: unknown
+  eventCount: number
 }
 
 interface LiveSessionsService {
@@ -105,7 +124,9 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
       .slice(0, MAX_SESSIONS)
 
     const present = new Set<string>()
-    let skipped = 0
+    // 小会话两路并发、大会话串行：两条队列都不改变最终 records 的顺序（顺序由 ordered 决定）
+    const shared: PendingSession[] = []
+    const alone: PendingSession[] = []
     for (const { snapshot } of ordered) {
       const id = firstString(snapshot.header.id)
       if (id === null) continue
@@ -114,21 +135,32 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
       const eventCount = typeof snapshot.eventCount === 'number' ? snapshot.eventCount : -1
       const cached = cache.get(id)
       if (cached !== undefined && cached.revision === revision && cached.eventCount === eventCount) continue
+      const size = typeof snapshot.sizeBytes === 'number' ? snapshot.sizeBytes : Number.POSITIVE_INFINITY
+      const pending = { id, header: snapshot.header, revision, eventCount }
+      if (size <= SERIAL_SESSION_BYTES) shared.push(pending)
+      else alone.push(pending)
+    }
 
+    let skipped = 0
+    const readSession = async ({ id, header, revision, eventCount }: PendingSession): Promise<void> => {
       let handle: SessionHandle | undefined
       try {
         handle = await persistence.open?.(id, 'read')
-        if (handle === undefined) { skipped += 1; continue }
+        if (handle === undefined) { skipped += 1; return }
         const { events } = await handle.read(0)
         const inherited = typeof handle.inheritedEventCount === 'number' ? handle.inheritedEventCount : 0
         if (!Number.isSafeInteger(inherited) || inherited < 0 || inherited > events.length) {
           skipped += 1
-          continue
+          return
         }
-        // 继承前缀只用于建立模型归属，不计入本次用量
-        const inheritedHeaders = events.slice(0, inherited).filter((event) => event.type === 'request/header')
-        const fold = foldSessionEvents([...inheritedHeaders, ...events.slice(inherited)])
-        const metadata = metadataOf(snapshot.header)
+        // 继承前缀只用于建立模型归属，不计入本次用量；无继承时直接用原数组，省一次整段拷贝
+        const fold = inherited === 0
+          ? foldSessionEvents(events)
+          : foldSessionEvents([
+            ...events.slice(0, inherited).filter((event) => event.type === 'request/header'),
+            ...events.slice(inherited),
+          ])
+        const metadata = metadataOf(header)
         cache.set(id, {
           revision,
           eventCount,
@@ -143,6 +175,10 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
         }
       }
     }
+
+    await forEachWithLimit(shared, READ_CONCURRENCY, readSession)
+    await forEachWithLimit(alone, 1, readSession)
+
     for (const id of [...cache.keys()]) if (!present.has(id)) cache.delete(id)
     const records = ordered
       .map(({ snapshot }) => firstString(snapshot.header.id))
@@ -208,6 +244,23 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
   }
 
   return { collect }
+}
+
+/**
+ * 有界并发跑任务：worker 数即并发上限，按游标顺序取活，不预先建满 promise 列表。
+ * worker 自己吞掉异常（读取失败只影响该会话），所以这里不会提前中断其它会话。
+ */
+async function forEachWithLimit<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let cursor = 0
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const index = cursor
+      cursor += 1
+      if (index >= items.length) return
+      await worker(items[index])
+    }
+  })
+  await Promise.all(runners)
 }
 
 function coverageOf(totalSessions: number, countedSessions: number, skippedSessions: number): SessionCoverage {
@@ -301,6 +354,8 @@ export interface ModelAggregateRow {
     inputTokens: number
     outputTokens: number
     cacheReadTokens: number
+    /** 只参与计费，不计入展示口径 tokens。 */
+    cacheWriteTokens: number
   }
 }
 
@@ -312,6 +367,7 @@ export function modelRowsOf(records: SessionUsageRecord[], knownProviders: strin
     inputTokens: number
     outputTokens: number
     cacheReadTokens: number
+    cacheWriteTokens: number
     sessionCount: number
     lastTime: number | null
   }
@@ -324,7 +380,7 @@ export function modelRowsOf(records: SessionUsageRecord[], knownProviders: strin
       if (accumulator === undefined) {
         accumulator = {
           provider: model.provider, model: model.model, calls: 0,
-          inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, sessionCount: 0, lastTime: null,
+          inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, sessionCount: 0, lastTime: null,
         }
         byModel.set(key, accumulator)
       }
@@ -332,6 +388,7 @@ export function modelRowsOf(records: SessionUsageRecord[], knownProviders: strin
       accumulator.inputTokens += model.buckets.inputTokens
       accumulator.outputTokens += model.buckets.outputTokens
       accumulator.cacheReadTokens += model.buckets.cacheReadTokens
+      accumulator.cacheWriteTokens += model.buckets.cacheWriteTokens
       accumulator.sessionCount += 1
       // 会话事件只有会话级时间戳，「最近活跃」只能取用到该模型的最晚会话时间，是近似值
       if (sessionLastTime !== null && (accumulator.lastTime === null || sessionLastTime > accumulator.lastTime)) {
@@ -354,6 +411,7 @@ export function modelRowsOf(records: SessionUsageRecord[], knownProviders: strin
           inputTokens: accumulator.inputTokens,
           outputTokens: accumulator.outputTokens,
           cacheReadTokens: accumulator.cacheReadTokens,
+          cacheWriteTokens: accumulator.cacheWriteTokens,
         },
       }
     })

@@ -143,23 +143,30 @@ function modelOfEvent(event: SessionEvent): string | null {
   return null
 }
 
-function sampleOfEvent(event: SessionEvent): { key: string; usage: Partial<TokenBuckets> } | null {
-  const turn = event.data?.turn
-  const step = event.data?.step
-  const key = Number.isInteger(turn) && Number.isInteger(step) ? `${turn}:${step}` : `seq:${event.seq}`
-  if (event.type === 'assistant/chunk' && event.data?.chunk?.type === 'usage' && event.data.chunk.usage !== undefined) {
-    return { key, usage: event.data.chunk.usage }
+/** 一次上报的用量载荷：区分「不是样本」（null）与「是样本但没有分桶」（usage 为 undefined）。 */
+interface UsagePayload {
+  usage: Partial<TokenBuckets> | undefined
+}
+
+/**
+ * 取事件携带的用量样本；与「哪些事件算样本」的口径一一对应（见 docs/01 §3.10）。
+ * 注意 `assistant/attempt` 不认 `data.usage`，只认 `data.stream` 里的样本，与旧实现一致。
+ */
+function usagePayloadOf(event: SessionEvent): UsagePayload | null {
+  const type = event.type
+  const data = event.data
+  if (type === 'assistant/chunk') {
+    const chunk = data?.chunk
+    return chunk?.type === 'usage' && chunk.usage !== undefined ? { usage: chunk.usage } : null
   }
-  if (event.type === 'assistant/message' && event.data?.usage !== undefined) {
-    return { key, usage: event.data.usage }
-  }
-  if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && Array.isArray(event.data?.stream)) {
-    const stream = event.data.stream
-    for (let index = stream.length - 1; index >= 0; index -= 1) {
-      const record = stream[index]
-      if (record?.type === 'chunk' && record.chunk?.type === 'usage' && record.chunk.usage !== undefined) {
-        return { key, usage: record.chunk.usage }
-      }
+  if (type !== 'assistant/message' && type !== 'assistant/attempt') return null
+  if (type === 'assistant/message' && data?.usage !== undefined) return { usage: data.usage }
+  const stream = data?.stream
+  if (!Array.isArray(stream)) return null
+  for (let index = stream.length - 1; index >= 0; index -= 1) {
+    const record = stream[index]
+    if (record?.type === 'chunk' && record.chunk?.type === 'usage' && record.chunk.usage !== undefined) {
+      return { usage: record.chunk.usage }
     }
   }
   return null
@@ -181,31 +188,41 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
       if (firstTime === null || time < firstTime) firstTime = time
       if (lastTime === null || time > lastTime) lastTime = time
     }
-    if (event.type === 'request/header') {
+    // 先按类型分流：整段日志里绝大多数事件与用量无关，不必为它们拼 (turn, step) 键
+    const type = event.type
+    if (type === 'assistant/chunk' || type === 'assistant/message' || type === 'assistant/attempt') {
+      const payload = usagePayloadOf(event)
+      if (payload === null || time === null) continue
+      const turn = event.data?.turn
+      const step = event.data?.step
+      const baseKey = Number.isInteger(turn) && Number.isInteger(step) ? `${turn}:${step}` : `seq:${event.seq}`
+      const attempt = attemptCounts.get(baseKey) ?? 0
+      const sampleKey = `${baseKey}#${attempt}`
+      const model = modelOfEvent(event) ?? currentModel ?? 'unknown/unknown'
+      samples.set(sampleKey, {
+        key: sampleKey,
+        day: dayKeyOf(time),
+        hour: hourOfTime(time),
+        model,
+        buckets: bucketsOf(payload.usage),
+      })
+      continue
+    }
+    if (type === 'request/header') {
       const model = modelOfEvent(event)
       if (model !== null) currentModel = model
+      continue
     }
-    if (firstPrompt === null && event.type === 'user/message') {
-      firstPrompt = promptTextOf(event)
+    if (type === 'llm/retry-started') {
+      const turn = event.data?.turn
+      const step = event.data?.step
+      if (Number.isInteger(turn) && Number.isInteger(step)) {
+        const baseKey = `${turn}:${step}`
+        attemptCounts.set(baseKey, (attemptCounts.get(baseKey) ?? 0) + 1)
+      }
+      continue
     }
-    const turn = event.data?.turn
-    const step = event.data?.step
-    const baseKey = Number.isInteger(turn) && Number.isInteger(step) ? `${turn}:${step}` : `seq:${event.seq}`
-    if (event.type === 'llm/retry-started' && Number.isInteger(turn) && Number.isInteger(step)) {
-      attemptCounts.set(baseKey, (attemptCounts.get(baseKey) ?? 0) + 1)
-    }
-    const sample = sampleOfEvent(event)
-    if (sample === null || time === null) continue
-    const attempt = attemptCounts.get(baseKey) ?? 0
-    const sampleKey = `${baseKey}#${attempt}`
-    const model = modelOfEvent(event) ?? currentModel ?? 'unknown/unknown'
-    samples.set(sampleKey, {
-      key: sampleKey,
-      day: dayKeyOf(time),
-      hour: hourOfTime(time),
-      model,
-      buckets: bucketsOf(sample.usage),
-    })
+    if (firstPrompt === null && type === 'user/message') firstPrompt = promptTextOf(event)
   }
   return { samples, firstTime, lastTime, firstPrompt }
 }

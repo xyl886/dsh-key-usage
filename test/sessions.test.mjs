@@ -19,24 +19,36 @@ const sessionLog = [
   usageChunk(2, afternoon, 1, 2, { inputTokens: 500, outputTokens: 100, cacheReadTokens: 4000 }),
 ]
 
-/** 0.2 形态的假持久化服务：list / open('read') / read(0) / close。 */
+/** 0.2 形态的假持久化服务：list / open('read') / read(0) / close，并记录 open→read 的并发窗口。 */
 function createFakePersistence(entries) {
   const records = new Map(entries)
-  const stats = { reads: [], closes: 0, opens: [] }
+  const stats = { reads: [], closes: 0, opens: [], openWindows: [] }
+  // 「处于 open 与 read 之间」的会话集合：宿主后端的解析 memo 就是按这个窗口大小复用的
+  const active = new Set()
   return {
     stats,
     records,
     service: {
       identity: Symbol('fixture'),
-      list: async () => [...records.entries()].map(([id, record]) => ({ header: record.header, revision: record.revision, eventCount: record.events.length })),
+      list: async () => [...records.entries()].map(([id, record]) => ({ header: record.header, revision: record.revision, eventCount: record.events.length, sizeBytes: record.sizeBytes })),
       open: async (id, access) => {
         stats.opens.push([id, access])
         const record = records.get(id)
         if (record.failOpen === true) throw new Error('fixture open failure')
+        const window = { id, peak: active.size + 1 }
+        for (const holder of active) holder.peak = Math.max(holder.peak, active.size + 1)
+        active.add(window)
+        stats.openWindows.push(window)
         return {
           inheritedEventCount: record.inherited ?? 0,
-          read: async (offset) => { stats.reads.push([id, offset]); return { events: record.events.slice(offset) } },
-          close: async () => { stats.closes += 1 },
+          read: async (offset) => {
+            // 读之前等一会儿，让并发的另一个会话有机会进入同一个窗口
+            await new Promise((resolve) => setTimeout(resolve, 20))
+            stats.reads.push([id, offset])
+            active.delete(window)
+            return { events: record.events.slice(offset) }
+          },
+          close: async () => { stats.closes += 1; active.delete(window) },
         }
       },
     },
@@ -113,5 +125,50 @@ assert.equal(hours.filter((slot) => slot.calls > 0).length, 2)
 const orphan = sessionRowsOf([{ id: 'session-c', title: null, workspace: null, summary: { calls: 0, tokens: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }, cacheHitRate: null, firstTime: null, lastTime: null, primaryModelKey: null, days: [], models: [] } }], [])
 assert.equal(orphan.length, 1)
 assert.equal(projectRowsOf([{ id: 'session-c', title: null, workspace: null, summary: { calls: 0, tokens: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }, cacheHitRate: null, firstTime: null, lastTime: null, primaryModelKey: null, days: [], models: [] } }], [])[0].workspace, '未归属工作区')
+
+// 8. 有界并发：小会话两路、大会话串行；不漏会话、不重复读、顺序仍按 updatedAt 倒序
+const oneMegabyte = 1024 * 1024
+const concurrencyFixture = createFakePersistence([
+  ['small-a', { header: { id: 'small-a', cwd: 'D:\\EasyJob', updatedAt: morning + 5 }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog }],
+  ['small-b', { header: { id: 'small-b', cwd: 'D:\\EasyJob', updatedAt: morning + 4 }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog }],
+  ['small-c', { header: { id: 'small-c', cwd: 'D:\\EasyJob', updatedAt: morning + 3 }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog }],
+  ['large-a', { header: { id: 'large-a', cwd: 'D:\\EasyJob', updatedAt: morning + 2 }, revision: Symbol('c1'), sizeBytes: 8 * oneMegabyte, events: sessionLog }],
+  ['large-b', { header: { id: 'large-b', cwd: 'D:\\EasyJob', updatedAt: morning + 1 }, revision: Symbol('c1'), sizeBytes: 8 * oneMegabyte, events: sessionLog }],
+])
+const concurrencySource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? concurrencyFixture.service : undefined) })
+const concurrent = await concurrencySource.collect()
+assert.equal(concurrent.coverage.status, 'complete')
+assert.equal(concurrent.coverage.countedSessions, 5, '并发读取不漏会话')
+assert.equal(concurrencyFixture.stats.opens.length, 5, '每个会话只 open 一次')
+assert.equal(concurrencyFixture.stats.reads.length, 5, '每个会话只 read 一次（没有半成品/重复折叠）')
+assert.equal(concurrencyFixture.stats.closes, 5, '每个 handle 都必须关闭')
+assert.deepEqual(
+  concurrent.records.map((record) => record.id),
+  ['small-a', 'small-b', 'small-c', 'large-a', 'large-b'],
+  '并发不改变记录顺序（仍按 updatedAt 倒序）',
+)
+const windowPeakOf = (id) => concurrencyFixture.stats.openWindows.find((window) => window.id === id).peak
+assert.equal(Math.max(windowPeakOf('small-a'), windowPeakOf('small-b'), windowPeakOf('small-c')), 2, '小会话两路并发')
+assert.equal(Math.max(windowPeakOf('large-a'), windowPeakOf('large-b')), 1, '大会话串行（不放大解析 memo 被挤掉的代价）')
+// 缺 sizeBytes 时按串行处理，行为与优化前一致
+const unknownSize = createFakePersistence([
+  ['u-1', { header: { id: 'u-1', updatedAt: morning }, revision: Symbol('c1'), events: sessionLog }],
+  ['u-2', { header: { id: 'u-2', updatedAt: afternoon }, revision: Symbol('c1'), events: sessionLog }],
+])
+const unknownSizeSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? unknownSize.service : undefined) })
+assert.equal((await unknownSizeSource.collect()).records.length, 2)
+assert.equal(Math.max(...unknownSize.stats.openWindows.map((window) => window.peak)), 1, '拿不到体积信息时退回串行')
+
+// 9. 并发读取中单个会话失败：只跳过它，其余照常返回
+const partialFixture = createFakePersistence([
+  ['ok-a', { header: { id: 'ok-a', updatedAt: morning + 2 }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog }],
+  ['bad', { header: { id: 'bad', updatedAt: morning + 1 }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog, failOpen: true }],
+  ['ok-b', { header: { id: 'ok-b', updatedAt: morning }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog }],
+])
+const partialSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? partialFixture.service : undefined) })
+const partial = await partialSource.collect()
+assert.equal(partial.coverage.status, 'partial')
+assert.equal(partial.coverage.skippedSessions, 1)
+assert.deepEqual(partial.records.map((record) => record.id), ['ok-a', 'ok-b'], '并发下一个会话失败不影响其它会话')
 
 console.log('sessions.test: 全部通过')

@@ -105,6 +105,44 @@ assert.equal(streamSummary.calls, 1, 'stream 内嵌样本被识别')
 assert.equal(streamSummary.buckets.cacheWriteTokens, 5, 'cacheWrite 一并计入总量')
 assert.equal(streamSummary.tokens, 15, 'tokens = 四类分桶之和')
 
+// 场景六：按类型分流后的边界 —— 缺 turn/step 的样本键、attempt 的样本来源、非整数重试、标题兜底
+const fallbackKeysFold = foldSessionEvents([
+  header,
+  { seq: 1, time: baseTime, type: 'assistant/chunk', data: { chunk: { type: 'usage', usage: { inputTokens: 5, outputTokens: 1, cacheReadTokens: 0 } } } },
+  { seq: 2, time: baseTime, type: 'llm/retry-started', data: {} },
+  { seq: 3, time: baseTime, type: 'assistant/chunk', data: { chunk: { type: 'usage', usage: { inputTokens: 6, outputTokens: 2, cacheReadTokens: 0 } } } },
+])
+const fallbackKeysSummary = summarizeSession(fallbackKeysFold)
+assert.equal(fallbackKeysSummary.calls, 2, '缺 turn/step 时按 seq 建档，两次上报都是独立样本')
+assert.equal(fallbackKeysSummary.buckets.inputTokens, 11, '缺 turn/step 的重试事件不参与尝试分槽')
+assert.ok([...fallbackKeysFold.samples.keys()].includes('seq:1#0'), '样本键回落 seq:<seq>')
+assert.ok([...fallbackKeysFold.samples.keys()].includes('seq:3#0'))
+
+// assistant/attempt 不认 data.usage，只认 data.stream（与旧实现一致）
+const attemptFold = foldSessionEvents([
+  header,
+  { seq: 1, time: baseTime, type: 'assistant/attempt', data: { turn: 3, step: 1, usage: { inputTokens: 999, outputTokens: 999, cacheReadTokens: 0 } } },
+  {
+    seq: 2, time: baseTime, type: 'assistant/attempt',
+    data: {
+      turn: 3, step: 2,
+      usage: { inputTokens: 888, outputTokens: 888, cacheReadTokens: 0 },
+      stream: [{ type: 'chunk', chunk: { type: 'usage', usage: { inputTokens: 4, outputTokens: 2, cacheReadTokens: 0 } } }],
+    },
+  },
+])
+const attemptSummary = summarizeSession(attemptFold)
+assert.equal(attemptSummary.calls, 1, 'attempt 只有 data.usage 时不算样本')
+assert.equal(attemptSummary.buckets.inputTokens, 4, 'attempt 带 stream 时取 stream 里的样本，而不是 data.usage')
+
+// 标题兜底：首个 user/message 没有文本块时继续找下一条
+const promptFold = foldSessionEvents([
+  { seq: 0, time: baseTime, type: 'user/message', data: { content: [{ type: 'image' }] } },
+  { seq: 1, time: baseTime, type: 'user/message', data: { content: ['   第二 条   提问   '] } },
+  { seq: 2, time: laterTime, type: 'user/message', data: { content: ['第三条不该被取'] } },
+])
+assert.equal(promptFold.firstPrompt, '第二 条 提问', '取第一条有文本的提问并压平空白')
+
 // 场景五：继承前缀不计入（由数据源负责裁剪），此处只验证时间范围
 assert.equal(replacementSummary.firstTime, baseTime)
 assert.equal(replacementSummary.lastTime, laterTime)
