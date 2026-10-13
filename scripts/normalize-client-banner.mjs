@@ -27,5 +27,13 @@ if (!code.startsWith(required)) {
   console.error('banner 归一化失败：头部未形成 ' + required)
   process.exit(1)
 }
+
+// 产物必须与机器路径无关，否则跨平台构建无法字节一致（CI 的产物同步闸会永远失败）
+const absolutePath = code.match(/[A-Za-z]:[\\/][^"'\s]*|\\\/home\\\/[^"'\s]*|\/home\/[^"'\s]*/)
+if (absolutePath !== null) {
+  console.error('client.js 里出现了绝对路径：' + absolutePath[0].slice(0, 120))
+  process.exit(1)
+}
+
 fs.writeFileSync(file, code)
 console.log('client banner 归一化完成：' + required)
