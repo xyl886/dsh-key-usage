@@ -1,13 +1,15 @@
 /** 使用明细：范围切换 + 三张统计卡 + 占比条 + 通道筛选 + 按天/按小时图表 + 每日细目。 */
 import type { ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellText, displayNameOf, statusColorOf } from '../channels.ts'
+import { channelColorOf, channelOf, costCellText, displayNameOf, showsAmount, statusColorOf } from '../channels.ts'
 import { fmtCalls, fmtCost, fmtShortDate, fmtTokens, isoDate } from '../format.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
-import type { Channel, ChannelDailySummary, UsageResponse } from '../types.ts'
+import type { Channel, ChannelDailySummary, DaySummary, UsageResponse } from '../types.ts'
 import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import { ShareBar } from '../components/ShareBar.tsx'
+import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
 import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
+import { TrendPanel } from '../components/TrendPanel.tsx'
 import { DailyDetailTable, type DetailSortState } from '../components/DailyDetailTable.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
@@ -81,9 +83,15 @@ export function DetailTab(props: {
   if (usage === null) return <div className={styles.empty}>台账读取中或不可用…</div>
 
   const totals = usage.totals
-  const safeTotals = totals ?? { date: '', calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, reasoningTokens: 0, cost: 0 }
+  const safeTotals: DaySummary = totals ?? {
+    date: '', calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, cost: 0,
+  }
   const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens
   const hitRate = hitRateOf(safeTotals.cacheReadTokens, safeTotals.inputTokens, safeTotals.outputTokens)
+  /** 缓存读在展示口径 Tokens 里的占比；分母为 0 时不给数字（避免显示 0% 误导）。 */
+  const cacheReadShare = totalTokens > 0 ? (safeTotals.cacheReadTokens / totalTokens * 100).toFixed(1) + '%' : null
+  /** 范围内「有用量」的天数：日均 Tokens 的分母（拿日历天数去除会把空闲日算成用量偏低）。 */
+  const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(channels, channelFilter)
   const costCell = costCellText(singleChannel, safeTotals.cost)
   const singleDay = bounds.from === bounds.to
@@ -223,15 +231,34 @@ export function DetailTab(props: {
         </span>
       </div>
 
-      <div className={styles.cardGrid3}>
+      <div className={styles.cardGridAuto}>
         <StatCard label="调用次数" value={fmtCalls(safeTotals.calls)} extra={activeProviders.size + ' 个通道有用量'} />
-        <StatCard label="Tokens" value={fmtTokens(totalTokens)} extra={'缓存读 ' + fmtTokens(safeTotals.cacheReadTokens) + ' · 命中率 ' + hitRate} />
+        <StatCard
+          label="Tokens"
+          value={fmtTokens(totalTokens)}
+          extra={'输入 ' + fmtTokens(safeTotals.inputTokens) + ' · 输出 ' + fmtTokens(safeTotals.outputTokens)}
+        />
+        <StatCard
+          label="缓存读"
+          value={fmtTokens(safeTotals.cacheReadTokens)}
+          extra={cacheReadShare === null ? '与上方 Tokens 同口径' : '占 Tokens 的 ' + cacheReadShare}
+        />
+        <StatCard label="缓存命中率" value={hitRate} extra="缓存读 ÷（输入 + 输出 + 缓存读）" />
+        <StatCard
+          label="日均 Tokens"
+          value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))}
+          extra={'范围内 ' + String(activeDays) + ' 天有用量'}
+        />
         <StatCard
           label="成本"
-          value={costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : costCell.text}
+          value={costCell.dim
+            ? <span className={styles.dim}>{costCell.text}</span>
+            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={safeTotals.costSource} />}</>}
           extra="按所选范围与筛选聚合"
         />
       </div>
+
+      <TrendPanel usage={usage} channels={channels} range={props.range} bounds={bounds} channelFilter={channelFilter} />
 
       <ShareBar usage={usage} totalTokens={totalTokens} channelFilter={channelFilter} channels={channels} tooltip={tooltip} />
 
