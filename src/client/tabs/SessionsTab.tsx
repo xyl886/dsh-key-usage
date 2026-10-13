@@ -7,14 +7,18 @@ import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'durationDesc'
+/** 会话归档筛选：与宿主原生「筛选会话」菜单同三档。 */
+type ArchiveFilter = 'hide' | 'all' | 'only'
 
 export function SessionsTab(props: { data: SessionsResponse | null; channels: Channel[] }): ReactNode {
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [daysFilter, setDaysFilter] = useState('30')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>('hide')
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
+  const archivedCount = rows.filter((row) => row.archived).length
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -25,7 +29,8 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
       const matchesChannel = channelFilter === 'ALL' || row.provider === channelFilter
       const matchesAge = maxAgeDays === 0 || row.lastTime === null
         || (nowMs - row.lastTime) <= maxAgeDays * 86400000
-      return matchesQuery && matchesChannel && matchesAge
+      const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'only' ? row.archived : !row.archived)
+      return matchesQuery && matchesChannel && matchesAge && matchesArchive
     })
     const sorters: Record<SortKey, (first: SessionRow, second: SessionRow) => number> = {
       recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
@@ -34,7 +39,7 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
       durationDesc: (first, second) => durationOf(second) - durationOf(first),
     }
     return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs])
+  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs, archiveFilter])
 
   if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
 
@@ -74,7 +79,22 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
           <option value="tokensAsc">Tokens 最少</option>
           <option value="durationDesc">时长最长</option>
         </select>
+        <select
+          className={listStyles.filterSelect}
+          value={archiveFilter}
+          onChange={(event) => setArchiveFilter(event.target.value as ArchiveFilter)}
+          title="已归档会话只做标记，仍然计入统计"
+        >
+          <option value="hide">隐藏已归档</option>
+          <option value="all">全部对话（显示已归档）</option>
+          <option value="only">仅显示已归档</option>
+        </select>
       </div>
+      {archiveFilter === 'hide' && archivedCount > 0 && (
+        <div className={styles.statExtra}>
+          另有 {archivedCount} 个已归档会话未显示（归档只是标记，用量仍计入上方统计）
+        </div>
+      )}
 
       <table className={styles.table}>
         <thead>
@@ -111,9 +131,12 @@ function sessionRowOf(row: SessionRow, channels: Channel[]): ReactNode {
   const channel = channelOf(channels, row.provider)
   const costCell = costCellText(channel, row.cost ?? 0)
   return (
-    <tr key={row.id}>
+    <tr key={row.id} className={row.archived ? listStyles.rowArchived : undefined}>
       <td>
-        <div className={listStyles.listMain}>{row.title ?? '会话 ' + shortIdOf(row.id)}</div>
+        <div className={listStyles.listMain}>
+          {row.title ?? '会话 ' + shortIdOf(row.id)}
+          {row.archived && <span className={listStyles.archivedTag}>已归档</span>}
+        </div>
         <div className={listStyles.listSub}>{row.workspace ?? '未归属工作区'}</div>
       </td>
       <td>{row.providerLabel ?? displayNameOf(channels, row.provider ?? '')}</td>

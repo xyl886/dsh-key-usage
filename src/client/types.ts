@@ -145,6 +145,8 @@ export interface UsageModelRow {
 export interface SessionRow {
   id: string
   title: string | null
+  /** 已归档（宿主侧标记）：列表默认隐藏，显示时淡化，用量照常计入。 */
+  archived: boolean
   workspace: string | null
   provider: string | null
   providerLabel: string | null
@@ -171,6 +173,8 @@ export interface ProjectRow {
   tokens: number
   cacheHitRate: number | null
   sessionCount: number
+  /** 其中已归档的会话数（归档仍计入统计，仅作标注）。 */
+  archivedSessionCount: number
   lastTime: number | null
   providers: Record<string, number>
   dominantProvider: string | null

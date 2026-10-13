@@ -52,6 +52,12 @@ export function apply(ctx: HostContext): void {
     },
   })
   ctx.inject(['webServer'], (host) => {
-    host.effect(() => mountKeyUsageRoutes(host.webServer, sessionSource, liveQuota), 'dsh-key-usage: http routes')
+    host.effect(
+      () => mountKeyUsageRoutes(host.webServer, sessionSource, liveQuota, {
+        // workspaceRegistry 用来读官方归档集合（拿不到就回退本地 storages/workspace.json）
+        get: (serviceName) => (typeof ctx.get === 'function' ? ctx.get(serviceName) : undefined),
+      }),
+      'dsh-key-usage: http routes',
+    )
   })
 }

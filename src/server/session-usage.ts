@@ -48,6 +48,8 @@ export interface SessionFold {
   samples: Map<string, UsageSample>
   firstTime: number | null
   lastTime: number | null
+  /** 首条用户提问的摘要（会话标题的兜底来源），没有则 null。 */
+  firstPrompt: string | null
 }
 
 export interface ModelUsageRow {
@@ -81,6 +83,8 @@ export interface SessionSummary {
   cacheHitRate: number | null
   firstTime: number | null
   lastTime: number | null
+  /** 首条用户提问摘要（标题兜底）。 */
+  firstPrompt: string | null
   /** 用量最大的模型归属键（列表里的通道列据此归一）。 */
   primaryModelKey: string | null
   days: SessionDaySummary[]
@@ -169,6 +173,8 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
   let currentModel: string | null = null
   let firstTime: number | null = null
   let lastTime: number | null = null
+  // 会话标题在宿主侧只对有投影的会话可见，其余用「首条用户提问」兜底
+  let firstPrompt: string | null = null
   for (const event of events) {
     const time = typeof event.time === 'number' ? event.time : null
     if (time !== null) {
@@ -178,6 +184,9 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
     if (event.type === 'request/header') {
       const model = modelOfEvent(event)
       if (model !== null) currentModel = model
+    }
+    if (firstPrompt === null && event.type === 'user/message') {
+      firstPrompt = promptTextOf(event)
     }
     const turn = event.data?.turn
     const step = event.data?.step
@@ -198,7 +207,24 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
       buckets: bucketsOf(sample.usage),
     })
   }
-  return { samples, firstTime, lastTime }
+  return { samples, firstTime, lastTime, firstPrompt }
+}
+
+/** 标题兜底：取 user/message 里第一个非空文本块，压平空白并截断。 */
+function promptTextOf(event: SessionEvent): string | null {
+  const message = event.data?.message
+  if (typeof message !== 'object' || message === null) return null
+  const content = (message as { content?: unknown }).content
+  if (!Array.isArray(content)) return null
+  for (const block of content) {
+    if (typeof block !== 'object' || block === null) continue
+    const text = (block as { text?: unknown }).text
+    if (typeof text !== 'string') continue
+    const flat = text.replace(/\s+/g, ' ').trim()
+    if (flat === '') continue
+    return flat.length > 60 ? flat.slice(0, 60) + '…' : flat
+  }
+  return null
 }
 
 /**
@@ -269,6 +295,7 @@ export function summarizeSession(fold: SessionFold): SessionSummary {
     cacheHitRate: cacheHitRateOf(totals),
     firstTime: fold.firstTime,
     lastTime: fold.lastTime,
+    firstPrompt: fold.firstPrompt,
     primaryModelKey: models.length > 0 ? models[0].key : null,
     days,
     models,

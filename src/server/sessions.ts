@@ -12,6 +12,7 @@ import {
   type SessionEvent,
   type SessionSummary,
 } from './session-usage.js'
+import { normalizeSessionId } from './session-meta.js'
 
 /**
  * 一次最多折叠的会话数：按更新时间倒序取，避免首次请求扫全量历史。
@@ -225,6 +226,8 @@ function coverageOf(totalSessions: number, countedSessions: number, skippedSessi
 export interface SessionRow {
   id: string
   title: string | null
+  /** 是否已在宿主侧归档（归档只做逻辑标记，会话文件仍在，用量照常计入）。 */
+  archived: boolean
   workspace: string | null
   provider: string | null
   firstTime: number | null
@@ -234,6 +237,12 @@ export interface SessionRow {
   cacheHitRate: number | null
   days: number
   models: Array<{ provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }>
+}
+
+/** 标题与归档的来源（缺省表示宿主没提供，界面自行回落）。 */
+export interface SessionMetaOptions {
+  titles?: Map<string, string>
+  archived?: Set<string>
 }
 
 function attributedModels(
@@ -252,11 +261,19 @@ function attributedModels(
   })
 }
 
-export function sessionRowsOf(records: SessionUsageRecord[], knownProviders: string[]): SessionRow[] {
+export function sessionRowsOf(
+  records: SessionUsageRecord[],
+  knownProviders: string[],
+  meta: SessionMetaOptions = {},
+): SessionRow[] {
+  const titles = meta.titles ?? new Map<string, string>()
+  const archived = meta.archived ?? new Set<string>()
   return records
     .map((record) => ({
       id: record.id,
-      title: record.title,
+      // 标题优先级：宿主投影缓存的标题 → 会话头自带字段 → 首条用户提问 → 界面回落成短 id
+      title: titles.get(normalizeSessionId(record.id)) ?? record.title ?? record.summary.firstPrompt ?? null,
+      archived: archived.has(normalizeSessionId(record.id)),
       workspace: record.workspace,
       provider: record.summary.primaryModelKey === null ? null : attributeModelKey(record.summary.primaryModelKey, knownProviders).provider,
       firstTime: record.summary.firstTime,
@@ -277,12 +294,19 @@ export interface ProjectRow {
   tokens: number
   cacheHitRate: number | null
   sessionCount: number
+  /** 其中已归档的会话数（归档仍计入统计，仅用于标注）。 */
+  archivedSessionCount: number
   lastTime: number | null
   providers: Record<string, number>
   models: Array<{ key: string; provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }>
 }
 
-export function projectRowsOf(records: SessionUsageRecord[], knownProviders: string[]): ProjectRow[] {
+export function projectRowsOf(
+  records: SessionUsageRecord[],
+  knownProviders: string[],
+  meta: SessionMetaOptions = {},
+): ProjectRow[] {
+  const archived = meta.archived ?? new Set<string>()
   interface Accumulator {
     workspace: string
     calls: number
@@ -292,6 +316,7 @@ export function projectRowsOf(records: SessionUsageRecord[], knownProviders: str
     outputTokens: number
     cacheWriteTokens: number
     sessionCount: number
+    archivedSessionCount: number
     lastTime: number | null
     providers: Map<string, number>
     models: Map<string, { key: string; provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }>
@@ -303,7 +328,7 @@ export function projectRowsOf(records: SessionUsageRecord[], knownProviders: str
     if (accumulator === undefined) {
       accumulator = {
         workspace, calls: 0, tokens: 0, cacheReadTokens: 0, inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0,
-        sessionCount: 0, lastTime: null, providers: new Map(), models: new Map(),
+        sessionCount: 0, archivedSessionCount: 0, lastTime: null, providers: new Map(), models: new Map(),
       }
       byWorkspace.set(workspace, accumulator)
     }
@@ -314,6 +339,7 @@ export function projectRowsOf(records: SessionUsageRecord[], knownProviders: str
     accumulator.cacheReadTokens += record.summary.buckets.cacheReadTokens
     accumulator.cacheWriteTokens += record.summary.buckets.cacheWriteTokens
     accumulator.sessionCount += 1
+    if (archived.has(normalizeSessionId(record.id))) accumulator.archivedSessionCount += 1
     const lastTime = record.summary.lastTime
     if (lastTime !== null && (accumulator.lastTime === null || lastTime > accumulator.lastTime)) accumulator.lastTime = lastTime
     if (record.summary.primaryModelKey !== null) {
@@ -344,6 +370,7 @@ export function projectRowsOf(records: SessionUsageRecord[], knownProviders: str
         tokens: accumulator.tokens,
         cacheHitRate: displayTokens > 0 ? Math.round(accumulator.cacheReadTokens / displayTokens * 1000) / 10 : null,
         sessionCount: accumulator.sessionCount,
+        archivedSessionCount: accumulator.archivedSessionCount,
         lastTime: accumulator.lastTime,
         providers: Object.fromEntries(accumulator.providers),
         models: [...accumulator.models.values()].sort((first, second) => second.tokens - first.tokens),

@@ -186,6 +186,21 @@ assert.equal(sessions.body.rows[0].providerLabel, 'opencode-go')
 assert.equal(sessions.body.rows[0].cost, null, '台账无成本数据时不给估算值')
 assert.equal(sessions.body.rows[0].costMode, 'sub')
 assert.equal(sessions.body.coverage.status, 'complete')
+assert.equal(sessions.body.rows[0].archived, false, '没有归档集合时标记为未归档')
+
+// 归档标记与标题：夹具里补一份 storages/workspace.json 与投影缓存
+mkdirSync(join(home, 'storages'), { recursive: true })
+writeFileSync(join(home, 'storages', 'workspace.json'), JSON.stringify({
+  global: { archivedSessionIds: ['session-fixture'] },
+}), 'utf8')
+writeFileSync(join(home, 'storages', 'session_projcache.json'), JSON.stringify({
+  tables: { sessions: { 'session-fixture': { rows: { title: { val: '夹具会话标题' } } } } },
+}), 'utf8')
+const sessionsWithMeta = await callEndpoint('/dsh-key-usage/sessions')
+assert.equal(sessionsWithMeta.body.rows[0].archived, true, '归档集合命中（session- 前缀归一后比对）')
+assert.equal(sessionsWithMeta.body.rows[0].title, '夹具会话标题', '标题取宿主投影缓存')
+const projectsWithMeta = await callEndpoint('/dsh-key-usage/projects')
+assert.equal(projectsWithMeta.body.rows[0].archivedSessionCount, 1, '项目行统计已归档数，用量不剔除')
 
 // 项目：按工作目录聚合
 const projects = await callEndpoint('/dsh-key-usage/projects')

@@ -163,48 +163,48 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$5
 		});
 		var shared_module_css_default = {
-			"tipSub": "LhdpGW_tipSub",
-			"sortable": "LhdpGW_sortable",
-			"clickable": "LhdpGW_clickable",
-			"cardGridAuto": "LhdpGW_cardGridAuto",
-			"card": "LhdpGW_card",
-			"tipDivider": "LhdpGW_tipDivider",
-			"tipName": "LhdpGW_tipName",
-			"sortActive": "LhdpGW_sortActive",
-			"footnote": "LhdpGW_footnote",
-			"tipBar": "LhdpGW_tipBar",
-			"tipRow": "LhdpGW_tipRow",
-			"tipRate": "LhdpGW_tipRate",
-			"tabBar": "LhdpGW_tabBar",
-			"blockLabel": "LhdpGW_blockLabel",
-			"empty": "LhdpGW_empty",
-			"total": "LhdpGW_total",
-			"statLabel": "LhdpGW_statLabel",
-			"sortArrow": "LhdpGW_sortArrow",
-			"statusDot": "LhdpGW_statusDot",
-			"mono": "LhdpGW_mono",
+			"ghost": "LhdpGW_ghost",
 			"statExtra": "LhdpGW_statExtra",
-			"refreshBtn": "LhdpGW_refreshBtn",
-			"legend": "LhdpGW_legend",
-			"footnoteList": "LhdpGW_footnoteList",
+			"disabled": "LhdpGW_disabled",
+			"footnote": "LhdpGW_footnote",
+			"empty": "LhdpGW_empty",
+			"titleActions": "LhdpGW_titleActions",
+			"chipRow": "LhdpGW_chipRow",
+			"tipAmount": "LhdpGW_tipAmount",
+			"tipDivider": "LhdpGW_tipDivider",
+			"groupLabel": "LhdpGW_groupLabel",
 			"cardGrid4": "LhdpGW_cardGrid4",
-			"dim": "LhdpGW_dim",
+			"title": "LhdpGW_title",
+			"cardGridAuto": "LhdpGW_cardGridAuto",
+			"warning": "LhdpGW_warning",
+			"refreshBtn": "LhdpGW_refreshBtn",
+			"footnoteList": "LhdpGW_footnoteList",
+			"clickable": "LhdpGW_clickable",
+			"statusDot": "LhdpGW_statusDot",
+			"tipSub": "LhdpGW_tipSub",
+			"tipTitle": "LhdpGW_tipTitle",
+			"statLabel": "LhdpGW_statLabel",
+			"tipRate": "LhdpGW_tipRate",
+			"tipName": "LhdpGW_tipName",
+			"statValue": "LhdpGW_statValue",
+			"total": "LhdpGW_total",
+			"blockLabel": "LhdpGW_blockLabel",
+			"sortArrow": "LhdpGW_sortArrow",
+			"tipRow": "LhdpGW_tipRow",
 			"section": "LhdpGW_section",
 			"cardGrid3": "LhdpGW_cardGrid3",
-			"tipTitle": "LhdpGW_tipTitle",
-			"statValue": "LhdpGW_statValue",
-			"titleActions": "LhdpGW_titleActions",
-			"title": "LhdpGW_title",
 			"active": "LhdpGW_active",
-			"disabled": "LhdpGW_disabled",
-			"groupLabel": "LhdpGW_groupLabel",
-			"chipRow": "LhdpGW_chipRow",
-			"chip": "LhdpGW_chip",
-			"tooltip": "LhdpGW_tooltip",
-			"tipAmount": "LhdpGW_tipAmount",
+			"sortActive": "LhdpGW_sortActive",
+			"dim": "LhdpGW_dim",
 			"table": "LhdpGW_table",
-			"warning": "LhdpGW_warning",
-			"ghost": "LhdpGW_ghost"
+			"sortable": "LhdpGW_sortable",
+			"legend": "LhdpGW_legend",
+			"tooltip": "LhdpGW_tooltip",
+			"tipBar": "LhdpGW_tipBar",
+			"mono": "LhdpGW_mono",
+			"tabBar": "LhdpGW_tabBar",
+			"card": "LhdpGW_card",
+			"chip": "LhdpGW_chip"
 		};
 		//#endregion
 		//#region src/client/tooltip.tsx
@@ -370,36 +370,36 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$4
 		});
 		var overview_module_css_default = {
-			"keyEnv": "J7Idbq_keyEnv",
-			"quotaText": "J7Idbq_quotaText",
+			"danger": "J7Idbq_danger",
+			"rowLink": "J7Idbq_rowLink",
+			"heatmapCard": "J7Idbq_heatmapCard",
 			"quotaCell": "J7Idbq_quotaCell",
-			"heatWeekdays": "J7Idbq_heatWeekdays",
+			"disabledRow": "J7Idbq_disabledRow",
+			"idle": "J7Idbq_idle",
 			"heatGrid": "J7Idbq_heatGrid",
+			"heatMonths": "J7Idbq_heatMonths",
+			"free": "J7Idbq_free",
+			"keyEnv": "J7Idbq_keyEnv",
+			"heatCell": "J7Idbq_heatCell",
+			"heatGridCol": "J7Idbq_heatGridCol",
+			"keyDisplay": "J7Idbq_keyDisplay",
+			"heatWeek": "J7Idbq_heatWeek",
+			"dim": "J7Idbq_dim",
+			"clickable": "J7Idbq_clickable",
+			"quotaText": "J7Idbq_quotaText",
+			"heatmapBody": "J7Idbq_heatmapBody",
+			"heatmapTitle": "J7Idbq_heatmapTitle",
 			"warn": "J7Idbq_warn",
 			"heatmapHead": "J7Idbq_heatmapHead",
-			"heatmapBody": "J7Idbq_heatmapBody",
-			"off": "J7Idbq_off",
-			"idle": "J7Idbq_idle",
-			"keyDisplay": "J7Idbq_keyDisplay",
-			"disabledRow": "J7Idbq_disabledRow",
-			"sub": "J7Idbq_sub",
-			"heatGridCol": "J7Idbq_heatGridCol",
-			"clickable": "J7Idbq_clickable",
-			"danger": "J7Idbq_danger",
-			"heatmapTitle": "J7Idbq_heatmapTitle",
-			"free": "J7Idbq_free",
-			"miniBar": "J7Idbq_miniBar",
-			"heatmapCard": "J7Idbq_heatmapCard",
-			"tag": "J7Idbq_tag",
-			"rowLink": "J7Idbq_rowLink",
-			"empty": "J7Idbq_empty",
-			"heatWeek": "J7Idbq_heatWeek",
-			"heatMonths": "J7Idbq_heatMonths",
 			"keyTable": "J7Idbq_keyTable",
-			"dim": "J7Idbq_dim",
-			"cellKey": "J7Idbq_cellKey",
+			"sub": "J7Idbq_sub",
+			"miniBar": "J7Idbq_miniBar",
 			"heatmapScroll": "J7Idbq_heatmapScroll",
-			"heatCell": "J7Idbq_heatCell"
+			"empty": "J7Idbq_empty",
+			"tag": "J7Idbq_tag",
+			"off": "J7Idbq_off",
+			"cellKey": "J7Idbq_cellKey",
+			"heatWeekdays": "J7Idbq_heatWeekdays"
 		};
 		//#endregion
 		//#region src/client/components/Heatmap.tsx
@@ -719,29 +719,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$3
 		});
 		var detail_module_css_default = {
-			"rangeLeft": "V9QVRa_rangeLeft",
-			"shareBar": "V9QVRa_shareBar",
-			"chartTitle": "V9QVRa_chartTitle",
-			"bars": "V9QVRa_bars",
-			"barsDense": "V9QVRa_barsDense",
 			"subRowCell": "V9QVRa_subRowCell",
-			"barColumn": "V9QVRa_barColumn",
-			"subHead": "V9QVRa_subHead",
-			"segOut": "V9QVRa_segOut",
-			"rangeCaption": "V9QVRa_rangeCaption",
-			"barLabels": "V9QVRa_barLabels",
-			"subModel": "V9QVRa_subModel",
-			"segCache": "V9QVRa_segCache",
-			"subName": "V9QVRa_subName",
-			"segIn": "V9QVRa_segIn",
-			"subRow": "V9QVRa_subRow",
-			"subNumber": "V9QVRa_subNumber",
-			"active": "V9QVRa_active",
-			"rangeTabs": "V9QVRa_rangeTabs",
+			"barsDense": "V9QVRa_barsDense",
+			"rangeLeft": "V9QVRa_rangeLeft",
 			"rangeBar": "V9QVRa_rangeBar",
-			"rangeInput": "V9QVRa_rangeInput",
+			"subModel": "V9QVRa_subModel",
+			"subName": "V9QVRa_subName",
 			"subChannel": "V9QVRa_subChannel",
-			"toggleArrow": "V9QVRa_toggleArrow"
+			"subNumber": "V9QVRa_subNumber",
+			"rangeInput": "V9QVRa_rangeInput",
+			"segCache": "V9QVRa_segCache",
+			"segOut": "V9QVRa_segOut",
+			"subHead": "V9QVRa_subHead",
+			"toggleArrow": "V9QVRa_toggleArrow",
+			"rangeTabs": "V9QVRa_rangeTabs",
+			"active": "V9QVRa_active",
+			"barColumn": "V9QVRa_barColumn",
+			"chartTitle": "V9QVRa_chartTitle",
+			"shareBar": "V9QVRa_shareBar",
+			"rangeCaption": "V9QVRa_rangeCaption",
+			"bars": "V9QVRa_bars",
+			"barLabels": "V9QVRa_barLabels",
+			"subRow": "V9QVRa_subRow",
+			"segIn": "V9QVRa_segIn"
 		};
 		//#endregion
 		//#region src/client/components/ShareBar.tsx
@@ -1374,7 +1374,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:D:\EasyJob\.plugin\dsh-key-usage\src\client\styles\lists.module.css.mjs
-		const css$2 = ".QpFKma_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.QpFKma_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;background:0 0;border-radius:9px;flex:1;padding:6px 12px;font-size:12.5px}.QpFKma_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.QpFKma_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;border-radius:9px;padding:6px 10px;font-size:12px}.QpFKma_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.QpFKma_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;overflow:hidden}.QpFKma_listSub{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;font-size:10.5px;overflow:hidden}.QpFKma_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.QpFKma_listBar>i{border-radius:3px;height:100%;display:block}.QpFKma_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:12px;font-weight:600;text-align:left!important;padding:7px 10px!important}.QpFKma_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px;font-size:11px;font-weight:500}";
+		const css$2 = ".QpFKma_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.QpFKma_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;background:0 0;border-radius:9px;flex:1;padding:6px 12px;font-size:12.5px}.QpFKma_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.QpFKma_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;border-radius:9px;padding:6px 10px;font-size:12px}.QpFKma_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.QpFKma_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;overflow:hidden}.QpFKma_listSub{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;font-size:10.5px;overflow:hidden}.QpFKma_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.QpFKma_listBar>i{border-radius:3px;height:100%;display:block}.QpFKma_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:12px;font-weight:600;text-align:left!important;padding:7px 10px!important}.QpFKma_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px;font-size:11px;font-weight:500}.QpFKma_rowArchived td{opacity:.5}.QpFKma_archivedTag{color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-size:10px;font-weight:500}";
 		const tagId$2 = "dsh-key-usage/lists.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1389,15 +1389,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$2
 		});
 		var lists_module_css_default = {
-			"listTitle": "QpFKma_listTitle",
 			"listBar": "QpFKma_listBar",
-			"filterSelect": "QpFKma_filterSelect",
-			"dayCount": "QpFKma_dayCount",
-			"searchInput": "QpFKma_searchInput",
+			"filterBar": "QpFKma_filterBar",
 			"listSub": "QpFKma_listSub",
+			"rowArchived": "QpFKma_rowArchived",
 			"listMain": "QpFKma_listMain",
 			"sessionDay": "QpFKma_sessionDay",
-			"filterBar": "QpFKma_filterBar"
+			"archivedTag": "QpFKma_archivedTag",
+			"listTitle": "QpFKma_listTitle",
+			"searchInput": "QpFKma_searchInput",
+			"filterSelect": "QpFKma_filterSelect",
+			"dayCount": "QpFKma_dayCount"
 		};
 		//#endregion
 		//#region src/client/tabs/ProjectsTab.tsx
@@ -1510,7 +1512,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										row.workspace,
 										" · ",
 										row.sessionCount,
-										" 个会话"
+										" 个会话",
+										row.archivedSessionCount > 0 ? "（含 " + row.archivedSessionCount + " 个已归档，仍计入）" : ""
 									]
 								})] })
 							}) }),
@@ -1575,26 +1578,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$1
 		});
 		var quota_module_css_default = {
-			"windowItem": "F7iUHa_windowItem",
-			"windowBar": "F7iUHa_windowBar",
-			"snapshotHint": "F7iUHa_snapshotHint",
-			"liveChip": "F7iUHa_liveChip",
-			"quotaEnv": "F7iUHa_quotaEnv",
-			"balanceItem": "F7iUHa_balanceItem",
-			"balanceStrip": "F7iUHa_balanceStrip",
-			"quotaTitle": "F7iUHa_quotaTitle",
-			"snapshotStale": "F7iUHa_snapshotStale",
 			"quotaList": "F7iUHa_quotaList",
-			"windowValue": "F7iUHa_windowValue",
-			"windowName": "F7iUHa_windowName",
-			"bsValue": "F7iUHa_bsValue",
-			"quotaCard": "F7iUHa_quotaCard",
-			"quotaHead": "F7iUHa_quotaHead",
 			"quotaProvider": "F7iUHa_quotaProvider",
-			"windowHead": "F7iUHa_windowHead",
+			"windowReset": "F7iUHa_windowReset",
+			"quotaEnv": "F7iUHa_quotaEnv",
+			"windowName": "F7iUHa_windowName",
+			"liveChip": "F7iUHa_liveChip",
+			"windowItem": "F7iUHa_windowItem",
 			"windowRow": "F7iUHa_windowRow",
+			"snapshotHint": "F7iUHa_snapshotHint",
 			"bsLabel": "F7iUHa_bsLabel",
-			"windowReset": "F7iUHa_windowReset"
+			"snapshotStale": "F7iUHa_snapshotStale",
+			"balanceStrip": "F7iUHa_balanceStrip",
+			"windowValue": "F7iUHa_windowValue",
+			"quotaHead": "F7iUHa_quotaHead",
+			"balanceItem": "F7iUHa_balanceItem",
+			"quotaCard": "F7iUHa_quotaCard",
+			"windowHead": "F7iUHa_windowHead",
+			"windowBar": "F7iUHa_windowBar",
+			"quotaTitle": "F7iUHa_quotaTitle",
+			"bsValue": "F7iUHa_bsValue"
 		};
 		//#endregion
 		//#region src/client/tabs/QuotaTab.tsx
@@ -1806,8 +1809,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
 			const [daysFilter, setDaysFilter] = (0, react.useState)("30");
 			const [sortKey, setSortKey] = (0, react.useState)("recent");
+			const [archiveFilter, setArchiveFilter] = (0, react.useState)("hide");
 			const [nowMs] = (0, react.useState)(() => Date.now());
 			const rows = props.data?.rows ?? [];
+			const archivedCount = rows.filter((row) => row.archived).length;
 			const visible = (0, react.useMemo)(() => {
 				const keyword = query.trim().toLowerCase();
 				const maxAgeDays = Number(daysFilter);
@@ -1816,7 +1821,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					const matchesQuery = keyword === "" || title.toLowerCase().includes(keyword);
 					const matchesChannel = channelFilter === "ALL" || row.provider === channelFilter;
 					const matchesAge = maxAgeDays === 0 || row.lastTime === null || nowMs - row.lastTime <= maxAgeDays * 864e5;
-					return matchesQuery && matchesChannel && matchesAge;
+					const matchesArchive = archiveFilter === "all" || (archiveFilter === "only" ? row.archived : !row.archived);
+					return matchesQuery && matchesChannel && matchesAge && matchesArchive;
 				});
 				const sorters = {
 					recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
@@ -1831,7 +1837,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				channelFilter,
 				daysFilter,
 				sortKey,
-				nowMs
+				nowMs,
+				archiveFilter
 			]);
 			if (props.data === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
@@ -1914,7 +1921,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: "时长最长"
 								})
 							]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+							className: lists_module_css_default.filterSelect,
+							value: archiveFilter,
+							onChange: (event) => setArchiveFilter(event.target.value),
+							title: "已归档会话只做标记，仍然计入统计",
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "hide",
+									children: "隐藏已归档"
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "all",
+									children: "全部对话（显示已归档）"
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "only",
+									children: "仅显示已归档"
+								})
+							]
 						})
+					]
+				}),
+				archiveFilter === "hide" && archivedCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: shared_module_css_default.statExtra,
+					children: [
+						"另有 ",
+						archivedCount,
+						" 个已归档会话未显示（归档只是标记，用量仍计入上方统计）"
 					]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
@@ -1961,26 +1996,32 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function sessionRowOf(row, channels) {
 			const channel = channelOf(channels, row.provider);
 			const costCell = costCellText(channel, row.cost ?? 0);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: lists_module_css_default.listMain,
-					children: row.title ?? "会话 " + shortIdOf(row.id)
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: lists_module_css_default.listSub,
-					children: row.workspace ?? "未归属工作区"
-				})] }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.providerLabel ?? displayNameOf(channels, row.provider ?? "") }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: row.lastTime === null ? "—" : dayLabelOf(row.lastTime, Date.now()) + " " + fmtTime(row.lastTime) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: lists_module_css_default.listSub,
-					children: ["时长 ", fmtDuration(durationOf(row))]
-				})] }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%" }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel === null || channel.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: shared_module_css_default.dim,
-					children: costCell.text
-				}) : costCell.text })
-			] }, row.id);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+				className: row.archived ? lists_module_css_default.rowArchived : void 0,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: lists_module_css_default.listMain,
+						children: [row.title ?? "会话 " + shortIdOf(row.id), row.archived && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: lists_module_css_default.archivedTag,
+							children: "已归档"
+						})]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: lists_module_css_default.listSub,
+						children: row.workspace ?? "未归属工作区"
+					})] }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.providerLabel ?? displayNameOf(channels, row.provider ?? "") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: row.lastTime === null ? "—" : dayLabelOf(row.lastTime, Date.now()) + " " + fmtTime(row.lastTime) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: lists_module_css_default.listSub,
+						children: ["时长 ", fmtDuration(durationOf(row))]
+					})] }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%" }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel === null || channel.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: shared_module_css_default.dim,
+						children: costCell.text
+					}) : costCell.text })
+				]
+			}, row.id);
 		}
 		function durationOf(row) {
 			if (row.firstTime === null || row.lastTime === null) return 0;
@@ -2201,6 +2242,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "热力图按可见区间内活跃日的三分位分档（少 / 中 / 高）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "项目用量、会话用量与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。" })
 							]

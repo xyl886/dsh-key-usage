@@ -40,7 +40,9 @@ import {
   projectRowsOf,
   sessionRowsOf,
   type SessionCollection,
+  type SessionMetaOptions,
 } from './sessions.js'
+import { createArchiveSource, createTitleSource } from './session-meta.js'
 import {
   mergeDailySeries,
   sessionDayRows,
@@ -111,9 +113,14 @@ export function mountKeyUsageRoutes(
   webServer: WebServer,
   sessionSource: SessionSource = unavailableSessionSource,
   liveQuota: LiveQuotaService = disabledLiveQuota,
+  hostServices: { get(name: string): unknown } = { get: () => undefined },
 ): void {
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
+  const titleSource = createTitleSource(join(dshHomePath(), 'storages', 'session_projcache.json'))
+  const archiveSource = createArchiveSource(hostServices, join(dshHomePath(), 'storages', 'workspace.json'))
+  /** 会话标题与归档状态：宿主服务/缓存文件都拿不到时返回空集合，界面自行回落。 */
+  const sessionMeta = (): SessionMetaOptions => ({ titles: titleSource.titles(), archived: archiveSource.archived() })
 
   const loadLedger = (): UsageLedger => readLedger(ledgerPath, (path) => {
     try { return readFileSync(path, 'utf8') } catch { return null }
@@ -306,7 +313,8 @@ export function mountKeyUsageRoutes(
       const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
       const { records, coverage } = await sessionSource.collect()
       const priceTable = buildPriceTable(loadLedger())
-      const rows = sessionRowsOf(records, knownProviders).slice(0, limit).map((row) => ({
+      const meta = sessionMeta()
+      const rows = sessionRowsOf(records, knownProviders, meta).slice(0, limit).map((row) => ({
         ...row,
         providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
         costMode: row.provider === null ? null : costModeOf.get(row.provider) ?? null,
@@ -327,7 +335,7 @@ export function mountKeyUsageRoutes(
       const knownProviders = channels.map((channel) => channel.provider)
       const { records, coverage } = await sessionSource.collect()
       const priceTable = buildPriceTable(loadLedger())
-      const rows = projectRowsOf(records, knownProviders).slice(0, limit).map((row) => ({
+      const rows = projectRowsOf(records, knownProviders, sessionMeta()).slice(0, limit).map((row) => ({
         ...row,
         dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
         cost: estimateCost(row.models, priceTable),

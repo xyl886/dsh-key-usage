@@ -20,3 +20,9 @@
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
 .dayCount { color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: 11px; margin-left: 8px; }
+/* 已归档会话：显示时整体淡化（与宿主原生「显示已归档」的观感一致），并在标题后加小标 */
+.rowArchived td { opacity: .5; }
+.archivedTag {
+  margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
+  color: var(--dsw-alias-label-tertiary, #67676f); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+}

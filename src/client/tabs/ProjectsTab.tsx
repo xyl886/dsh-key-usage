@@ -70,7 +70,10 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
                   <div className={listStyles.listTitle}>
                     <div>
                       <div className={listStyles.listMain}>{baseNameOf(row.workspace)}</div>
-                      <div className={listStyles.listSub}>{row.workspace} · {row.sessionCount} 个会话</div>
+                      <div className={listStyles.listSub}>
+                        {row.workspace} · {row.sessionCount} 个会话
+                        {row.archivedSessionCount > 0 ? '（含 ' + row.archivedSessionCount + ' 个已归档，仍计入）' : ''}
+                      </div>
                     </div>
                   </div>
                 </td>
