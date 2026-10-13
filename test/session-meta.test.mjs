@@ -58,15 +58,26 @@ assert.equal(brokenFile.archived().size, 0, '文件损坏时返回空集合')
 // ---------- 4) 首条用户提问作为标题兜底 ----------
 const morning = new Date(2026, 9, 13, 9, 0, 0).getTime()
 const folded = foldSessionEvents([
-  { seq: 0, time: morning, type: 'user/message', data: { message: { content: [{ type: 'text', text: '  帮我   看看\n这个插件的用量  ' }] } } },
+  // 真实形状：user/message 的正文在 data.content（assistant/message 才用 data.message.content）
+  { seq: 0, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '  帮我   看看\n这个插件的用量  ' }] } },
   { seq: 1, time: morning, type: 'request/header', data: { header: { config: { provider: 'opencode-go', model: 'GLM-5.3-Flash' } } } },
-  { seq: 2, time: morning, type: 'user/message', data: { message: { content: [{ type: 'text', text: '第二条不该覆盖' }] } } },
+  { seq: 2, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '第二条不该覆盖' }] } },
   { seq: 3, time: morning, type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 10, outputTokens: 2, cacheReadTokens: 0 } } } },
 ])
 assert.equal(folded.firstPrompt, '帮我 看看 这个插件的用量', '空白被压平、只取第一条')
 
+// 兼容分支：assistant 那套 data.message.content、以及裸字符串块
+const nestedShape = foldSessionEvents([
+  { seq: 0, time: morning, type: 'user/message', data: { message: { content: [{ type: 'text', text: '嵌套形状也要认' }] } } },
+])
+assert.equal(nestedShape.firstPrompt, '嵌套形状也要认', 'data.message.content 作为兼容分支')
+const stringBlocks = foldSessionEvents([
+  { seq: 0, time: morning, type: 'user/message', data: { content: ['', '裸字符串提示'] } },
+])
+assert.equal(stringBlocks.firstPrompt, '裸字符串提示', '裸字符串块也要认')
+
 const longPrompt = foldSessionEvents([
-  { seq: 0, time: morning, type: 'user/message', data: { message: { content: [{ type: 'text', text: '一'.repeat(120) }] } } },
+  { seq: 0, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '一'.repeat(120) }] } },
 ])
 assert.equal(longPrompt.firstPrompt.length, 61, '超长标题截断到 60 字 + 省略号')
 

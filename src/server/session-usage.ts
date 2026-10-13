@@ -210,15 +210,21 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
   return { samples, firstTime, lastTime, firstPrompt }
 }
 
-/** 标题兜底：取 user/message 里第一个非空文本块，压平空白并截断。 */
+/** 标题兜底：取用户消息里第一个非空文本块，压平空白并截断。 */
 function promptTextOf(event: SessionEvent): string | null {
-  const message = event.data?.message
-  if (typeof message !== 'object' || message === null) return null
-  const content = (message as { content?: unknown }).content
-  if (!Array.isArray(content)) return null
+  const data = event.data
+  if (typeof data !== 'object' || data === null) return null
+  // `user/message` 的正文在 `data.content`（宿主 dsh-context 就是这么读的），
+  // `assistant/message` 才用 `data.message.content` —— 两种都认，避免形状差异导致标题全空。
+  const direct = (data as { content?: unknown }).content
+  const nested = (data as { message?: { content?: unknown } }).message?.content
+  const content = Array.isArray(direct) ? direct : Array.isArray(nested) ? nested : null
+  if (content === null) return null
   for (const block of content) {
-    if (typeof block !== 'object' || block === null) continue
-    const text = (block as { text?: unknown }).text
+    // 文本块既可能是对象，也可能是裸字符串
+    const text = typeof block === 'string'
+      ? block
+      : typeof block === 'object' && block !== null ? (block as { text?: unknown }).text : null
     if (typeof text !== 'string') continue
     const flat = text.replace(/\s+/g, ' ').trim()
     if (flat === '') continue
