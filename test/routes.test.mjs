@@ -302,6 +302,14 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.deepEqual(pricing.body.templates.map((template) => template.id), ['deepseek', 'kimi', 'glm'])
   assert.equal(pricing.body.offPeakNow.length, 1, '每条规则一个错峰状态')
   assert.equal(pricing.body.offPeakNow[0], false, '没有错峰窗口的规则永远不是错峰')
+  // 内置官方价目：自动生效，界面靠这段渲染「已内置 N 条（来源见 …）」
+  assert.ok(pricing.body.catalog.entries > 0, '内置价目条数透出给界面')
+  assert.ok(pricing.body.catalog.sources.length >= 4, '按来源分组：DeepSeek / Kimi / Z.ai / OpenRouter')
+  for (const source of pricing.body.catalog.sources) {
+    assert.ok(/^https:\/\//.test(source.source), '每条来源都是精确 URL：' + source.source)
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(source.fetchedAt), '每条来源都带抓取日期')
+    assert.ok(source.providers.length > 0 && source.count > 0)
+  }
   assert.equal(pricing.body.coverage.ruleModels, 1, 'opencode-go 命中规则')
   assert.equal(pricing.body.coverage.unpricedModels, 1, 'local 既没规则也没台账成本')
   // 参照值：近 30 天所有行按规则口径算 = 台账两天（1000+200+8000 与 2000+400+16000）

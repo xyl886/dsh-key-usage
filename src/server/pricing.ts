@@ -5,20 +5,29 @@
  * 本模块只做纯函数：归一化、优先级匹配、错峰判定、单位换算与费用 / 缓存省钱计算。
  * 不读文件、不联网，因此可以完全离线单测。
  *
- * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 台账反推均价 > 无（显示 —）。
- * 本模块负责「用户规则」这一层。
+ * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 内置官方价目 > 台账反推均价
+ * > 无（显示 —）。本模块负责「用户规则」与「内置官方价目」这两层。
  */
+import { catalogRuleFor } from './pricing-catalog.js'
 
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
-/** 成本来源：官方账单 / 用户规则 / 台账反推均价 / 无依据。 */
-export type CostSource = 'official' | 'rule' | 'estimate' | 'none'
+/** 成本来源：官方账单 / 用户规则 / 内置官方价目 / 台账反推均价 / 无依据。 */
+export type CostSource = 'official' | 'rule' | 'catalog' | 'estimate' | 'none'
+
+/** 命中的价目来自哪一层；`catalog` = 内置官方价目。 */
+export type PricingRuleSource = 'rule' | 'catalog'
 
 export interface OffPeakWindow {
   /** 本地时间 `HH:MM`。 */
   from: string
   /** 本地时间 `HH:MM`；小于 `from` 表示跨午夜，`24:00` 表示当天末尾。 */
   to: string
+  /**
+   * 该窗口只在哪些星期生效，ISO 编号 1=周一 … 7=周日；**缺省 = 每天都适用**。
+   * 缺省必须是「每天」：已有规则与已保存配置都没有这个字段，语义不能变。
+   */
+  days?: number[]
 }
 
 export interface PricingRates {
@@ -67,12 +76,12 @@ export interface PricingUsageRow {
 
 export interface PricedRow {
   cost: number | null
-  /** `rule` = 命中用户规则；`none` = 没有规则可算（由调用方回落台账均价）。 */
-  source: 'rule' | 'none'
+  /** `rule` = 命中用户规则；`catalog` = 命中内置官方价目；`none` = 没有价目可算（由调用方回落台账均价）。 */
+  source: PricingRuleSource | 'none'
   rule: PricingRule | null
   /** 相邻时间窗内该规则是否处于错峰（`at` 以参数传入时才有意义）。 */
   offPeak: boolean
-  /** 该行因缓存命中而少付的钱（未命中价 − 命中价）；无规则或按次计费时为 0。 */
+  /** 该行因缓存命中而少付的钱（未命中价 − 命中价）；无价目或按次计费时为 0。 */
   cacheSavings: number
 }
 
@@ -136,6 +145,23 @@ function ratesOf(raw: Record<string, unknown>, fallback: PricingRates): PricingR
   }
 }
 
+/**
+ * `days` 归一：只接受 1–7 的整数并去重排序。
+ * 非法值（空数组 / 越界 / 非整数 / 非数组）一律**返回 undefined = 每天适用**：
+ * 这些值只会来自手改 JSON 或旧配置，把整段错峰作废会让金额突然变高，
+ * 而「每天适用」正是缺省语义，最保守也最接近用户原意（不静默改变已有行为）。
+ */
+export function normalizeDays(raw: unknown): number[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const days = new Set<number>()
+  for (const entry of raw) {
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 1 || entry > 7) continue
+    days.add(entry)
+  }
+  if (days.size === 0) return undefined
+  return [...days].sort((first, second) => first - second)
+}
+
 function windowsOf(raw: unknown): OffPeakWindow[] {
   if (!Array.isArray(raw)) return []
   const windows: OffPeakWindow[] = []
@@ -144,7 +170,8 @@ function windowsOf(raw: unknown): OffPeakWindow[] {
     const from = (entry as { from?: unknown }).from
     const to = (entry as { to?: unknown }).to
     if (clockMinutes(from) === null || clockMinutes(to) === null) continue
-    windows.push({ from: (from as string).trim(), to: (to as string).trim() })
+    const days = normalizeDays((entry as { days?: unknown }).days)
+    windows.push({ from: (from as string).trim(), to: (to as string).trim(), ...(days === undefined ? {} : { days }) })
   }
   return windows
 }
@@ -222,15 +249,43 @@ export function matchPricingRule(rules: PricingRule[], provider: string, model: 
   return null
 }
 
-/** 一个时间点是否落在规则的错峰窗口内（按**本地时间**判断，跨午夜窗口取并集）。 */
-export function isOffPeakAt(rule: PricingRule, at: Date): boolean {
-  if (rule.offPeak === null) return false
-  return isOffPeakAtMinutes(rule, at.getHours() * 60 + at.getMinutes())
+/**
+ * 找一条可用于该行的价目：用户规则优先，没命中再查内置官方价目。
+ * 内置价目不落盘、用户也不可编辑，因此只有「查得到 / 查不到」两种结果。
+ */
+export function matchPricedRule(
+  rules: PricingRule[],
+  provider: string,
+  model: string,
+): { rule: PricingRule; source: PricingRuleSource } | null {
+  const userRule = matchPricingRule(rules, provider, model)
+  if (userRule !== null) return { rule: userRule, source: 'rule' }
+  const catalogRule = catalogRuleFor(provider, model)
+  if (catalogRule !== null) return { rule: catalogRule, source: 'catalog' }
+  return null
 }
 
-function isOffPeakAtMinutes(rule: PricingRule, minutes: number): boolean {
+/**
+ * 一个时间点是否落在规则的错峰窗口内（按**本地时间**判断，跨午夜窗口取并集）。
+ * 星期几也取本地时间，与时间判定保持同一口径。
+ */
+export function isOffPeakAt(rule: PricingRule, at: Date): boolean {
+  if (rule.offPeak === null) return false
+  return isOffPeakAtMinutes(rule, at.getHours() * 60 + at.getMinutes(), isoDayOf(at))
+}
+
+/** ISO 星期：1=周一 … 7=周日（`Date.getDay()` 的 0=周日 映射过来）。 */
+export function isoDayOf(at: Date): number {
+  const day = at.getDay()
+  return day === 0 ? 7 : day
+}
+
+function isOffPeakAtMinutes(rule: PricingRule, minutes: number, day?: number): boolean {
   if (rule.offPeak === null) return false
   for (const window of rule.offPeak.windows) {
+    // days 缺省或非法都当作「每天」；这里再归一一次，防住绕过 normalizePricing 的调用方
+    const days = normalizeDays(window.days)
+    if (day !== undefined && days !== undefined && !days.includes(day)) continue
     const from = clockMinutes(window.from)
     const to = clockMinutes(window.to)
     if (from === null || to === null) continue
@@ -276,6 +331,8 @@ function costAtRates(row: PricingUsageRow, rule: PricingRule, rates: PricingRate
 /**
  * 错峰权重：一天里落在错峰窗口内的 tokens 占比（按小时槽取样，小时粒度取该小时中点判定）。
  * 小时槽只有整天的分桶、没有「模型 × 小时」的拆分，所以这是近似值；调用方拿不到小时数据时按 0 处理。
+ * 只有整天的分桶、拿不到日期，因此带 `days` 的窗口在这里按「每天适用」算 —— 与实际一周里的
+ * 星期分布无关，属有意近似（单日范围的加权本就更粗）。
  */
 export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | null): number {
   if (rule.offPeak === null || hours === null || hours.length === 0) return 0
@@ -303,10 +360,11 @@ export function priceRowsByRules(
   const at = options.at ?? null
   const sharedHours = options.hours ?? null
   return rows.map((row) => {
-    const rule = matchPricingRule(config.rules, row.provider, row.model)
-    if (rule === null) {
+    const matched = matchPricedRule(config.rules, row.provider, row.model)
+    if (matched === null) {
       return { cost: null, source: 'none', rule: null, offPeak: false, cacheSavings: 0 }
     }
+    const rule = matched.rule
     const standard = costAtRates(row, rule, rule)
     const share = rule.offPeak === null
       ? (at !== null && isOffPeakAt(rule, at) ? 1 : 0)
@@ -315,7 +373,7 @@ export function priceRowsByRules(
     const cost = standard * (1 - share) + offPeakCost * share
     return {
       cost,
-      source: 'rule' as const,
+      source: matched.source,
       rule,
       offPeak: share >= 1,
       // 省下的钱 = 命中缓存的 tokens ×（未命中价 − 命中价），按要求只用标准价
@@ -328,9 +386,9 @@ export interface RowCostSummary {
   cost: number | null
   /** 只要有一行回落台账均价，整体就降级为 estimate（宁可标弱也不冒称精确）。 */
   source: CostSource
-  /** 命中规则的行数。 */
+  /** 命中用户规则或内置价目的行数。 */
   ruleRows: number
-  /** 缓存命中省下的钱（只统计命中规则的行）。 */
+  /** 缓存命中省下的钱（只统计命中价目的行）。 */
   cacheSavings: number
 }
 
@@ -350,7 +408,7 @@ function round2(value: number): number {
 }
 
 /**
- * 逐行定价：用户规则优先，规则没命中时回落调用方给的均价查价（台账反推均价）。
+ * 逐行定价：用户规则 > 内置官方价目，都没命中时回落调用方给的均价查价（台账反推均价）。
  * @param averagePrice - 台账反推均价查价函数（由调用方注入，避免本模块依赖 ledger）
  */
 export function rowCostsOf(
@@ -363,7 +421,7 @@ export function rowCostsOf(
   return rows.map((row, index) => {
     const hit = priced[index]
     if (hit.cost !== null) {
-      return { cost: round2(hit.cost), source: 'rule' as CostSource, rule: hit.rule, cacheSavings: hit.cacheSavings }
+      return { cost: round2(hit.cost), source: hit.source as CostSource, rule: hit.rule, cacheSavings: hit.cacheSavings }
     }
     const average = averagePrice(row)
     if (average !== null) return { cost: average, source: 'estimate' as CostSource, rule: null, cacheSavings: 0 }
@@ -371,7 +429,7 @@ export function rowCostsOf(
   })
 }
 
-/** 组合「用户规则 → 台账反推均价」两层估算，给出金额、最弱来源、命中行数与缓存省钱。 */
+/** 组合「用户规则 → 内置官方价目 → 台账反推均价」三层估算，给出金额、最弱来源、命中行数与缓存省钱。 */
 export function costOfUsageRows(
   rows: PricingUsageRow[],
   config: PricingConfig,
@@ -383,22 +441,28 @@ export function costOfUsageRows(
   let matched = false
   let ruleRows = 0
   let cacheSavings = 0
-  let fellBack = false
+  let weakest: CostSource = 'official'
   for (const row of priced) {
     if (row.cost === null) continue
     total += row.cost
     matched = true
     cacheSavings += row.cacheSavings
-    if (row.source === 'rule') ruleRows += 1
-    else fellBack = true
+    if (row.source === 'rule' || row.source === 'catalog') ruleRows += 1
+    weakest = weakestOf(weakest, row.source)
   }
   if (!matched) return { cost: null, source: 'none', ruleRows: 0, cacheSavings: 0 }
   return {
     cost: round2(total),
-    source: fellBack ? 'estimate' : 'rule',
+    source: weakest,
     ruleRows,
     cacheSavings: round4(cacheSavings),
   }
+}
+
+/** 两个来源取更弱的那个（与 routes 的 `weakestSource` 同一顺序）。 */
+function weakestOf(current: CostSource, candidate: CostSource): CostSource {
+  const rank: Record<CostSource, number> = { official: 0, rule: 1, catalog: 2, estimate: 3, none: 4 }
+  return rank[candidate] > rank[current] ? candidate : current
 }
 
 /** 按币种分组累加：跨币种不换算、不合计（不同通道币种不同，混加没有意义）。 */
@@ -410,8 +474,8 @@ export function addMoney(target: MoneyByCurrency, currency: string, amount: numb
 }
 
 /**
- * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中规则 / 回落均价 / 无依据，
- * 并按**所有行**累加金额与缓存省钱（各按规则自己的币种分组，跨币种不换算不合计）。
+ * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中用户规则 / 命中内置价目 / 回落均价 / 无依据，
+ * 并按**所有行**累加金额与缓存省钱（各按价目自己的币种分组，跨币种不换算不合计）。
  */
 export function summarizeCoverage(
   rows: PricingUsageRow[],
@@ -419,6 +483,7 @@ export function summarizeCoverage(
   averagePrice: (row: PricingUsageRow) => number | null = () => null,
 ): {
   ruleModels: number
+  catalogModels: number
   averagedModels: number
   unpricedModels: number
   costByCurrency: MoneyByCurrency
@@ -429,6 +494,7 @@ export function summarizeCoverage(
   const savingsByCurrency: MoneyByCurrency = {}
   const savingsByModel = new Map<string, { provider: string; model: string; currency: string; cacheReadTokens: number; amount: number }>()
   const rulerKeys = new Set<string>()
+  const catalogKeys = new Set<string>()
   const averagedKeys = new Set<string>()
   const unpricedKeys = new Set<string>()
   for (const row of rows) {
@@ -440,7 +506,8 @@ export function summarizeCoverage(
       else unpricedKeys.add(key)
       continue
     }
-    rulerKeys.add(key)
+    if (priced.source === 'catalog') catalogKeys.add(key)
+    else rulerKeys.add(key)
     addMoney(costByCurrency, priced.rule.currency, priced.cost)
     if (priced.cacheSavings <= 0) continue
     addMoney(savingsByCurrency, priced.rule.currency, priced.cacheSavings)
@@ -463,6 +530,7 @@ export function summarizeCoverage(
     .sort((first, second) => second.amount - first.amount)
   return {
     ruleModels: rulerKeys.size,
+    catalogModels: catalogKeys.size,
     averagedModels: averagedKeys.size,
     unpricedModels: unpricedKeys.size,
     costByCurrency,
@@ -480,29 +548,40 @@ export interface PricingTemplate {
 }
 
 /**
+ * DeepSeek 错峰窗口（本地时间）：高峰 = 周一至周五 09:00–12:00 与 14:00–18:00，
+ * 其余时段全是错峰，因此三段窗口都限定 `days` 为工作日，周末另给一条全天窗口。
+ */
+const DEEPSEEK_RULE_OFFPEAK_WINDOWS: OffPeakWindow[] = [
+  { from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] },
+  { from: '12:00', to: '14:00', days: [1, 2, 3, 4, 5] },
+  { from: '18:00', to: '00:00', days: [1, 2, 3, 4, 5] },
+  { from: '00:00', to: '00:00', days: [6, 7] },
+]
+
+/**
  * 内置价目模板：只提供**结构与官方数值**，套用后由用户自行核对/修改。
- * 数值来自 docs/05 附录 A.4（2026-10-13 抓取）。
- * DeepSeek 官方公布的 peak 是「周一至周五 01:00–04:00 与 06:00–10:00 **UTC**」，
- * 而错峰窗口按本地时间判断，因此这里换算成 UTC+8 的 09:00–12:00 / 14:00–18:00；
- * 规则模型只有 `{from,to}`，表达不了「仅工作日」，这一点写在 note 里。
+ * 数值来自 docs/05 附录 A.5（2026-10-13 抓取）。
+ * DeepSeek 取**中文文档的 CNY 价**（英文页同价不同币种）：peak = 北京时间周一至周五
+ * 09:00–12:00 与 14:00–18:00，其余时段半价；错峰窗口因此必须带 `days`，
+ * 否则周末会被算成高峰。法定节假日没有日历可查，仍按高峰价算，已在 note 写明。
  */
 export const PRICING_TEMPLATES: PricingTemplate[] = [
   {
     id: 'deepseek',
     label: 'DeepSeek 官方',
-    note: 'USD / 百万 tokens；错峰 = peak 半价。peak 为周一至周五 01:00–04:00 与 06:00–10:00 UTC，此处按 UTC+8 换算为 09:00–12:00 与 14:00–18:00；窗口不含「仅工作日」条件，周末会被算成错峰。来源：https://api-docs.deepseek.com/quick_start/pricing（2026-10-13）',
+    note: 'CNY / 百万 tokens；错峰 = 高峰半价。高峰为北京时间周一至周五（仅工作日）09:00–12:00 与 14:00–18:00，其余时段（含周末全天）为错峰；中国法定节假日无法表达，会按高峰价算。来源：https://api-docs.deepseek.com/zh-cn/quick_start/pricing（2026-10-13）',
     rules: [
       {
-        provider: 'deepseek-official', model: 'deepseek-v4-pro', unit: 'perMillionTokens', currency: 'USD',
-        input: 0.66, cacheRead: 0.022, cacheWrite: 0.66, output: 1.98,
-        offPeak: { windows: [{ from: '00:00', to: '09:00' }, { from: '12:00', to: '14:00' }, { from: '18:00', to: '24:00' }], input: 0.33, cacheRead: 0.011, cacheWrite: 0.33, output: 0.99 },
-        note: 'v4-pro 标准价；缓存写按未命中价计。来源同上',
+        provider: 'deepseek-official', model: 'deepseek-v4-pro', unit: 'perMillionTokens', currency: 'CNY',
+        input: 9, cacheRead: 0.3, cacheWrite: 9, output: 27,
+        offPeak: { windows: DEEPSEEK_RULE_OFFPEAK_WINDOWS, input: 4.5, cacheRead: 0.15, cacheWrite: 4.5, output: 13.5 },
+        note: 'v4-pro 高峰价；缓存写文档未单列，沿用未命中价。来源同上',
       },
       {
-        provider: 'deepseek-official', model: '*', unit: 'perMillionTokens', currency: 'USD',
-        input: 0.30, cacheRead: 0.006, cacheWrite: 0.30, output: 1.20,
-        offPeak: { windows: [{ from: '00:00', to: '09:00' }, { from: '12:00', to: '14:00' }, { from: '18:00', to: '24:00' }], input: 0.15, cacheRead: 0.003, cacheWrite: 0.15, output: 0.60 },
-        note: '该通道兜底按 flash 档填写（标准价）；缓存写按未命中价计。来源同上',
+        provider: 'deepseek-official', model: '*', unit: 'perMillionTokens', currency: 'CNY',
+        input: 2, cacheRead: 0.04, cacheWrite: 2, output: 8,
+        offPeak: { windows: DEEPSEEK_RULE_OFFPEAK_WINDOWS, input: 1, cacheRead: 0.02, cacheWrite: 1, output: 4 },
+        note: '该通道兜底按 Flash 档填写（高峰价）；缓存写文档未单列，沿用未命中价。来源同上',
       },
     ],
   },

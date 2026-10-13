@@ -1,5 +1,6 @@
 /**
- * 成本来源角标：官方 / 自定 / 估算 —— 避免把估算当成账单金额用。
+ * 成本来源角标：官方（台账账单）/ 官方价（内置官方价目）/ 自定（你的规则）/ 估算（台账均价）
+ * —— 避免把估算当成账单金额用。
  * 只在真的显示了金额时挂；`订阅内` / `免费` / `—` 这类占位文案不带角标。
  */
 import type { ReactNode } from 'react'
@@ -19,5 +20,6 @@ export function CostSourceChip(props: { source: CostSource | null | undefined; c
 function sourceClass(source: CostSource): string {
   if (source === 'official') return styles.sourceOfficial
   if (source === 'rule') return styles.sourceRule
+  if (source === 'catalog') return styles.sourceCatalog
   return styles.sourceEstimate
 }

@@ -71,6 +71,7 @@ import {
   type PricingUsageRow,
   type PricingView,
 } from './pricing.js'
+import { catalogEntryCount, catalogSources } from './pricing-catalog.js'
 
 interface WebServer {
   register(route: { kind: string; path: string; handler: (request: IncomingMessage, response: ServerResponse) => Promise<void> | void }): void
@@ -101,7 +102,7 @@ const EMPTY_LEDGER: UsageLedger = { version: 0, days: {} }
 type AnnotatedModelSummary = ModelSummary & { costSource: CostSource }
 type AnnotatedDaySummary = ChannelDailySummary & { costSource: CostSource; models: AnnotatedModelSummary[] }
 
-const SOURCE_RANK: Record<CostSource, number> = { official: 0, rule: 1, estimate: 2, none: 3 }
+const SOURCE_RANK: Record<CostSource, number> = { official: 0, rule: 1, catalog: 2, estimate: 3, none: 4 }
 
 /** 一天里最弱的那一格决定整天的角标：宁可标弱，也不把估算冒充成规则价。 */
 export function weakestSource(sources: CostSource[]): CostSource {
@@ -275,7 +276,7 @@ export function mountKeyUsageRoutes(
         const priced = priceRowsByRules([row], view.config, { hours: offPeakHours })[0]
         const fallback = estimateCost([{ provider: model.provider, model: model.model, tokens: displayTokensOf(row) }], priceTable)
         const cost = priced.cost ?? fallback ?? 0
-        const source: CostSource = priced.cost !== null ? 'rule' : fallback !== null ? 'estimate' : 'none'
+        const source: CostSource = priced.cost !== null ? priced.source : fallback !== null ? 'estimate' : 'none'
         return { ...model, cost: Math.round(cost * 100) / 100, costSource: source }
       })
       return {
@@ -607,14 +608,20 @@ export function mountKeyUsageRoutes(
         writable: view.writable,
         revision: view.revision,
         templates: PRICING_TEMPLATES,
+        // 内置官方价目：自动生效、无需套用模板；这里只透出「覆盖了哪些通道 / 来源 / 抓取日期」
+        catalog: {
+          entries: catalogEntryCount(),
+          sources: catalogSources(),
+        },
         offPeakNow: view.config.rules.map((rule) => isOffPeakNow(rule, now)),
         coverage: {
           from: monthFrom,
           to: today,
           ruleModels: coverage.ruleModels,
+          catalogModels: coverage.catalogModels,
           averagedModels: coverage.averagedModels,
           unpricedModels: coverage.unpricedModels,
-          // 只作参照：界面上的成本按「官方 > 规则 > 均价」逐格取值，与这个总额不一定相等
+          // 只作参照：界面上的成本按「官方 > 规则 > 内置 > 均价」逐格取值，与这个总额不一定相等
           ruleCostByCurrency: coverage.costByCurrency,
           savingsByCurrency: coverage.savingsByCurrency,
           savingsDetail: coverage.savingsDetail,

@@ -8,11 +8,13 @@
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
 /** 成本来源角标：与服务端 `costSource` 字段一一对应。 */
-export type CostSource = 'official' | 'rule' | 'estimate' | 'none'
+export type CostSource = 'official' | 'rule' | 'catalog' | 'estimate' | 'none'
 
 export interface OffPeakWindow {
   from: string
   to: string
+  /** ISO 星期 1=周一 … 7=周日；缺省 = 每天都适用（与服务端同义）。 */
+  days?: number[]
 }
 
 export interface PricingRates {
@@ -48,13 +50,23 @@ export interface PricingTemplate {
   rules: PricingRule[]
 }
 
+/** 内置官方价目的一个来源（计费面板展示「已内置 N 条，来源见 …」）。 */
+export interface CatalogSourceSummary {
+  source: string
+  fetchedAt: string
+  providers: string[]
+  count: number
+}
+
 export interface PricingCoverage {
   from: string
   to: string
   ruleModels: number
+  /** 命中内置官方价目的模型数（未配规则时自动生效的那一层）。 */
+  catalogModels: number
   averagedModels: number
   unpricedModels: number
-  /** 近 30 天按规则口径算出的金额（仅作参照，界面成本按「官方 > 规则 > 均价」逐格取值）。 */
+  /** 近 30 天按规则口径算出的金额（仅作参照，界面成本按「官方 > 规则 > 内置 > 均价」逐格取值）。 */
   ruleCostByCurrency: Record<string, number>
   savingsByCurrency: Record<string, number>
   savingsDetail: Array<{ provider: string; model: string; currency: string; cacheReadTokens: number; amount: number }>
@@ -67,6 +79,8 @@ export interface PricingResponse {
   writable: boolean
   revision: number | null
   templates: PricingTemplate[]
+  /** 内置官方价目：条数 + 各来源（含抓取日期），无需用户套用即自动生效。 */
+  catalog: { entries: number; sources: CatalogSourceSummary[] }
   /** 与 rules 等长：该条规则此刻是否处于错峰时段（按本地时间判定，服务端算）。 */
   offPeakNow: boolean[]
   coverage: PricingCoverage
@@ -75,6 +89,7 @@ export interface PricingResponse {
 export const COST_SOURCE_LABELS: Record<CostSource, string> = {
   official: '官方',
   rule: '自定',
+  catalog: '官方价',
   estimate: '估算',
   none: '—',
 }
@@ -83,6 +98,7 @@ export const COST_SOURCE_LABELS: Record<CostSource, string> = {
 export const COST_SOURCE_HINTS: Record<CostSource, string> = {
   official: '官方：台账记录的厂商账单金额',
   rule: '自定：按你维护的计费规则算出',
+  catalog: '官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）',
   estimate: '估算：按台账反推的均价推算',
   none: '没有价格依据（未配置规则，台账也无成本数据）',
 }
@@ -114,10 +130,64 @@ export function ruleLabelOf(rule: PricingRule): string {
   return (rule.provider === '*' ? '任意通道' : rule.provider) + ' · ' + model
 }
 
-/** 错峰窗口文案：`09:00–12:00、14:00–18:00`；没有则空串。 */
+/** 错峰窗口文案：`09:00–12:00、14:00–18:00`；带 `days` 的窗口补一个「（工作日）」之类的后缀。 */
 export function offPeakWindowsText(rule: PricingRule): string {
   if (rule.offPeak === null || rule.offPeak.windows.length === 0) return ''
-  return rule.offPeak.windows.map((window) => window.from + '–' + window.to).join('、')
+  return rule.offPeak.windows.map((window) => {
+    const base = window.from + '–' + window.to
+    const suffix = dayScopeSuffixOf(window.days)
+    return suffix === '' ? base : base + '（' + suffix + '）'
+  }).join('、')
+}
+
+/** 编辑器里的星期范围三选一；与服务端 `days` 的映射见 DAY_SCOPE_DAYS。 */
+export type DayScope = 'every' | 'weekday' | 'weekend'
+
+export const DAY_SCOPE_OPTIONS: DayScope[] = ['every', 'weekday', 'weekend']
+
+export const DAY_SCOPE_LABELS: Record<DayScope, string> = {
+  every: '每天',
+  weekday: '仅工作日',
+  weekend: '仅周末',
+}
+
+/** 「每天」刻意映射成 `days` 缺省（而不是 [1..7]），保证升级前的规则原样往返。 */
+export const DAY_SCOPE_DAYS: Record<DayScope, number[] | undefined> = {
+  every: undefined,
+  weekday: [1, 2, 3, 4, 5],
+  weekend: [6, 7],
+}
+
+/** 已保存的 `days` → 编辑器取值；非法值一律当「每天」（与服务端容错口径一致）。 */
+export function dayScopeOf(days: number[] | undefined): DayScope {
+  const normalized = normalizeDays(days)
+  if (normalized === undefined) return 'every'
+  const key = normalized.join(',')
+  if (key === '1,2,3,4,5') return 'weekday'
+  if (key === '6,7') return 'weekend'
+  // 三选一表达不了自定义组合（手改 JSON 才可能出现）：保守显示「每天」，不改写数值
+  return 'every'
+}
+
+/** `days` 的简短说明；缺省或非三名组合返回空串（表示「每天」）。 */
+export function dayScopeSuffixOf(days: number[] | undefined): string {
+  const scope = dayScopeOf(days)
+  return scope === 'every' ? '' : DAY_SCOPE_LABELS[scope]
+}
+
+/**
+ * `days` 归一：只接受 1–7 的整数、去重排序；非法值返回 undefined = 每天适用。
+ * 与服务端 normalizeDays 同一口径：非法值不整段作废，避免金额突然变高。
+ */
+export function normalizeDays(raw: unknown): number[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const days = new Set<number>()
+  for (const entry of raw) {
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 1 || entry > 7) continue
+    days.add(entry)
+  }
+  if (days.size === 0) return undefined
+  return [...days].sort((first, second) => first - second)
 }
 
 function toNumber(value: unknown, fallback: number): number {
@@ -146,7 +216,8 @@ function windowsOf(raw: unknown): OffPeakWindow[] {
     const to = (entry as { to?: unknown }).to
     if (typeof from !== 'string' || typeof to !== 'string') continue
     if (!/^\d{1,2}:\d{2}$/.test(from.trim()) || !/^\d{1,2}:\d{2}$/.test(to.trim())) continue
-    windows.push({ from: from.trim(), to: to.trim() })
+    const days = normalizeDays((entry as { days?: unknown }).days)
+    windows.push({ from: from.trim(), to: to.trim(), ...(days === undefined ? {} : { days }) })
   }
   return windows
 }
@@ -202,7 +273,13 @@ export function cleanRuleForWrite(rule: PricingRule): Record<string, unknown> {
   }
   if (rule.offPeak !== null && rule.offPeak.windows.length > 0) {
     values.offPeak = {
-      windows: rule.offPeak.windows.map((window) => ({ from: window.from, to: window.to })),
+      // `days` 缺省时**不写这个字段**：保持与升级前的 JSON 形状一致，旧版本读到也还是「每天」
+      windows: rule.offPeak.windows.map((window) => {
+        const days = normalizeDays(window.days)
+        return days === undefined
+          ? { from: window.from, to: window.to }
+          : { from: window.from, to: window.to, days }
+      }),
       input: rule.offPeak.input,
       cacheRead: rule.offPeak.cacheRead,
       cacheWrite: rule.offPeak.cacheWrite,
