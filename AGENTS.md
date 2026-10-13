@@ -78,7 +78,10 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 
 ## 发版与推送（2026-10-13 用户明确要求）
 
-- **改完不要自动 commit / push / npm publish**：仓库与 npm 都只在你明确说「提交」「推送」「发版」时才动。改完留在工作区，汇报里说明「未提交」。
+- **不要自动 push / npm publish**：远端动作只在你明确说「推送」「发版」时才做。本地 commit 可以自行做（见下一条）。
+- **本地 vs 远端（2026-10-13 用户明确）**：
+  - **本地 commit 可以自行做**（用于留可回退基线），但仍要选在**验证通过、没有并行写入者**的时点，不要把半成品提交进去。
+  - **任何远端动作都必须先获得用户明确授权**：`git push`、`npm publish`、以及会触发远端工作流的操作（`gh workflow run`，包括 `publish.yml` 的 dry_run）。授权要具体到「推送 / 发版」这类指令，不能由「已验证 / 已验收」推断出来。
 - **版本号规则：1.0 之前一律走 `patch`**（0.1.x 一路走）—— 新功能也只升 patch，攒够一批再由用户决定是否跳 0.2.0 / 1.0.0。
 - 本机发布：`npm version patch --no-git-tag-version` → `npm publish`；发布前跑完 `verify` / `pack:dry`。
 - **CI 发布（长期做法）**：`.github/workflows/publish.yml` 手动触发，默认 `dry_run=true` 只校验打包；改成 false 才真正 `pnpm publish --provenance --no-git-checks`。**token 只放仓库 Secret `NPM_TOKEN`，本机不再放**。
