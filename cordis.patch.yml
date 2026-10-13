@@ -1,0 +1,4 @@
+# dsh-key-usage bundle patch：把「Key 使用情况」section 插入 profile 的 layer 栈。
+- insert:
+    - id: dsh-key-usage
+      name: 'dsh-key-usage'

@@ -1,0 +1,61 @@
+{
+  "name": "dsh-key-usage",
+  "description": "DeepSeek Harness 设置页「使用情况」：按通道展示用量明细、年度热力图、项目/会话用量与官方余额/配额原样数据",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "usage",
+    "api-key"
+  ],
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "src/",
+    "client/",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build:client": "tsdown && node scripts/normalize-client-banner.mjs",
+    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/merge.js",
+    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/routes.test.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/react": "18.3.31",
+    "lightningcss": "1.33.0",
+    "react": "18.3.1",
+    "tsdown": "0.22.14",
+    "typescript": "7.0.2"
+  }
+}

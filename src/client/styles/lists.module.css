@@ -1,0 +1,22 @@
+/* 项目用量 / 会话用量：筛选栏与列表表格。 */
+.filterBar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.searchInput {
+  flex: 1; min-width: 180px; background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: 12.5px;
+}
+.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f); }
+.filterSelect {
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.listTitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.listMain { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.listSub { font-size: 10.5px; color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.listBar { width: 70px; height: 5px; border-radius: 3px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; display: inline-block; vertical-align: middle; }
+.listBar > i { display: block; height: 100%; border-radius: 3px; }
+.sessionDay td {
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec);
+  font-weight: 600; font-size: 12px; text-align: left !important; padding: 7px 10px !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+}
+.dayCount { color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: 11px; margin-left: 8px; }

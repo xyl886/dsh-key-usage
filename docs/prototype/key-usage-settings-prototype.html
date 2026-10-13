@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key 使用情况 · 设置页 UI 原型 v6</title>
+<style>
+  :root {
+    --bg: #141417;
+    --surface: #1d1d22;
+    --surface-2: #232329;
+    --border: #2c2c34;
+    --text: #e8e8ec;
+    --text-2: #9a9aa6;
+    --text-3: #67676f;
+    --accent: #5b8cff;
+    --accent-soft: rgba(91, 140, 255, 0.14);
+    --ok: #3fb96f;
+    --ok-soft: rgba(63, 185, 111, 0.13);
+    --warn: #e0a13c;
+    --warn-soft: rgba(224, 161, 60, 0.14);
+    --danger: #e05a5a;
+    --danger-soft: rgba(224, 90, 90, 0.14);
+    --key-deepseek: #5b8cff;
+    --key-opencodego: #9a7bff;
+    --key-sensenova: #3fb96f;
+    --key-local: #e0a13c;
+    --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  }
+  html[data-theme="light"] {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --border: #e1e4ea;
+    --text: #1d2129;
+    --text-2: #5c6572;
+    --text-3: #949ca8;
+    --accent-soft: rgba(91, 140, 255, 0.12);
+    --ok-soft: rgba(63, 185, 111, 0.12);
+    --warn-soft: rgba(224, 161, 60, 0.14);
+    --danger-soft: rgba(224, 90, 90, 0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 13.5px;
+    line-height: 1.55;
+    padding: 40px 16px 80px;
+  }
+  .page { max-width: 960px; margin: 0 auto; }
+
+  .proto-note {
+    border: 1px dashed var(--warn);
+    border-radius: 10px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    margin-bottom: 28px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+
+  .section-title { font-size: 19px; font-weight: 650; margin-bottom: 14px; }
+  .ghost-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+    border-radius: 999px; padding: 3px 12px; font-size: 11.5px; cursor: pointer; font-family: inherit;
+  }
+  .ghost-btn:hover { color: var(--text); border-color: var(--text-3); }
+
+  /* ===== Tab 栏 ===== */
+  .tab-bar {
+    display: flex; gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .tab-bar button {
+    border: 0; background: none; color: var(--text-2);
+    font-family: inherit; font-size: 13px; padding: 9px 14px;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color .12s;
+  }
+  .tab-bar button:hover { color: var(--text); }
+  .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ===== 使用明细：范围切换 + 统计卡 ===== */
+  .range-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .range-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .range-tabs { display: inline-flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+  .range-tabs button {
+    border: 0; background: transparent; color: var(--text-2);
+    font-size: 12px; padding: 4px 13px; border-radius: 7px; cursor: pointer; font-family: inherit;
+  }
+  .range-tabs button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .custom-dates { display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+  .custom-dates.show { display: inline-flex; }
+  .custom-dates input {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 3px 8px; font-family: inherit; font-size: 12px; color-scheme: dark;
+  }
+  html[data-theme="light"] .custom-dates input { color-scheme: light; }
+  .range-caption { color: var(--text-3); font-size: 11.5px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .search-input {
+    flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 9px; padding: 6px 12px; font-family: inherit; font-size: 12.5px;
+  }
+  .search-input::placeholder { color: var(--text-3); }
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-2);
+    border-radius: 9px; padding: 6px 10px; font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  .session-day td {
+    background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 12px;
+    text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border);
+  }
+  .session-day .day-count { color: var(--text-3); font-weight: 500; font-size: 11px; margin-left: 8px; }
+  .heat-cell.idle { background: rgba(128,128,140,.22); }
+  .legend i.ghost { background: rgba(128,128,140,.10); border: 1px solid rgba(128,128,140,.25); }
+
+  .overview-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .stat-label { color: var(--text-3); font-size: 11.5px; margin-bottom: 6px; }
+  .stat-value { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat-value small { font-size: 12px; color: var(--text-2); font-weight: 500; margin-left: 2px; }
+  .stat-extra { color: var(--text-3); font-size: 11.5px; margin-top: 4px; }
+  .share-card .mini-share { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 8px 0 10px; }
+  .share-card .mini-share > i { display: block; height: 100%; }
+  .share-legend { display: flex; flex-direction: column; gap: 4px; }
+  .share-legend .lg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); }
+  .share-legend .lg-item i { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .share-legend .lg-item b { color: var(--text); font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .share-legend .lg-item .lg-amt { color: var(--text-3); margin-left: 6px; }
+
+  /* ===== 筛选 chips + 视图切换 ===== */
+  .detail-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+    border-radius: 999px; padding: 5px 14px; font-size: 12px; cursor: pointer;
+    font-family: inherit; transition: all .12s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip:hover { color: var(--text); border-color: var(--text-3); }
+  .chip.active { background: var(--accent-soft); border-color: rgba(91,140,255,.4); color: var(--accent); font-weight: 600; }
+  .chip .status-dot { width: 6px; height: 6px; }
+
+  /* ===== Key 清单表格（总览） ===== */
+  .group-label { color: var(--text-2); font-size: 12.5px; font-weight: 600; margin: 4px 0 10px; }
+  .key-table { width: 100%; border-collapse: collapse; }
+  .key-table th {
+    text-align: right; font-weight: 500; color: var(--text-3); font-size: 10.5px;
+    padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .key-table th:first-child { text-align: left; padding-left: 0; }
+  .key-table td {
+    text-align: right; padding: 10px 10px; font-size: 12.5px;
+    font-variant-numeric: tabular-nums; color: var(--text-2);
+    border-bottom: 1px solid rgba(128,128,140,.12); white-space: nowrap;
+  }
+  .key-table td:first-child { text-align: left; padding-left: 0; }
+  .key-table tr:last-child td { border-bottom: 0; }
+  .key-table tbody tr { cursor: pointer; transition: background .1s; }
+  .key-table tbody tr:hover { background: var(--surface); }
+  .key-table tr.disabled { opacity: .55; cursor: default; }
+  .key-table tr.disabled:hover { background: none; }
+  .cell-key { display: flex; align-items: center; gap: 10px; }
+  .key-display { font-size: 13px; font-weight: 600; color: var(--text); }
+  .key-env { font-family: var(--mono); font-size: 10px; color: var(--text-3); margin-top: 1px; }
+  .tag {
+    display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
+    border: 1px solid var(--border); color: var(--text-2); background: var(--surface-2);
+  }
+  .tag.free { color: var(--ok); border-color: rgba(63,185,111,.35); background: var(--ok-soft); }
+  .tag.sub  { color: var(--accent); border-color: rgba(91,140,255,.35); background: var(--accent-soft); }
+  .tag.off  { color: var(--text-3); }
+  .quota-cell { display: inline-flex; align-items: center; gap: 8px; }
+  .quota-cell .mini-bar { width: 64px; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; flex-shrink: 0; }
+  .quota-cell .mini-bar > i { display: block; height: 100%; border-radius: 3px; }
+  .quota-cell .q-text { min-width: 74px; text-align: left; }
+  .quota-cell .q-text.danger { color: var(--danger); font-weight: 600; }
+  .quota-cell .q-text.warn { color: var(--warn); font-weight: 600; }
+  .quota-cell .q-text.dim { color: var(--text-3); }
+  .row-link { color: var(--text-3); font-size: 11px; }
+  .key-table tbody tr:hover .row-link { color: var(--accent); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  .status-dot.ok { background: var(--ok); }
+  .status-dot.warn { background: var(--warn); }
+  .status-dot.danger { background: var(--danger); }
+  .status-dot.off { background: var(--text-3); }
+
+  /* ===== 使用明细面板 ===== */
+  .detail-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .detail-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
+  .detail-title { font-size: 14px; font-weight: 650; }
+  .detail-title .key-env { margin-left: 8px; }
+  .detail-range { color: var(--text-3); font-size: 11.5px; }
+  .chart-title { color: var(--text-2); font-size: 11.5px; margin: 4px 0 10px; display: flex; justify-content: space-between; }
+  .legend { display: inline-flex; gap: 12px; font-size: 10.5px; color: var(--text-3); }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  .lg-cache { background: #3d4d6e; }
+  .lg-in { background: var(--accent); }
+  .lg-out { background: #9a7bff; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 110px; }
+  .bars.dense { gap: 2px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; height: 100%; }
+  .seg-cache { background: #3d4d6e; border-radius: 2px 2px 0 0; }
+  .seg-in { background: var(--accent); }
+  .seg-out { background: #9a7bff; border-radius: 0 0 2px 2px; }
+  .bar-labels { display: flex; margin-top: 6px; }
+  .bar-labels span { flex: 1; text-align: center; font-size: 9.5px; color: var(--text-3); white-space: nowrap; overflow: visible; }
+
+  .day-table, .model-table, .list-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .day-table th, .model-table th, .list-table th {
+    text-align: right; font-weight: 500; color: var(--text-3); font-size: 10.5px;
+    padding: 5px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .day-table th:first-child, .model-table th:first-child, .list-table th:first-child { text-align: left; padding-left: 0; }
+  .day-table td, .model-table td, .list-table td {
+    text-align: right; padding: 6px 10px; font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--text-2);
+    border-bottom: 1px solid rgba(128,128,140,.12);
+  }
+  .day-table td:first-child, .list-table td:first-child { text-align: left; padding-left: 0; color: var(--text); }
+  .model-table td:first-child { text-align: left; padding-left: 0; color: var(--text); font-family: var(--mono); font-size: 11.5px; }
+  .day-table tr.total td { color: var(--text); font-weight: 600; border-bottom: 0; border-top: 1px solid var(--border); }
+  .model-table th.sortable { cursor: pointer; user-select: none; }
+  .model-table th.sortable:hover { color: var(--text-2); }
+  .model-table th.sort-active { color: var(--accent); }
+  .sort-arrow { font-size: 8px; margin-left: 3px; opacity: .8; }
+  .model-subrow-block { display: none; }
+  .model-subrow-block.open { display: table-row; }
+  .model-subrow-block > td { padding: 2px 10px 10px 30px; background: rgba(128,128,140,.05); }
+  .sub-row {
+    display: grid; align-items: baseline; gap: 8px;
+    grid-template-columns: minmax(170px, 1.5fr) minmax(80px, 1fr) minmax(80px, 1fr) minmax(80px, 1fr) minmax(100px, 1.1fr) minmax(80px, 1fr);
+    padding: 4px 0; border-bottom: 1px dashed rgba(128,128,140,.14); font-size: 11.5px;
+  }
+  .sub-row:last-child { border-bottom: 0; }
+  .sub-row.sub-head { color: var(--text-3); font-size: 10px; border-bottom: 1px solid rgba(128,128,140,.2); }
+  .sub-model { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .sub-channel { color: var(--text-3); font-size: 10px; margin-left: 8px; font-family: inherit; }
+  .sub-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }
+  .model-table tr:last-child td, .list-table tr:last-child td { border-bottom: 0; }
+  .dim { color: var(--text-3); }
+  .block-label { color: var(--text-2); font-size: 11.5px; margin: 18px 0 4px; }
+
+  /* ===== 年度热力图 ===== */
+  .heatmap-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-top: 24px;
+  }
+  .heatmap-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .heatmap-title { color: var(--text-2); font-size: 11.5px; }
+  .heatmap-wrap { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .heat-weekdays { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .heat-weekdays span { height: 13px; line-height: 13px; font-size: 9px; color: var(--text-3); width: 14px; text-align: right; }
+  .heat-grid { display: flex; gap: 3px; flex: 1; min-width: 640px; }
+  .heat-week { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .heat-cell { height: 13px; border-radius: 3px; background: var(--surface-2); cursor: default; }
+  .heatmap-months { display: flex; gap: 3px; margin-top: 6px; margin-left: 20px; }
+  .heatmap-months span { flex: 1; font-size: 9.5px; color: var(--text-3); text-align: left; white-space: nowrap; }
+  #heat-tip,
+  #chart-tip {
+    position: fixed; z-index: 50; display: none; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    padding: 10px 12px; min-width: 210px; max-width: 280px;
+  }
+  #heat-tip .tip-date { font-size: 12px; font-weight: 650; margin-bottom: 2px; }
+  #heat-tip .tip-total { font-size: 11.5px; color: var(--text-2); margin-bottom: 8px; }
+  #heat-tip .tip-total b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .tip-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); padding: 2px 0; }
+  .tip-row i { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .tip-row .tip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tip-row .tip-pct { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+  .tip-row .tip-amt { font-variant-numeric: tabular-nums; color: var(--text-3); width: 58px; text-align: right; }
+  .tip-bar { height: 3px; border-radius: 2px; background: var(--surface-2); margin: 1px 0 5px; overflow: hidden; }
+  .tip-bar > i { display: block; height: 100%; border-radius: 2px; }
+
+  /* ===== 项目用量 / 会话用量 ===== */
+  .list-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .list-title .lt-main { font-weight: 600; color: var(--text); font-size: 12.5px; }
+  .list-title .lt-sub { font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
+  .list-bar { width: 110px; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; display: inline-block; vertical-align: middle; }
+  .list-bar > i { display: block; height: 100%; border-radius: 3px; }
+
+  /* ===== 余额与配额 ===== */
+  .quota-list { display: flex; flex-direction: column; gap: 12px; }
+  .quota-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .quota-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .quota-card-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .quota-card-title .key-env { margin-left: 8px; }
+  .quota-card-provider { color: var(--text-3); font-size: 11.5px; }
+  .balance-strip { display: flex; gap: 10px 44px; flex-wrap: wrap; align-items: baseline; }
+  .balance-strip .bs-label { color: var(--text-3); font-size: 11px; margin-bottom: 2px; }
+  .balance-strip .bs-value { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .quota-row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .quota-item { flex: 1; min-width: 150px; }
+  .quota-item .q-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .quota-item .q-name { color: var(--text-2); font-size: 11.5px; }
+  .quota-item .q-value { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .quota-item .q-reset { color: var(--text-3); font-size: 10.5px; }
+  .bar { height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 4px; }
+  .bar > i.ok { background: var(--ok); }
+  .bar > i.warn { background: var(--warn); }
+
+  .footnote {
+    margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--border);
+    color: var(--text-3); font-size: 11.5px; line-height: 1.8;
+  }
+  .footnote b { color: var(--text-2); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="proto-note">
+    <span>UI 原型 v6 · 演示数据由固定种子生成，总览统计卡与图表随「通道筛选 × 范围切换」联动</span>
+    <button class="ghost-btn" onclick="toggleTheme()">切换亮色 / 暗色</button>
+  </div>
+
+  <div class="section-head">
+    <span class="section-title">Key 使用情况</span>
+    <button class="ghost-btn" onclick="refreshCurrentTab(this)">↻ 刷新</button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="active" data-tab="overview" onclick="switchTab('overview')">总览</button>
+    <button data-tab="daily" onclick="switchTab('daily')">使用明细</button>
+    <button data-tab="projects" onclick="switchTab('projects')">项目用量</button>
+    <button data-tab="sessions" onclick="switchTab('sessions')">会话用量</button>
+    <button data-tab="quota" onclick="switchTab('quota')">余额与配额</button>
+  </div>
+
+  <!-- ================= Tab 1：总览 ================= -->
+  <section class="tab-panel active" id="tab-overview">
+
+    <div class="group-label">Key 清单</div>
+    <table class="key-table">
+      <thead>
+        <tr>
+          <th>通道</th><th>类型</th><th>今日</th><th>近 30 天</th><th>余额 / 窗口</th><th>30 天成本</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="key-table-body"><!-- JS 渲染 --></tbody>
+    </table>
+
+    <div class="heatmap-card">
+      <div class="heatmap-head">
+        <span class="heatmap-title">活跃热力图 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
+        <span class="legend"><span><i class="ghost"></i>无数据</span><span><i style="background: rgba(128,128,140,.22)"></i>无用量</span><span><i style="background: rgba(91,140,255,.25)"></i>少</span><span><i style="background: rgba(91,140,255,.55)"></i>中</span><span><i style="background: var(--accent)"></i>高</span></span>
+      </div>
+      <div class="heatmap-wrap">
+        <div class="heat-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="heat-grid" id="heat-grid"></div>
+      </div>
+      <div class="heatmap-months" id="heat-months"></div>
+    </div>
+
+  </section>
+
+  <!-- ================= Tab 2：使用明细 ================= -->
+  <section class="tab-panel" id="tab-daily">
+
+    <div class="range-bar">
+      <div class="range-left">
+        <div class="range-tabs" id="range-tabs">
+          <button class="active" data-range="today" onclick="setRange('today')">今日</button>
+          <button data-range="week" onclick="setRange('week')">周</button>
+          <button data-range="month" onclick="setRange('month')">月</button>
+          <button data-range="total" onclick="setRange('total')">总计</button>
+          <button data-range="custom" onclick="setRange('custom')">自定义</button>
+        </div>
+        <div class="custom-dates" id="custom-dates">
+          <input type="date" id="custom-from" value="2026-09-29" onchange="onCustomRangeChange()">
+          <span>至</span>
+          <input type="date" id="custom-to" value="2026-10-12" onchange="onCustomRangeChange()">
+        </div>
+      </div>
+      <span class="range-caption" id="range-caption"></span>
+    </div>
+
+    <div class="overview-grid" id="overview-grid"><!-- JS 渲染四卡 --></div>
+
+    <div class="detail-toolbar">
+      <div class="chip-row" id="key-chips"><!-- JS 渲染 --></div>
+    </div>
+
+    <div id="detail-panels"><!-- JS 渲染 --></div>
+
+  </section>
+
+  <!-- ================= Tab 3：项目用量 ================= -->
+  <section class="tab-panel" id="tab-projects">
+    <div class="filter-bar">
+      <input class="search-input" id="project-search" placeholder="搜索项目名、路径…" oninput="renderProjects()">
+      <select class="filter-select" id="project-channel" onchange="renderProjects()">
+        <option value="ALL">全部通道</option>
+        <option value="OPENCODE_GO_API_KEY">opencode-go</option>
+        <option value="DEEPSEEK_API_KEY">DeepSeek</option>
+        <option value="SENSENOVA_API_KEY">sensenova</option>
+        <option value="LOCAL_API_KEY">local</option>
+      </select>
+      <select class="filter-select" id="project-sort" onchange="renderProjects()">
+        <option value="recent">最近活跃</option>
+        <option value="tokensDesc">Tokens 最多</option>
+        <option value="tokensAsc">Tokens 最少</option>
+        <option value="callsDesc">调用最多</option>
+      </select>
+    </div>
+    <table class="list-table">
+      <thead><tr><th>项目</th><th>调用</th><th>Tokens</th><th>占比</th><th>成本</th><th>最近活跃</th></tr></thead>
+      <tbody id="project-table-body"><!-- JS 渲染 --></tbody>
+    </table>
+  </section>
+
+  <!-- ================= Tab 4：会话用量 ================= -->
+  <section class="tab-panel" id="tab-sessions">
+    <div class="filter-bar">
+      <input class="search-input" id="session-search" placeholder="搜索会话标题、session id、工作区…" oninput="renderSessions()">
+      <select class="filter-select" id="session-channel" onchange="renderSessions()">
+        <option value="ALL">全部通道</option>
+        <option value="OPENCODE_GO_API_KEY">opencode-go</option>
+        <option value="DEEPSEEK_API_KEY">DeepSeek</option>
+        <option value="SENSENOVA_API_KEY">sensenova</option>
+        <option value="LOCAL_API_KEY">local</option>
+      </select>
+      <select class="filter-select" id="session-days" onchange="renderSessions()">
+        <option value="7">近 7 天</option>
+        <option value="30">近 30 天</option>
+        <option value="0">全部</option>
+      </select>
+      <select class="filter-select" id="session-sort" onchange="renderSessions()">
+        <option value="recent">最新会话</option>
+        <option value="tokensDesc">Tokens 最多</option>
+        <option value="tokensAsc">Tokens 最少</option>
+        <option value="durationDesc">时长最长</option>
+      </select>
+    </div>
+    <table class="list-table">
+      <thead><tr><th>会话</th><th>工作区</th><th>通道</th><th>时间</th><th>时长</th><th>Tokens</th><th>命中率</th><th>成本</th></tr></thead>
+      <tbody id="session-table-body"><!-- JS 渲染 --></tbody>
+    </table>
+  </section>
+
+  <!-- ================= Tab 5：余额与配额 ================= -->
+  <section class="tab-panel" id="tab-quota">
+
+    <div class="quota-list">
+
+      <div class="quota-card">
+        <div class="quota-card-head">
+          <span class="status-dot danger"></span>
+          <span class="quota-card-title">DeepSeek<span class="key-env">DEEPSEEK_API_KEY</span></span>
+          <span class="quota-card-provider">deepseek-official · 按量计费</span>
+        </div>
+        <div class="balance-strip">
+          <div class="bs-item"><div class="bs-label">总余额</div><div class="bs-value">¥1.50</div></div>
+          <div class="bs-item"><div class="bs-label">充值余额</div><div class="bs-value">¥1.50</div></div>
+          <div class="bs-item"><div class="bs-label">赠送余额</div><div class="bs-value">¥0.00</div></div>
+          <div class="bs-item"><div class="bs-label">币种</div><div class="bs-value">CNY</div></div>
+        </div>
+      </div>
+
+      <div class="quota-card">
+        <div class="quota-card-head">
+          <span class="status-dot warn"></span>
+          <span class="quota-card-title">opencode-go<span class="key-env">OPENCODE_GO_API_KEY</span></span>
+          <span class="quota-card-provider">opencode-go · 订阅制</span>
+        </div>
+        <div class="quota-row">
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">5 小时窗口</span><span class="q-value">0%</span></div>
+            <div class="bar"><i class="ok" style="width: 0%"></i></div>
+            <div class="q-reset">重置时间 —</div>
+          </div>
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">本周窗口</span><span class="q-value">19%</span></div>
+            <div class="bar"><i class="ok" style="width: 19%"></i></div>
+            <div class="q-reset">重置于 2026-10-19 00:00</div>
+          </div>
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">本月窗口</span><span class="q-value">76%</span></div>
+            <div class="bar"><i class="warn" style="width: 76%"></i></div>
+            <div class="q-reset">重置于 2026-10-17 02:56</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quota-card">
+        <div class="quota-card-head">
+          <span class="status-dot ok"></span>
+          <span class="quota-card-title">sensenova<span class="key-env">SENSENOVA_API_KEY</span></span>
+          <span class="quota-card-provider">sensenova · 免费额度</span>
+        </div>
+        <div class="quota-row">
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">余额</span><span class="q-value" style="color: var(--text-2)">该通道无余额查询接口</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quota-card">
+        <div class="quota-card-head">
+          <span class="status-dot ok"></span>
+          <span class="quota-card-title">local<span class="key-env">LOCAL_API_KEY</span></span>
+          <span class="quota-card-provider">local · 本地端点</span>
+        </div>
+        <div class="quota-row">
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">余额</span><span class="q-value" style="color: var(--text-2)">该通道无余额查询接口</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quota-card">
+        <div class="quota-card-head">
+          <span class="status-dot off"></span>
+          <span class="quota-card-title">opencode<span class="key-env">OPENCODE_API_KEY</span></span>
+          <span class="quota-card-provider">opencode · 未配置</span>
+        </div>
+        <div class="quota-row">
+          <div class="quota-item">
+            <div class="q-head"><span class="q-name">状态</span><span class="q-value" style="color: var(--text-2)">凭据引用存在，Key 未填写</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="footnote">
+    <b>口径说明</b>：统计卡、明细图表与热力图均聚合自宿主用量台账（按天 × 通道 × 模型），随使用明细页的通道筛选与范围切换联动；项目与会话用量来自本地会话日志聚合（原型为演示数据）；余额与订阅窗口原样展示官方接口返回的数据，不做换算与建议。
+  </div>
+
+</div>
+
+<!-- 热力图悬停浮层 -->
+<div id="heat-tip"></div>
+<!-- 图表列悬停浮层 -->
+<div id="chart-tip"></div>
+
+<script>
+/* =====================================================================
+ * 演示数据层：按 usage-ledger.json 的口径（天 × 通道 × 模型）生成
+ * 固定种子伪随机数据，供总览/细目/热力图共用，保证联动数字一致。
+ * ===================================================================== */
+
+var DATA_START = { year: 2026, month: 9, day: 7 };   // 台账起始日
+var TODAY = { year: 2026, month: 10, day: 13 };      // 演示「今天」
+
+// 固定种子伪随机（LCG），保证每次打开演示数据一致
+function makeRandom(seed) {
+  return function () {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+}
+
+var CHANNELS = [
+  {
+    key: 'OPENCODE_GO_API_KEY', label: 'opencode-go', env: 'OPENCODE_GO_API_KEY',
+    status: 'warn', color: 'var(--key-opencodego)', typeLabel: '订阅制', typeClass: 'sub',
+    costMode: 'sub', baseTokensM: 62, baseCalls: 1650, weekendFactor: 0.3,
+    models: [
+      { name: 'GLM-5.3-Flash', weight: 0.80 },
+      { name: 'DeepSeek V4.1 Flash', weight: 0.15 },
+      { name: 'GPT-5.6 Luna', weight: 0.05 }
+    ],
+    quotaCellHtml: '<span class="quota-cell"><span class="mini-bar"><i style="width:76%; background: var(--warn)"></i></span><span class="q-text warn">月 76%</span></span>',
+    costCellText: '<span class="dim">订阅内</span>'
+  },
+  {
+    key: 'DEEPSEEK_API_KEY', label: 'DeepSeek', env: 'DEEPSEEK_API_KEY',
+    status: 'danger', color: 'var(--key-deepseek)', typeLabel: '按量计费', typeClass: '',
+    costMode: 'perToken', baseTokensM: 6.2, baseCalls: 62, weekendFactor: 0.45,
+    models: [ { name: 'DeepSeek-Flash', weight: 1 } ],
+    quotaCellHtml: '<span class="quota-cell"><span class="mini-bar"><i style="width:4%; background: var(--danger)"></i></span><span class="q-text danger">¥1.50</span></span>',
+    costCellText: null
+  },
+  {
+    key: 'SENSENOVA_API_KEY', label: 'sensenova', env: 'SENSENOVA_API_KEY',
+    status: 'ok', color: 'var(--key-sensenova)', typeLabel: '免费额度', typeClass: 'free',
+    costMode: 'free', baseTokensM: 13, baseCalls: 150, weekendFactor: 0.5,
+    models: [
+      { name: 'sensenova-6.8-flash-lite', weight: 0.70 },
+      { name: 'GLM-5.2', weight: 0.22 },
+      { name: 'deepseek-v4-flash', weight: 0.08 },
+      { name: 'kimi-k3', weight: 0 }
+    ],
+    quotaCellHtml: '<span class="quota-cell"><span class="q-text dim">—</span></span>',
+    costCellText: '<span class="dim">¥0.00</span>'
+  },
+  {
+    key: 'LOCAL_API_KEY', label: 'local', env: 'LOCAL_API_KEY',
+    status: 'ok', color: 'var(--key-local)', typeLabel: '本地端点', typeClass: '',
+    costMode: 'none', baseTokensM: 2.1, baseCalls: 24, weekendFactor: 0.6,
+    models: [ { name: 'Qwen3.6-35B-A3B-NVFP4', weight: 1 } ],
+    quotaCellHtml: '<span class="quota-cell"><span class="q-text dim">无计费</span></span>',
+    costCellText: '<span class="dim">—</span>'
+  }
+];
+
+// 通道下所有模型的着色（热力图浮层与模型占比共用）
+var MODEL_COLORS = {};
+CHANNELS.forEach(function (channel) {
+  channel.models.forEach(function (model) {
+    if (model.weight > 0) MODEL_COLORS[model.name] = channel.color;
+  });
+});
+
+function dateKey(date) {
+  return date.year + '-' + String(date.month).padStart(2, '0') + '-' + String(date.day).padStart(2, '0');
+}
+function shortDate(date) {
+  return String(date.month).padStart(2, '0') + '-' + String(date.day).padStart(2, '0');
+}
+function toDateObject(date) {
+  return new Date(date.year, date.month - 1, date.day);
+}
+function shiftDate(date, offsetDays) {
+  var shifted = toDateObject(date);
+  shifted.setDate(shifted.getDate() + offsetDays);
+  return { year: shifted.getFullYear(), month: shifted.getMonth() + 1, day: shifted.getDate() };
+}
+function daysBetween(fromDate, toDate) {
+  return Math.round((toDateObject(toDate) - toDateObject(fromDate)) / 86400000);
+}
+
+/* dailyRecords[dateKey][channelKey] = { calls, input, output, cacheRead, cost,
+ *   models: [{ name, calls, input, output, cacheRead, cost }] }
+ * hourlyRecords[dateKey][hour][channelKey] 结构同上，单日范围时提供小时细分。 */
+var dailyRecords = {};
+var hourlyRecords = {};
+
+function buildDailyRecords() {
+  var random = makeRandom(20261013);
+  var totalDays = daysBetween(DATA_START, TODAY);
+  for (var dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
+    var date = shiftDate(DATA_START, dayOffset);
+    var weekday = toDateObject(date).getDay();
+    var dateRecord = {};
+    var hourBuckets = {};
+    CHANNELS.forEach(function (channel) {
+      var channelQuiet = (weekday === 0 || weekday === 6) ? channel.weekendFactor : 1;
+      // 约 6% 的概率整天空闲
+      var active = random() > 0.06;
+      var tokensM = active ? channel.baseTokensM * (0.55 + random() * 0.9) * channelQuiet : 0;
+      if (tokensM < 0.05) tokensM = 0;
+      var cacheReadM = tokensM * (0.68 + random() * 0.14);
+      var inputM = tokensM * (0.16 + random() * 0.06);
+      var outputM = Math.max(0, tokensM - cacheReadM - inputM);
+      var calls = tokensM > 0 ? Math.max(1, Math.round(channel.baseCalls * (0.6 + random() * 0.8) * channelQuiet)) : 0;
+      var cost = 0;
+      if (channel.costMode === 'perToken' && tokensM > 0) {
+        cost = Math.round((inputM * 2 + outputM * 8 + cacheReadM * 0.2) * 100) / 100;
+      }
+      // 模型拆分：按权重加抖动，最后一个模型拿余量
+      var modelRows = [];
+      var remainingTokens = tokensM;
+      var remainingCalls = calls;
+      channel.models.forEach(function (model, modelIndex) {
+        var isLast = modelIndex === channel.models.length - 1;
+        var modelTokensM = isLast ? Math.max(0, remainingTokens)
+          : Math.min(remainingTokens, tokensM * model.weight * (0.75 + random() * 0.5));
+        var modelCalls = isLast ? remainingCalls
+          : Math.min(remainingCalls, Math.round(calls * model.weight * (0.75 + random() * 0.5)));
+        remainingTokens -= modelTokensM;
+        remainingCalls -= modelCalls;
+        var modelInputM = tokensM > 0 ? modelTokensM * (inputM / tokensM) : 0;
+        var modelOutputM = tokensM > 0 ? modelTokensM * (outputM / tokensM) : 0;
+        var modelCacheM = tokensM > 0 ? modelTokensM * (cacheReadM / tokensM) : 0;
+        var modelCost = 0;
+        if (channel.costMode === 'perToken' && modelTokensM > 0) {
+          modelCost = Math.round((modelInputM * 2 + modelOutputM * 8 + modelCacheM * 0.2) * 100) / 100;
+        }
+        modelRows.push({
+          name: model.name, calls: modelCalls,
+          input: modelInputM, output: modelOutputM, cacheRead: modelCacheM, cost: modelCost
+        });
+      });
+      dateRecord[channel.key] = {
+        calls: calls, input: inputM, output: outputM, cacheRead: cacheReadM, cost: cost,
+        models: modelRows
+      };
+      // 单日范围的小时细分：把当日量按钟摆曲线拆到 24 小时
+      var hourlyRecord = {};
+      if (tokensM > 0) {
+        var hourWeights = [];
+        var hourWeightSum = 0;
+        for (var hour = 0; hour < 24; hour++) {
+          var workHour = hour >= 9 && hour <= 22;
+          var hourWeight = (workHour ? 1 : 0.08) * (0.6 + random() * 0.8);
+          hourWeights.push(hourWeight);
+          hourWeightSum += hourWeight;
+        }
+        for (var hourIndex = 0; hourIndex < 24; hourIndex++) {
+          var hourShare = hourWeights[hourIndex] / hourWeightSum;
+          var hourTokensM = tokensM * hourShare;
+          if (hourTokensM < 0.02) continue;
+          var hourCacheM = hourTokensM * (cacheReadM / tokensM);
+          var hourInputM = hourTokensM * (inputM / tokensM);
+          var hourOutputM = hourTokensM - hourCacheM - hourInputM;
+          var hourCalls = Math.max(1, Math.round(calls * hourShare));
+          var hourCost = channel.costMode === 'perToken'
+            ? Math.round((hourInputM * 2 + hourOutputM * 8 + hourCacheM * 0.2) * 100) / 100 : 0;
+          var hourModels = modelRows.map(function (modelRow) {
+            return {
+              name: modelRow.name,
+              calls: Math.max(modelRow.calls > 0 ? 1 : 0, Math.round(modelRow.calls * hourShare)),
+              input: modelRow.input * hourShare, output: modelRow.output * hourShare,
+              cacheRead: modelRow.cacheRead * hourShare, cost: modelRow.cost * hourShare
+            };
+          });
+          hourlyRecord[hourIndex] = {
+            calls: hourCalls, input: hourInputM, output: hourOutputM,
+            cacheRead: hourCacheM, cost: hourCost, models: hourModels
+          };
+        }
+      }
+      hourBuckets[dateKey(date)] = hourlyRecord;
+    });
+    dailyRecords[dateKey(date)] = dateRecord;
+    hourlyRecords[dateKey(date)] = hourBuckets;
+  }
+}
+
+/* ===== 范围解析 ===== */
+var RANGE_KEYS = ['today', 'week', 'month', 'total', 'custom'];
+var currentRange = 'today';
+var selectedFilter = 'ALL'; // 'ALL' 或通道 key
+
+function resolveRange(rangeKey) {
+  if (rangeKey === 'today') {
+    return { from: TODAY, to: TODAY, label: '统计范围：今日（' + dateKey(TODAY) + '）' };
+  }
+  if (rangeKey === 'week') {
+    var weekFrom = shiftDate(TODAY, -6);
+    return { from: weekFrom, to: TODAY, label: '统计范围：近 7 天（' + shortDate(weekFrom) + ' ~ ' + shortDate(TODAY) + '）' };
+  }
+  if (rangeKey === 'month') {
+    var monthFrom = shiftDate(TODAY, -29);
+    return { from: monthFrom, to: TODAY, label: '统计范围：近 30 天（' + shortDate(monthFrom) + ' ~ ' + shortDate(TODAY) + '）' };
+  }
+  if (rangeKey === 'total') {
+    var totalDays = daysBetween(DATA_START, TODAY) + 1;
+    return { from: DATA_START, to: TODAY, label: '统计范围：总计（' + dateKey(DATA_START) + ' ~ ' + dateKey(TODAY) + ' · ' + totalDays + ' 天）' };
+  }
+  // custom：读取日期选择器，超出数据范围的端点做钳制
+  var rawFrom = document.getElementById('custom-from').value;
+  var rawTo = document.getElementById('custom-to').value;
+  var fromDate = rawFrom ? { year: +rawFrom.slice(0, 4), month: +rawFrom.slice(5, 7), day: +rawFrom.slice(8, 10) } : DATA_START;
+  var toDate = rawTo ? { year: +rawTo.slice(0, 4), month: +rawTo.slice(5, 7), day: +rawTo.slice(8, 10) } : TODAY;
+  if (daysBetween(fromDate, DATA_START) > 0) fromDate = DATA_START;
+  if (daysBetween(TODAY, toDate) > 0) toDate = TODAY;
+  if (daysBetween(fromDate, toDate) > 0) fromDate = toDate;
+  var spanDays = daysBetween(fromDate, toDate) + 1;
+  return { from: fromDate, to: toDate, label: '统计范围：' + dateKey(fromDate) + ' ~ ' + dateKey(toDate) + '（' + spanDays + ' 天）' };
+}
+
+/* ===== 聚合：范围 + 筛选 → 汇总与按天序列 ===== */
+function forEachDayInRange(fromDate, toDate, callback) {
+  var totalDays = daysBetween(fromDate, toDate);
+  for (var dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
+    var date = shiftDate(fromDate, dayOffset);
+    callback(dateKey(date), date);
+  }
+}
+
+function aggregateRange(fromDate, toDate, filterKey) {
+  var summary = { calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0, days: [], modelMap: {} };
+  var channelsInFilter = filterKey === 'ALL' ? CHANNELS : CHANNELS.filter(function (channel) { return channel.key === filterKey; });
+  forEachDayInRange(fromDate, toDate, function (key, date) {
+    var dayRecord = dailyRecords[key];
+    if (!dayRecord) return;
+    var dayTotals = { key: key, date: date, calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0 };
+    channelsInFilter.forEach(function (channel) {
+      var channelRecord = dayRecord[channel.key];
+      if (!channelRecord) return;
+      dayTotals.calls += channelRecord.calls;
+      dayTotals.input += channelRecord.input;
+      dayTotals.output += channelRecord.output;
+      dayTotals.cacheRead += channelRecord.cacheRead;
+      dayTotals.cost += channelRecord.cost;
+      summary.calls += channelRecord.calls;
+      summary.input += channelRecord.input;
+      summary.output += channelRecord.output;
+      summary.cacheRead += channelRecord.cacheRead;
+      summary.cost += channelRecord.cost;
+      channelRecord.models.forEach(function (modelRow) {
+        var modelSummary = summary.modelMap[modelRow.name];
+        if (!modelSummary) {
+          modelSummary = summary.modelMap[modelRow.name] = {
+            name: modelRow.name, channel: channel.label, channelKey: channel.key,
+            calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0
+          };
+        }
+        modelSummary.calls += modelRow.calls;
+        modelSummary.input += modelRow.input;
+        modelSummary.output += modelRow.output;
+        modelSummary.cacheRead += modelRow.cacheRead;
+        modelSummary.cost += modelRow.cost;
+      });
+    });
+    summary.days.push(dayTotals);
+  });
+  summary.models = Object.values(summary.modelMap).sort(function (first, second) {
+    return (second.input + second.output + second.cacheRead) - (first.input + first.output + first.cacheRead);
+  });
+  return summary;
+}
+
+/* ===== 格式化 ===== */
+// tokens（单位 M）格式化
+function fmtTokens(amountM) {
+  if (amountM >= 1000) return (amountM / 1000).toFixed(2) + 'B';
+  if (amountM >= 100) return Math.round(amountM) + 'M';
+  if (amountM >= 10) return amountM.toFixed(1) + 'M';
+  return amountM.toFixed(2) + 'M';
+}
+function fmtCost(amount) {
+  return '¥' + amount.toFixed(2);
+}
+function fmtCalls(count) {
+  return String(count).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/* =====================================================================
+ * 渲染层
+ * ===================================================================== */
+
+/* switchTab 在刷新一节统一定义（含 currentTabId 维护与按 Tab 重渲染） */
+
+// 总览表格行 → 跳使用明细并选中对应通道
+function gotoDetail(keyName) {
+  switchTab('daily');
+  selectFilter(keyName);
+}
+
+function toggleTheme() {
+  var root = document.documentElement;
+  root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+/* ===== 总览：Key 清单表 ===== */
+function renderKeyTable() {
+  var body = document.getElementById('key-table-body');
+  var monthFrom = shiftDate(TODAY, -29);
+  var rowsHtml = '';
+  CHANNELS.forEach(function (channel) {
+    var channelToday = aggregateRange(TODAY, TODAY, channel.key);
+    var channelMonth = aggregateRange(monthFrom, TODAY, channel.key);
+    var channelTodayTokens = channelToday.input + channelToday.output + channelToday.cacheRead;
+    var channelMonthTokens = channelMonth.input + channelMonth.output + channelMonth.cacheRead;
+    var channelMonthCost = channelMonth.cost;
+    var costCell = channel.costMode === 'perToken'
+      ? fmtCost(channelMonthCost)
+      : (channel.costMode === 'sub' ? '<span class="dim">订阅内</span>'
+        : channel.costMode === 'free' ? '<span class="dim">¥0.00</span>' : '<span class="dim">—</span>');
+    rowsHtml += '<tr onclick="gotoDetail(\'' + channel.key + '\')">'
+      + '<td><div class="cell-key"><span class="status-dot ' + channel.status + '"></span>'
+      + '<div><div class="key-display">' + channel.label + '</div><div class="key-env">' + channel.env + '</div></div></div></td>'
+      + '<td><span class="tag ' + channel.typeClass + '">' + channel.typeLabel + '</span></td>'
+      + '<td>' + (channelTodayTokens > 0 ? fmtTokens(channelTodayTokens) : '<span class="dim">—</span>') + '</td>'
+      + '<td>' + (channelMonthTokens > 0 ? fmtTokens(channelMonthTokens) : '<span class="dim">—</span>') + '</td>'
+      + '<td>' + channel.quotaCellHtml + '</td>'
+      + '<td>' + costCell + '</td>'
+      + '<td><span class="row-link">明细 →</span></td></tr>';
+  });
+  // 未配置通道行
+  rowsHtml += '<tr class="disabled">'
+    + '<td><div class="cell-key"><span class="status-dot off"></span>'
+    + '<div><div class="key-display">opencode</div><div class="key-env">OPENCODE_API_KEY</div></div></div></td>'
+    + '<td><span class="tag off">未配置</span></td>'
+    + '<td class="dim">—</td><td class="dim">—</td>'
+    + '<td><span class="quota-cell"><span class="q-text dim">—</span></span></td>'
+    + '<td class="dim">—</td><td></td></tr>';
+  body.innerHTML = rowsHtml;
+}
+
+/* ===== 使用明细：统计四卡（随范围 + 筛选联动） ===== */
+function renderOverviewCards() {
+  var bounds = resolveRange(currentRange);
+  var summary = aggregateRange(bounds.from, bounds.to, selectedFilter);
+  var totalTokens = summary.input + summary.output + summary.cacheRead;
+  var hitRate = totalTokens > 0 ? (summary.cacheRead / totalTokens * 100).toFixed(1) + '%' : '—';
+
+  // 第四卡：全部 → 通道占比；单通道 → 模型占比
+  var shareRows = [];
+  if (selectedFilter === 'ALL') {
+    CHANNELS.forEach(function (channel) {
+      var channelSummary = aggregateRange(bounds.from, bounds.to, channel.key);
+      var channelTokens = channelSummary.input + channelSummary.output + channelSummary.cacheRead;
+      if (channelTokens <= 0) return;
+      shareRows.push({ name: channel.label, color: channel.color, amountM: channelTokens,
+        pct: totalTokens > 0 ? Math.round(channelTokens / totalTokens * 100) : 0 });
+    });
+  } else {
+    summary.models.forEach(function (model) {
+      if (model.input + model.output + model.cacheRead <= 0) return;
+      shareRows.push({ name: model.name, color: MODEL_COLORS[model.name] || 'var(--accent)', amountM: model.input + model.output + model.cacheRead,
+        pct: totalTokens > 0 ? Math.round((model.input + model.output + model.cacheRead) / totalTokens * 100) : 0 });
+    });
+  }
+  shareRows.sort(function (first, second) { return second.amountM - first.amountM; });
+  var shareTitle = selectedFilter === 'ALL' ? '通道占比 · 按 Tokens' : '模型占比 · 按 Tokens';
+  var shareBarHtml = '';
+  var shareLegendHtml = '';
+  shareRows.forEach(function (row) {
+    shareBarHtml += '<i style="width:' + row.pct + '%; background:' + row.color + '"></i>';
+    shareLegendHtml += '<span class="lg-item"><i style="background:' + row.color + '"></i>' + row.name
+      + '<span class="lg-amt">' + fmtTokens(row.amountM) + '</span><b>' + row.pct + '%</b></span>';
+  });
+  if (shareRows.length === 0) shareLegendHtml = '<span class="lg-item">所选范围内无用量记录</span>';
+
+  var costValue = summary.cost > 0 ? fmtCost(summary.cost)
+    : (selectedFilter !== 'ALL' ? costValueForChannel(selectedFilter, summary.cost) : '¥0.00');
+  var activeChannelCount = shareRows.length;
+  document.getElementById('overview-grid').innerHTML = ''
+    + '<div class="stat-card"><div class="stat-label">调用次数</div><div class="stat-value">' + fmtCalls(summary.calls) + '</div>'
+    + '<div class="stat-extra">' + activeChannelCount + ' 个通道有用量</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Tokens</div><div class="stat-value">' + fmtTokens(totalTokens) + '<small></small></div>'
+    + '<div class="stat-extra">缓存读取 ' + fmtTokens(summary.cacheRead) + ' · 命中率 ' + hitRate + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">成本</div><div class="stat-value">' + costValue + '</div>'
+    + '<div class="stat-extra">按所选范围与筛选聚合</div></div>'
+    + '<div class="stat-card share-card"><div class="stat-label">' + shareTitle + '</div>'
+    + '<div class="mini-share">' + shareBarHtml + '</div>'
+    + '<div class="share-legend">' + shareLegendHtml + '</div></div>';
+  document.getElementById('range-caption').textContent = bounds.label;
+}
+
+function costValueForChannel(channelKey, cost) {
+  var channel = CHANNELS.find(function (item) { return item.key === channelKey; });
+  if (!channel) return '¥0.00';
+  if (channel.costMode === 'perToken') return fmtCost(cost);
+  if (channel.costMode === 'sub') return '<span class="dim">订阅内</span>';
+  if (channel.costMode === 'free') return '<span class="dim">¥0.00</span>';
+  return '<span class="dim">无计费</span>';
+}
+
+function setRange(rangeKey) {
+  currentRange = rangeKey;
+  document.querySelectorAll('#range-tabs button').forEach(function (button) {
+    button.classList.toggle('active', button.dataset.range === rangeKey);
+  });
+  document.getElementById('custom-dates').classList.toggle('show', rangeKey === 'custom');
+  renderOverviewCards();
+  renderDetailPanel();
+}
+
+function onCustomRangeChange() {
+  if (currentRange !== 'custom') {
+    currentRange = 'custom';
+    document.querySelectorAll('#range-tabs button').forEach(function (button) {
+      button.classList.toggle('active', button.dataset.range === 'custom');
+    });
+    document.getElementById('custom-dates').classList.add('show');
+  }
+  renderOverviewCards();
+  renderDetailPanel();
+}
+
+/* ===== 使用明细：筛选 chips ===== */
+function renderChips() {
+  var chipRow = document.getElementById('key-chips');
+  var html = '<button class="chip' + (selectedFilter === 'ALL' ? ' active' : '') + '" data-key="ALL" onclick="selectFilter(\'ALL\')">'
+    + '<span class="status-dot ok" style="background: var(--accent)"></span>全部通道</button>';
+  CHANNELS.forEach(function (channel) {
+    html += '<button class="chip' + (selectedFilter === channel.key ? ' active' : '') + '" data-key="' + channel.key + '" onclick="selectFilter(\'' + channel.key + '\')">'
+      + '<span class="status-dot ' + channel.status + '"></span>' + channel.label + '</button>';
+  });
+  chipRow.innerHTML = html;
+}
+
+function selectFilter(filterKey) {
+  selectedFilter = filterKey;
+  renderChips();
+  renderOverviewCards();
+  renderDetailPanel();
+}
+
+/* ===== 使用明细：图表（唯一视图） ===== */
+function renderDetailPanel() {
+  var bounds = resolveRange(currentRange);
+  var isSingleDay = daysBetween(bounds.from, bounds.to) === 0;
+  var summary = aggregateRange(bounds.from, bounds.to, selectedFilter);
+  var container = document.getElementById('detail-panels');  var isAll = selectedFilter === 'ALL';
+  var channel = isAll ? null : CHANNELS.find(function (item) { return item.key === selectedFilter; });
+  var title = isAll ? '全部通道'
+    : '<span class="status-dot ' + channel.status + '" style="display:inline-block;margin-right:8px"></span>' + channel.label
+      + '<span class="key-env">' + channel.env + '</span>';
+  var html = '<div class="detail-panel">';
+  html += '<div class="detail-head"><span class="detail-title">' + title + '</span>'
+    + '<span class="detail-range">' + bounds.label.replace('统计范围：', '') + '</span></div>';
+
+  // 图表时间轴行：多日按天，单日按小时
+  var timeRows = summary.days;
+  if (isSingleDay) {
+    var dayKey = dateKey(bounds.from);
+    var dayHourBuckets = hourlyRecords[dayKey] || {};
+    var hourRows = [];
+    var hourChannels = isAll ? CHANNELS : [channel];
+    for (var hour = 0; hour < 24; hour++) {
+      var hourBuckets = dayHourBuckets[hour] || {};
+      var hourTotals = { date: { year: bounds.from.year, month: bounds.from.month, day: bounds.from.day, hour: hour },
+        calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0 };
+      hourChannels.forEach(function (item) {
+        var hourRecord = hourBuckets[item.key];
+        if (!hourRecord) return;
+        hourTotals.calls += hourRecord.calls;
+        hourTotals.input += hourRecord.input;
+        hourTotals.output += hourRecord.output;
+        hourTotals.cacheRead += hourRecord.cacheRead;
+        hourTotals.cost += hourRecord.cost;
+      });
+      hourRows.push(hourTotals);
+    }
+    timeRows = hourRows;
+  }
+  // 无调用的时间段不展示
+  timeRows = timeRows.filter(function (row) {
+    return row.calls > 0 || (row.input + row.output + row.cacheRead) > 0;
+  });
+  var hasHourAxis = isSingleDay;
+  var rowLabel = function (row) {
+    return hasHourAxis ? String(row.date.hour).padStart(2, '0') + ':00' : shortDate(row.date);
+  };
+  var costCell = function (cost, costMode) {
+    if (costMode === 'sub') return '<td class="dim">订阅内</td>';
+    if (costMode === 'free') return '<td class="dim">¥0.00</td>';
+    if (costMode === 'none') return '<td class="dim">无计费</td>';
+    return '<td>' + fmtCost(cost) + '</td>';
+  };
+  var summaryCostMode = isAll ? 'mixed' : channel.costMode;
+
+  // 图表视图：按天（或按小时）堆叠条形图
+  var peak = 0;
+  timeRows.forEach(function (row) {
+    var total = row.input + row.output + row.cacheRead;
+    if (total > peak) peak = total;
+  });
+  var labelEvery = Math.max(1, Math.ceil(timeRows.length / 14));
+  html += '<div class="chart-block">';
+  html += '<div class="chart-title"><span>' + (hasHourAxis ? '按小时 Tokens（' + dateKey(bounds.from) + '）' : '按天 Tokens（' + timeRows.length + ' 天）') + '</span>'
+    + '<span class="legend"><span><i class="lg-cache"></i>缓存读</span><span><i class="lg-in"></i>输入</span><span><i class="lg-out"></i>输出</span></span></div>';
+  if (timeRows.length === 0) {
+    html += '<div class="dim" style="padding: 14px 0;">所选范围内无用量记录</div>';
+  }
+  html += '<div class="bars' + (timeRows.length > 20 ? ' dense' : '') + '"' + (timeRows.length === 0 ? ' style="display:none"' : '') + '>';
+  timeRows.forEach(function (row, rowIndex) {
+    var scale = function (value) { return Math.max(1, Math.round(value / peak * 100)); };
+    html += '<div class="bar-col" data-idx="' + rowIndex + '">'
+      + '<span class="seg-cache" style="height:' + (peak > 0 ? scale(row.cacheRead) : 1) + '%"></span>'
+      + '<span class="seg-in" style="height:' + (peak > 0 ? scale(row.input) : 1) + '%"></span>'
+      + '<span class="seg-out" style="height:' + (peak > 0 ? scale(row.output) : 1) + '%"></span>'
+      + '</div>';
+  });
+  html += '</div><div class="bar-labels">';
+  timeRows.forEach(function (row, rowIndex) {
+    var showLabel = rowIndex % labelEvery === 0 || rowIndex === timeRows.length - 1;
+    html += '<span>' + (showLabel ? rowLabel(row) : '') + '</span>';
+  });
+  html += '</div></div>';
+
+  // 每日细目：按时间段（单日=小时，多日=日期）折叠展开各模型
+  var totalTokens = summary.input + summary.output + summary.cacheRead;
+  var hitRate = totalTokens > 0 ? (summary.cacheRead / totalTokens * 100).toFixed(1) + '%' : '—';
+  var costCell = function (cost, costMode) {
+    if (costMode === 'sub') return '<td class="dim">订阅内</td>';
+    if (costMode === 'free') return '<td class="dim">¥0.00</td>';
+    if (costMode === 'none') return '<td class="dim">无计费</td>';
+    return '<td>' + fmtCost(cost) + '</td>';
+  };
+  var summaryCostMode = isAll ? 'mixed' : channel.costMode;
+  var periodModelMap = {};
+  var channelsForPeriodModels = isAll ? CHANNELS : [channel];
+  var collectPeriodModels = function (periodKey, record) {
+    channelsForPeriodModels.forEach(function (item) {
+      var channelRecord = record[item.key];
+      if (!channelRecord) return;
+      channelRecord.models.forEach(function (modelRow) {
+        if (modelRow.input + modelRow.output + modelRow.cacheRead <= 0) return;
+        var key = periodKey + '|' + modelRow.name;
+        var entry = periodModelMap[key];
+        if (!entry) {
+          entry = periodModelMap[key] = { period: periodKey, name: modelRow.name, channel: item.label, channelKey: item.key,
+            calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0 };
+        }
+        entry.calls += modelRow.calls; entry.input += modelRow.input; entry.output += modelRow.output;
+        entry.cacheRead += modelRow.cacheRead; entry.cost += modelRow.cost;
+      });
+    });
+  };
+  if (hasHourAxis) {
+    var hourBucketsForModels = hourlyRecords[dateKey(bounds.from)] || {};
+    for (var modelHour = 0; modelHour < 24; modelHour++) {
+      var hourRecord = hourBucketsForModels[modelHour] || {};
+      channelsForPeriodModels.forEach(function (item) {
+        var channelHourRecord = hourRecord[item.key];
+        if (!channelHourRecord) return;
+        channelHourRecord.models.forEach(function (modelRow) {
+          if (modelRow.input + modelRow.output + modelRow.cacheRead <= 0) return;
+          var key = modelHour + '|' + modelRow.name;
+          var entry = periodModelMap[key];
+          if (!entry) {
+            entry = periodModelMap[key] = { period: modelHour, name: modelRow.name, channel: item.label, channelKey: item.key,
+              calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0 };
+          }
+          entry.calls += modelRow.calls; entry.input += modelRow.input; entry.output += modelRow.output;
+          entry.cacheRead += modelRow.cacheRead; entry.cost += modelRow.cost;
+        });
+      });
+    }
+  } else {
+    forEachDayInRange(bounds.from, bounds.to, function (dayKey, dayDate) {
+      var dayRecord = dailyRecords[dayKey];
+      if (dayRecord) collectPeriodModels(dayKey, dayRecord);
+    });
+  }
+  /* 每日细目：以「天/小时段」为单位排序并折叠展开。
+   * 时间与数值列按时间段聚合值排序，展开行始终按 tokens 降序；
+   * 模型与通道不占表头列，展开块的子行内展示。 */
+  var periodRows = Object.values(periodModelMap);
+  periodRows.forEach(function (row) {
+    row.totalTokens = row.input + row.output + row.cacheRead;
+  });
+  var periodSort = periodSortState || { key: 'period', dir: 'desc' };
+  var periodLabelOf = function (row) {
+    return hasHourAxis ? String(row.period).padStart(2, '0') + ':00' : row.period;
+  };
+  var periodAggregates = {};
+  periodRows.forEach(function (row) {
+    var bucket = periodAggregates[row.period];
+    if (!bucket) bucket = periodAggregates[row.period] = { period: row.period, calls: 0, input: 0, output: 0, cacheRead: 0, cost: 0, totalTokens: 0 };
+    bucket.calls += row.calls; bucket.input += row.input; bucket.output += row.output;
+    bucket.cacheRead += row.cacheRead; bucket.cost += row.cost; bucket.totalTokens += row.totalTokens;
+  });
+  var periodComparers = {
+    period: function (first, second) { return first.period < second.period ? -1 : first.period > second.period ? 1 : 0; },
+    calls: function (first, second) { return first.calls - second.calls; },
+    total: function (first, second) { return first.totalTokens - second.totalTokens; },
+    input: function (first, second) { return first.input - second.input; },
+    output: function (first, second) { return first.output - second.output; },
+    cacheRead: function (first, second) { return first.cacheRead - second.cacheRead; },
+    hit: function (first, second) { return (first.totalTokens > 0 ? first.cacheRead / first.totalTokens : -1) - (second.totalTokens > 0 ? second.cacheRead / second.totalTokens : -1); },
+    cost: function (first, second) { return first.cost - second.cost; }
+  };
+  var activeComparer = periodComparers[periodSort.key] || periodComparers.period;
+  var byTokensDesc = function (first, second) { return second.totalTokens - first.totalTokens; };
+
+  var sortableHeader = function (key, label) {
+    var isActive = periodSort.key === key;
+    var arrow = isActive ? (periodSort.dir === 'asc' ? '▲' : '▼') : '↕';
+    return '<th class="sortable' + (isActive ? ' sort-active' : '') + '" onclick="setPeriodSort(\'' + key + '\')">' + label
+      + '<span class="sort-arrow">' + arrow + '</span></th>';
+  };
+  html += '<div class="block-label">每日细目</div><table class="model-table"><thead><tr>'
+    + sortableHeader('period', hasHourAxis ? '时间' : '日期')
+    + sortableHeader('total', '总计')
+    + sortableHeader('calls', '调用')
+    + sortableHeader('input', '输入')
+    + sortableHeader('output', '输出')
+    + sortableHeader('cacheRead', '缓存读')
+    + sortableHeader('hit', '命中率')
+    + sortableHeader('cost', '成本')
+    + '</tr></thead><tbody>';
+
+  if (true) {
+    // 折叠模式（唯一模式）：时间段为单位排序，展开块内按 tokens 降序列模型子行
+    var periodKeysOrdered = Object.keys(periodAggregates).sort(function (firstKey, secondKey) {
+      var firstBucket = periodAggregates[firstKey];
+      var secondBucket = periodAggregates[secondKey];
+      var compared = activeComparer(firstBucket, secondBucket);
+      return periodSort.dir === 'asc' ? compared : -compared;
+    });
+    var expandedGroups = expandedPeriods;
+    periodKeysOrdered.forEach(function (periodKey) {
+      var bucket = periodAggregates[periodKey];
+      var modelsInPeriod = periodRows.filter(function (row) { return row.period === periodKey; }).sort(byTokensDesc);
+      var aggregateHit = bucket.totalTokens > 0 ? (bucket.cacheRead / bucket.totalTokens * 100).toFixed(1) + '%' : '—';
+      var aggregateCostCell = summaryCostMode === 'mixed'
+        ? '<td>' + (bucket.cost > 0 ? fmtCost(bucket.cost) : '<span class="dim">—</span>') + '</td>'
+        : costCell(bucket.cost, summaryCostMode);
+      var expandable = modelsInPeriod.length > 1;
+      var isOpen = !!expandedGroups[periodKey];
+      html += '<tr class="period-row' + (isOpen ? ' open' : '') + '" data-period="' + periodKey + '"' + (expandable ? ' onclick="togglePeriodRow(this)"' : '') + '>'
+        + '<td>' + (expandable ? '<span class="toggle-arrow">▶</span>' : '') + periodLabelOf({ period: periodKey }) + '</td>'
+        + '<td>' + fmtTokens(bucket.totalTokens) + '</td>'
+        + '<td>' + fmtCalls(bucket.calls) + '</td>'
+        + '<td>' + fmtTokens(bucket.input) + '</td><td>' + fmtTokens(bucket.output) + '</td><td>' + fmtTokens(bucket.cacheRead) + '</td>'
+        + '<td>' + aggregateHit + '</td>' + aggregateCostCell + '</tr>';
+      if (expandable && isOpen) {
+        // 展开块：一行占满，内部网格列出模型/通道与数值
+        var subColumns = '<span></span><span class="sub-num">调用</span><span class="sub-num">输入</span><span class="sub-num">输出</span><span class="sub-num">缓存读</span><span class="sub-num">命中率</span>';
+        var subRowsHtml = modelsInPeriod.map(function (row) {
+          var rowHit = row.totalTokens > 0 ? (row.cacheRead / row.totalTokens * 100).toFixed(1) + '%' : '—';
+          return '<div class="sub-row"><span class="sub-model">' + row.name
+            + (isAll ? '<span class="sub-channel">' + row.channel + '</span>' : '') + '</span>'
+            + '<span class="sub-num">' + fmtCalls(row.calls) + '</span>'
+            + '<span class="sub-num">' + fmtTokens(row.input) + '</span>'
+            + '<span class="sub-num">' + fmtTokens(row.output) + '</span>'
+            + '<span class="sub-num">' + fmtTokens(row.cacheRead) + '</span>'
+            + '<span class="sub-num">' + rowHit + '</span></div>';
+        }).join('');
+        html += '<tr class="model-subrow-block' + (isOpen ? ' open' : '') + '" data-parent="' + periodKey + '"><td colspan="8">'
+          + '<div class="sub-row sub-head">' + subColumns + '</div>' + subRowsHtml + '</td></tr>';
+      }
+    });
+  }
+  if (periodRows.length === 0) {
+    html += '<tr><td class="dim" colspan="8">所选范围内无用量记录</td></tr>';
+  } else {
+    var totalTokens = summary.input + summary.output + summary.cacheRead;
+    var totalHit = totalTokens > 0 ? (summary.cacheRead / totalTokens * 100).toFixed(1) + '%' : '—';
+    var totalCostCellHtml = summaryCostMode === 'mixed'
+      ? '<td>' + (summary.cost > 0 ? fmtCost(summary.cost) : '<span class="dim">—</span>') + '</td>'
+      : costCell(summary.cost, summaryCostMode);
+    html += '<tr class="total"><td>合计</td>'
+      + '<td>' + fmtTokens(totalTokens) + '</td>'
+      + '<td>' + fmtCalls(summary.calls) + '</td>'
+      + '<td>' + fmtTokens(summary.input) + '</td><td>' + fmtTokens(summary.output) + '</td><td>' + fmtTokens(summary.cacheRead) + '</td>'
+      + '<td>' + totalHit + '</td>' + totalCostCellHtml + '</tr>';
+  }
+  html += '</tbody></table>';
+
+  html += '</div>';
+  container.innerHTML = html;
+  bindChartTip(timeRows, hasHourAxis, summaryCostMode);
+}
+
+/* ===== 图表列悬停 tip：显示该时段调用/输入/输出/缓存读/命中率/成本 ===== */
+function bindChartTip(timeRows, hasHourAxis, summaryCostMode) {
+  var tip = document.getElementById('chart-tip');
+  var barsNode = document.querySelector('#detail-panels .bars');
+  if (!barsNode) return;
+  barsNode.addEventListener('mousemove', function (event) {
+    var column = event.target.closest('.bar-col');
+    if (!column) { tip.style.display = 'none'; return; }
+    var row = timeRows[Number(column.dataset.idx)];
+    if (!row) { tip.style.display = 'none'; return; }
+    var rowTokens = row.input + row.output + row.cacheRead;
+    var rowHit = rowTokens > 0 ? (row.cacheRead / rowTokens * 100).toFixed(1) + '%' : '—';
+    var rowLabel = hasHourAxis
+      ? dateKey({ year: row.date.year, month: row.date.month, day: row.date.day }) + ' ' + String(row.date.hour).padStart(2, '0') + ':00'
+      : dateKey(row.date);
+    var costText = summaryCostMode === 'mixed'
+      ? (row.cost > 0 ? fmtCost(row.cost) : '—')
+      : summaryCostMode === 'sub' ? '订阅内' : summaryCostMode === 'free' ? '¥0.00'
+      : summaryCostMode === 'none' ? '无计费' : fmtCost(row.cost);
+    tip.innerHTML = '<div class="tip-date">' + rowLabel + '</div>'
+      + '<div class="tip-total">调用 <b>' + row.calls + '</b> · Tokens <b>' + fmtTokens(rowTokens) + '</b></div>'
+      + '<div class="tip-row"><i style="background: var(--accent)"></i><span class="tip-name">输入</span><span class="tip-amt">' + fmtTokens(row.input) + '</span></div>'
+      + '<div class="tip-row"><i style="background: #9a7bff"></i><span class="tip-name">输出</span><span class="tip-amt">' + fmtTokens(row.output) + '</span></div>'
+      + '<div class="tip-row"><i style="background: #3d4d6e"></i><span class="tip-name">缓存读</span><span class="tip-amt">' + fmtTokens(row.cacheRead) + '</span><span class="tip-pct">' + rowHit + '</span></div>'
+      + '<div class="tip-row" style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px;"><span class="tip-name" style="color: var(--text-2)">成本</span><span class="tip-amt" style="color: var(--text); font-weight: 600; width: auto;">' + costText + '</span></div>';
+    tip.style.display = 'block';
+    var tipX = Math.min(event.clientX + 14, window.innerWidth - tip.offsetWidth - 12);
+    var tipY = Math.min(event.clientY + 14, window.innerHeight - tip.offsetHeight - 12);
+    tip.style.left = tipX + 'px';
+    tip.style.top = tipY + 'px';
+  });
+  barsNode.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+}
+
+/* ===== 每日细目排序与折叠 ===== */
+var periodSortState = null; // null = 默认按时间段倒序（折叠模式）
+var expandedPeriods = {};   // 折叠模式的展开状态，key 为时间段（跨重渲染保留）
+
+function setPeriodSort(key) {
+  if (periodSortState && periodSortState.key === key) {
+    periodSortState.dir = periodSortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    periodSortState = { key: key, dir: 'desc' };
+  }
+  renderDetailPanel();
+}
+
+function togglePeriodRow(headerRow) {
+  var periodKey = headerRow.dataset.period;
+  expandedPeriods[periodKey] = !expandedPeriods[periodKey];
+  headerRow.classList.toggle('open', !!expandedPeriods[periodKey]);
+  document.querySelectorAll('#detail-panels .model-subrow[data-parent="' + periodKey + '"]').forEach(function (row) {
+    row.classList.toggle('open', !!expandedPeriods[periodKey]);
+  });
+}
+
+/* ===== 刷新：标题行全局按钮，服务当前 Tab（正式版将重读台账/快照/会话日志） ===== */
+var TAB_RENDERERS = {
+  overview: function () { renderKeyTable(); renderHeatmap(); },
+  daily: function () { renderOverviewCards(); renderDetailPanel(); },
+  projects: function () { renderProjects(); },
+  sessions: function () { renderSessions(); },
+  quota: function () { /* 正式版：重读余额快照 / 实时余额接口 */ }
+};
+var currentTabId = 'overview';
+
+function refreshCurrentTab(button) {
+  if (button) {
+    var originalText = button.textContent;
+    button.textContent = '刷新中…';
+    button.disabled = true;
+    setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 400);
+  }
+  var renderer = TAB_RENDERERS[currentTabId];
+  if (renderer) renderer();
+}
+
+function switchTab(tabId) {
+  currentTabId = tabId;
+  document.querySelectorAll('.tab-bar button').forEach(function (button) {
+    button.classList.toggle('active', button.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function (panel) {
+    panel.classList.toggle('active', panel.id === 'tab-' + tabId);
+  });
+  var renderer = TAB_RENDERERS[tabId];
+  if (renderer) renderer();
+}
+
+/* ===== 年度热力图（总览）：数据与细目同源 ===== */
+var WEEK_COUNT = 53;
+var HEAT_ALPHA = { 1: 0.25, 2: 0.55, 3: 1 };
+
+function buildHeatData() {
+  // 直接复用 dailyRecords：日总量 = 各通道之和；模型拆分跨通道聚合
+  var heatDays = [];
+  var todayDate = toDateObject(TODAY);
+  var endSaturday = new Date(todayDate);
+  endSaturday.setDate(endSaturday.getDate() + (6 - endSaturday.getDay()));
+  var start = new Date(endSaturday);
+  start.setDate(start.getDate() - (WEEK_COUNT * 7 - 1));
+  var dataStartObject = toDateObject(DATA_START);
+  for (var dayOffset = 0; dayOffset < WEEK_COUNT * 7; dayOffset++) {
+    var currentDate = new Date(start);
+    currentDate.setDate(currentDate.getDate() + dayOffset);
+    var date = { year: currentDate.getFullYear(), month: currentDate.getMonth() + 1, day: currentDate.getDate() };
+    var cell = { date: date, state: 'empty', totalM: 0, models: [] };
+    if (currentDate > todayDate) {
+      cell.state = 'future';
+    } else if (currentDate >= dataStartObject) {
+      var record = dailyRecords[dateKey(date)];
+      var dayTotal = 0;
+      var modelMap = {};
+      if (record) {
+        CHANNELS.forEach(function (channel) {
+          var channelRecord = record[channel.key];
+          if (!channelRecord) return;
+          dayTotal += channelRecord.input + channelRecord.output + channelRecord.cacheRead;
+          channelRecord.models.forEach(function (modelRow) {
+            var modelTotal = modelRow.input + modelRow.output + modelRow.cacheRead;
+            if (modelTotal <= 0) return;
+            var modelEntry = modelMap[modelRow.name];
+            if (!modelEntry) {
+              modelEntry = modelMap[modelRow.name] = { name: modelRow.name, color: MODEL_COLORS[modelRow.name] || 'var(--accent)', amountM: 0 };
+            }
+            modelEntry.amountM += modelTotal;
+          });
+        });
+      }
+      if (dayTotal <= 0) {
+        cell.state = 'idle';
+      } else {
+        cell.state = 'active';
+        cell.totalM = dayTotal;
+        cell.models = Object.values(modelMap).sort(function (first, second) { return second.amountM - first.amountM; })
+          .map(function (model) {
+            return { name: model.name, color: model.color, amountM: model.amountM,
+              pct: Math.round(model.amountM / dayTotal * 100) };
+          });
+      }
+    }
+    heatDays.push(cell);
+  }
+  return heatDays;
+}
+
+var heatDays = [];
+
+function renderHeatmap() {
+  var grid = document.getElementById('heat-grid');
+  var monthsRow = document.getElementById('heat-months');
+  var gridHtml = '';
+  var monthLabels = [];
+  var previousMonth = -1;
+  for (var weekIndex = 0; weekIndex < WEEK_COUNT; weekIndex++) {
+    var columnHtml = '';
+    var weekFirstMonth = -1;
+    for (var weekdayIndex = 0; weekdayIndex < 7; weekdayIndex++) {
+      var cell = heatDays[weekIndex * 7 + weekdayIndex];
+      // 未来与不存在（台账起始前）的格子淡显为浅灰轮廓，不与背景融为一体；
+      // 范围内无用量的格子为 idle 灰，有用量按强度着色。
+      if (!cell || cell.state === 'future' || cell.state === 'empty') {
+        columnHtml += '<div class="heat-cell" style="background: rgba(128,128,140,.10)"></div>';
+        continue;
+      }
+      if (weekdayIndex === 0) weekFirstMonth = cell.date.month;
+      var style = cell.state === 'active'
+        ? ' style="background: rgba(91,140,255,' + HEAT_ALPHA[cell.totalM < 120 ? 1 : cell.totalM < 320 ? 2 : 3] + ')"'
+        : '';
+      var idleClass = cell.state === 'active' ? '' : ' idle';
+      columnHtml += '<div class="heat-cell' + idleClass + '"' + style + ' data-day-index="' + (weekIndex * 7 + weekdayIndex) + '"></div>';
+    }
+    gridHtml += '<div class="heat-week">' + columnHtml + '</div>';
+    if (weekFirstMonth !== previousMonth) {
+      monthLabels.push('<span>' + weekFirstMonth + '月</span>');
+      previousMonth = weekFirstMonth;
+    } else {
+      monthLabels.push('<span></span>');
+    }
+  }
+  grid.innerHTML = gridHtml;
+  monthsRow.innerHTML = monthLabels.join('');
+
+  var tip = document.getElementById('heat-tip');
+  grid.addEventListener('mousemove', function (event) {
+    var target = event.target.closest('.heat-cell');
+    if (!target || target.dataset.dayIndex === undefined) { tip.style.display = 'none'; return; }
+    var cell = heatDays[Number(target.dataset.dayIndex)];
+    if (!cell || cell.state !== 'active') {
+      var idleHtml = '<div class="tip-date">' + dateKey(cell.date) + '</div>'
+        + '<div class="tip-total">' + (cell.state === 'idle' ? '当日无用量记录' : '当日无台账数据') + '</div>';
+      tip.innerHTML = idleHtml;
+      tip.style.display = 'block';
+    } else {
+      var tipHtml = '<div class="tip-date">' + dateKey(cell.date) + '</div>'
+        + '<div class="tip-total">合计 <b>' + fmtTokens(cell.totalM) + '</b> tokens</div>';
+      cell.models.forEach(function (model) {
+        tipHtml += '<div class="tip-row"><i style="background:' + model.color + '"></i>'
+          + '<span class="tip-name">' + model.name + '</span>'
+          + '<span class="tip-amt">' + fmtTokens(model.amountM) + '</span>'
+          + '<span class="tip-pct">' + model.pct + '%</span></div>'
+          + '<div class="tip-bar"><i style="width:' + Math.max(2, model.pct) + '%; background:' + model.color + '"></i></div>';
+      });
+      tip.innerHTML = tipHtml;
+      tip.style.display = 'block';
+    }
+    var tipX = Math.min(event.clientX + 14, window.innerWidth - tip.offsetWidth - 12);
+    var tipY = Math.min(event.clientY + 14, window.innerHeight - tip.offsetHeight - 12);
+    tip.style.left = tipX + 'px';
+    tip.style.top = tipY + 'px';
+  });
+  grid.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+}
+
+/* ===== 项目用量：搜索 / 通道筛选 / 排序 ===== */
+var PROJECT_ROWS = [
+  { name: 'EasyJob', path: 'D:\\EasyJob · 主仓库', calls: 38410, tokensM: 1010, costText: '<span class="dim">订阅内 + ¥13.54</span>', channels: ['OPENCODE_GO_API_KEY', 'DEEPSEEK_API_KEY'], lastActivityMinutesAgo: 48 },
+  { name: 'EasyJob/frontend', path: 'D:\\EasyJob\\frontend', calls: 9240, tokensM: 242, costText: '¥9.86', channels: ['DEEPSEEK_API_KEY'], lastActivityMinutesAgo: 80 },
+  { name: 'zp_token', path: 'D:\\EasyJob\\Job\\finance\\Boss', calls: 6118, tokensM: 160, costText: '<span class="dim">¥0.00</span>', channels: ['SENSENOVA_API_KEY'], lastActivityMinutesAgo: 800 },
+  { name: 'docs 调研', path: 'D:\\EasyJob\\docs', calls: 3502, tokensM: 92, costText: '¥6.12', channels: ['DEEPSEEK_API_KEY'], lastActivityMinutesAgo: 2900 },
+  { name: '其他 / 临时会话', path: '未归属工作区', calls: 1890, tokensM: 49, costText: '<span class="dim">—</span>', channels: ['LOCAL_API_KEY'], lastActivityMinutesAgo: 7100 }
+];
+var totalProjectTokensM = PROJECT_ROWS.reduce(function (sum, row) { return sum + row.tokensM; }, 0);
+var PROJECT_CHANNEL_COLORS = { OPENCODE_GO_API_KEY: 'var(--key-opencodego)', DEEPSEEK_API_KEY: 'var(--key-deepseek)', SENSENOVA_API_KEY: 'var(--key-sensenova)', LOCAL_API_KEY: 'var(--key-local)' };
+
+function formatRelativeActivity(minutesAgo) {
+  if (minutesAgo < 1) return '刚刚';
+  if (minutesAgo < 60) return Math.round(minutesAgo) + ' 分钟前';
+  if (minutesAgo < 60 * 24) return Math.round(minutesAgo / 60) + ' 小时前';
+  return Math.round(minutesAgo / (60 * 24)) + ' 天前';
+}
+
+function renderProjects() {
+  var query = document.getElementById('project-search').value.trim().toLowerCase();
+  var channelFilter = document.getElementById('project-channel').value;
+  var sortKey = document.getElementById('project-sort').value;
+  var rows = PROJECT_ROWS.filter(function (row) {
+    var queryMatch = !query || row.name.toLowerCase().includes(query) || row.path.toLowerCase().includes(query);
+    var channelMatch = channelFilter === 'ALL' || row.channels.includes(channelFilter);
+    return queryMatch && channelMatch;
+  });
+  var sorters = {
+    recent: function (first, second) { return first.lastActivityMinutesAgo - second.lastActivityMinutesAgo; },
+    tokensDesc: function (first, second) { return second.tokensM - first.tokensM; },
+    tokensAsc: function (first, second) { return first.tokensM - second.tokensM; },
+    callsDesc: function (first, second) { return second.calls - first.calls; }
+  };
+  rows.sort(sorters[sortKey] || sorters.recent);
+  var body = document.getElementById('project-table-body');
+  if (rows.length === 0) {
+    body.innerHTML = '<tr><td class="dim" colspan="6">没有符合条件的项目</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(function (row) {
+    var pct = totalProjectTokensM > 0 ? Math.round(row.tokensM / totalProjectTokensM * 100) : 0;
+    var dominantChannel = row.channels[0];
+    return '<tr><td><div class="list-title"><div><div class="lt-main">' + row.name + '</div><div class="lt-sub">' + row.path + '</div></div></div></td>'
+      + '<td>' + fmtCalls(row.calls) + '</td>'
+      + '<td>' + fmtTokens(row.tokensM) + '</td>'
+      + '<td><span class="list-bar"><i style="width:' + Math.max(2, pct) + '%; background:' + PROJECT_CHANNEL_COLORS[dominantChannel] + '"></i></span> ' + pct + '%</td>'
+      + '<td>' + row.costText + '</td>'
+      + '<td>' + formatRelativeActivity(row.lastActivityMinutesAgo) + '</td></tr>';
+  }).join('');
+}
+
+/* ===== 会话用量：搜索 / 通道与天数筛选 / 排序 / 按日分组 ===== */
+var SESSION_ROWS = [
+  { title: '开发 DSH Key 用量插件 · 原型迭代', id: 'session-10a21de5', workspace: 'EasyJob', channel: 'OPENCODE_GO_API_KEY', channelLabel: 'opencode-go', dateOffsetDays: 0, timeText: '11:39', minutes: 72, tokensM: 32.6, hitRate: '81.4%', costText: '<span class="dim">订阅内</span>' },
+  { title: 'frontend 页面联调排查', id: 'session-4bd5c861', workspace: 'EasyJob/frontend', channel: 'DEEPSEEK_API_KEY', channelLabel: 'DeepSeek', dateOffsetDays: 0, timeText: '10:02', minutes: 38, tokensM: 7.2, hitRate: '74.8%', costText: '¥2.04' },
+  { title: 'Boss zp_token 逆向复现', id: 'session-77c1e0aa', workspace: 'EasyJob', channel: 'SENSENOVA_API_KEY', channelLabel: 'sensenova', dateOffsetDays: 1, timeText: '21:30', minutes: 125, tokensM: 18.4, hitRate: '88.9%', costText: '<span class="dim">¥0.00</span>' },
+  { title: 'docs 台账索引重建', id: 'session-99b2f7c3', workspace: 'EasyJob', channel: 'LOCAL_API_KEY', channelLabel: 'local', dateOffsetDays: 1, timeText: '15:47', minutes: 26, tokensM: 2.4, hitRate: '64.2%', costText: '<span class="dim">无计费</span>' },
+  { title: 'Action 台账批量核对', id: 'session-51ca88d7', workspace: 'EasyJob', channel: 'OPENCODE_GO_API_KEY', channelLabel: 'opencode-go', dateOffsetDays: 2, timeText: '20:15', minutes: 54, tokensM: 21.8, hitRate: '79.6%', costText: '<span class="dim">订阅内</span>' },
+  { title: '热力图数据口径核对', id: 'session-3e8fa2b1', workspace: 'EasyJob/docs', channel: 'DEEPSEEK_API_KEY', channelLabel: 'DeepSeek', dateOffsetDays: 2, timeText: '14:02', minutes: 41, tokensM: 4.9, hitRate: '72.5%', costText: '¥1.32' },
+  { title: '前端图表配色调整', id: 'session-b7d4c209', workspace: 'EasyJob/frontend', channel: 'OPENCODE_GO_API_KEY', channelLabel: 'opencode-go', dateOffsetDays: 4, timeText: '09:18', minutes: 33, tokensM: 11.2, hitRate: '84.1%', costText: '<span class="dim">订阅内</span>' },
+  { title: 'Core 缓存层影响分析', id: 'session-c91a5f77', workspace: 'EasyJob', channel: 'SENSENOVA_API_KEY', channelLabel: 'sensenova', dateOffsetDays: 6, timeText: '16:44', minutes: 58, tokensM: 9.6, hitRate: '81.2%', costText: '<span class="dim">¥0.00</span>' }
+];
+
+function sessionDateLabel(row) {
+  if (row.dateOffsetDays === 0) return '今日';
+  if (row.dateOffsetDays === 1) return '昨日';
+  var date = shiftDate(TODAY, -row.dateOffsetDays);
+  return dateKey(date);
+}
+
+function renderSessions() {
+  var query = document.getElementById('session-search').value.trim().toLowerCase();
+  var channelFilter = document.getElementById('session-channel').value;
+  var daysFilter = Number(document.getElementById('session-days').value);
+  var sortKey = document.getElementById('session-sort').value;
+  var rows = SESSION_ROWS.filter(function (row) {
+    var queryMatch = !query || row.title.toLowerCase().includes(query) || row.id.toLowerCase().includes(query)
+      || row.workspace.toLowerCase().includes(query) || row.channelLabel.toLowerCase().includes(query);
+    var channelMatch = channelFilter === 'ALL' || row.channel === channelFilter;
+    var daysMatch = daysFilter === 0 || row.dateOffsetDays <= daysFilter - 1;
+    return queryMatch && channelMatch && daysMatch;
+  });
+  var sorters = {
+    recent: function (first, second) {
+      return first.dateOffsetDays - second.dateOffsetDays || second.timeText.localeCompare(first.timeText);
+    },
+    tokensDesc: function (first, second) { return second.tokensM - first.tokensM; },
+    tokensAsc: function (first, second) { return first.tokensM - second.tokensM; },
+    durationDesc: function (first, second) { return second.minutes - first.minutes; }
+  };
+  rows.sort(sorters[sortKey] || sorters.recent);
+  var body = document.getElementById('session-table-body');
+  if (rows.length === 0) {
+    body.innerHTML = '<tr><td class="dim" colspan="8">没有符合条件的会话</td></tr>';
+    return;
+  }
+  // 按日分组：tokens/时长排序时仍在组内保持相对顺序，组间按排序键最大值排列
+  var grouped = sortKey === 'recent';
+  var html = '';
+  if (grouped) {
+    var dayGroups = [];
+    var currentLabel = null;
+    rows.forEach(function (row) {
+      var label = sessionDateLabel(row);
+      if (label !== currentLabel) {
+        dayGroups.push({ label: label, rows: [] });
+        currentLabel = label;
+      }
+      dayGroups[dayGroups.length - 1].rows.push(row);
+    });
+    dayGroups.forEach(function (group) {
+      var dayTokens = group.rows.reduce(function (sum, row) { return sum + row.tokensM; }, 0);
+      html += '<tr class="session-day"><td colspan="8">' + group.label
+        + '<span class="day-count">' + group.rows.length + ' 个会话 · ' + fmtTokens(dayTokens) + '</span></td></tr>';
+      group.rows.forEach(function (row) { html += sessionRowHtml(row); });
+    });
+  } else {
+    rows.forEach(function (row) { html += sessionRowHtml(row); });
+  }
+  body.innerHTML = html;
+}
+
+function sessionRowHtml(row) {
+  return '<tr><td><div class="lt-main">' + row.title + '</div><div class="lt-sub">' + row.id + '</div></td>'
+    + '<td class="dim">' + row.workspace + '</td>'
+    + '<td>' + row.channelLabel + '</td>'
+    + '<td>' + sessionDateLabel(row) + ' ' + row.timeText + '</td>'
+    + '<td>' + (row.minutes >= 60 ? Math.floor(row.minutes / 60) + 'h ' + (row.minutes % 60) + 'm' : row.minutes + 'm') + '</td>'
+    + '<td>' + fmtTokens(row.tokensM) + '</td>'
+    + '<td>' + row.hitRate + '</td>'
+    + '<td>' + row.costText + '</td></tr>';
+}
+
+/* ===== 启动 ===== */
+buildDailyRecords();
+heatDays = buildHeatData();
+renderKeyTable();
+renderHeatmap();
+renderChips();
+renderOverviewCards();
+renderDetailPanel();
+renderProjects();
+renderSessions();
+</script>
+</body>
+</html>

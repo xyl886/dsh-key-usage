@@ -1,0 +1,17 @@
+/* 主区域页面容器：自己当滚动容器（宿主主内容区不滚动），内容居中并留内边距。 */
+.page {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 24px 28px;
+}

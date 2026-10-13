@@ -1,0 +1,153 @@
+/** 会话用量：按会话列出 tokens / 命中率 / 时长，按最近活跃时按日分组。 */
+import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { channelOf, costCellText, displayNameOf } from '../channels.ts'
+import { fmtCalls, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
+import type { Channel, SessionRow, SessionsResponse } from '../types.ts'
+import styles from '../styles/shared.module.css'
+import listStyles from '../styles/lists.module.css'
+
+type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'durationDesc'
+
+export function SessionsTab(props: { data: SessionsResponse | null; channels: Channel[] }): ReactNode {
+  const [query, setQuery] = useState('')
+  const [channelFilter, setChannelFilter] = useState('ALL')
+  const [daysFilter, setDaysFilter] = useState('30')
+  const [sortKey, setSortKey] = useState<SortKey>('recent')
+  const [nowMs] = useState(() => Date.now())
+  const rows = props.data?.rows ?? []
+
+  const visible = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    const maxAgeDays = Number(daysFilter)
+    const filtered = rows.filter((row) => {
+      const title = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '')
+      const matchesQuery = keyword === '' || title.toLowerCase().includes(keyword)
+      const matchesChannel = channelFilter === 'ALL' || row.provider === channelFilter
+      const matchesAge = maxAgeDays === 0 || row.lastTime === null
+        || (nowMs - row.lastTime) <= maxAgeDays * 86400000
+      return matchesQuery && matchesChannel && matchesAge
+    })
+    const sorters: Record<SortKey, (first: SessionRow, second: SessionRow) => number> = {
+      recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
+      tokensDesc: (first, second) => second.tokens - first.tokens,
+      tokensAsc: (first, second) => first.tokens - second.tokens,
+      durationDesc: (first, second) => durationOf(second) - durationOf(first),
+    }
+    return [...filtered].sort(sorters[sortKey])
+  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs])
+
+  if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
+
+  const groups: Array<{ label: string; rows: SessionRow[] }> = []
+  if (sortKey === 'recent') {
+    for (const row of visible) {
+      const label = dayLabelOf(row.lastTime, nowMs)
+      const last = groups[groups.length - 1]
+      if (last === undefined || last.label !== label) groups.push({ label, rows: [row] })
+      else last.rows.push(row)
+    }
+  }
+
+  return (
+    <div>
+      {props.data.coverage.status !== 'complete' && (
+        <div className={styles.warning}>
+          {props.data.coverage.status === 'unavailable'
+            ? '会话数据不可用（宿主未提供会话服务或全部读取失败）'
+            : '会话数据不完整：' + String(props.data.coverage.skippedSessions) + ' 个会话读取失败，未计入统计'}
+        </div>
+      )}
+      <div className={listStyles.filterBar}>
+        <input className={listStyles.searchInput} placeholder="搜索会话标题、session id、工作区…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
+          <option value="ALL">全部通道</option>
+          {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
+        </select>
+        <select className={listStyles.filterSelect} value={daysFilter} onChange={(event) => setDaysFilter(event.target.value)}>
+          <option value="7">近 7 天</option>
+          <option value="30">近 30 天</option>
+          <option value="0">全部</option>
+        </select>
+        <select className={listStyles.filterSelect} value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
+          <option value="recent">最新会话</option>
+          <option value="tokensDesc">Tokens 最多</option>
+          <option value="tokensAsc">Tokens 最少</option>
+          <option value="durationDesc">时长最长</option>
+        </select>
+      </div>
+
+      <table className={styles.table}>
+        <thead>
+          <tr><th>会话</th><th>通道</th><th>时间 / 时长</th><th>Tokens</th><th>命中率</th><th>成本</th></tr>
+        </thead>
+        <tbody>
+          {groups.map((group) => {
+            const groupTokens = group.rows.reduce((total, row) => total + row.tokens, 0)
+            return (
+              <Fragment key={'group-' + group.label}>
+                <tr className={listStyles.sessionDay}>
+                  <td colSpan={6}>
+                    {group.label}
+                    <span className={listStyles.dayCount}>{group.rows.length} 个会话 · {fmtTokens(groupTokens)}</span>
+                  </td>
+                </tr>
+                {group.rows.map((row) => sessionRowOf(row, props.channels))}
+              </Fragment>
+            )
+          })}
+          {sortKey !== 'recent' && visible.map((row) => sessionRowOf(row, props.channels))}
+          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的会话</td></tr>}
+        </tbody>
+      </table>
+      <div className={styles.statExtra}>
+        会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按台账模型均价估算
+        {props.data.priced ? '' : '（台账无成本数据，暂不可估）'}
+      </div>
+    </div>
+  )
+}
+
+function sessionRowOf(row: SessionRow, channels: Channel[]): ReactNode {
+  const channel = channelOf(channels, row.provider)
+  const costCell = costCellText(channel, row.cost ?? 0)
+  return (
+    <tr key={row.id}>
+      <td>
+        <div className={listStyles.listMain}>{row.title ?? '会话 ' + shortIdOf(row.id)}</div>
+        <div className={listStyles.listSub}>{row.workspace ?? '未归属工作区'}</div>
+      </td>
+      <td>{row.providerLabel ?? displayNameOf(channels, row.provider ?? '')}</td>
+      <td>
+        <div>{row.lastTime === null ? '—' : dayLabelOf(row.lastTime, Date.now()) + ' ' + fmtTime(row.lastTime)}</div>
+        <div className={listStyles.listSub}>时长 {fmtDuration(durationOf(row))}</div>
+      </td>
+      <td>{fmtTokens(row.tokens)}</td>
+      <td>{row.cacheHitRate === null ? '—' : row.cacheHitRate.toFixed(1) + '%'}</td>
+      <td>{row.cost === null || channel === null || channel.costMode !== 'perToken'
+        ? <span className={styles.dim}>{costCell.text}</span>
+        : costCell.text}</td>
+    </tr>
+  )
+}
+
+function durationOf(row: SessionRow): number {
+  if (row.firstTime === null || row.lastTime === null) return 0
+  return Math.max(0, row.lastTime - row.firstTime)
+}
+
+/** 会话头通常不带标题，用 id 的短片段做可读标识。 */
+function shortIdOf(id: string): string {
+  const stripped = id.replace(/^session-/, '')
+  return stripped.slice(0, 8)
+}
+
+function dayLabelOf(timeMs: number | null, nowMs: number): string {
+  if (timeMs === null) return '未知日期'
+  const dateKey = isoDate(new Date(timeMs))
+  if (dateKey === isoDate(new Date(nowMs))) return '今日'
+  if (dateKey === isoDate(new Date(nowMs - 86400000))) return '昨日'
+  return dateKey
+}
+
+/** 保留调用计数格式，避免各 Tab 各写一份。 */
+export { fmtCalls }

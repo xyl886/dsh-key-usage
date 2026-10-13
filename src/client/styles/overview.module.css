@@ -1,0 +1,57 @@
+/* 总览：Key 清单表 + 年度热力图。 */
+.keyTable { width: 100%; border-collapse: collapse; }
+.keyTable th {
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+  padding: 6px 10px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+}
+.keyTable th:first-child { text-align: left; padding-left: 0; }
+.keyTable td {
+  text-align: right; padding: 10px 10px; font-size: 12.5px; font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  border-bottom: 1px solid var(--dsw-alias-fill-l1, rgba(128,128,140,.12)); white-space: nowrap;
+}
+.keyTable td:first-child { text-align: left; padding-left: 0; }
+.keyTable tr:last-child td { border-bottom: 0; }
+.keyTable tbody tr.clickable { cursor: pointer; }
+.keyTable tbody tr.clickable:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.07)); }
+.keyTable tr.disabledRow { opacity: .55; }
+
+.cellKey { display: flex; align-items: center; gap: 10px; }
+.keyDisplay { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.keyEnv { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; }
+.tag {
+  display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); color: var(--dsw-alias-label-secondary, #9a9aa6);
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+}
+.tag.free { color: var(--dsw-alias-state-success-primary, #3fb96f); border-color: rgba(63,185,111,.35); }
+.tag.sub { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.35); }
+.tag.off { color: var(--dsw-alias-label-tertiary, #67676f); }
+.rowLink { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.keyTable tbody tr.clickable:hover .rowLink { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+
+.quotaCell { display: inline-flex; align-items: center; gap: 8px; }
+.miniBar { width: 64px; height: 5px; border-radius: 3px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; flex-shrink: 0; }
+.miniBar > i { display: block; height: 100%; border-radius: 3px; }
+.quotaText { min-width: 74px; text-align: left; }
+.quotaText.warn { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-weight: 600; }
+.quotaText.danger { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-weight: 600; }
+.quotaText.dim { color: var(--dsw-alias-label-tertiary, #67676f); }
+
+/* ===== 年度热力图 ===== */
+.heatmapCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; margin-top: 24px; }
+.heatmapHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+.heatmapTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; }
+/* 53 列全部塞进面板宽度：格子随列宽收缩，不出现横向滚动条 */
+.heatmapWrap { display: flex; gap: 5px; }
+.heatWeekdays { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.heatWeekdays span { font-size: 8.5px; color: var(--dsw-alias-label-tertiary, #67676f); width: 11px; text-align: right; }
+.heatGrid { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.heatWeek { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+/* 宽 100% + aspect-ratio 让格子随列宽等比收缩；max-height 防止宽面板下格子被拉高 */
+.heatCell { width: 100%; aspect-ratio: 1; max-height: 12px; border-radius: 2px; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.18)); cursor: default; }
+.heatCell.idle { background: rgba(128,128,140,.22); }
+.heatCell.empty { background: rgba(128,128,140,.10); border: 1px solid rgba(128,128,140,.25); }
+.heatMonths { display: flex; gap: 2px; margin: 5px 0 0 16px; }
+.heatMonths span { flex: 1; font-size: 9px; color: var(--dsw-alias-label-tertiary, #67676f); text-align: left; white-space: nowrap; }
+.heatScale { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 8px; }

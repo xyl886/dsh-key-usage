@@ -1,0 +1,313 @@
+/**
+ * HTTP 路由：只读 GET 端点，向客户端提供聚合数据。
+ * - /dsh-key-usage/channels  通道清单（含状态与计费模式）
+ * - /dsh-key-usage/usage     范围聚合（from/to/provider 过滤；单日附带按小时）
+ * - /dsh-key-usage/heatmap   年度热力图序列
+ * - /dsh-key-usage/quota     余额与订阅窗口原样快照
+ * - /dsh-key-usage/summary   总览表用的「今日 / 近 30 天」按通道汇总
+ * - /dsh-key-usage/sessions  会话用量（来自宿主会话事件折叠）
+ * - /dsh-key-usage/projects  项目（工作目录）用量
+ *
+ * 台账已停更时（本机停在 2026-09-30），按天序列会用会话事件补齐缺的日期（见 merge.ts），
+ * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403；零外网。
+ */
+import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import {
+  aggregateRange,
+  buildPriceTable,
+  estimateCost,
+  readLedger,
+  type UsageLedger,
+} from './ledger.js'
+import {
+  classifyChannels,
+  costModeLabel,
+  extractChannels,
+  quotaWindowLabel,
+  readProviderSnapshots,
+  type ChannelInfo,
+} from './collect.js'
+import {
+  hoursOfDate,
+  projectRowsOf,
+  sessionRowsOf,
+  type SessionCollection,
+} from './sessions.js'
+import {
+  mergeDailySeries,
+  sessionDayRows,
+  summarizeMergedByProvider,
+  totalsOfMerged,
+} from './merge.js'
+
+interface WebServer {
+  register(route: { kind: string; path: string; handler: (request: IncomingMessage, response: ServerResponse) => Promise<void> | void }): void
+}
+
+/** 会话数据源（由 index.ts 注入，服务缺失时仍返回空结果）。 */
+export interface SessionSource {
+  collect(): Promise<SessionCollection>
+}
+
+/** 无会话服务时的兜底数据源，保证台账相关端点照常工作。 */
+export const unavailableSessionSource: SessionSource = {
+  collect: async () => ({
+    records: [],
+    coverage: { status: 'unavailable', totalSessions: 0, countedSessions: 0, skippedSessions: 0 },
+  }),
+}
+
+const EMPTY_LEDGER: UsageLedger = { version: 0, days: {} }
+
+function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {
+  const payload = JSON.stringify(body)
+  response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' })
+  response.end(payload)
+}
+
+function isLoopback(request: IncomingMessage): boolean {
+  const remoteAddress = request.socket.remoteAddress ?? ''
+  return remoteAddress === '127.0.0.1' || remoteAddress === '::1' || remoteAddress === '::ffff:127.0.0.1'
+}
+
+/** dsh 家目录：与宿主一致地优先 DSH_HOME。 */
+export function dshHomePath(): string {
+  return process.env.DSH_HOME ?? join(homedir(), '.dsh')
+}
+
+function dayKeyOf(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function shiftedDayKey(offsetDays: number): string {
+  return dayKeyOf(new Date(Date.now() + offsetDays * 86400000))
+}
+
+function channelPayload(channel: ChannelInfo): Record<string, unknown> {
+  return {
+    ...channel,
+    costLabel: costModeLabel(channel.costMode),
+    quotaWindowLabel: channel.quotaWindowKey === null ? null : quotaWindowLabel(channel.quotaWindowKey),
+  }
+}
+
+export function mountKeyUsageRoutes(webServer: WebServer, sessionSource: SessionSource = unavailableSessionSource): void {
+  const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
+  const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
+
+  const loadLedger = (): UsageLedger => readLedger(ledgerPath, (path) => {
+    try { return readFileSync(path, 'utf8') } catch { return null }
+  }) ?? EMPTY_LEDGER
+
+  const loadChannels = (): ChannelInfo[] => {
+    // cordis.yml 是应用按需重写的组合产物：插件集变化期间会短暂变成空模板，
+    // 因此先读它，取不到再回退到用户 patch 层 cordis.patch.yml。
+    // 两个文件都含 !!js 表达式，只做文本提取，不执行任何表达式。
+    const profileDir = join(dshHomePath(), 'profiles', 'desktop')
+    const snapshots = readProviderSnapshots(snapshotPath).providers
+    const composed = readTextFile(join(profileDir, 'cordis.yml'))
+    if (composed !== null) {
+      const channels = classifyChannels(extractChannels(composed), snapshots)
+      if (channels.length > 0) return channels
+    }
+    const patch = readTextFile(join(profileDir, 'cordis.patch.yml'))
+    return patch === null ? [] : classifyChannels(extractChannels(patch), snapshots)
+  }
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/channels',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      sendJson(response, 200, { channels: loadChannels().map(channelPayload) })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/usage',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const ledger = loadLedger()
+      const collection = await sessionSource.collect()
+      const knownProviders = loadChannels().map((channel) => channel.provider)
+      const dayKeys = Object.keys(ledger.days).sort()
+      const providerParam = url.searchParams.get('provider')
+      const providerFilter = providerParam !== null && providerParam !== '' ? providerParam.split(',').filter(Boolean) : null
+      const sessionRows = sessionDayRows(collection.records, knownProviders)
+        .filter((row) => providerFilter === null || providerFilter.includes(row.provider))
+      const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
+      const availableFrom = minKey(dayKeys[0], sessionDates[0])
+      const availableTo = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1])
+      const from = url.searchParams.get('from') ?? availableFrom ?? ''
+      const to = url.searchParams.get('to') ?? availableTo ?? ''
+      const ledgerResult = aggregateRange(ledger, from, to, providerFilter)
+      const merged = mergeDailySeries(ledgerResult.days, sessionRows, from, to)
+      // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
+      const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
+      sendJson(response, 200, {
+        days: merged.days,
+        totals: merged.days.length > 0 ? totalsOfMerged(merged.days) : null,
+        sessionDates: merged.sessionDates,
+        availableFrom: availableFrom ?? null,
+        availableTo: availableTo ?? null,
+        hours,
+      })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/heatmap',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const ledger = loadLedger()
+      const collection = await sessionSource.collect()
+      const knownProviders = loadChannels().map((channel) => channel.provider)
+      const sessionRows = sessionDayRows(collection.records, knownProviders)
+      const dayKeys = Object.keys(ledger.days).sort()
+      const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
+      const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10)
+      const earliest = minKey(dayKeys[0], sessionDates[0]) ?? yearAgo
+      const from = earliest > yearAgo ? earliest : yearAgo
+      const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
+      const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
+      sendJson(response, 200, {
+        days: merged.days
+          .map((day) => ({
+            date: day.date,
+            totalTokens: day.inputTokens + day.outputTokens + day.cacheReadTokens,
+            models: day.models
+              .map((model) => ({
+                provider: model.provider,
+                model: model.model,
+                totalTokens: model.inputTokens + model.outputTokens + model.cacheReadTokens,
+              }))
+              .filter((model) => model.totalTokens > 0)
+              .sort((first, second) => second.totalTokens - first.totalTokens),
+          }))
+          .filter((day) => day.totalTokens > 0),
+        sessionDates: merged.sessionDates,
+      })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/quota',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      sendJson(response, 200, readProviderSnapshots(snapshotPath))
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/summary',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const today = dayKeyOf(new Date())
+      const monthFrom = shiftedDayKey(-29)
+      const ledger = loadLedger()
+      const collection = await sessionSource.collect()
+      const channels = loadChannels()
+      const knownProviders = channels.map((channel) => channel.provider)
+      const sessionRows = sessionDayRows(collection.records, knownProviders)
+      const merged = mergeDailySeries(aggregateRange(ledger, monthFrom, today, null).days, sessionRows, monthFrom, today)
+      const todaySummary = summarizeMergedByProvider(merged.days, today, today)
+      const monthSummary = summarizeMergedByProvider(merged.days, monthFrom, today)
+      const rows = channels.map((channel) => {
+        const todayRow = todaySummary.find((row) => row.provider === channel.provider)
+        const monthRow = monthSummary.find((row) => row.provider === channel.provider)
+        return {
+          provider: channel.provider,
+          today: todayRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
+          month: monthRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
+        }
+      })
+      sendJson(response, 200, {
+        channels: rows,
+        range: { today, monthFrom },
+        todaySource: merged.sessionDates.includes(today) ? 'session' : 'ledger',
+        sessionDates: merged.sessionDates,
+      })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/sessions',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const limit = parseLimit(url.searchParams.get('limit'), 200)
+      const channels = loadChannels()
+      const knownProviders = channels.map((channel) => channel.provider)
+      const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+      const { records, coverage } = await sessionSource.collect()
+      const priceTable = buildPriceTable(loadLedger())
+      const rows = sessionRowsOf(records, knownProviders).slice(0, limit).map((row) => ({
+        ...row,
+        providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
+        costMode: row.provider === null ? null : costModeOf.get(row.provider) ?? null,
+        cost: estimateCost(row.models, priceTable),
+      }))
+      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/projects',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const limit = parseLimit(url.searchParams.get('limit'), 200)
+      const channels = loadChannels()
+      const knownProviders = channels.map((channel) => channel.provider)
+      const { records, coverage } = await sessionSource.collect()
+      const priceTable = buildPriceTable(loadLedger())
+      const rows = projectRowsOf(records, knownProviders).slice(0, limit).map((row) => ({
+        ...row,
+        dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
+        cost: estimateCost(row.models, priceTable),
+      }))
+      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+    },
+  })
+}
+
+function minKey(first: string | undefined, second: string | undefined): string | undefined {
+  if (first === undefined) return second
+  if (second === undefined) return first
+  return first < second ? first : second
+}
+
+function maxKey(first: string | undefined, second: string | undefined): string | undefined {
+  if (first === undefined) return second
+  if (second === undefined) return first
+  return first > second ? first : second
+}
+
+function parseLimit(raw: string | null, fallback: number): number {
+  if (raw === null) return fallback
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return Math.min(parsed, 1000)
+}
+
+function requireLoopback(request: IncomingMessage, response: ServerResponse): boolean {
+  if (isLoopback(request)) return true
+  sendJson(response, 403, { error: 'loopback only' })
+  return false
+}
+
+function readTextFile(path: string): string | null {
+  try { return readFileSync(path, 'utf8') } catch { return null }
+}

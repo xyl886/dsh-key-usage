@@ -1,0 +1,2 @@
+# 统一按 LF 存储：源码在 Windows / macOS / Linux 上保持一致，避免换行符造成无意义 diff
+* text=auto eol=lf
