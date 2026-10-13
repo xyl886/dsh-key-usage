@@ -52,10 +52,16 @@ jobs:
       - name: 版本号检查（不能重复发布已用过的版本）
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "准备发布 dsh-key-usage@$VERSION"
+          echo "当前版本：dsh-key-usage@$VERSION"
           if npm view "dsh-key-usage@$VERSION" version >/dev/null 2>&1; then
-            echo "::error::dsh-key-usage@$VERSION 已经发布过；npm 版本号不可复用，请先改 package.json"
-            exit 1
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "::warning::dsh-key-usage@$VERSION 已经发布过；dry_run 不中断，但真正发布前必须先升版本"
+            else
+              echo "::error::dsh-key-usage@$VERSION 已经发布过；npm 版本号不可复用，请先改 package.json"
+              exit 1
+            fi
+          else
+            echo "该版本号未被占用，可以发布"
           fi
 
       - name: 打包清单
