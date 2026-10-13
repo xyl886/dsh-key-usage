@@ -4,11 +4,12 @@
  * 项目与会话数据来自宿主会话事件折叠，切到对应 Tab 时才首次拉取。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadChannels, loadHeatmap, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
+import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
+import { ModelsTab } from './tabs/ModelsTab.tsx'
 import { ProjectsTab } from './tabs/ProjectsTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
@@ -16,6 +17,7 @@ import type { DetailSortState } from './components/DailyDetailTable.tsx'
 import type {
   Channel,
   HeatmapDay,
+  ModelsResponse,
   ProjectsResponse,
   QuotaProvider,
   SessionsResponse,
@@ -24,12 +26,13 @@ import type {
 } from './types.ts'
 import styles from './styles/shared.module.css'
 
-type TabId = 'overview' | 'detail' | 'projects' | 'sessions' | 'quota'
+type TabId = 'overview' | 'detail' | 'projects' | 'models' | 'sessions' | 'quota'
 
 const TABS: Array<[TabId, string]> = [
   ['overview', '总览'],
   ['detail', '使用明细'],
   ['projects', '项目用量'],
+  ['models', '按模型'],
   ['sessions', '会话用量'],
   ['quota', '余额与配额'],
 ]
@@ -50,6 +53,7 @@ export function KeyUsageSection() {
   const [usage, setUsage] = useState<UsageResponse | null>(null)
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
+  const [models, setModels] = useState<ModelsResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const tooltip = useTooltip()
@@ -66,20 +70,22 @@ export function KeyUsageSection() {
     setSummary(summaryResult)
     setHeatmap(heatmapResult ?? [])
     if (includeSessionData) {
-      const [sessionResult, projectResult] = await Promise.all([loadSessions(), loadProjects()])
+      const [sessionResult, projectResult, modelResult] = await Promise.all([loadSessions(), loadProjects(), loadModels()])
       setSessions(sessionResult)
       setProjects(projectResult)
+      setModels(modelResult)
     }
     setLoading(false)
   }, [])
 
   useEffect(() => { void reload(false) }, [reload])
 
-  // 项目 / 会话数据按需加载（首次切到对应 Tab 时）
+  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时）
   useEffect(() => {
     if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
     if (activeTab === 'projects' && projects === null) void loadProjects().then(setProjects)
-  }, [activeTab, sessions, projects])
+    if (activeTab === 'models' && models === null) void loadModels().then(setModels)
+  }, [activeTab, sessions, projects, models])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
@@ -103,9 +109,13 @@ export function KeyUsageSection() {
   }, [bounds.from, bounds.to, channelFilter])
 
   const refresh = useCallback(() => {
-    void reload(activeTab === 'sessions' || activeTab === 'projects' || sessions !== null || projects !== null, true)
+    void reload(
+      activeTab === 'sessions' || activeTab === 'projects' || activeTab === 'models'
+      || sessions !== null || projects !== null || models !== null,
+      true,
+    )
     void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => { if (result !== null) setUsage(result) })
-  }, [reload, activeTab, sessions, projects, bounds.from, bounds.to, channelFilter])
+  }, [reload, activeTab, sessions, projects, models, bounds.from, bounds.to, channelFilter])
 
   return (
     <div className={styles.section}>
@@ -155,6 +165,7 @@ export function KeyUsageSection() {
         />
       )}
       {activeTab === 'projects' && <ProjectsTab data={projects} channels={channels} />}
+      {activeTab === 'models' && <ModelsTab data={models} channels={channels} />}
       {activeTab === 'sessions' && <SessionsTab data={sessions} channels={channels} />}
       {activeTab === 'quota' && <QuotaTab channels={channels} quotas={quotas} />}
 
@@ -167,7 +178,7 @@ export function KeyUsageSection() {
             。两套来源按天取舍、不相加。
           </li>
           <li>热力图按可见区间内活跃日的三分位分档（少 / 中 / 高）。</li>
-          <li>项目用量、会话用量与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。</li>
+          <li>项目用量、会话用量、按模型与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。</li>
           <li>已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。</li>
           <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
           <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>

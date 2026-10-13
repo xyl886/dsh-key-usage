@@ -287,6 +287,79 @@ export function sessionRowsOf(
     .sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
 }
 
+/** 模型维度聚合行（`provider + model`），供「按模型」视图使用。 */
+export interface ModelAggregateRow {
+  provider: string
+  model: string
+  calls: number
+  /** 展示口径 tokens：输入 + 输出 + 缓存读（与总览 / 使用明细一致，不含 cacheWrite）。 */
+  tokens: number
+  cacheHitRate: number | null
+  sessionCount: number
+  lastTime: number | null
+  buckets: {
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+  }
+}
+
+export function modelRowsOf(records: SessionUsageRecord[], knownProviders: string[]): ModelAggregateRow[] {
+  interface Accumulator {
+    provider: string
+    model: string
+    calls: number
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    sessionCount: number
+    lastTime: number | null
+  }
+  const byModel = new Map<string, Accumulator>()
+  for (const record of records) {
+    const sessionLastTime = record.summary.lastTime
+    for (const model of attributedModels(record.summary.models, knownProviders)) {
+      const key = model.provider + '|' + model.model
+      let accumulator = byModel.get(key)
+      if (accumulator === undefined) {
+        accumulator = {
+          provider: model.provider, model: model.model, calls: 0,
+          inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, sessionCount: 0, lastTime: null,
+        }
+        byModel.set(key, accumulator)
+      }
+      accumulator.calls += model.calls
+      accumulator.inputTokens += model.buckets.inputTokens
+      accumulator.outputTokens += model.buckets.outputTokens
+      accumulator.cacheReadTokens += model.buckets.cacheReadTokens
+      accumulator.sessionCount += 1
+      // 会话事件只有会话级时间戳，「最近活跃」只能取用到该模型的最晚会话时间，是近似值
+      if (sessionLastTime !== null && (accumulator.lastTime === null || sessionLastTime > accumulator.lastTime)) {
+        accumulator.lastTime = sessionLastTime
+      }
+    }
+  }
+  return [...byModel.values()]
+    .map((accumulator) => {
+      const displayTokens = accumulator.inputTokens + accumulator.outputTokens + accumulator.cacheReadTokens
+      return {
+        provider: accumulator.provider,
+        model: accumulator.model,
+        calls: accumulator.calls,
+        tokens: displayTokens,
+        cacheHitRate: displayTokens > 0 ? Math.round(accumulator.cacheReadTokens / displayTokens * 1000) / 10 : null,
+        sessionCount: accumulator.sessionCount,
+        lastTime: accumulator.lastTime,
+        buckets: {
+          inputTokens: accumulator.inputTokens,
+          outputTokens: accumulator.outputTokens,
+          cacheReadTokens: accumulator.cacheReadTokens,
+        },
+      }
+    })
+    .sort((first, second) => second.tokens - first.tokens)
+}
+
 /** 会话记录 → 项目（工作目录）聚合行（按最近活动倒序）。 */
 export interface ProjectRow {
   workspace: string

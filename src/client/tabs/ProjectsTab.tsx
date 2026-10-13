@@ -1,12 +1,28 @@
 /** 项目用量：按会话工作目录聚合（数据来自宿主会话事件折叠）。 */
 import { useMemo, useState, type ReactNode } from 'react'
 import { channelColorOf, channelOf, costCellText, displayNameOf } from '../channels.ts'
-import { fmtCalls, fmtRelative, fmtTokens } from '../format.ts'
+import { fmtCalls, fmtDateTime, fmtRelative, fmtTokens } from '../format.ts'
+import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
+import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
 import type { Channel, ProjectRow, ProjectsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
+import exportStyles from '../styles/export.module.css'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'callsDesc'
+
+/** 导出列：成本与命中率都给原始数值，方便在表格里继续算。 */
+const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
+  { key: 'workspace', label: '项目路径', value: (row) => row.workspace },
+  { key: 'dominantProvider', label: '主要通道', value: (row) => row.dominantProvider },
+  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
+  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
+  { key: 'cost', label: '成本(估算,元)', value: (row) => row.cost },
+  { key: 'sessionCount', label: '会话数', value: (row) => row.sessionCount },
+  { key: 'archivedSessionCount', label: '已归档会话数', value: (row) => row.archivedSessionCount },
+  { key: 'lastTime', label: '最近活跃', value: (row) => fmtDateTime(row.lastTime) },
+]
 
 export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Channel[] }): ReactNode {
   const [query, setQuery] = useState('')
@@ -17,7 +33,7 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    const filtered = rows.filter((row) => {
+    const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
       const matchesQuery = keyword === '' || row.workspace.toLowerCase().includes(keyword)
       const matchesChannel = channelFilter === 'ALL' || row.providers[channelFilter] !== undefined
       return matchesQuery && matchesChannel
@@ -32,6 +48,14 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
   }, [rows, query, channelFilter, sortKey])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
+  // 零 Token 的项目（多为调用失败）不展示，条数如实告知
+  const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
+
+  /** 导出当前筛选与排序后的项目行（JSON 取整行，CSV 按固定列映射）。 */
+  const exportRows = (format: 'csv' | 'json'): void => {
+    if (format === 'csv') downloadFile(exportFileName('projects', 'csv'), toCsv(visible, EXPORT_COLUMNS), CSV_MIME)
+    else downloadFile(exportFileName('projects', 'json'), toJson(visible), JSON_MIME)
+  }
 
   if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
 
@@ -52,6 +76,10 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
           <option value="tokensAsc">Tokens 最少</option>
           <option value="callsDesc">调用最多</option>
         </select>
+        <span className={exportStyles.exportGroup}>
+          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
+          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
+        </span>
       </div>
 
       <table className={styles.table}>
@@ -94,6 +122,7 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
           {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的项目</td></tr>}
         </tbody>
       </table>
+      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         成本按台账模型中位均价估算{props.data.priced ? '' : '（台账无成本数据，暂不可估）'}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
       </div>

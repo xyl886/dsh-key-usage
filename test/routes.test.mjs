@@ -4,7 +4,7 @@
  * 运行：node test/routes.test.mjs
  */
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mountKeyUsageRoutes } from '../lib/routes.js'
@@ -164,6 +164,37 @@ assert.equal(liveOpencode.fetchedAt, 1791000900000)
 assert.deepEqual(liveOpencode.plan.windows.map((window) => window.key), ['5h', 'week', 'month'])
 const liveLocal = liveQuotaBody.body.providers.find((row) => row.provider === 'local')
 assert.equal(liveLocal.source, 'snapshot', '实时没有结果的通道继续回落快照')
+assert.equal(liveOpencode.supported, true, '有查询方案的通道标 supported')
+assert.equal(liveLocal.supported, false, '本地端点没有余额接口，界面不该提示「查询失败」')
+
+// 快照持久化：实时一成功就落一份自己的快照（宿主那份已经 13 天没更新了）
+const ownSnapshotPath = join(home, 'dsh-key-usage', 'quota-snapshots.json')
+assert.equal(existsSync(ownSnapshotPath), true, '实时成功后应写出自己的快照文件')
+const ownSnapshot = JSON.parse(readFileSync(ownSnapshotPath, 'utf8'))
+assert.equal(ownSnapshot.providers['opencode-go'].updatedAt, 1791000900000)
+assert.equal(ownSnapshot.providers['opencode-go'].windows.length, 3)
+
+// 之后实时失败时，回落的是这份「最近一次成功」的快照，而不是宿主那份旧值
+const failedCache = new Map([['opencode-go', {
+  provider: 'opencode-go',
+  ok: false,
+  error: 'timeout',
+  fetchedAt: 1791001000000,
+  balance: null,
+  windows: null,
+}]])
+const failedHandlers = new Map()
+mountKeyUsageRoutes(
+  { register: (route) => { failedHandlers.set(route.path, route.handler) } },
+  sessionSource,
+  { cached: () => failedCache, refreshIfStale: async () => failedCache },
+)
+const afterFailure = await callHandler(failedHandlers, '/dsh-key-usage/quota')
+const staleOpencode = afterFailure.body.providers.find((row) => row.provider === 'opencode-go')
+assert.equal(staleOpencode.source, 'snapshot')
+assert.equal(staleOpencode.error, 'timeout', '失败原因照常透出')
+assert.equal(staleOpencode.updatedAt, 1791000900000, '回落的是最近一次成功的快照，不是宿主的旧值')
+assert.deepEqual(staleOpencode.plan.windows.map((window) => window.key), ['5h', 'week', 'month'])
 
 // 通道判定要吃实时值：快照里峰值是 month 76%，实时峰值是 rolling 19%
 const liveChannels = await callHandler(liveHandlers, '/dsh-key-usage/channels')
@@ -208,6 +239,31 @@ assert.equal(projects.body.rows.length, 1)
 assert.equal(projects.body.rows[0].workspace, 'D:\\EasyJob')
 assert.equal(projects.body.rows[0].tokens, 9200 + 440, '两次结算样本的 tokens 之和')
 assert.equal(projects.body.rows[0].dominantProvider, 'opencode-go')
+
+// 按模型：通道 + 模型聚合，口径与 /sessions 一致（tokens 不含 cacheWrite）
+const models = await callEndpoint('/dsh-key-usage/models')
+assert.equal(models.body.rows.length, 1, '两份样本同一模型归一行')
+const modelRow = models.body.rows[0]
+assert.equal(modelRow.provider, 'opencode-go')
+assert.equal(modelRow.providerLabel, 'opencode-go')
+assert.equal(modelRow.model, 'GLM-5.3-Flash')
+assert.equal(modelRow.calls, 2, '调用数 = 结算样本数')
+assert.equal(modelRow.tokens, 9640, '输入 + 输出 + 缓存读')
+assert.equal(modelRow.buckets.inputTokens, 1400)
+assert.equal(modelRow.buckets.outputTokens, 240)
+assert.equal(modelRow.buckets.cacheReadTokens, 8000)
+assert.equal(modelRow.cacheHitRate, 83, '8000 / 9640')
+assert.equal(modelRow.sessionCount, 1)
+assert.equal(modelRow.costMode, 'sub')
+assert.equal(modelRow.cost, null, '台账无成本数据时不给估算值（与 /sessions 同口径）')
+assert.equal(models.body.coverage.status, 'complete')
+assert.equal(models.body.priced, false)
+
+// limit 生效，非法 limit 回落默认值而不是报错
+const limited = await callEndpoint('/dsh-key-usage/models?limit=0')
+assert.equal(limited.body.rows.length, 1, 'limit 非法时回落默认值')
+const loopbackOnly = await callEndpoint('/dsh-key-usage/models', '10.0.0.7')
+assert.equal(loopbackOnly.status, 403, '按模型端点同样只允许回环')
 
 // 非回环一律 403
 const foreign = await callEndpoint('/dsh-key-usage/channels', '192.168.1.9')

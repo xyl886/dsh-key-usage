@@ -7,6 +7,7 @@
  * - /dsh-key-usage/summary   总览表用的「今日 / 近 30 天」按通道汇总
  * - /dsh-key-usage/sessions  会话用量（来自宿主会话事件折叠）
  * - /dsh-key-usage/projects  项目（工作目录）用量
+ * - /dsh-key-usage/models    模型（provider + model）用量与估算成本
  *
  * 台账已停更时（本机停在 2026-09-30），按天序列会用会话事件补齐缺的日期（见 merge.ts），
  * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403。
@@ -34,15 +35,17 @@ import {
   type ChannelInfo,
   type ProviderSnapshot,
 } from './collect.js'
-import { type LiveQuota, type LiveQuotaService } from './live-quota.js'
+import { schemeIdOf, type LiveQuota, type LiveQuotaService } from './live-quota.js'
 import {
   hoursOfDate,
+  modelRowsOf,
   projectRowsOf,
   sessionRowsOf,
   type SessionCollection,
   type SessionMetaOptions,
 } from './sessions.js'
 import { createArchiveSource, createTitleSource } from './session-meta.js'
+import { readQuotaSnapshots, writeQuotaSnapshots, type QuotaSnapshotEntry } from './quota-snapshots.js'
 import {
   mergeDailySeries,
   sessionDayRows,
@@ -119,6 +122,7 @@ export function mountKeyUsageRoutes(
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
   const titleSource = createTitleSource(join(dshHomePath(), 'storages', 'session_projcache.json'))
   const archiveSource = createArchiveSource(hostServices, join(dshHomePath(), 'storages', 'workspace.json'))
+  const quotaSnapshotPath = join(dshHomePath(), 'dsh-key-usage', 'quota-snapshots.json')
   /** 会话标题与归档状态：宿主服务/缓存文件都拿不到时返回空集合，界面自行回落。 */
   const sessionMeta = (): SessionMetaOptions => ({ titles: titleSource.titles(), archived: archiveSource.archived() })
 
@@ -234,15 +238,30 @@ export function mountKeyUsageRoutes(
       const live = url.searchParams.get('fresh') === '1'
         ? await liveQuota.refreshIfStale(channels, true)
         : await liveQuota.refreshIfStale(channels)
+      // 实时成功立刻落一份自己的快照：下次失败时回落的是「最近一次成功」，而不是宿主那份十几天前的旧值
+      const succeeded: QuotaSnapshotEntry[] = []
+      for (const entry of live.values()) {
+        if (!entry.ok) continue
+        succeeded.push({
+          provider: entry.provider,
+          displayName: channels.find((channel) => channel.provider === entry.provider)?.displayName ?? null,
+          updatedAt: entry.fetchedAt,
+          balance: entry.balance,
+          windows: entry.windows,
+        })
+      }
+      writeQuotaSnapshots(quotaSnapshotPath, succeeded)
+      const ownSnapshots = readQuotaSnapshots(quotaSnapshotPath)
       const snapshots = readSnapshots()
       const providers = channels.map((channel) => {
         const liveEntry = live.get(channel.provider)
-        const snapshot = snapshots.find((entry) => entry.provider === channel.provider) ?? null
+        const supported = schemeIdOf(channel.provider) !== null
         if (liveEntry !== undefined && liveEntry.ok) {
           return {
             provider: channel.provider,
             displayName: channel.displayName,
             credential: channel.apiKeyEnv,
+            supported,
             source: 'live',
             fetchedAt: liveEntry.fetchedAt,
             updatedAt: liveEntry.fetchedAt,
@@ -251,17 +270,27 @@ export function mountKeyUsageRoutes(
             plan: liveEntry.windows === null ? null : { windows: liveEntry.windows },
           }
         }
+        // 回落顺序：自己的快照与宿主的快照里，取 updatedAt 更新的那一份
+        const own = ownSnapshots.find((entry) => entry.provider === channel.provider) ?? null
+        const host = snapshots.find((entry) => entry.provider === channel.provider) ?? null
+        const useOwn = own !== null && (host === null || own.updatedAt >= (host.updatedAt ?? 0))
+        const updatedAt = useOwn ? own.updatedAt : host?.updatedAt ?? null
+        const fallbackBalance = useOwn ? own.balance : host?.balance ?? null
+        const fallbackPlan = useOwn
+          ? (own.windows === null ? null : { windows: own.windows })
+          : host?.plan ?? null
         return {
           provider: channel.provider,
-          displayName: snapshot?.displayName ?? channel.displayName,
-          credential: snapshot?.credential ?? channel.apiKeyEnv,
+          displayName: host?.displayName ?? channel.displayName,
+          credential: host?.credential ?? channel.apiKeyEnv,
+          supported,
           source: 'snapshot',
           fetchedAt: null,
-          updatedAt: snapshot?.updatedAt ?? null,
+          updatedAt,
           // 实时失败的原因要透出（未配置凭据 / 网络 / 鉴权），界面据此提示
-          error: liveEntry?.error ?? (snapshot === null ? 'no-snapshot' : null),
-          balance: snapshot?.balance ?? null,
-          plan: snapshot?.plan ?? null,
+          error: liveEntry?.error ?? (updatedAt === null ? 'no-snapshot' : null),
+          balance: fallbackBalance,
+          plan: fallbackPlan,
         }
       })
       sendJson(response, 200, { providers })
@@ -339,6 +368,29 @@ export function mountKeyUsageRoutes(
         ...row,
         dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
         cost: estimateCost(row.models, priceTable),
+      }))
+      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/models',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const limit = parseLimit(url.searchParams.get('limit'), 200)
+      const channels = loadChannels()
+      const knownProviders = channels.map((channel) => channel.provider)
+      const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+      const { records, coverage } = await sessionSource.collect()
+      const priceTable = buildPriceTable(loadLedger())
+      const rows = modelRowsOf(records, knownProviders).slice(0, limit).map((row) => ({
+        ...row,
+        providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
+        costMode: costModeOf.get(row.provider) ?? null,
+        // 与 /sessions 同一口径：按台账反推的均价估算，不是官方账单金额
+        cost: estimateCost([{ provider: row.provider, model: row.model, tokens: row.tokens }], priceTable),
       }))
       sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
     },

@@ -4,7 +4,7 @@
  * 具体数值并入页面底部的口径说明，不再单独占一行。
  * 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
  */
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../channels.ts'
 import { fmtTokens, isoDate } from '../format.ts'
 import type { Channel, HeatmapDay } from '../types.ts'
@@ -81,6 +81,14 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
     return { columns: weeks, monthLabels: labels }
   }, [days, heatmapByDate])
 
+  // 默认贴最右侧：右边是最新的日期，左边是 9 个月前的历史（每次筛选都跳回去反而烦人，所以只在挂载时定位一次）
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const node = scrollRef.current
+    if (node === null) return
+    node.scrollLeft = node.scrollWidth - node.clientWidth
+  }, [])
+
   return (
     <div className={styles.heatmapCard}>
       <div className={styles.heatmapHead}>
@@ -93,7 +101,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
           <span><i style={{ background: LEVEL_COLORS[3] }} />高</span>
         </span>
       </div>
-      <div className={styles.heatmapScroll}>
+      <div className={styles.heatmapScroll} ref={scrollRef}>
         <div className={styles.heatmapBody}>
           <div className={styles.heatWeekdays}>
             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>

@@ -1,14 +1,32 @@
 /** 会话用量：按会话列出 tokens / 命中率 / 时长，按最近活跃时按日分组。 */
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { channelOf, costCellText, displayNameOf } from '../channels.ts'
-import { fmtCalls, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
+import { fmtCalls, fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
+import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
+import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
 import type { Channel, SessionRow, SessionsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
+import exportStyles from '../styles/export.module.css'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'durationDesc'
 /** 会话归档筛选：与宿主原生「筛选会话」菜单同三档。 */
 type ArchiveFilter = 'hide' | 'all' | 'only'
+
+/** 导出列：标题可能带逗号或换行，由 toCsv 统一转义。 */
+const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
+  { key: 'id', label: '会话 id', value: (row) => row.id },
+  { key: 'title', label: '标题', value: (row) => row.title },
+  { key: 'workspace', label: '工作区', value: (row) => row.workspace },
+  { key: 'provider', label: '通道', value: (row) => row.provider },
+  { key: 'firstTime', label: '首次时间', value: (row) => fmtDateTime(row.firstTime) },
+  { key: 'lastTime', label: '最近时间', value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
+  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
+  { key: 'cost', label: '成本(估算,元)', value: (row) => row.cost },
+  { key: 'archived', label: '已归档', value: (row) => row.archived ? '是' : '否' },
+]
 
 export function SessionsTab(props: { data: SessionsResponse | null; channels: Channel[] }): ReactNode {
   const [query, setQuery] = useState('')
@@ -19,11 +37,13 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
   const archivedCount = rows.filter((row) => row.archived).length
+  // 零 Token 的会话（调用失败、没产生用量）不展示，条数如实告知
+  const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     const maxAgeDays = Number(daysFilter)
-    const filtered = rows.filter((row) => {
+    const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
       const title = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '')
       const matchesQuery = keyword === '' || title.toLowerCase().includes(keyword)
       const matchesChannel = channelFilter === 'ALL' || row.provider === channelFilter
@@ -40,6 +60,12 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
     }
     return [...filtered].sort(sorters[sortKey])
   }, [rows, query, channelFilter, daysFilter, sortKey, nowMs, archiveFilter])
+
+  /** 只导当前筛选后的会话行（归档筛选、时间窗口、搜索都算数）。 */
+  const exportRows = (format: 'csv' | 'json'): void => {
+    if (format === 'csv') downloadFile(exportFileName('sessions', 'csv'), toCsv(visible, EXPORT_COLUMNS), CSV_MIME)
+    else downloadFile(exportFileName('sessions', 'json'), toJson(visible), JSON_MIME)
+  }
 
   if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
 
@@ -89,6 +115,10 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
           <option value="all">全部对话（显示已归档）</option>
           <option value="only">仅显示已归档</option>
         </select>
+        <span className={exportStyles.exportGroup}>
+          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
+          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
+        </span>
       </div>
       {archiveFilter === 'hide' && archivedCount > 0 && (
         <div className={styles.statExtra}>
@@ -119,6 +149,7 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
           {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的会话</td></tr>}
         </tbody>
       </table>
+      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按台账模型均价估算
         {props.data.priced ? '' : '（台账无成本数据，暂不可估）'}

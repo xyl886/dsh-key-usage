@@ -1,0 +1,12 @@
+/* 导出按钮：各 Tab 筛选栏 / 范围条右侧的两个小按钮，走宿主 --dsw-alias-* 令牌。 */
+.exportGroup { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
+.exportBtn {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 999px; padding: 4px 11px;
+  font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap;
+}
+.exportBtn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1));
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+}
+.exportBtn:disabled { opacity: .5; cursor: default; }

@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import { channelColorOf, channelOf, costCellText, displayNameOf, statusColorOf } from '../channels.ts'
 import { fmtCalls, fmtCost, fmtShortDate, fmtTokens, isoDate } from '../format.ts'
+import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import type { Channel, ChannelDailySummary, UsageResponse } from '../types.ts'
 import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import { ShareBar } from '../components/ShareBar.tsx'
@@ -10,6 +11,7 @@ import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
 import { DailyDetailTable, type DetailSortState } from '../components/DailyDetailTable.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
+import exportStyles from '../styles/export.module.css'
 
 export type RangeKey = 'today' | 'week' | 'month' | 'total' | 'custom'
 
@@ -19,6 +21,23 @@ const RANGE_TABS: Array<[RangeKey, string]> = [
 
 /** 图表最多铺开的列数：超过这个跨度的范围按天全画会挤成一团。 */
 const MAX_AXIS_DAYS = 366
+
+/** 导出列：命中率与成本给数值（不带单位），方便在表格里继续算。 */
+const EXPORT_COLUMNS: Array<ExportColumn<ChannelDailySummary>> = [
+  { key: 'date', label: '日期', value: (row) => row.date },
+  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'inputTokens', label: '输入', value: (row) => row.inputTokens },
+  { key: 'outputTokens', label: '输出', value: (row) => row.outputTokens },
+  { key: 'cacheReadTokens', label: '缓存读', value: (row) => row.cacheReadTokens },
+  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => hitRateValueOf(row) },
+  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+]
+
+/** 命中率数值（导出用；界面上的带 % 文本由 `hitRateOf` 生成）。 */
+function hitRateValueOf(row: ChannelDailySummary): number | null {
+  const total = row.inputTokens + row.outputTokens + row.cacheReadTokens
+  return total > 0 ? Math.round(row.cacheReadTokens / total * 1000) / 10 : null
+}
 
 function hitRateOf(cacheReadTokens: number, inputTokens: number, outputTokens: number): string {
   const total = inputTokens + outputTokens + cacheReadTokens
@@ -69,6 +88,12 @@ export function DetailTab(props: {
   const costCell = costCellText(singleChannel, safeTotals.cost)
   const singleDay = bounds.from === bounds.to
   const rangeDays = Math.min(daysBetween(bounds.from, bounds.to), MAX_AXIS_DAYS)
+
+  /** 导出当前范围与通道筛选后的每日明细（按日期升序，不跟随表格排序）。 */
+  const exportDaily = (format: 'csv' | 'json'): void => {
+    if (format === 'csv') downloadFile(exportFileName('daily', 'csv'), toCsv(usage.days, EXPORT_COLUMNS), CSV_MIME)
+    else downloadFile(exportFileName('daily', 'json'), toJson(usage.days), JSON_MIME)
+  }
 
   const activeProviders = new Set<string>()
   for (const day of usage.days) {
@@ -192,6 +217,10 @@ export function DetailTab(props: {
             </>
           )}
         </div>
+        <span className={exportStyles.exportGroup}>
+          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('csv')}>导出 CSV</button>
+          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('json')}>导出 JSON</button>
+        </span>
       </div>
 
       <div className={styles.cardGrid3}>

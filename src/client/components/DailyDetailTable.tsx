@@ -5,6 +5,7 @@
 import { Fragment, type ReactNode } from 'react'
 import { displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtTokens } from '../format.ts'
+import { hiddenEmptyRowsText } from '../rows.ts'
 import type { Channel, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
@@ -12,6 +13,11 @@ import detailStyles from '../styles/detail.module.css'
 export interface DetailSortState {
   key: string
   dir: 'asc' | 'desc'
+}
+
+/** 输入/输出为 0 时不再显示 `0`（全缓存命中或纯输出模型的 0 是噪音），改显示淡化的 `—`。 */
+function tokenCellOf(value: number): ReactNode {
+  return value === 0 ? <span className={styles.dim}>—</span> : fmtTokens(value)
 }
 
 interface ModelRow {
@@ -96,7 +102,10 @@ export function DailyDetailTable(props: {
     }
   }
   const comparer = COMPARERS[sort.key] ?? COMPARERS.period
-  const ordered = [...aggregates.values()].sort((first, second) => {
+  // 全天零 Token（只有失败调用）的日子不展示：总计划 0、命中率与成本都是空值，只是噪音
+  const nonEmpty = [...aggregates.values()].filter((entry) => entry.totalTokens > 0)
+  const hiddenEmpty = aggregates.size - nonEmpty.length
+  const ordered = nonEmpty.sort((first, second) => {
     const compared = comparer(first, second)
     return sort.dir === 'asc' ? compared : -compared
   })
@@ -145,6 +154,7 @@ export function DailyDetailTable(props: {
           {ordered.map((period) => {
             const modelsInPeriod = modelRows
               .filter((row) => row.period === period.period)
+              .filter((row) => row.totalTokens > 0)
               .sort((first, second) => second.totalTokens - first.totalTokens)
             const expandable = modelsInPeriod.length > 1
             const isOpen = expandable && expandedPeriods[period.period] === true
@@ -160,8 +170,8 @@ export function DailyDetailTable(props: {
                   </td>
                   <td>{fmtTokens(period.totalTokens)}</td>
                   <td>{fmtCalls(period.calls)}</td>
-                  <td>{fmtTokens(period.inputTokens)}</td>
-                  <td>{fmtTokens(period.outputTokens)}</td>
+                  <td>{tokenCellOf(period.inputTokens)}</td>
+                  <td>{tokenCellOf(period.outputTokens)}</td>
                   <td>{fmtTokens(period.cacheReadTokens)}</td>
                   <td>{hitRateOf(period.cacheReadTokens, period.inputTokens, period.outputTokens)}</td>
                 </tr>
@@ -183,8 +193,8 @@ export function DailyDetailTable(props: {
                             {channelFilter === 'ALL' && <span className={detailStyles.subChannel}>{displayNameOf(channels, row.provider)}</span>}
                           </span>
                           <span className={detailStyles.subNumber}>{fmtCalls(row.calls)}</span>
-                          <span className={detailStyles.subNumber}>{fmtTokens(row.inputTokens)}</span>
-                          <span className={detailStyles.subNumber}>{fmtTokens(row.outputTokens)}</span>
+                          <span className={detailStyles.subNumber}>{tokenCellOf(row.inputTokens)}</span>
+                          <span className={detailStyles.subNumber}>{tokenCellOf(row.outputTokens)}</span>
                           <span className={detailStyles.subNumber}>{fmtTokens(row.cacheReadTokens)}</span>
                           <span className={detailStyles.subNumber}>{hitRateOf(row.cacheReadTokens, row.inputTokens, row.outputTokens)}</span>
                         </div>
@@ -206,6 +216,7 @@ export function DailyDetailTable(props: {
           </tr>
         </tbody>
       </table>
+      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
     </div>
   )
 }

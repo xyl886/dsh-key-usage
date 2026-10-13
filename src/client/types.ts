@@ -101,6 +101,8 @@ export interface QuotaProvider {
   displayName: string | null
   credential: string | null
   updatedAt: number | null
+  /** 该通道是否有官方余额 / 窗口查询方案：false 表示没有接口可查（如免费额度、本地端点）。 */
+  supported: boolean
   /** live = 刚从官方接口查到；snapshot = 实时失败后回落到本机快照。 */
   source: 'live' | 'snapshot'
   /** 实时查询完成时间（source=live 时有效）。 */
@@ -184,6 +186,36 @@ export interface ProjectRow {
 
 export interface ProjectsResponse {
   rows: ProjectRow[]
+  coverage: SessionCoverage
+  priced: boolean
+}
+
+/** 模型聚合行的 token 分桶（展示口径，不含 cacheWrite / reasoning）。 */
+export interface ModelBuckets {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+}
+
+export interface ModelAggregateRow {
+  provider: string
+  providerLabel: string
+  model: string
+  calls: number
+  /** 展示口径 tokens：输入 + 输出 + 缓存读。 */
+  tokens: number
+  cacheHitRate: number | null
+  /** 估算成本（台账均价推算），无成本数据时为 null。 */
+  cost: number | null
+  costMode: ChannelCostMode | null
+  sessionCount: number
+  /** 用到该模型的最晚会话时间（会话事件只有会话级时间戳，是近似值）。 */
+  lastTime: number | null
+  buckets: ModelBuckets
+}
+
+export interface ModelsResponse {
+  rows: ModelAggregateRow[]
   coverage: SessionCoverage
   priced: boolean
 }

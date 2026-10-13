@@ -84,10 +84,12 @@ export function QuotaTab(props: { channels: Channel[]; quotas: QuotaProvider[] }
                 实时查询于 {freshTextOf(snapshot?.fetchedAt ?? null)}（来自官方接口，最多缓存 1 分钟）
               </div>
             )}
-            {snapshot !== null && !isLive && (
+            {snapshot !== null && !isLive && snapshot.supported && (
               <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
-                实时查询未成功（{errorTextOf(snapshot.error)}），显示本机快照
-                {snapshot.updatedAt === null ? '' : ' · 快照时间 ' + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? '，已 ' + staleDaysOf(snapshot.updatedAt) + ' 天未更新' : '')}
+                实时查询未成功（{errorTextOf(snapshot.error)}）
+                {snapshot.updatedAt === null
+                  ? '，且暂无可用快照 —— 点右上角「刷新」重试'
+                  : '，显示快照 · 快照时间 ' + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? '，已 ' + staleDaysOf(snapshot.updatedAt) + ' 天未更新' : '')}
               </div>
             )}
           </div>
