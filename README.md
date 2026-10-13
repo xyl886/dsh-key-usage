@@ -57,6 +57,15 @@ dsh plugin --profile tui add github:xyl886/dsh-key-usage
 
 以下为开发与维护文档（架构、契约、构建、发布注意事项）。
 
+## 发布记录
+
+| 项 | 值 |
+| --- | --- |
+| 公开仓库 | https://github.com/xyl886/dsh-key-usage |
+| 收录申请 | https://github.com/dshplugin/dsh-plugin-hub/issues/184（提交于 2026-10-13） |
+| 市场要求自查 | 公开仓库 ✅ ｜ topic `dsh-plugin` ✅ ｜ README 含安装命令 ✅ ｜ 导出 `apply(ctx)` ✅ ｜ 根 `package.json` ✅ ｜ MIT 许可证 ✅ |
+| 提交内容 | 源码 + 构建产物 `lib/`、`client/`（git 安装必须带产物，否则宿主加载不到入口） |
+
 ## 状态
 
 | 项 | 值 |
