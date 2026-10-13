@@ -231,7 +231,7 @@ export function DetailTab(props: {
         </span>
       </div>
 
-      <div className={styles.cardGridAuto}>
+      <div className={styles.cardGrid6}>
         <StatCard label="调用次数" value={fmtCalls(safeTotals.calls)} extra={activeProviders.size + ' 个通道有用量'} />
         <StatCard
           label="Tokens"

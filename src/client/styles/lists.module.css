@@ -26,3 +26,32 @@
   margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
   color: var(--dsw-alias-label-tertiary, #67676f); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
 }
+
+/* 首列是长文本（会话标题 / 模型名 / 项目路径）的表格必须用固定布局：
+   auto 布局下，首列里 nowrap 的标题会把该列的最小宽度顶到整段文本宽度，
+   结果「通道」这类短列被挤成逐字竖排（Mo / ons / hot …）。固定布局 + 明确列宽后，
+   首列由 overflow 省略号截断，其余列各得其所。 */
+.sessionTable { table-layout: fixed; }
+.sessionTable th:nth-child(1) { width: 38%; }
+.sessionTable th:nth-child(2) { width: 13%; }
+.sessionTable th:nth-child(3) { width: 19%; }
+.sessionTable th:nth-child(4) { width: 11%; }
+.sessionTable th:nth-child(5) { width: 8%; }
+.sessionTable th:nth-child(6) { width: 11%; }
+
+.modelTable { table-layout: fixed; }
+.modelTable th:nth-child(1) { width: 30%; }
+.modelTable th:nth-child(2) { width: 9%; }
+.modelTable th:nth-child(3) { width: 11%; }
+.modelTable th:nth-child(4) { width: 12%; }
+.modelTable th:nth-child(5) { width: 9%; }
+.modelTable th:nth-child(6) { width: 12%; }
+.modelTable th:nth-child(7) { width: 17%; }
+
+.projectTable { table-layout: fixed; }
+.projectTable th:nth-child(1) { width: 38%; }
+.projectTable th:nth-child(2) { width: 10%; }
+.projectTable th:nth-child(3) { width: 12%; }
+.projectTable th:nth-child(4) { width: 13%; }
+.projectTable th:nth-child(5) { width: 12%; }
+.projectTable th:nth-child(6) { width: 15%; }

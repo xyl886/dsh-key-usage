@@ -96,7 +96,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
         </span>
       </div>
 
-      <table className={styles.table}>
+      <table className={styles.table + ' ' + listStyles.modelTable}>
         <thead>
           <tr><th>模型</th><th>调用</th><th>Tokens</th><th>占比</th><th>命中率</th><th>成本</th><th>最近活跃</th></tr>
         </thead>

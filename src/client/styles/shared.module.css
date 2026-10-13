@@ -22,6 +22,11 @@
 .cardGrid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .cardGrid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
 .cardGridAuto { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
+/* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
+   最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
+.cardGrid6 { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+@media (max-width: 1180px) { .cardGrid6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .cardGrid6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .cardGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-bottom: 6px; }

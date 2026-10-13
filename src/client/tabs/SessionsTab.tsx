@@ -129,7 +129,7 @@ export function SessionsTab(props: { data: SessionsResponse | null; channels: Ch
         </div>
       )}
 
-      <table className={styles.table}>
+      <table className={styles.table + ' ' + listStyles.sessionTable}>
         <thead>
           <tr><th>会话</th><th>通道</th><th>时间 / 时长</th><th>Tokens</th><th>命中率</th><th>成本</th></tr>
         </thead>

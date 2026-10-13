@@ -107,19 +107,29 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 
 ## 界面预览
 
-> 演示数据，由设计稿原型渲染（[`docs/prototype/`](./docs/prototype/)）。
+> 真实界面截图（**演示数据**，截图中的项目路径与部分金额已打码）。
 
 <p align="center">
-  <img src="./docs/images/usage-overview.png" alt="总览：Key 清单与活跃热力图" width="820" />
+  <img src="./docs/images/usage-overview.png" alt="总览：Key 清单（含余额 / 窗口与成本来源）与活跃热力图" width="820" />
 </p>
 
 <p align="center">
-  <img src="./docs/images/usage-daily.png" alt="使用明细：统计卡、通道占比、按天图表与每日细目" width="820" />
+  <img src="./docs/images/usage-daily.png" alt="使用明细：六张统计卡、环比对比、通道占比、按天图表与每日细目" width="820" />
 </p>
 
 <p align="center">
-  <img src="./docs/images/usage-quota.png" alt="余额与配额：官方余额与订阅窗口" width="820" />
+  <img src="./docs/images/按模型.png" alt="按模型：按通道 + 模型聚合的调用数、Tokens、占比、命中率与成本（带来源角标）" width="820" />
 </p>
+
+<p align="center">
+  <img src="./docs/images/项目总量.png" alt="项目用量：按工作目录聚合的调用数、Tokens、占比、成本与最近活跃" width="820" />
+</p>
+
+<p align="center">
+  <img src="./docs/images/usage-quota.png" alt="余额与配额：官方余额、订阅窗口与计费规则" width="820" />
+</p>
+
+> 设计意图与原型见 [`docs/prototype/`](./docs/prototype/)（早期设计稿，不代表当前界面）。
 
 ## 权限与数据来源
 
