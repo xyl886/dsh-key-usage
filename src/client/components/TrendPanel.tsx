@@ -1,7 +1,7 @@
 /**
  * 环比对比：纯客户端实现（复用 /usage 按上期范围再请求一次），涨跌只用中性色 + 箭头，不引入对错语义。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadUsage } from '../api.ts'
 import { channelOf, costCellOf } from '../channels.ts'
@@ -34,6 +34,9 @@ interface TrendRow {
 
 const FLAT: ChangeView = { text: '持平', kind: 'flat', warn: false }
 const UNAVAILABLE: ChangeView = { text: '—', kind: 'none', warn: false }
+
+/** 标题文案：折叠控件与「总计范围没有上一段」分支共用。 */
+const TITLE_TEXT = '环比对比 · 与上一段等长范围'
 
 /** 闭区间天数，至少 1（日期键按本地日历算，与 DetailTab 的横轴口径一致）。 */
 function spanDaysOf(from: string, to: string): number {
@@ -118,6 +121,13 @@ export function TrendPanel(props: {
   const previousWindow = useMemo(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to])
   const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready'>('loading')
+  /** 默认折叠，且不记住上次状态：每次进页面都从收起的一行开始（多个实例各自独立）。 */
+  const [expanded, setExpanded] = useState(false)
+  const instanceId = useId()
+  const bodyId = instanceId + '-trend-body'
+
+  const periodText = '本期 ' + bounds.from + ' ~ ' + bounds.to
+    + (comparable ? ' · 上期 ' + previousWindow.from + ' ~ ' + previousWindow.to : '')
 
   useEffect(() => {
     if (!comparable) return
@@ -131,20 +141,14 @@ export function TrendPanel(props: {
     return () => { cancelled = true }
   }, [comparable, previousWindow.from, previousWindow.to, channelFilter, props.pricingRevision])
 
-  const header = (
-    <div className={trendStyles.head}>
-      <span className={styles.statLabel}>环比对比 · 与上一段等长范围</span>
-      <span className={trendStyles.span}>
-        本期 {bounds.from} ~ {bounds.to}
-        {comparable ? ' · 上期 ' + previousWindow.from + ' ~ ' + previousWindow.to : ''}
-      </span>
-    </div>
-  )
-
   if (!comparable) {
+    // 没有可对比的上一段时没有可展开的内容，只留一行说明（不给展开控件）
     return (
       <div className={styles.card + ' ' + trendStyles.panel}>
-        {header}
+        <div className={trendStyles.head}>
+          <span className={styles.statLabel}>{TITLE_TEXT}</span>
+          <span className={trendStyles.span}>{periodText}</span>
+        </div>
         <div className={trendStyles.placeholder}>总计范围没有可对比的上一段</div>
       </div>
     )
@@ -229,31 +233,68 @@ export function TrendPanel(props: {
   if (!currentHasData) notes.push('本期范围内无用量记录')
   notes.push('命中率的变化按百分点（pp）计，其余指标为环比百分比')
 
+  /** 折叠态摘要：复用表里已算好的值（成本不可比时退到 Tokens），不新增任何计算口径。 */
+  const summary = costComparable
+    ? { label: '本期成本', text: currentCostText.text, change: percentChangeOf(currentCost, previousCost, true) }
+    : { label: '本期 Tokens', text: fmtTokens(currentTokens), change: percentChangeOf(currentTokens, previousTokens, false) }
+
+  const toggle = (
+    <button
+      type="button"
+      className={trendStyles.toggle}
+      aria-expanded={expanded}
+      aria-controls={bodyId}
+      onClick={() => setExpanded((previous) => !previous)}
+    >
+      <span className={trendStyles.arrow} aria-hidden="true">{expanded ? '▼' : '▶'}</span>
+      <span className={styles.statLabel}>{TITLE_TEXT}</span>
+    </button>
+  )
+
   return (
     <div className={styles.card + ' ' + trendStyles.panel}>
-      {header}
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>指标</th>
-            <th>本期</th>
-            <th>上期</th>
-            <th>变化</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key}>
-              <td>{row.label}</td>
-              <td>{row.current}</td>
-              <td>{row.previous}</td>
-              <td>{row.change}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className={trendStyles.notes}>
-        {notes.map((note) => <div key={note} className={trendStyles.note}>{note}</div>)}
+      <div className={trendStyles.head}>
+        {toggle}
+        {expanded
+          ? <span className={trendStyles.span}>{periodText}</span>
+          : (
+            <span className={trendStyles.summary}>
+              {summary.label} <b>{summary.text}</b>
+              {' · 环比 '}
+              {previousHasData
+                ? changeNodeOf(summary.change)
+                : <span className={trendStyles.muted}>{previousPlaceholder}</span>}
+            </span>
+          )}
+      </div>
+      <div id={bodyId} className={trendStyles.body}>
+        {expanded && (
+          <>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>指标</th>
+                  <th>本期</th>
+                  <th>上期</th>
+                  <th>变化</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.label}</td>
+                    <td>{row.current}</td>
+                    <td>{row.previous}</td>
+                    <td>{row.change}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className={trendStyles.notes}>
+              {notes.map((note) => <div key={note} className={trendStyles.note}>{note}</div>)}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

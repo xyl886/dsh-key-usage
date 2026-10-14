@@ -1413,7 +1413,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/trend.module.css.mjs
-		const css$4 = ".dJbyja_panel{margin-bottom:12px}.dJbyja_head{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}.dJbyja_span{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;font-size:11.5px}.dJbyja_placeholder{color:var(--dsw-alias-label-tertiary,#67676f);padding:10px 0 2px}.dJbyja_current{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.dJbyja_previous{color:var(--dsw-alias-label-secondary,#9a9aa6)}.dJbyja_change{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.dJbyja_flat{color:var(--dsw-alias-label-tertiary,#67676f)}.dJbyja_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.dJbyja_muted{color:var(--dsw-alias-label-tertiary,#67676f)}.dJbyja_notes{flex-direction:column;gap:2px;margin-top:8px;display:flex}.dJbyja_note{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.5}";
+		const css$4 = ".dJbyja_panel{margin-bottom:12px}.dJbyja_head{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}.dJbyja_span{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;font-size:11.5px}.dJbyja_placeholder{color:var(--dsw-alias-label-tertiary,#67676f);padding:10px 0 2px}.dJbyja_toggle{font:inherit;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;align-items:center;gap:6px;padding:0;display:inline-flex}.dJbyja_toggle:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.dJbyja_toggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.dJbyja_arrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10px}.dJbyja_summary{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;font-size:11.5px}.dJbyja_summary b{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.dJbyja_body{margin-top:10px}.dJbyja_body:empty{display:none}.dJbyja_current{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.dJbyja_previous{color:var(--dsw-alias-label-secondary,#9a9aa6)}.dJbyja_change{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.dJbyja_flat{color:var(--dsw-alias-label-tertiary,#67676f)}.dJbyja_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.dJbyja_muted{color:var(--dsw-alias-label-tertiary,#67676f)}.dJbyja_notes{flex-direction:column;gap:2px;margin-top:8px;display:flex}.dJbyja_note{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.5}";
 		const tagId$4 = "dsh-key-usage/trend.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1428,6 +1428,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$4
 		});
 		var trend_module_css_default = {
+			"arrow": "dJbyja_arrow",
+			"body": "dJbyja_body",
 			"change": "dJbyja_change",
 			"current": "dJbyja_current",
 			"flat": "dJbyja_flat",
@@ -1439,6 +1441,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"placeholder": "dJbyja_placeholder",
 			"previous": "dJbyja_previous",
 			"span": "dJbyja_span",
+			"summary": "dJbyja_summary",
+			"toggle": "dJbyja_toggle",
 			"warn": "dJbyja_warn"
 		};
 		//#endregion
@@ -1457,6 +1461,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			kind: "none",
 			warn: false
 		};
+		/** 标题文案：折叠控件与「总计范围没有上一段」分支共用。 */
+		const TITLE_TEXT = "环比对比 · 与上一段等长范围";
 		/** 闭区间天数，至少 1（日期键按本地日历算，与 DetailTab 的横轴口径一致）。 */
 		function spanDaysOf(from, to) {
 			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
@@ -1548,6 +1554,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const previousWindow = (0, react.useMemo)(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to]);
 			const [previousUsage, setPreviousUsage] = (0, react.useState)(null);
 			const [status, setStatus] = (0, react.useState)("loading");
+			/** 默认折叠，且不记住上次状态：每次进页面都从收起的一行开始（多个实例各自独立）。 */
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			const bodyId = (0, react.useId)() + "-trend-body";
+			const periodText = "本期 " + bounds.from + " ~ " + bounds.to + (comparable ? " · 上期 " + previousWindow.from + " ~ " + previousWindow.to : "");
 			(0, react.useEffect)(() => {
 				if (!comparable) return;
 				let cancelled = false;
@@ -1567,25 +1577,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				channelFilter,
 				props.pricingRevision
 			]);
-			const header = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: trend_module_css_default.head,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: shared_module_css_default.statLabel,
-					children: "环比对比 · 与上一段等长范围"
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					className: trend_module_css_default.span,
-					children: [
-						"本期 ",
-						bounds.from,
-						" ~ ",
-						bounds.to,
-						comparable ? " · 上期 " + previousWindow.from + " ~ " + previousWindow.to : ""
-					]
-				})]
-			});
 			if (!comparable) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card + " " + trend_module_css_default.panel,
-				children: [header, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: trend_module_css_default.head,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: shared_module_css_default.statLabel,
+						children: TITLE_TEXT
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: trend_module_css_default.span,
+						children: periodText
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: trend_module_css_default.placeholder,
 					children: "总计范围没有可对比的上一段"
 				})]
@@ -1668,11 +1671,55 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (status === "ready" && previousUsage === null) notes.push("上一段范围读取失败，无法对比");
 			if (!currentHasData) notes.push("本期范围内无用量记录");
 			notes.push("命中率的变化按百分点（pp）计，其余指标为环比百分比");
+			/** 折叠态摘要：复用表里已算好的值（成本不可比时退到 Tokens），不新增任何计算口径。 */
+			const summary = costComparable ? {
+				label: "本期成本",
+				text: currentCostText.text,
+				change: percentChangeOf(currentCost, previousCost, true)
+			} : {
+				label: "本期 Tokens",
+				text: fmtTokens(currentTokens),
+				change: percentChangeOf(currentTokens, previousTokens, false)
+			};
+			const toggle = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				type: "button",
+				className: trend_module_css_default.toggle,
+				"aria-expanded": expanded,
+				"aria-controls": bodyId,
+				onClick: () => setExpanded((previous) => !previous),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: trend_module_css_default.arrow,
+					"aria-hidden": "true",
+					children: expanded ? "▼" : "▶"
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: shared_module_css_default.statLabel,
+					children: TITLE_TEXT
+				})]
+			});
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card + " " + trend_module_css_default.panel,
-				children: [
-					header,
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: trend_module_css_default.head,
+					children: [toggle, expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: trend_module_css_default.span,
+						children: periodText
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: trend_module_css_default.summary,
+						children: [
+							summary.label,
+							" ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: summary.text }),
+							" · 环比 ",
+							previousHasData ? changeNodeOf(summary.change) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: trend_module_css_default.muted,
+								children: previousPlaceholder
+							})
+						]
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					id: bodyId,
+					className: trend_module_css_default.body,
+					children: expanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: shared_module_css_default.table,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "指标" }),
@@ -1685,15 +1732,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.previous }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.change })
 						] }, row.key)) })]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: trend_module_css_default.notes,
 						children: notes.map((note) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: trend_module_css_default.note,
 							children: note
 						}, note))
-					})
-				]
+					})] })
+				})]
 			});
 		}
 		//#endregion
