@@ -9,6 +9,12 @@
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12px; cursor: pointer;
 }
+/* 搜索框与下拉是筛选用的主要控件，键盘聚焦时给出与按钮一致的焦点环 */
+.searchInput:focus-visible,
+.filterSelect:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline-offset: 2px;
+}
 .listTitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .listMain { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .listSub { font-size: 10.5px; color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

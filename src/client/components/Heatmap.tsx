@@ -42,8 +42,6 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
   const { days, channels, tooltip } = props
   const heatmapByDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   const thresholds = useMemo(() => levelThresholds(days), [days])
-  /** 供容器的 aria-label 用：读屏用户拿不到逐格悬停信息，至少给出规模概述。 */
-  const activeDays = days.filter((day) => day.totalTokens > 0).length
 
   const { columns, monthLabels } = useMemo(() => {
     const today = new Date()
@@ -82,6 +80,10 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
     }
     return { columns: weeks, monthLabels: labels }
   }, [days, heatmapByDate])
+
+  // aria-label 的活跃日数只数画在图上的格子：接口给的 days 最多覆盖 364 天，
+  // 而图只画 39 周，直接数 days 会把更早的日子算进去，和「近 9 个月」的说法对不上。
+  const activeDays = columns.reduce((count, week) => count + week.filter((cell) => cell.state === 'active').length, 0)
 
   // 默认贴最右侧：右边是最新的日期，左边是 9 个月前的历史（每次筛选都跳回去反而烦人，所以只在挂载时定位一次）
   const scrollRef = useRef<HTMLDivElement | null>(null)

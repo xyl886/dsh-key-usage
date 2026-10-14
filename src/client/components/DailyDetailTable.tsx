@@ -120,7 +120,7 @@ export function DailyDetailTable(props: {
           className={styles.sortBtn + (isActive ? ' ' + styles.sortActiveBtn : '')}
           onClick={() => onSort(isActive ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })}
         >
-          {label}<span className={styles.sortArrow}>{isActive ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+          {label}<span className={styles.sortArrow} aria-hidden="true">{isActive ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
         </button>
       </th>
     )

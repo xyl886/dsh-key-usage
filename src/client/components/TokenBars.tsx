@@ -15,6 +15,8 @@ export interface TokenBarRow {
 export function TokenBars(props: {
   rows: TokenBarRow[]
   tooltip: TooltipApi
+  /** 整张图的读屏替代文本：逐柱数值只有 hover tip，柱子本身不建成 tab stop（几十上百个会淹没键盘用户）。 */
+  ariaLabel: string
   hidden?: boolean
 }): ReactNode {
   const { rows, tooltip } = props
@@ -25,7 +27,7 @@ export function TokenBars(props: {
   const labelEvery = Math.max(1, Math.ceil(rows.length / 14))
   return (
     <>
-      <div className={rows.length > 20 ? styles.bars + ' ' + styles.barsDense : styles.bars}>
+      <div className={rows.length > 20 ? styles.bars + ' ' + styles.barsDense : styles.bars} role="img" aria-label={props.ariaLabel}>
         {rows.map((row) => {
           const rowTotal = row.cacheReadTokens + row.inputTokens + row.outputTokens
           return (

@@ -207,6 +207,10 @@ export function DetailTab(props: {
   const useHourAxis = singleDay && usage.hours !== null
   const chartRows = useHourAxis ? hourlyRows : dailyRows
   const chartTitle = useHourAxis ? '按小时 Tokens（' + bounds.from + '）' : '按天 Tokens（' + rangeDays + ' 天）'
+  // 图表的读屏替代文本：柱状图本身没有可读文本，逐柱数值只有 hover tip
+  const chartAriaLabel = useHourAxis
+    ? '按小时 Tokens 堆叠柱状图（' + bounds.from + '），共 ' + String(chartRows.length) + ' 个小时，含输入 / 输出 / 缓存读三段'
+    : '按天 Tokens 堆叠柱状图，共 ' + String(chartRows.length) + ' 天（含无用量日），含输入 / 输出 / 缓存读三段'
 
   return (
     <div>
@@ -301,7 +305,7 @@ export function DetailTab(props: {
         </div>
         {chartRows.length === 0
           ? <div className={styles.empty}>所选范围内无用量记录</div>
-          : <TokenBars rows={chartRows} tooltip={tooltip} />}
+          : <TokenBars rows={chartRows} tooltip={tooltip} ariaLabel={chartAriaLabel} />}
         {useHourAxis && <div className={styles.statExtra}>按小时数据来自本地会话事件，不含成本</div>}
       </div>
 

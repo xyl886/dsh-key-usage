@@ -5,7 +5,7 @@
  * 目的是让「这一格钱凭什么」一眼可读，同时把矛盾提示合并成一条带优先级的提示。
  * 规则本体存在宿主设置服务里，成本计算全在服务端（src/server/pricing.ts），界面不重复算。
  */
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   CURRENCY_OPTIONS, DAY_SCOPE_DAYS, DAY_SCOPE_LABELS, DAY_SCOPE_OPTIONS, EMPTY_CONFIG,
   UNIT_LABELS, UNIT_OPTIONS,
@@ -34,6 +34,9 @@ export function PricingRulesPanel(props: {
   models?: ModelsResponse | null
 }): ReactNode {
   const { settings, state, pricing, channels } = props
+  // 本面板同时挂在「余额与配额」页和插件页，抽屉 id 必须逐实例唯一，
+  // 写死字符串会在两处同时渲染时出现重复 id，aria-controls 指到另一个实例上。
+  const drawerId = useId()
   const [expanded, setExpanded] = useState(false)
   const [draft, setDraft] = useState<PricingRule | null>(null)
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -163,6 +166,7 @@ export function PricingRulesPanel(props: {
         savingsEntries={savingsEntries}
         expanded={expanded}
         onToggle={() => setExpanded((previous) => !previous)}
+        drawerId={drawerId}
         showExplanation={showExplanation}
         onToggleExplanation={() => setShowExplanation((previous) => !previous)}
       />
@@ -170,7 +174,7 @@ export function PricingRulesPanel(props: {
       {showExplanation && <ExplanationBlock />}
 
       {expanded && (
-        <div className={pricingStyles.drawer} id="key-usage-pricing-drawer">
+        <div className={pricingStyles.drawer} id={drawerId}>
           {/* 状态提示只渲染一条（优先级见 StatusNotice），不与「写入被拒绝」叠加 */}
           <StatusNotice state={state} />
 
@@ -376,6 +380,7 @@ function SummaryStrip(props: {
   savingsEntries: Array<[string, number]>
   expanded: boolean
   onToggle: () => void
+  drawerId: string
   showExplanation: boolean
   onToggleExplanation: () => void
 }): ReactNode {
@@ -420,7 +425,7 @@ function SummaryStrip(props: {
         <button
           className={pricingStyles.actionBtn + ' ' + pricingStyles.primary}
           aria-expanded={props.expanded}
-          aria-controls="key-usage-pricing-drawer"
+          aria-controls={props.drawerId}
           onClick={props.onToggle}
         >
           {props.expanded ? '收起规则 ◂' : '配置规则 ▸'}
