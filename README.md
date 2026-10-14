@@ -79,15 +79,21 @@ dsh plugin --profile desktop add dsh-key-usage
 | `$DSH_HOME/profiles/<profile>/cordis.yml` | 通道清单 | 只做文本提取，**不执行**其中的 `!!js`；取不到回退 `cordis.patch.yml` |
 | 宿主 `sessionPersistence` 服务 | 项目 / 会话 / 单会话详情 / 按小时 | 只开只读句柄（`open("read") → read(0) → close`），不自行解压会话文件；看详情只折叠被点开的那一个会话 |
 | 宿主 `credentials` 服务 / 进程环境变量 | 查余额时的 API Key | 只用于拼 `Authorization` 请求头 |
-| 宿主 `settings` 服务 + 客户端 `configForms` | 计费规则与预算阈值 | 读写都走宿主设置服务，**落盘由宿主的 config-editor 完成** |
+| `$DSH_HOME/dsh-key-usage/pricing-rules.yml` | 你的计费规则 | **唯一事实来源**：面板保存与手改都写它，改完刷新页面即生效 |
+| profile 条目配置里的旧 `pricing` 字段（`apply(ctx, config).pricing`） | 规则**只读回退** | 只在上面那个文件不存在时才用（老用户规则不丢）；它是当年宿主设置服务写进去的，现在只读、不再写入 |
 
-**写什么**（唯一一处）：`$DSH_HOME/dsh-key-usage/quota-snapshots.json` —— 余额与订阅窗口的快照，每次实时查询成功即原子写（临时文件 + 改名，每通道只留最新一份）；查询失败时与宿主那份**取更新的**。不含任何密钥。
+**写什么**（两处，都在 `$DSH_HOME/dsh-key-usage/`）：
+
+- `quota-snapshots.json` —— 余额与订阅窗口的快照，每次实时查询成功即原子写（临时文件 + 改名，每通道只留最新一份）；查询失败时与宿主那份**取更新的**；
+- `pricing-rules.yml` —— 你自己的计费规则（面板保存时原子写；也可以直接手改这个文件）。
+
+两个文件都不含任何密钥；宿主的 `provider-snapshots.json` 与 profile 配置一律只读。
 
 三条承诺：
 
 - **不读凭据文件** —— 从不打开 `.credentials.yaml`；密钥不落盘、不进日志、不返回前端；界面只显示 `apiKeyEnv` 这类**变量名**；
-- **不改宿主配置** —— 不写宿主的 `provider-snapshots.json`，不碰其它数据文件；计费规则与预算阈值由宿主的配置服务保存（命名空间就是本插件在 profile 里的条目 id `dsh-key-usage`，写 patch 时会保留文件里的注释）；
-- **仅回环** —— 所有端点只接受 `127.0.0.1` / `::1` 的请求，非回环一律 403。
+- **不改宿主配置** —— 不写宿主的 `provider-snapshots.json`，不碰 profile 的 `cordis.yml` / `cordis.patch.yml`；规则写插件自己的 `pricing-rules.yml`（宿主设置服务那条链路已退役；旧版 entry config 里的规则只在文件缺失时作只读回退）；
+- **仅回环** —— 所有端点只接受 `127.0.0.1` / `::1` 的请求，非回环一律 403（含写规则的 `POST`）。
 
 **会联网的唯一路径**：打开「余额与配额」时按通道请求官方接口，结果缓存 60 秒（点「刷新」强制重查）。
 
@@ -126,19 +132,17 @@ dsh plugin --profile desktop add dsh-key-usage
 
 - 每个通道一张卡片：官方余额（如 DeepSeek 的总余额 / 赠送 / 充值）或订阅窗口占用（opencode-go 的 5 小时 / 本周 / 本月 + 重置时间）；成功带「实时」标签与查询时间，失败写明原因并回落快照。
 
-**计费规则**（在「余额与配额」页下半部分，插件页也有同一面板）
+**计费规则**（在「余额与配额」页下半部分）
 
-- **内置官方价目自动生效**，开箱即用；需要覆盖时再写自己的规则（通道 · 模型 · 单位 · 四档单价 · 币种 · 错峰时段 · 备注）；
-- **最值得补规则的模型** —— 按 Tokens 占比列出目前只有估算的模型，一键为它新增规则（表单自动预填通道与模型）；
-- 支持**导入 / 导出 JSON** 与**清空规则**（回到内置价目 + 台账反推均价）；
+- **YAML 是唯一事实来源**：规则存在 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`，面板保存与手改写的是**同一个文件** —— 改完**刷新页面即生效，不需要重启宿主**；面板会显示该文件路径，解析有问题的条目**带行号列出并被跳过**（不影响其它规则）；
+- **三条配价路径**（写的是同一条优先级链，你的规则覆盖内置价目）：① **什么都不用做** —— 内置官方价目自动生效、开箱即用；② **用面板** —— 表单只填 **通道 · 模型 · 币种 · 四档单价**，保存即写文件；③ **改 YAML** —— 手改 `pricing-rules.yml`，或点「让 DSH 帮我配」一键生成提示词交给 agent 去改；
+- ⚠️ **面板保存是整份重写**：条目字段会按 `provider|model` 继承 `unit` / `offPeak` / `note`，但**你在 YAML 里手写的注释不会保留**（插件会写自己的头部注释）。想把「价格出处」留住，请写进 `note` 字段，或先备份文件再点保存；
+- **下载规则模板** —— 客户端直接生成 YAML：预填**内置价目 ∩ 你实际用到的模型**（模型清单来自「按模型」页的数据），把你**还没有价格依据**的模型列成**注释占位**（`#   - provider: …`，故意不写成价格 0 —— 0 会被算成「免费」，比「没有依据」更糟；填好四档单价后删掉行首 `# ` 即可）；顶部注释给出字段说明与**完整的错峰写法**；
+- **下载 / 复制片段** —— 缺口模型每行一键给出单条规则（缩进已按 `rules:` 下排好），规则表每行也能**复制这一条的 YAML**（含 `unit` / `offPeak` / `note`）。注意它是**片段、不是完整文档**：单独存成文件会因首行缩进报 1 条 issue，要粘到已有文件的 `rules:` 下面；文件里若还是 `rules: []`，先把它改成 `rules:` 再粘；
+- **让 DSH 帮我配** —— 一键生成提示词（自动带上目标文件绝对路径与缺口模型清单，并要求核对厂商官方定价页、不许编造价格、不许用 0 占位），粘进 DSH 会话即可由 agent 直接改 YAML；也可以下载成 `.txt`；
+- `unit`（计价单位）、`offPeak`（错峰窗口）、`note`（备注）**只在 YAML 里编辑**：含这些字段的已有规则会在列表里标出「含错峰窗口 … · 含单位设置：… —— 只在 YAML 里编辑」，表单里也写明「错峰价、计价单位、备注由 YAML 维护；在这里保存不会清掉它们」，面板保存**按原值写回、不会清空**（改通道 / 模型等于换主键，旧条的这三项不会跟过来）；
+- **默认只显示你的通道**：规则列表按 `cordis.yml` 里配置过的通道过滤（`*` 通配规则始终显示），属于未配置通道的规则点「显示全部」即可看到；内置价目来源同样只列相关项。**过滤只是显示层，成本计算照旧用完整规则与价目**；
 - 面板上同时显示内置价目的**抓取日期与距今天数**，最新一次抓取超过 **90 天**会改成警示样式并提示按官方文档复核价目。
-
-**预算与告警**（阈值在同一面板里配置，与规则一样存在宿主设置服务里）
-
-- 三项可选阈值：**每日 Tokens**、**每月 Tokens**、**每月成本（逐币种）**；**0 或留空 = 该项不启用**；
-- 口径：按**本地日历日 / 日历月**切分（**不是**滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）；成本**按币种独立比较，不换算、不合计**；
-- 用量到 **80%** 起在页面顶部提示「接近上限」，用满或超出提示「已超出上限」，并给出跳到「使用明细」的入口；总览顶部同时有一行预算进度（超限 / 接近 / 正常三档配色）；
-- **只是提示，不阻断任何操作**（本轮不接系统通知）。
 
 ## 成本与内置价目
 
@@ -151,7 +155,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | **官方价** | 按插件**内置的官方价目**算出（自动生效，来源与抓取日期可查） |
 | **估算** | 内置价目也没收录时，按台账反推的均价推算 |
 
-**内置价目覆盖**（共 18 条，2026-10-13 抓取）：
+**内置价目覆盖**（共 18 条，2026-10-13 抓取；数据在随包发布的 `pricing-catalog.yml`）：
 
 | 通道 | 模型 | 币种 | 来源 |
 | --- | --- | --- | --- |
@@ -161,7 +165,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | `openrouter` | deepseek/deepseek-v4.1-flash · anthropic/claude-sonnet-5.5 · anthropic/claude-opus-5.5 · openai/gpt-6.1-sol · openai/gpt-6-astra | USD | [openrouter.ai](https://openrouter.ai/api/v1/models) |
 
 - 币种按各家定价页**原样记录，不做汇率换算**：DeepSeek / Kimi 与账户币种一致（CNY），GLM / OpenRouter 为 USD；不同币种分别展示、不合计；
-- **运行时不联网抓价**：价目是静态数据（`src/server/pricing-catalog.ts`），每条带来源 URL 与抓取日期，厂商调价后需人工更新；文档没写清的档位**留空而不是猜**（例如 Kimi K2 系列未公布缓存写入价 → 该档按 0 计）；
+- **运行时不联网抓价**：价目是随包发布的静态文件 `pricing-catalog.yml`（仓库根，源码侧的读取逻辑在 `src/server/pricing-catalog.ts`），每条带来源 URL 与抓取日期，厂商调价后需人工更新；文档没写清的档位**留空而不是猜**（例如 Kimi K2 系列未公布缓存写入价 → 该档按 0 计）。想覆盖价格请写自己的规则文件，**不要改这个包内文件**（升级会被覆盖）；
 - **错峰怎么算**：窗口按**本地时间**判定（`起止相同` = 全天，`from > to` = 跨午夜），每个窗口可限定**每天 / 仅工作日 / 仅周末**；只有**单日范围**会用当天的 24 小时分布算错峰占比并加权，跨天 / 会话 / 项目 / 按模型按标准价算（有意保守）。内置的 DeepSeek 价目按官方口径：**北京时间周一至周五 9:00–12:00 与 14:00–18:00 为高峰，其余（含周末全天）为空闲（半价）**；插件没有中国法定节假日日历，**节假日会按高峰价算**（金额偏高、保守），是已知近似；
 - 完整明细、单位换算与全部已知近似见 [`docs/05-后续版本计划.md`](./docs/05-后续版本计划.md) 附录 A.5。
 
@@ -176,7 +180,7 @@ dsh plugin --profile desktop add dsh-key-usage
 <details>
 <summary><b>Windows 上 pnpm 安装报 EPERM（无法创建符号链接）</b></summary>
 
-未开启开发者模式时 Windows 不允许创建符号链接。本插件已把两个由宿主提供的 peer 依赖（`@deepseek-ai/cordis` / `@deepseek-ai/schemastery`）都标为 **optional**，pnpm 不会再为它们建链接，因此新版本不会触发这个错误。
+未开启开发者模式时 Windows 不允许创建符号链接。本插件把唯一的宿主 peer 依赖（`@deepseek-ai/cordis`）标为 **optional**，pnpm 不会为它建链接，因此新版本不会触发这个错误（`@deepseek-ai/schemastery` 已随设置服务退役从 `peerDependencies` 移除）。
 
 在更早的版本（≤ 0.1.4）上遇到此错误时：改用 **Plugin Hub** 安装（DSH 自带安装器不安装 peer 依赖），或开启开发者模式 / 以管理员身份运行。
 </details>
@@ -194,15 +198,21 @@ dsh plugin --profile desktop add dsh-key-usage
 </details>
 
 <details>
-<summary><b>预算阈值按自然月还是近 30 天算</b></summary>
-
-按**本地日历日 / 日历月**：每日 = 当天 00:00 起；每月 = **当月 1 日到现在**的累计 —— 和总览那种「近 30 天」不是同一个窗口，两处数字本就不该相等。Tokens 用展示口径（输入 + 输出 + 缓存读，不含缓存写）；成本上限**逐币种独立比较**，不做汇率换算、也不跨币种合计；**0 或留空表示该项不启用**。到 80% 起提示「接近上限」，用满或超出提示「已超出上限」，只是提示，不会阻断任何操作。
-</details>
-
-<details>
 <summary><b>成本显示为 0 / 「无计费」</b></summary>
 
 免费额度与本地端点没有成本概念；由会话事件补位的日期、以及项目 / 会话 / 按小时视图也没有官方成本。想让它有数字，先看这个模型是否在**内置价目覆盖表**里；没覆盖就在计费规则里手填单价。
+</details>
+
+<details>
+<summary><b>我在 <code>pricing-rules.yml</code> 里写的注释，保存后怎么没了</b></summary>
+
+面板保存是**整份重写**这个文件：条目字段会按 `provider|model` 继承旧的 `unit` / `offPeak` / `note`，但**注释不保留**（插件会写自己的头部注释）。想把「价格出处」留下来，请写进 `note` 字段（表格里会原样显示），或先备份文件再点保存。只打算改价、不打算用面板的话，手改文件是安全的 —— 改完刷新页面即生效。
+</details>
+
+<details>
+<summary><b>下载的「片段」单独存成文件，面板却报解析问题</b></summary>
+
+片段是**片段、不是完整文档**：它的缩进是按 `rules:` 下方排好的，单独存成文件时解析器会报 1 条 issue（首行有缩进）。正确用法是粘到已有规则文件的 `rules:` 下面；如果文件里还是 `rules: []`，先把它改成 `rules:` 再粘。
 </details>
 
 <details>
@@ -228,11 +238,13 @@ teammate / 斜杠命令这类会话的首条消息是宿主注入的 `<system-re
 
 | 项 | 要求 |
 | --- | --- |
-| DeepSeek Harness | 桌面端 0.2.x（客户端 slot：`sidebar.panellist` + `main`，配置服务 `configForms`）；web profile 同样支持 |
+| DeepSeek Harness | 桌面端 0.2.x（客户端 slot：`sidebar.panellist` + `main`）；web profile 同样支持 |
 | Node.js | ≥ 22（宿主内置） |
-| 运行时依赖 | 无。`react` / `react/jsx-runtime` 由宿主注入，服务端只用 Node 内置模块；`@deepseek-ai/schemastery` 与 `@deepseek-ai/dsh-client-ui-settings` 由宿主提供，前者按 `peerDependencies` 走宿主 runtime resolution（缺失时计费面板降级为只读 + 导入导出） |
+| 运行时依赖 | 无。`react` / `react/jsx-runtime` 由宿主注入，服务端只用 Node 内置模块（含自带的受限 YAML 子集解析器）；唯一 peer 是 `@deepseek-ai/cordis`（optional） |
 | 必需服务 | 无 |
-| 可选服务 | `sessionPersistence`（缺失时项目 / 会话 / 按小时为空态）、`credentials`（缺失时余额只读快照）、`settings` / `configForms`（缺失时计费规则只能导入导出、成本按台账均价估算） |
+| 可选服务 | `sessionPersistence`（缺失时项目 / 会话 / 按小时为空态）、`credentials`（缺失时余额只读快照） |
+| 客户端注入 | `@deepseek-ai/dsh-client-locale`、`@deepseek-ai/dsh-client-ui-slots`（计费规则改走 YAML 文件后，已不依赖 `dsh-client-ui-settings`） |
+| 计费规则文件 | `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（插件自己写，唯一可写目标）；内置价目是随包发布的 `pricing-catalog.yml`（只读） |
 
 ## 开发
 
@@ -240,7 +252,7 @@ teammate / 斜杠命令这类会话的首条消息是宿主注入的 `<system-re
 pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
 pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
 pnpm run typecheck    # 客户端 + 服务端类型检查
-pnpm run test         # 11 个离线测试
+pnpm run test         # 13 个离线测试
 pnpm run check        # lib/*.js 语法检查
 pnpm run verify       # 上面全套（CI 跑的就是这条）
 pnpm run pack:dry     # 发布清单自检
@@ -255,10 +267,11 @@ pnpm run pack:dry     # 发布清单自检
 | `src/client/**` | `pnpm run build` → **刷新页面** |
 | `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
 
-**验证安装**（10 个端点全部是只读 `GET`、只接受回环请求）：
+**验证安装**（**10 个只读 `GET` + 1 个写规则的 `POST`**，全部只接受回环请求；写端点只允许 `POST`，非回环 403）：
 
 ```bash
 curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [...] } 即已挂载
+curl -s http://127.0.0.1:19387/dsh-key-usage/pricing    # 计费契约：rules / files / issues / catalog / coverage
 ```
 
 **CI**：[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) 在 push / PR 上跑 `pnpm run verify`，另加「构建产物必须与源码同步」与「发布包必须含三件套」两道闸；发布由人工触发 [`publish.yml`](./.github/workflows/publish.yml)（带 provenance 签名）。

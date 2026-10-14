@@ -1,5 +1,5 @@
 /**
- * dsh-key-usage 服务端入口：声明计费规则配置项、挂载只读 HTTP 路由，
+ * dsh-key-usage 服务端入口：挂载 HTTP 路由（只读聚合 + 规则写入），
  * 向客户端提供用量台账、通道配置、余额快照与会话用量的聚合数据。
  *
  * 数据来源：
@@ -7,70 +7,15 @@
  * - 项目、会话、按小时：宿主 sessionPersistence 的只读 handle；
  * - 余额与订阅窗口：优先查各通道官方接口（凭据经宿主 credentials seam 解析，
  *   不落盘、不进日志、不返回给客户端），失败时回落到本地快照；
- * - 计费规则与预算阈值：宿主设置服务（宿主负责落盘，本插件不写任何文件）。
+ * - 计费规则：插件自己原子写 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（见 pricing-store.ts）。
+ *   宿主设置服务这条链路（schemastery `Config` / volatile 字段 / 客户端 configForms）已退役；
+ *   旧版 entry config 只作只读回退，避免老用户规则丢失。
  */
-import z from '@deepseek-ai/schemastery'
 import { mountKeyUsageRoutes } from './routes.js'
 import { createLiveQuotaService } from './live-quota.js'
 import { createSessionSource } from './sessions.js'
-import { EMPTY_PRICING, normalizePricing, type PricingView } from './pricing.js'
-import { EMPTY_BUDGET } from './budget.js'
 
 export const name = 'dsh-key-usage'
-
-/**
- * 计费规则与预算阈值存在宿主设置服务的这个命名空间里。
- *
- * 宿主的「设置」服务并不维护独立存储：命名空间就是 profile 里**本条目的 id**
- * （`cordis.patch.yml` 的 `insert.id`，与本包同名），字段必须用 `.volatile()` 标记才会被
- * 列出；写入由宿主的 config-editor 落到当前 profile 的 cordis patch 上并原地生效，
- * 因此本插件不写文件、也不需要重启宿主。
- */
-const SETTINGS_NAMESPACE = 'dsh-key-usage'
-
-/** 规则的 Config 形状；数值全部可改，默认空规则 = 沿用台账反推均价（与升级前行为一致）。 */
-const RulesSchema = z.array(z.object({
-  provider: z.string().default('*'),
-  model: z.string().default('*'),
-  unit: z.union(['perMillionTokens', 'perThousandTokens', 'perCall']).default('perMillionTokens'),
-  currency: z.string().default('CNY'),
-  input: z.number().default(0),
-  cacheRead: z.number().default(0),
-  cacheWrite: z.number().default(0),
-  output: z.number().default(0),
-  offPeak: z.object({
-    // `days`（ISO 1=周一 … 7=周日）缺省 = 每天适用；加它之前保存的规则没有这个字段，语义必须不变
-    windows: z.array(z.object({
-      from: z.string(),
-      to: z.string(),
-      days: z.array(z.number()).default([]),
-    })).default([]),
-    input: z.number().default(0),
-    cacheRead: z.number().default(0),
-    cacheWrite: z.number().default(0),
-    output: z.number().default(0),
-  }),
-  note: z.string().default(''),
-}))
-
-/** 预算阈值：与规则同住一个命名空间，因此同样是 volatile 字段（0 / 缺省 = 该项不启用）。 */
-const BudgetSchema = z.object({
-  dailyTokens: z.number().default(0),
-  monthlyTokens: z.number().default(0),
-  monthlyCost: z.array(z.object({
-    currency: z.string().default('CNY'),
-    amount: z.number().default(0),
-  })).default([]),
-})
-
-export const Config = z.object({
-  pricing: z.object({
-    version: z.number().default(1),
-    currency: z.string().default('CNY'),
-    rules: RulesSchema.default([]),
-  }).default(EMPTY_PRICING).volatile(),
-  budget: BudgetSchema.default(EMPTY_BUDGET).volatile(),
-})
 
 /** cordis 宿主上下文中本插件触达的最小面。 */
 interface HostContext {
@@ -85,40 +30,6 @@ interface HostContext {
 
 interface CredentialsService {
   resolve(reference: string): Promise<{ value?: unknown } | null>
-}
-
-interface SettingsService {
-  describe(options?: { redactSecrets?: boolean }): Array<{ ns?: unknown; value?: unknown; revision?: unknown }>
-}
-
-/**
- * 读设置命名空间里的一行：优先问宿主设置服务的实时投影（用户改完立即生效，无需重启宿主），
- * 服务缺失（非桌面 / 未组配 dsh-settings）或尚未就绪时返回 null，由调用方回退插件自身 Config。
- */
-function readSettingsRow(ctx: HostContext): { value: unknown; revision: number | null } | null {
-  const settings = (typeof ctx.get === 'function' ? ctx.get('settings') : undefined) as SettingsService | undefined
-  if (settings === undefined || typeof settings.describe !== 'function') return null
-  try {
-    const rows = settings.describe({ redactSecrets: false })
-    const row = Array.isArray(rows) ? rows.find((candidate) => candidate?.ns === SETTINGS_NAMESPACE) : undefined
-    if (row === undefined) return null
-    return { value: row.value, revision: typeof row.revision === 'number' ? row.revision : null }
-  } catch {
-    // 设置服务尚未就绪（组合中或已停用）：静默退回本地 Config
-    return null
-  }
-}
-
-function readPricing(ctx: HostContext, configRef: unknown): PricingView {
-  const row = readSettingsRow(ctx)
-  if (row !== null) return { config: normalizePricing(row.value), writable: true, revision: row.revision }
-  return { config: normalizePricing(configRef), writable: false, revision: null }
-}
-
-/** 预算阈值与规则同一个命名空间，读法一致；值由 routes 侧的 normalizeBudget 兜底，这里不解析也不抛错。 */
-function readBudget(ctx: HostContext, configRef: unknown): unknown {
-  const row = readSettingsRow(ctx)
-  return row === null ? configRef : row.value
 }
 
 export function apply(ctx: HostContext, config: unknown): void {
@@ -149,9 +60,9 @@ export function apply(ctx: HostContext, config: unknown): void {
         // workspaceRegistry 用来读官方归档集合（拿不到就回退本地 storages/workspace.json）
         get: (serviceName) => (typeof ctx.get === 'function' ? ctx.get(serviceName) : undefined),
       }, {
-        current: () => readPricing(ctx, (config as { pricing?: unknown } | undefined)?.pricing),
-      }, {
-        current: () => readBudget(ctx, (config as { budget?: unknown } | undefined)?.budget),
+        // 旧版 entry config（apply 的 config.pricing）只作**只读回退**：老用户规则不丢；
+        // 新规则一律走 pricing-rules.yml，由 routes 侧的 POST /pricing/rules 原子写入
+        current: () => (config as { pricing?: unknown } | undefined)?.pricing,
       }),
       'dsh-key-usage: http routes',
     )

@@ -1,6 +1,6 @@
 /**
  * 路由集成测试：把 DSH_HOME 指向临时夹具，直接调用各端点 handler 校验响应结构。
- * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、非回环 403、预算判定。
+ * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、计费规则、非回环 403。
  * 运行：node test/routes.test.mjs
  */
 import assert from 'node:assert/strict'
@@ -109,14 +109,20 @@ const handlers = new Map()
 process.env.DSH_HOME = home
 mountKeyUsageRoutes({ register: (route) => { handlers.set(route.path, route.handler) } }, sessionSource)
 
-async function callHandler(handlers, path, remoteAddress = '127.0.0.1') {
+async function callHandler(handlers, path, remoteAddress = '127.0.0.1', body = null) {
   const handler = handlers.get(path.split('?')[0])
   assert.ok(handler !== undefined, '端点应已注册：' + path)
   let status = 0
   let payload = ''
+  const request = { socket: { remoteAddress }, url: path, method: body === null ? 'GET' : 'POST' }
+  if (body !== null) {
+    // 真实宿主给的是可读流；夹具用异步迭代器模拟（handler 只依赖 asyncIterator）
+    const buffer = Buffer.from(body, 'utf8')
+    request[Symbol.asyncIterator] = async function* () { yield buffer }
+  }
   await handler(
-    { socket: { remoteAddress }, url: path, method: 'GET' },
-    { writeHead: (code) => { status = code }, end: (body) => { payload = body } },
+    request,
+    { writeHead: (code) => { status = code }, end: (value) => { payload = value } },
   )
   return { status, body: payload === '' ? null : JSON.parse(payload) }
 }
@@ -443,13 +449,11 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
     detailSource,
     undefined,
     undefined,
+    // 注入的是旧版 entry config 那一段（`config.pricing`）
     {
       current: () => ({
-        config: {
-          version: 1, currency: 'CNY',
-          rules: [{ provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY', input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则' }],
-        },
-        writable: true, revision: 1,
+        version: 1, currency: 'CNY',
+        rules: [{ provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY', input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则' }],
       }),
     },
   )
@@ -495,21 +499,47 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
     sessionSource,
     undefined,
     undefined,
-    { current: () => ({ config: { version: 1, currency: 'CNY', rules }, writable: true, revision: 7 }) },
+    // 注入的是**旧版 entry config**（apply 的 config.pricing 那一段）；设置服务已退役，只作只读回退
+    { current: () => ({ version: 1, currency: 'CNY', rules }) },
   )
   const priced = (path) => callHandler(pricedHandlers, path)
 
   const pricing = await priced('/dsh-key-usage/pricing')
   assert.equal(pricing.status, 200)
-  assert.equal(pricing.body.writable, true)
-  assert.equal(pricing.body.revision, 7, '修订号透出给界面做乐观锁')
+  // 冻结契约：字段集合就是这些，多一个少一个客户端都要跟着改
+  assert.deepEqual(
+    Object.keys(pricing.body).sort(),
+    ['catalog', 'coverage', 'currency', 'files', 'issues', 'offPeakNow', 'revision', 'rules', 'rulesOrigin', 'writable'],
+  )
+  assert.deepEqual(Object.keys(pricing.body.catalog).sort(), ['entries', 'rules', 'sources'])
+  assert.deepEqual(Object.keys(pricing.body.files).sort(), ['catalog', 'user'])
+  assert.deepEqual(Object.keys(pricing.body.files.catalog).sort(), ['entries', 'exists', 'path'])
+  assert.deepEqual(Object.keys(pricing.body.files.user).sort(), ['entries', 'exists', 'path'])
+  assert.equal(pricing.body.writable, true, '规则由本插件的 POST 端点写盘，恒为可写')
+  assert.equal(pricing.body.revision, null, '设置服务已退役：修订号恒为 null')
+  assert.equal(pricing.body.rulesOrigin, 'legacy', '没有用户文件时回落到旧版 entry config')
   assert.equal(pricing.body.rules.length, 1)
-  assert.deepEqual(pricing.body.templates.map((template) => template.id), ['deepseek', 'kimi', 'glm'])
+  assert.equal(pricing.body.currency, 'CNY')
   assert.equal(pricing.body.offPeakNow.length, 1, '每条规则一个错峰状态')
   assert.equal(pricing.body.offPeakNow[0], false, '没有错峰窗口的规则永远不是错峰')
-  // 内置官方价目：自动生效，界面靠这段渲染「已内置 N 条（来源见 …）」
+  assert.equal(pricing.body.templates, undefined, '模板字段已随设置服务退役')
+  // 两个价目文件的状态：内置价目在包根、用户文件还没建
+  assert.equal(pricing.body.files.catalog.exists, true, '内置价目随包发布')
+  assert.ok(pricing.body.files.catalog.path.includes('pricing-catalog.yml'))
+  assert.equal(pricing.body.files.catalog.entries, pricing.body.catalog.entries)
+  assert.equal(pricing.body.files.user.exists, false, '用户文件还没建')
+  assert.ok(pricing.body.files.user.path.endsWith(join('dsh-key-usage', 'pricing-rules.yml')))
+  assert.equal(pricing.body.files.user.entries, 0)
+  assert.deepEqual(pricing.body.issues, [], '内置价目干净 + 没有用户文件 → 没有问题')
+  // 内置官方价目：自动生效，界面靠这段渲染「已内置 N 条（来源见 …）」与「下载规则模板」
   assert.ok(pricing.body.catalog.entries > 0, '内置价目条数透出给界面')
   assert.ok(pricing.body.catalog.sources.length >= 4, '按来源分组：DeepSeek / Kimi / Z.ai / OpenRouter')
+  assert.equal(pricing.body.catalog.rules.length, pricing.body.catalog.entries, '逐条规则与条数一致（模板下载用）')
+  assert.equal(pricing.body.catalog.rules[0].note, '', '长 note 不下发：来源与抓取日期走 sources')
+  assert.ok(
+    pricing.body.catalog.rules.some((rule) => rule.offPeak !== null && rule.offPeak.windows.length > 0),
+    '内置价目里带错峰窗口（模板的错峰示例由它提供）',
+  )
   for (const source of pricing.body.catalog.sources) {
     assert.ok(/^https:\/\//.test(source.source), '每条来源都是精确 URL：' + source.source)
     assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(source.fetchedAt), '每条来源都带抓取日期')
@@ -557,61 +587,189 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.equal(unpricedUsage.body.days[0].cost, 0)
 }
 
-// ===== 预算与告警：阈值来自宿主设置服务，未配置时必须 enabled:false（而不是报错） =====
+// ===== 用户规则文件：文件 > 旧版 entry config；改文件刷新即生效；POST 原子写 + 按 provider|model 合并 =====
 {
-  // 期望值按夹具算：日历月内「台账优先、缺日由会话补位」的展示口径之和
-  // （与 /summary 一样，夹具日期被假设落在当前自然月；月份变了这里跟着变，断言不会失真）
-  const ledgerDayTokens = { '2026-10-12': 9200 + 120, '2026-10-13': 18400 }
-  const sessionOnlyDayTokens = { '2026-10-20': 440 }
-  const expectedTokensBetween = (from, to) => {
-    let total = 0
-    for (const [date, tokens] of Object.entries({ ...sessionOnlyDayTokens, ...ledgerDayTokens })) {
-      if (date >= from && date <= to) total += tokens
-    }
-    return total
-  }
-  const now = new Date()
-  const pad = (value) => String(value).padStart(2, '0')
-  const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-  const monthFromKey = todayKey.slice(0, 8) + '01'
-  const expectedMonthTokens = expectedTokensBetween(monthFromKey, todayKey)
-  const expectedTodayTokens = expectedTokensBetween(todayKey, todayKey)
-
-  const unconfigured = await callEndpoint('/dsh-key-usage/budget')
-  assert.equal(unconfigured.status, 200)
-  assert.equal(unconfigured.body.enabled, false, '没有任何阈值 = 不启用（不是报错）')
-  assert.equal(unconfigured.body.level, 'ok')
-  assert.deepEqual(unconfigured.body.entries, [])
-  assert.deepEqual(unconfigured.body.thresholds, { dailyTokens: 0, monthlyTokens: 0, monthlyCost: [] })
-  assert.equal(unconfigured.body.today.date, todayKey, '「今日」按服务器本地日历日')
-  assert.equal(unconfigured.body.month.from, monthFromKey, '「本月」按本地日历月首日，不是滚动 30 天')
-  assert.equal(unconfigured.body.month.to, todayKey)
-  assert.equal(unconfigured.body.today.tokens, expectedTodayTokens)
-  assert.equal(unconfigured.body.month.tokens, expectedMonthTokens, '与台账 × 会话合并同一口径')
-
-  // 非回环一律 403（与其它端点同一写法）
-  const foreignBudget = await callEndpoint('/dsh-key-usage/budget', '10.0.0.7')
-  assert.equal(foreignBudget.status, 403)
-  assert.deepEqual(foreignBudget.body, { error: 'loopback only' })
-
-  // 配了阈值：阈值 = 本月 Tokens 时正好用满（夹具不在本月则该阈值等于 0 → 不启用，两种都断言）
-  const configuredBudgetHandlers = new Map()
+  const userRulesPath = join(home, 'dsh-key-usage', 'pricing-rules.yml')
+  const fileHandlers = new Map()
   mountKeyUsageRoutes(
-    { register: (route) => { configuredBudgetHandlers.set(route.path, route.handler) } },
+    { register: (route) => { fileHandlers.set(route.path, route.handler) } },
     sessionSource,
     undefined,
     undefined,
-    undefined,
-    { current: () => ({ dailyTokens: 0, monthlyTokens: expectedMonthTokens, monthlyCost: [] }) },
+    // 旧版 entry config 里有一条规则：用户文件一出现就必须被顶掉
+    { current: () => ({ rules: [{ provider: 'legacy-only', model: '*', unit: 'perMillionTokens', currency: 'CNY', input: 1, cacheRead: 0.1, cacheWrite: 1, output: 2, offPeak: null, note: '旧配置' }] }) },
   )
-  const configured = await callHandler(configuredBudgetHandlers, '/dsh-key-usage/budget')
-  const hasMonthUsage = expectedMonthTokens > 0
-  assert.equal(configured.body.enabled, hasMonthUsage, '阈值 > 0 才启用')
-  assert.equal(configured.body.thresholds.monthlyTokens, expectedMonthTokens, '透出归一后的阈值')
-  assert.equal(configured.body.level, hasMonthUsage ? 'over' : 'ok', '用满上限即视为超限')
-  assert.equal(configured.body.entries[0]?.kind ?? null, hasMonthUsage ? 'monthlyTokens' : null)
-  assert.equal(configured.body.entries[0]?.used ?? 0, hasMonthUsage ? expectedMonthTokens : 0)
-  assert.equal(configured.body.entries[0]?.percent ?? 0, hasMonthUsage ? 100 : 0)
+  const fileCall = (path, body = null, remoteAddress = '127.0.0.1') => callHandler(fileHandlers, path, remoteAddress, body)
+
+  // 默认挂载（没有旧版配置）且没有文件：origin = none，成本只剩内置价目与台账均价两层
+  const noneView = await callEndpoint('/dsh-key-usage/pricing')
+  assert.equal(noneView.body.rulesOrigin, 'none')
+  assert.deepEqual(noneView.body.rules, [])
+  assert.equal(noneView.body.files.user.exists, false)
+
+  const legacyView = await fileCall('/dsh-key-usage/pricing')
+  assert.equal(legacyView.body.rulesOrigin, 'legacy', '没有文件时回落到旧版 entry config')
+  assert.deepEqual(legacyView.body.rules.map((ruleItem) => ruleItem.provider), ['legacy-only'])
+
+  /** 文件里的 opencode-go 规则带 unit / offPeak / note：这三项面板不编辑，保存时必须保留。 */
+  const fileWithOptions = [
+    'version: 1',
+    'currency: CNY',
+    'rules:',
+    '  - provider: opencode-go',
+    '    model: "*"',
+    '    unit: perThousandTokens',
+    '    currency: CNY',
+    '    input: 2',
+    '    cacheRead: 0.2',
+    '    cacheWrite: 2',
+    '    output: 8',
+    '    note: 文件备注',
+    '    offPeak:',
+    '      windows:',
+    '        - from: "00:00"',
+    '          to: "09:00"',
+    '          days: [1, 2, 3, 4, 5]',
+    '      input: 1',
+    '      cacheRead: 0.1',
+    '      cacheWrite: 1',
+    '      output: 4',
+    '  - provider: zai',
+    '    model: glm-5',
+    '    input: 1',
+    '    cacheRead: 0.2',
+    '    cacheWrite: 0',
+    '    output: 3.2',
+  ].join('\n')
+
+  writeFileSync(userRulesPath, fileWithOptions, 'utf8')
+  const fileView = await fileCall('/dsh-key-usage/pricing')
+  assert.equal(fileView.body.rulesOrigin, 'file', '文件存在时文件优先，旧版配置作废')
+  assert.deepEqual(fileView.body.rules.map((ruleItem) => ruleItem.provider + '|' + ruleItem.model), ['opencode-go|*', 'zai|glm-5'])
+  assert.equal(fileView.body.rules[0].unit, 'perThousandTokens')
+  assert.equal(fileView.body.rules[0].note, '文件备注')
+  assert.equal(fileView.body.rules[0].offPeak.windows.length, 1)
+  assert.equal(fileView.body.files.user.exists, true)
+  assert.equal(fileView.body.files.user.entries, 2)
+  assert.deepEqual(fileView.body.issues, [])
+  assert.equal(fileView.body.offPeakNow.length, 2)
+
+  // 成本按文件里的规则算（台账缺的 10-20 由会话补位 → 规则口径）
+  const fileUsage = await fileCall('/dsh-key-usage/usage?from=2026-10-20&to=2026-10-20')
+  assert.equal(fileUsage.body.days[0].costSource, 'rule')
+  assert.ok(fileUsage.body.days[0].cost > 0, '按文件规则算出金额：' + fileUsage.body.days[0].cost)
+
+  // 改文件 → 下一次请求立刻生效（mtime/size 缓存失效，不需要重启宿主）
+  writeFileSync(userRulesPath, 'version: 1\ncurrency: CNY\nrules:\n  - provider: zai\n    model: glm-5\n    input: 9\n    cacheRead: 0.9\n    cacheWrite: 9\n    output: 27\n', 'utf8')
+  const editedView = await fileCall('/dsh-key-usage/pricing')
+  assert.deepEqual(editedView.body.rules.map((ruleItem) => ruleItem.provider), ['zai'], '改完文件刷新即可生效')
+  assert.equal(editedView.body.rules[0].input, 9)
+
+  // YAML 写坏：issue 带行号、坏条目跳过、端点照常 200（绝不影响其它端点）
+  writeFileSync(userRulesPath, [
+    'version: 1',
+    'rules:',
+    '  - provider: broken',
+    '    model: missing-output',
+    '    input: 1',
+    '    cacheRead: 0.1',
+    '    cacheWrite: 1',
+    '  - provider: ok',
+    '    model: kept',
+    '    input: 1',
+    '    cacheRead: 0.1',
+    '    cacheWrite: 1',
+    '    output: 2',
+  ].join('\n'), 'utf8')
+  const brokenView = await fileCall('/dsh-key-usage/pricing')
+  assert.equal(brokenView.status, 200)
+  assert.deepEqual(brokenView.body.rules.map((ruleItem) => ruleItem.model), ['kept'], '坏条目跳过，好条目保留')
+  assert.equal(brokenView.body.issues.length > 0, true, '坏写法必须报出来')
+  assert.equal(brokenView.body.issues.every((issue) => issue.file === 'user'), true, '问题归属用户文件')
+  assert.equal(brokenView.body.issues[0].line, 3, 'issue 带行号')
+  assert.equal(brokenView.body.files.user.entries, 1)
+  assert.equal((await fileCall('/dsh-key-usage/channels')).status, 200, '计费文件坏掉不影响其它端点')
+
+  // ===== POST /dsh-key-usage/pricing/rules =====
+  // 非回环一律 403（与其它端点同一写法）
+  const foreignPost = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({ rules: [] }), '10.0.0.7')
+  assert.equal(foreignPost.status, 403)
+  assert.deepEqual(foreignPost.body, { error: 'loopback only' })
+
+  // 非 POST / 非 JSON / 空体 / 超 256 KiB / 非法字段：一律 HTTP 200 + ok:false
+  const wrongMethod = await fileCall('/dsh-key-usage/pricing/rules')
+  assert.equal(wrongMethod.status, 200)
+  assert.equal(wrongMethod.body.ok, false)
+  assert.ok(wrongMethod.body.error.includes('POST'), wrongMethod.body.error)
+
+  const badJson = await fileCall('/dsh-key-usage/pricing/rules', '{oops')
+  assert.equal(badJson.status, 200)
+  assert.equal(badJson.body.ok, false)
+  assert.ok(badJson.body.error.includes('JSON'), badJson.body.error)
+
+  const emptyBody = await fileCall('/dsh-key-usage/pricing/rules', '')
+  assert.equal(emptyBody.status, 200)
+  assert.equal(emptyBody.body.ok, false)
+
+  const oversize = await fileCall('/dsh-key-usage/pricing/rules', 'x'.repeat(300 * 1024))
+  assert.equal(oversize.status, 200)
+  assert.equal(oversize.body.ok, false)
+  assert.ok(oversize.body.error.includes('256 KiB'), oversize.body.error)
+
+  const badRule = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({
+    rules: [{ provider: 'a', model: 'b', currency: 'CNY', input: -1, cacheRead: 0, cacheWrite: 0, output: 1 }],
+  }))
+  assert.equal(badRule.status, 200)
+  assert.equal(badRule.body.ok, false)
+  assert.ok(badRule.body.error.includes('input'), badRule.body.error)
+  const untouched = await fileCall('/dsh-key-usage/pricing')
+  assert.deepEqual(untouched.body.rules.map((ruleItem) => ruleItem.model), ['kept'], '请求非法时一个字节都不写')
+
+  // 合法请求：原子写文件 + 按 provider|model 合并（unit / offPeak / note 保留旧值，其余以请求为准，顺序按请求）
+  writeFileSync(userRulesPath, fileWithOptions, 'utf8')
+  const written = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({
+    rules: [
+      { provider: 'opencode-go', model: '*', currency: 'CNY', input: 4, cacheRead: 0.4, cacheWrite: 4, output: 16 },
+      { provider: 'moonshotai', model: 'kimi-k3', currency: 'CNY', input: 20, cacheRead: 2, cacheWrite: 20, output: 100 },
+    ],
+  }))
+  assert.equal(written.status, 200)
+  assert.equal(written.body.ok, true, JSON.stringify(written.body))
+  assert.deepEqual(Object.keys(written.body).sort(), ['entries', 'issues', 'ok', 'path'], '写入响应契约')
+  assert.equal(written.body.path, userRulesPath)
+  assert.equal(written.body.entries, 2)
+  assert.deepEqual(written.body.issues, [])
+
+  const afterWrite = await fileCall('/dsh-key-usage/pricing')
+  assert.equal(afterWrite.body.rulesOrigin, 'file')
+  assert.deepEqual(
+    afterWrite.body.rules.map((ruleItem) => ruleItem.provider + '|' + ruleItem.model),
+    ['opencode-go|*', 'moonshotai|kimi-k3'],
+    '顺序按请求',
+  )
+  assert.equal(afterWrite.body.rules[0].input, 4, '单价以请求为准')
+  assert.equal(afterWrite.body.rules[0].unit, 'perThousandTokens', 'unit 保留文件旧值')
+  assert.equal(afterWrite.body.rules[0].note, '文件备注', 'note 保留文件旧值')
+  assert.equal(afterWrite.body.rules[0].offPeak.windows.length, 1, 'offPeak 保留文件旧值')
+  assert.equal(afterWrite.body.rules[1].unit, 'perMillionTokens', '新条目 unit 默认每百万 tokens')
+  assert.equal(afterWrite.body.rules[1].offPeak, null, '新条目 offPeak 默认 null')
+  assert.equal(afterWrite.body.rules[1].note, '', '新条目 note 默认空串')
+  assert.equal(afterWrite.body.files.user.entries, 2)
+  assert.equal(afterWrite.body.rules.some((ruleItem) => ruleItem.model === 'glm-5'), false, '请求里没有的条目被移出（文件列表以请求为准）')
+
+  // 落盘的是带中文注释头的 YAML；`*` 必须加引号；临时文件不残留
+  const writtenText = readFileSync(userRulesPath, 'utf8')
+  assert.ok(writtenText.includes('刷新页面即生效'), '文件头要写明改完刷新即生效')
+  assert.ok(writtenText.includes('provider: opencode-go'))
+  assert.ok(writtenText.includes("model: '*'"), '`*` 必须加引号（否则被当别名）')
+  assert.equal(existsSync(userRulesPath + '.tmp'), false)
+
+  // 收尾：留一份干净的空规则文件，避免影响后面的端点断言
+  writeFileSync(userRulesPath, 'version: 1\ncurrency: CNY\nrules: []\n', 'utf8')
+  const cleared = await fileCall('/dsh-key-usage/pricing')
+  assert.equal(cleared.body.rulesOrigin, 'file', '文件存在但为空 → 仍是 file（文件是唯一事实来源）')
+  assert.deepEqual(cleared.body.rules, [])
+  assert.equal(cleared.body.files.user.entries, 0)
 }
 
 // 台账整体缺失时不会变成空态，而是全量走会话事件

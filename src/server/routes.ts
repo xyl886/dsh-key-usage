@@ -1,5 +1,5 @@
 /**
- * HTTP 路由：只读 GET 端点，向客户端提供聚合数据。
+ * HTTP 路由：只读 GET 端点 + 一个规则写入 POST，向客户端提供聚合数据。
  * - /dsh-key-usage/channels  通道清单（含状态与计费模式）
  * - /dsh-key-usage/usage     范围聚合（from/to/provider 过滤；单日附带按小时）
  * - /dsh-key-usage/heatmap   年度热力图序列
@@ -9,15 +9,16 @@
  * - /dsh-key-usage/session   单个会话详情（?id=<sessionId>；只折叠这一个会话）
  * - /dsh-key-usage/projects  项目（工作目录）用量
  * - /dsh-key-usage/models    模型（provider + model）用量与估算成本
- * - /dsh-key-usage/budget    预算与告警（今日 / 本月用量对阈值，纯提示、不阻断）
- * - /dsh-key-usage/pricing   计费规则的服务端对照（内置价目 / 错峰 / 覆盖度）
+ * - /dsh-key-usage/pricing   计费规则的服务端对照（三层优先级 / 文件状态 / 内置价目 / 错峰 / 覆盖度）
+ * - POST /dsh-key-usage/pricing/rules  用户规则写入（原子写插件自己的 pricing-rules.yml）
  *
  * 台账已停更时（本机停在 2026-09-30），按天序列会用会话事件补齐缺的日期（见 merge.ts），
  * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403。
  *
- * 成本口径（四处一致）：台账当天的官方成本 > 用户计费规则 > 台账反推均价 > 无依据（界面显示 —）。
- * 每个成本单元格都带 `costSource`（official / rule / estimate / none），界面据此打来源角标。
- * 规则与成本算法见 pricing.ts，规则本体存在宿主设置服务里（本插件不写文件）。
+ * 成本口径（四处一致）：台账当天的官方成本 > 用户计费规则 > 内置官方价目 > 台账反推均价 > 无依据（界面显示 —）。
+ * 每个成本单元格都带 `costSource`（official / rule / catalog / estimate / none），界面据此打来源角标。
+ * 规则与成本算法见 pricing.ts；规则本体存插件自己的 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`
+ * （读写见 pricing-store.ts），旧版 entry config 只作只读回退。
  *
  * 网络：只有「余额与订阅窗口」会访问各通道**官方**接口（见 live-quota.ts），
  * 失败即回落本地快照；其余端点零外网。
@@ -68,29 +69,22 @@ import {
   totalsOfMerged,
 } from './merge.js'
 import {
+  EMPTY_PRICING,
   EMPTY_PRICING_VIEW,
-  PRICING_TEMPLATES,
-  addMoney,
   displayTokensOf,
   isOffPeakNow,
-  matchPricedRule,
+  normalizePricing,
   priceRowsByRules,
   rowCostsOf,
   summarizeCoverage,
-  type CostSource,
-  type MoneyByCurrency,
   type PricingConfig,
+  type PricingIssue,
   type PricingUsageRow,
   type PricingView,
+  type CostSource,
 } from './pricing.js'
-import {
-  EMPTY_BUDGET,
-  evaluateBudget,
-  normalizeBudget,
-  type BudgetThresholds,
-  type BudgetUsage,
-} from './budget.js'
-import { catalogEntryCount, catalogSources } from './pricing-catalog.js'
+import { catalogEntryCount, catalogFileInfo, catalogIssues, catalogRuleList, catalogSources } from './pricing-catalog.js'
+import { mergeRulesForWrite, parseRulesRequest, pricingRulesPath, readPricingRulesFile, writePricingRulesFile } from './pricing-store.js'
 
 interface WebServer {
   register(route: { kind: string; path: string; handler: (request: IncomingMessage, response: ServerResponse) => Promise<void> | void }): void
@@ -236,31 +230,6 @@ export function sourceOfProvider(days: AnnotatedDaySummary[], provider: string, 
   return sources.length === 0 ? 'none' : weakestSource(sources)
 }
 
-/** 某一天的展示口径 tokens（输入 + 输出 + 缓存读，不含缓存写）；该天没有记录时返回 0。 */
-export function displayTokensOn(days: ChannelDailySummary[], date: string): number {
-  const day = days.find((candidate) => candidate.date === date)
-  if (day === undefined) return 0
-  return day.inputTokens + day.outputTokens + day.cacheReadTokens
-}
-
-/**
- * 逐模型成本按币种加总（预算的「每月成本」逐币种比较）。
- * 金额与界面成本是同一份数字（`annotateCosts` 的结果）；币种取该模型命中的价目
- * （你的规则 / 内置官方价目），没命中价目的（台账官方账单、台账均价）记入规则默认币种。
- * 逐币种独立累加，不换算、不合计。
- */
-export function costByCurrencyOf(days: AnnotatedDaySummary[], config: PricingConfig): MoneyByCurrency {
-  const byCurrency: MoneyByCurrency = {}
-  for (const day of days) {
-    for (const model of day.models) {
-      if (model.cost === 0) continue
-      const currency = matchPricedRule(config.rules, model.provider, model.model)?.rule.currency ?? config.currency
-      addMoney(byCurrency, currency, model.cost)
-    }
-  }
-  return byCurrency
-}
-
 function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {
   const payload = JSON.stringify(body)
   response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' })
@@ -283,11 +252,6 @@ function dayKeyOf(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-/** 本地日历月的首日：预算里的「月」是自然月，不是滚动 30 天。 */
-function monthStartKey(date: Date): string {
-  return dayKeyOf(date).slice(0, 8) + '01'
-}
-
 function shiftedDayKey(offsetDays: number): string {
   return dayKeyOf(new Date(Date.now() + offsetDays * 86400000))
 }
@@ -300,19 +264,16 @@ function channelPayload(channel: ChannelInfo): Record<string, unknown> {
   }
 }
 
-/** 计费规则来源（由 index.ts 注入；缺省表示没有规则，一切按台账反推均价）。 */
+/** 旧版规则来源（由 index.ts 注入）：返回 `apply(ctx, config)` 里的 `config.pricing` 原值。 */
 export interface PricingSource {
-  current(): PricingView
-}
-
-export const noPricingSource: PricingSource = { current: () => EMPTY_PRICING_VIEW }
-
-/** 预算阈值来源（由 index.ts 注入）；值不可信，一律经 `normalizeBudget` 兜底，缺省 = 未配置。 */
-export interface BudgetSource {
   current(): unknown
 }
 
-export const noBudgetSource: BudgetSource = { current: () => undefined }
+/** 没有旧版配置时的空源（测试与降级用）；文件优先级不受它影响。 */
+export const noPricingSource: PricingSource = { current: () => null }
+
+/** 规则写入请求体上限：256 KiB（超出直接拒绝，避免一次请求吃满内存）。 */
+const MAX_RULES_BODY_BYTES = 256 * 1024
 
 export function mountKeyUsageRoutes(
   webServer: WebServer,
@@ -320,13 +281,13 @@ export function mountKeyUsageRoutes(
   liveQuota: LiveQuotaService = disabledLiveQuota,
   hostServices: { get(name: string): unknown } = { get: () => undefined },
   pricingSource: PricingSource = noPricingSource,
-  budgetSource: BudgetSource = noBudgetSource,
 ): void {
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
   const titleSource = createTitleSource(join(dshHomePath(), 'storages', 'session_projcache.json'))
   const archiveSource = createArchiveSource(hostServices, join(dshHomePath(), 'storages', 'workspace.json'))
   const quotaSnapshotPath = join(dshHomePath(), 'dsh-key-usage', 'quota-snapshots.json')
+  const userRulesPath = pricingRulesPath()
   /** 会话标题与归档状态：宿主服务/缓存文件都拿不到时返回空集合，界面自行回落。 */
   const sessionMeta = (): SessionMetaOptions => ({ titles: titleSource.titles(), archived: archiveSource.archived() })
 
@@ -336,21 +297,39 @@ export function mountKeyUsageRoutes(
 
   const readSnapshots = (): ProviderSnapshot[] => readProviderSnapshots(snapshotPath).providers
 
-  /** 规则每次请求现取：用户在界面上改完立即生效，不需要重启宿主。 */
+  /**
+   * 规则视图（每次请求现取，三层优先级）：用户规则文件（若存在）> 旧版 entry config > 空。
+   * 文件读取按 mtime/size 缓存并被写入端点主动失效，因此改完文件**刷新页面即生效**，不需要重启宿主。
+   * 任何意外都降级成空视图：计费规则坏掉绝不影响其它端点。
+   */
   const pricingView = (): PricingView => {
     try {
-      return pricingSource.current()
+      const legacy = normalizePricing(pricingSource.current())
+      const file = readPricingRulesFile(userRulesPath)
+      const issues: PricingIssue[] = [
+        ...catalogIssues().map((issue) => ({ file: 'catalog' as const, line: issue.line, message: issue.message })),
+        ...file.issues,
+      ]
+      const files = {
+        catalog: catalogFileInfo(),
+        user: { path: file.path, exists: file.exists, entries: file.rules.length },
+      }
+      if (file.exists) {
+        return {
+          config: { version: file.version, currency: file.currency, rules: file.rules },
+          writable: true,
+          revision: null,
+          origin: 'file',
+          files,
+          issues,
+        }
+      }
+      if (legacy.rules.length > 0) {
+        return { config: legacy, writable: true, revision: null, origin: 'legacy', files, issues }
+      }
+      return { config: EMPTY_PRICING, writable: true, revision: null, origin: 'none', files, issues }
     } catch {
       return EMPTY_PRICING_VIEW
-    }
-  }
-
-  /** 阈值同样每次请求现取；设置服务缺失 / 值非法 / 取不到一律当未配置，这个端点绝不因此报错。 */
-  const budgetThresholds = (): BudgetThresholds => {
-    try {
-      return normalizeBudget(budgetSource.current())
-    } catch {
-      return EMPTY_BUDGET
     }
   }
 
@@ -750,8 +729,8 @@ export function mountKeyUsageRoutes(
   })
 
   /**
-   * 计费规则面板：服务端视角的规则、内置模板、设定来源，以及近 30 天的覆盖度与缓存省钱。
-   * 规则本体由客户端经宿主设置服务读写，这里只提供「算出来是什么样」的对照。
+   * 计费规则面板：服务端视角的规则、来源层级、两个文件的状态、内置价目、错峰状态、覆盖度与解析问题。
+   * 规则本体在 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`，面板读写都走本端点与下面的 POST。
    */
   webServer.register({
     kind: 'exact',
@@ -778,14 +757,16 @@ export function mountKeyUsageRoutes(
       const now = new Date()
       sendJson(response, 200, {
         rules: view.config.rules,
+        rulesOrigin: view.origin,
         currency: view.config.currency,
+        // 规则由本插件的 POST 端点原子写文件，正常恒为 true；写失败会在写入响应里给原因
         writable: view.writable,
         revision: view.revision,
-        templates: PRICING_TEMPLATES,
-        // 内置官方价目：自动生效、无需套用模板；这里只透出「覆盖了哪些通道 / 来源 / 抓取日期」
+        // 内置官方价目：自动生效、无需用户维护；条数 / 来源给摘要，rules 给「下载规则模板」按用户模型取交集
         catalog: {
           entries: catalogEntryCount(),
           sources: catalogSources(),
+          rules: catalogRuleList(),
         },
         offPeakNow: view.config.rules.map((rule) => isOffPeakNow(rule, now)),
         coverage: {
@@ -800,46 +781,52 @@ export function mountKeyUsageRoutes(
           savingsByCurrency: coverage.savingsByCurrency,
           savingsDetail: coverage.savingsDetail,
         },
+        // 两个价目文件的位置 / 存在性 / 条数，以及解析问题（面板据此提示「哪一行写了不支持的写法」）
+        files: view.files,
+        issues: view.issues,
       })
     },
   })
 
   /**
-   * 预算与告警：今日 / 本月用量对阈值，判定在 budget.ts（纯函数，可离线单测）。
-   * 「日」「月」按本地日历日 / 日历月切分；用量与成本都走上面同一套台账 × 会话合并，
-   * 否则预算里的数字会和总览、使用明细对不上。
+   * 用户规则写入：仅回环，原子写 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`。
+   * 一律 HTTP 200 + `{ok:false,error}`（客户端只看 ok / error，不必区分状态码）；
+   * 与现有文件条目按 `provider|model` 合并，旧条目的 unit / offPeak / note 保留（面板不编辑这三项）。
    */
   webServer.register({
     kind: 'exact',
-    path: '/dsh-key-usage/budget',
+    path: '/dsh-key-usage/pricing/rules',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      const now = new Date()
-      const today = dayKeyOf(now)
-      const monthFrom = monthStartKey(now)
-      const ledger = loadLedger()
-      const collection = await sessionSource.collect()
-      const knownProviders = loadChannels().map((channel) => channel.provider)
-      const merged = mergeDailySeries(
-        aggregateRange(ledger, monthFrom, today, null).days,
-        sessionDayRows(collection.records, knownProviders),
-        monthFrom,
-        today,
-      )
-      const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
-      const totals = totalsOfMerged(days)
-      const usage: BudgetUsage = {
-        todayTokens: displayTokensOn(days, today),
-        monthTokens: totals.inputTokens + totals.outputTokens + totals.cacheReadTokens,
-        monthCostByCurrency: costByCurrencyOf(days, pricingView().config),
+      if (request.method !== undefined && request.method !== 'POST') {
+        sendJson(response, 200, { ok: false, error: '该端点只支持 POST' })
+        return
       }
-      const thresholds = budgetThresholds()
-      sendJson(response, 200, {
-        ...evaluateBudget(thresholds, usage),
-        today: { date: today, tokens: usage.todayTokens },
-        month: { from: monthFrom, to: today, tokens: usage.monthTokens, costByCurrency: usage.monthCostByCurrency },
-        thresholds,
-      })
+      const body = await readRequestBody(request, MAX_RULES_BODY_BYTES)
+      if (!body.ok) {
+        sendJson(response, 200, { ok: false, error: body.error })
+        return
+      }
+      let payload: unknown
+      try {
+        payload = JSON.parse(body.text.trim() === '' ? 'null' : body.text)
+      } catch {
+        sendJson(response, 200, { ok: false, error: '请求体不是合法 JSON' })
+        return
+      }
+      const parsed = parseRulesRequest(payload)
+      if (!parsed.ok) {
+        sendJson(response, 200, { ok: false, error: parsed.error })
+        return
+      }
+      const current = readPricingRulesFile(userRulesPath)
+      const merged = mergeRulesForWrite(current.rules, parsed.rules)
+      const written = writePricingRulesFile(userRulesPath, merged, parsed.currency ?? current.currency)
+      if (!written.ok) {
+        sendJson(response, 200, { ok: false, error: written.error })
+        return
+      }
+      sendJson(response, 200, { ok: true, path: written.path, entries: written.entries, issues: written.issues })
     },
   })
 }
@@ -892,4 +879,26 @@ function requireLoopback(request: IncomingMessage, response: ServerResponse): bo
 
 function readTextFile(path: string): string | null {
   try { return readFileSync(path, 'utf8') } catch { return null }
+}
+
+/** 读请求体并做上限保护；测试夹具的请求对象可能没有可迭代流，此时按空体处理。 */
+async function readRequestBody(
+  request: IncomingMessage,
+  limit: number,
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const stream = request as unknown as AsyncIterable<Buffer | string>
+  if (typeof stream[Symbol.asyncIterator] !== 'function') return { ok: true, text: '' }
+  const chunks: Buffer[] = []
+  let size = 0
+  try {
+    for await (const chunk of stream) {
+      const buffer = typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : chunk
+      size += buffer.length
+      if (size > limit) return { ok: false, error: '请求体超过 ' + Math.round(limit / 1024) + ' KiB 上限' }
+      chunks.push(buffer)
+    }
+  } catch {
+    return { ok: false, error: '读取请求体失败' }
+  }
+  return { ok: true, text: Buffer.concat(chunks).toString('utf8') }
 }

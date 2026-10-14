@@ -78,6 +78,8 @@ export function DetailTab(props: {
   onSort: (sort: DetailSortState) => void
   bounds: { from: string; to: string }
   tooltip: TooltipApi
+  /** 计费规则版本号：成本在服务端按规则算，规则一改这里要重取上期数据。 */
+  pricingRevision: number
 }): ReactNode {
   const { usage, channels, bounds, tooltip, channelFilter } = props
   if (usage === null) return <div className={styles.empty}>台账读取中或不可用…</div>
@@ -262,7 +264,14 @@ export function DetailTab(props: {
         />
       </div>
 
-      <TrendPanel usage={usage} channels={channels} range={props.range} bounds={bounds} channelFilter={channelFilter} />
+      <TrendPanel
+        usage={usage}
+        channels={channels}
+        range={props.range}
+        bounds={bounds}
+        channelFilter={channelFilter}
+        pricingRevision={props.pricingRevision}
+      />
 
       <ShareBar usage={usage} totalTokens={totalTokens} channelFilter={channelFilter} channels={channels} tooltip={tooltip} />
 

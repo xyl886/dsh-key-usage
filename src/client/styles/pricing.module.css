@@ -1,9 +1,6 @@
 /* 计费规则面板：规则表、编辑器、来源角标、覆盖度。颜色全部走宿主 --dsw-alias-* 令牌。 */
 .panel { margin-top: 26px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); padding-top: 16px; }
-.panelHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-.panelTitle { font-size: 14px; font-weight: 650; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .panelHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
-.panelNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.7; margin: 6px 0 12px; }
 
 .statStrip { display: flex; gap: 10px 26px; flex-wrap: wrap; margin-bottom: 12px; }
 .statItem .statName { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 2px; }
@@ -19,6 +16,47 @@
 .actionBtn:disabled { opacity: .5; cursor: default; }
 .actionBtn.primary { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
 .toolbarSpacer { flex: 1; }
+
+/* ===== 按通道过滤：只影响展示，保存仍然提交全部规则 ===== */
+.filterRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+.filterLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-right: 2px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
+  color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px; cursor: pointer;
+}
+.chip:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.chipOn { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.chip:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+
+/* ===== YAML 文件位置与解析问题：手写规则之后唯一的自查入口 ===== */
+.fileLine {
+  display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 8px 0;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+}
+.pathText { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; word-break: break-all; }
+.issueBlock {
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
+  color: var(--dsw-alias-state-warning-primary, #e0a13c);
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border: 1px solid var(--dsw-alias-state-warning-primary, #e0a13c);
+}
+.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.issueList { margin: 6px 0 0; padding-left: 18px; }
+.issueWhere { color: var(--dsw-alias-label-secondary, #9a9aa6); margin-right: 6px; }
+
+/* ===== 「让 DSH 帮我配」：提示词预览 + 复制 / 下载 ===== */
+.promptBlock { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px; padding: 10px 14px; margin: 8px 0 10px; }
+.promptHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; line-height: 1.7; }
+.promptActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.promptText {
+  margin: 0; padding: 10px 12px; border-radius: 8px; max-height: 260px; overflow: auto;
+  background: var(--dsw-alias-bg-layer-3, #232329); color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.7;
+  white-space: pre-wrap; word-break: break-word;
+}
 
 .ruleTable { width: 100%; border-collapse: collapse; margin-top: 4px; }
 .ruleTable th {
@@ -36,6 +74,8 @@
 .ruleTable tr.editing { background: var(--dsw-alias-interactive-bg-active, rgba(91,140,255,.14)); }
 .ruleName { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
 .ruleNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: normal; max-width: 260px; }
+/* 「含错峰 / 单位设置 —— 只在 YAML 里编辑」：提示附加字段仍然存在，不能让人以为数据丢了 */
+.ruleExtra { margin-top: 2px; font-size: 10px; }
 .linkBtn {
   border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px;
   cursor: pointer; padding: 0 6px;
@@ -86,10 +126,7 @@
   outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
   outline-offset: 2px;
 }
-.fieldWide { grid-column: span 2; }
 .subLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin: 12px 0 6px; }
-.windowRow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.windowRow input { width: 84px; }
 .editorError { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-size: 11.5px; margin-top: 10px; }
 .editorHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 8px; }
 .editorActions { display: flex; gap: 8px; margin-top: 12px; }
@@ -98,7 +135,6 @@
 .warning { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 11.5px; margin: 6px 0; }
 .error { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-size: 11.5px; margin: 6px 0; }
 .savingsList { margin: 6px 0 0; padding: 0; list-style: none; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.7; }
-.hiddenFile { display: none; }
 
 /* ===== 摘要行：默认收起的全部内容，一行说清「钱凭什么 + 省了多少 + 怎么改」 ===== */
 .summaryStrip {

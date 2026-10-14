@@ -1,0 +1,428 @@
+[
+  {
+    "provider": "deepseek-official",
+    "model": "deepseek-flash",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 2,
+    "cacheRead": 0.04,
+    "cacheWrite": 2,
+    "output": 8,
+    "offPeak": {
+      "windows": [
+        {
+          "from": "00:00",
+          "to": "09:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "12:00",
+          "to": "14:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "18:00",
+          "to": "00:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "00:00",
+          "to": "00:00",
+          "days": [
+            6,
+            7
+          ]
+        }
+      ],
+      "input": 1,
+      "cacheRead": 0.02,
+      "cacheWrite": 1,
+      "output": 4
+    },
+    "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "deepseek-flash（模型版本 DeepSeek-V4.1-Flash）高峰价：未命中 ¥2.00 / 命中 ¥0.04 / 输出 ¥8.00；缓存写入档文档未单列，沿用未命中价（口径推断，见 docs/05 附录 A.5）。错峰 = 高峰半价。高峰为北京时间周一至周五（不含中国法定节假日）9:00–12:00 与 14:00–18:00，其余时段（含周末全天）均为空闲时段；窗口按本地时间判定，工作日三段与周末全天各用一条窗口表达。限制：插件没有中国法定节假日日历，节假日会按高峰价算 —— 这是已知近似（方向：把空闲当高峰，金额偏高）。"
+  },
+  {
+    "provider": "deepseek-official",
+    "model": "deepseek-v4-flash",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 2,
+    "cacheRead": 0.04,
+    "cacheWrite": 2,
+    "output": 8,
+    "offPeak": {
+      "windows": [
+        {
+          "from": "00:00",
+          "to": "09:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "12:00",
+          "to": "14:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "18:00",
+          "to": "00:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "00:00",
+          "to": "00:00",
+          "days": [
+            6,
+            7
+          ]
+        }
+      ],
+      "input": 1,
+      "cacheRead": 0.02,
+      "cacheWrite": 1,
+      "output": 4
+    },
+    "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "旧模型名：官方注明请求由 DeepSeek-V4.1-Flash 提供服务并按 Flash 价计费，故与 deepseek-flash 同价。错峰 = 高峰半价。高峰为北京时间周一至周五（不含中国法定节假日）9:00–12:00 与 14:00–18:00，其余时段（含周末全天）均为空闲时段；窗口按本地时间判定，工作日三段与周末全天各用一条窗口表达。限制：插件没有中国法定节假日日历，节假日会按高峰价算 —— 这是已知近似（方向：把空闲当高峰，金额偏高）。"
+  },
+  {
+    "provider": "deepseek-official",
+    "model": "deepseek-v4-flash-vision-exp",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 2,
+    "cacheRead": 0.04,
+    "cacheWrite": 2,
+    "output": 8,
+    "offPeak": {
+      "windows": [
+        {
+          "from": "00:00",
+          "to": "09:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "12:00",
+          "to": "14:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "18:00",
+          "to": "00:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "00:00",
+          "to": "00:00",
+          "days": [
+            6,
+            7
+          ]
+        }
+      ],
+      "input": 1,
+      "cacheRead": 0.02,
+      "cacheWrite": 1,
+      "output": 4
+    },
+    "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "旧模型名（同 deepseek-v4-flash 的计费说明）：按 Flash 价计费。错峰 = 高峰半价。高峰为北京时间周一至周五（不含中国法定节假日）9:00–12:00 与 14:00–18:00，其余时段（含周末全天）均为空闲时段；窗口按本地时间判定，工作日三段与周末全天各用一条窗口表达。限制：插件没有中国法定节假日日历，节假日会按高峰价算 —— 这是已知近似（方向：把空闲当高峰，金额偏高）。"
+  },
+  {
+    "provider": "deepseek-official",
+    "model": "deepseek-v4-pro",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 9,
+    "cacheRead": 0.3,
+    "cacheWrite": 9,
+    "output": 27,
+    "offPeak": {
+      "windows": [
+        {
+          "from": "00:00",
+          "to": "09:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "12:00",
+          "to": "14:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "18:00",
+          "to": "00:00",
+          "days": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "from": "00:00",
+          "to": "00:00",
+          "days": [
+            6,
+            7
+          ]
+        }
+      ],
+      "input": 4.5,
+      "cacheRead": 0.15,
+      "cacheWrite": 4.5,
+      "output": 13.5
+    },
+    "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "deepseek-v4-pro（DeepSeek-V4-Pro-0813）高峰价：未命中 ¥9.00 / 命中 ¥0.30 / 输出 ¥27.00；缓存写入档文档未单列，沿用未命中价。错峰 = 高峰半价。高峰为北京时间周一至周五（不含中国法定节假日）9:00–12:00 与 14:00–18:00，其余时段（含周末全天）均为空闲时段；窗口按本地时间判定，工作日三段与周末全天各用一条窗口表达。限制：插件没有中国法定节假日日历，节假日会按高峰价算 —— 这是已知近似（方向：把空闲当高峰，金额偏高）。"
+  },
+  {
+    "provider": "moonshotai",
+    "model": "kimi-k3",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 20,
+    "cacheRead": 2,
+    "cacheWrite": 20,
+    "output": 100,
+    "source": "https://platform.kimi.com/docs/pricing/chat",
+    "fetchedAt": "2026-10-13",
+    "note": "K3 系列（1M tokens 计价，上下文窗口 1,048,576）：未命中 ¥20.00 / 命中 ¥2.00 / 输出 ¥100.00。官方缓存写入分 TTL 5min（本插件取此档，为默认档）/ 1h（¥40.00）两档。"
+  },
+  {
+    "provider": "moonshotai",
+    "model": "kimi-k2.7-code",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 6.5,
+    "cacheRead": 1.3,
+    "output": 27,
+    "source": "https://platform.kimi.com/docs/pricing/chat",
+    "fetchedAt": "2026-10-13",
+    "note": "K2.7 Code（上下文窗口 262,144）：未命中 ¥6.50 / 命中 ¥1.30 / 输出 ¥27.00。官方 K2 系列价格表没有「缓存写入」列，该档留空（不按输入价顶替）。"
+  },
+  {
+    "provider": "moonshotai",
+    "model": "kimi-k2.7-code-highspeed",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 13,
+    "cacheRead": 2.6,
+    "output": 54,
+    "source": "https://platform.kimi.com/docs/pricing/chat",
+    "fetchedAt": "2026-10-13",
+    "note": "K2.7 Code Highspeed：未命中 ¥13.00 / 命中 ¥2.60 / 输出 ¥54.00。官方 K2 系列价格表没有「缓存写入」列，该档留空。"
+  },
+  {
+    "provider": "moonshotai",
+    "model": "kimi-k2.6",
+    "unit": "perMillionTokens",
+    "currency": "CNY",
+    "input": 6.5,
+    "cacheRead": 1.1,
+    "output": 27,
+    "source": "https://platform.kimi.com/docs/pricing/chat",
+    "fetchedAt": "2026-10-13",
+    "note": "K2.6（上下文窗口 262,144）：未命中 ¥6.50 / 命中 ¥1.10 / 输出 ¥27.00。官方 K2 系列价格表没有「缓存写入」列，该档留空。"
+  },
+  {
+    "provider": "zai",
+    "model": "glm-5.3",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 1.4,
+    "cacheRead": 0.26,
+    "cacheWrite": 0,
+    "output": 4.4,
+    "source": "https://docs.z.ai/guides/overview/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "GLM-5.3：输入 $1.4 / 缓存命中 $0.26 / 输出 $4.4。缓存写入档对应官方「Cached Input Storage」，文档标注 Limited-time Free（限时免费），故记 0。"
+  },
+  {
+    "provider": "zai",
+    "model": "glm-5.3-flash",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 0.15,
+    "cacheRead": 0.03,
+    "cacheWrite": 0,
+    "output": 0.5,
+    "source": "https://docs.z.ai/guides/overview/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "GLM-5.3-Flash：输入 $0.15 / 缓存命中 $0.03 / 输出 $0.50。缓存写入档对应官方「Cached Input Storage」，文档标注 Limited-time Free（限时免费），故记 0。"
+  },
+  {
+    "provider": "zai",
+    "model": "glm-5.3-flashx",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 0.37,
+    "cacheRead": 0.075,
+    "cacheWrite": 0,
+    "output": 1.25,
+    "source": "https://docs.z.ai/guides/overview/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "GLM-5.3-FlashX：输入 $0.37 / 缓存命中 $0.075 / 输出 $1.25。缓存写入档对应官方「Cached Input Storage」，文档标注 Limited-time Free（限时免费），故记 0。"
+  },
+  {
+    "provider": "zai",
+    "model": "glm-5.2",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 1.4,
+    "cacheRead": 0.26,
+    "cacheWrite": 0,
+    "output": 4.4,
+    "source": "https://docs.z.ai/guides/overview/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "GLM-5.2：输入 $1.4 / 缓存命中 $0.26 / 输出 $4.4。缓存写入档对应官方「Cached Input Storage」，文档标注 Limited-time Free（限时免费），故记 0。"
+  },
+  {
+    "provider": "zai",
+    "model": "glm-5",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 1,
+    "cacheRead": 0.2,
+    "cacheWrite": 0,
+    "output": 3.2,
+    "source": "https://docs.z.ai/guides/overview/pricing",
+    "fetchedAt": "2026-10-13",
+    "note": "GLM-5（Text Models 表）：输入 $1 / 缓存命中 $0.2 / 输出 $3.2。缓存写入档对应官方「Cached Input Storage」，文档标注 Limited-time Free（限时免费），故记 0。"
+  },
+  {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 0.0441,
+    "cacheRead": 0.0054,
+    "output": 0.63,
+    "source": "https://openrouter.ai/api/v1/models",
+    "fetchedAt": "2026-10-13",
+    "note": "OpenRouter 中转价（非 DeepSeek 官方直连价）：prompt 0.0000000441 / completion 0.00000063 / input_cache_read 0.0000000054。无 input_cache_write 字段，缓存写入档留空。官方 pricing 为 USD per token，此处 ×1e6 换算为每百万 tokens。"
+  },
+  {
+    "provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 2,
+    "cacheRead": 0.1,
+    "cacheWrite": 2.5,
+    "output": 10,
+    "source": "https://openrouter.ai/api/v1/models",
+    "fetchedAt": "2026-10-13",
+    "note": "Claude Sonnet 5.5：prompt 0.000002 / completion 0.00001 / cache_read 0.0000001 / cache_write 0.0000025。另有 input_cache_write_1h 0.000004（1 小时 TTL），本插件只有一个缓存写入档，取默认档。官方 pricing 为 USD per token，此处 ×1e6 换算为每百万 tokens。官方另有 overrides 阶梯价（超长提示按更高单价计），本插件价格模型表达不了，未收录。"
+  },
+  {
+    "provider": "openrouter",
+    "model": "anthropic/claude-opus-5.5",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 4,
+    "cacheRead": 0.2,
+    "cacheWrite": 5,
+    "output": 20,
+    "source": "https://openrouter.ai/api/v1/models",
+    "fetchedAt": "2026-10-13",
+    "note": "Claude Opus 5.5：prompt 0.000004 / completion 0.00002 / cache_read 0.0000002 / cache_write 0.000005。官方 pricing 为 USD per token，此处 ×1e6 换算为每百万 tokens。"
+  },
+  {
+    "provider": "openrouter",
+    "model": "openai/gpt-6.1-sol",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 2,
+    "cacheRead": 0.1,
+    "cacheWrite": 2.5,
+    "output": 10,
+    "source": "https://openrouter.ai/api/v1/models",
+    "fetchedAt": "2026-10-13",
+    "note": "GPT-6.1 Sol：prompt 0.000002 / completion 0.00001 / cache_read 0.0000001 / cache_write 0.0000025。官方 pricing 为 USD per token，此处 ×1e6 换算为每百万 tokens。官方另有 overrides 阶梯价（超长提示按更高单价计），本插件价格模型表达不了，未收录。"
+  },
+  {
+    "provider": "openrouter",
+    "model": "openai/gpt-6-astra",
+    "unit": "perMillionTokens",
+    "currency": "USD",
+    "input": 10,
+    "cacheRead": 1,
+    "cacheWrite": 12.5,
+    "output": 50,
+    "source": "https://openrouter.ai/api/v1/models",
+    "fetchedAt": "2026-10-13",
+    "note": "GPT-6 Astra：prompt 0.00001 / completion 0.00005 / cache_read 0.000001 / cache_write 0.0000125。官方 pricing 为 USD per token，此处 ×1e6 换算为每百万 tokens。官方另有 overrides 阶梯价（超长提示按更高单价计），本插件价格模型表达不了，未收录。"
+  }
+]

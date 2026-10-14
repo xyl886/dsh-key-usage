@@ -1,11 +1,12 @@
 /**
  * 计费规则离线测试：优先级匹配、错峰判定（本地时间 / 跨午夜）、单位换算、
- * 缓存省钱公式与「规则 → 内置官方价目 → 台账均价」三层回落。
+ * 缓存省钱公式与「规则 → 内置官方价目 → 台账均价」三层回落，
+ * 以及内置价目从 TS 迁到 `pricing-catalog.yml` 后的**回归基线**（与 golden fixture 深度相等）。
  * 运行：node test/pricing.test.mjs（依赖 lib/pricing.js，改 src 后要先 tsc -p tsconfig.server.json）
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
-  PRICING_TEMPLATES,
   clockMinutes,
   costOfUsageRows,
   displayTokensOf,
@@ -24,7 +25,19 @@ import {
   summarizeCoverage,
   unwrapSettingValue,
 } from '../lib/pricing.js'
-import { PRICING_CATALOG, catalogEntryCount, catalogRuleFor, catalogSources } from '../lib/pricing-catalog.js'
+import {
+  catalogEntries,
+  catalogEntryCount,
+  catalogFileInfo,
+  catalogIssues,
+  catalogRuleFor,
+  catalogRuleList,
+  catalogSources,
+  parseCatalogText,
+} from '../lib/pricing-catalog.js'
+
+/** 迁移基线：迁移前从 lib/pricing-catalog.js 导出的 18 条原样条目（字段、顺序、数字一字不差）。 */
+const GOLDEN_CATALOG = JSON.parse(readFileSync(new URL('./fixtures/pricing-catalog.golden.json', import.meta.url), 'utf8'))
 
 /**
  * 造一个本地日期：`atLocal(hours, minutes, day)` 里 day 用 ISO 编号（1=周一 … 7=周日）。
@@ -290,45 +303,41 @@ assert.equal(clockMinutes(900), null)
   assert.equal(overflow.rules.length, 200, '规则条数封顶，避免一次请求打满 CPU')
 }
 
-// ===== 11. 模板：结构与官方数值 =====
+// ===== 11. 内置价目下发给界面（下载规则模板用）：结构与官方数值 =====
 {
-  assert.deepEqual(PRICING_TEMPLATES.map((template) => template.id), ['deepseek', 'kimi', 'glm'])
+  const rules = catalogRuleList()
+  assert.equal(rules.length, catalogEntryCount(), '逐条规则与条数一致')
+  for (const rule of rules) {
+    assert.equal(rule.note, '', '长 note 不下发：来源与抓取日期由 catalogSources() 给')
+    assert.ok(rule.unit === 'perMillionTokens', '内置价目统一按每百万 tokens 记录')
+  }
 
-  const deepseek = PRICING_TEMPLATES.find((template) => template.id === 'deepseek')
-  assert.equal(deepseek.rules.length, 2)
-  const flash = deepseek.rules[1]
-  assert.equal(flash.provider, 'deepseek-official')
-  assert.equal(flash.model, '*', '通道兜底规则')
+  const flash = rules.find((rule) => rule.provider === 'deepseek-official' && rule.model === 'deepseek-flash')
   assert.equal(flash.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价')
   assert.deepEqual([flash.input, flash.cacheRead, flash.cacheWrite, flash.output], [2, 0.04, 2, 8], 'Flash 高峰价 ¥2 / ¥0.04 / ¥2 / ¥8')
   assert.equal(flash.offPeak.input, flash.input / 2, 'DeepSeek 错峰 = 高峰半价（输入）')
   assert.equal(flash.offPeak.output, flash.output / 2, 'DeepSeek 错峰 = 高峰半价（输出）')
   assert.equal(flash.offPeak.windows.length, 4, '工作日三段 + 周末全天一段')
-  assert.deepEqual(flash.offPeak.windows.map((window) => window.days), [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [6, 7]], '每段窗口都限定星期')
+  assert.deepEqual(
+    flash.offPeak.windows.map((window) => window.days),
+    [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [6, 7]],
+    '每段窗口都限定星期（模板里的错峰示例就取这条）',
+  )
   assert.equal(flash.offPeak.windows[2].to, '00:00', '工作日最后一段跨午夜到 00:00')
-  assert.ok(deepseek.note.includes('api-docs.deepseek.com'), '模板说明里留价目来源与抓取日期')
-  assert.ok(deepseek.note.includes('CNY'), '模板说明写明币种')
-  assert.ok(flash.note !== '', '每条规则也留备注，便于复核')
-  assert.ok(deepseek.note.includes('工作日'), '把「高峰只在工作日」写进说明')
-  assert.ok(deepseek.note.includes('法定节假日'), '把「节假日无法表达」的已知近似写进说明')
 
-  const kimi = PRICING_TEMPLATES.find((template) => template.id === 'kimi')
-  const k3 = kimi.rules.find((entry) => entry.model === 'kimi-k3')
+  const k3 = rules.find((rule) => rule.model === 'kimi-k3')
   assert.deepEqual([k3.input, k3.cacheRead, k3.cacheWrite, k3.output], [20, 2, 20, 100], 'Kimi K3：¥20 / ¥2 / ¥20 / ¥100')
   assert.equal(k3.currency, 'CNY')
 
-  const glm = PRICING_TEMPLATES.find((template) => template.id === 'glm')
-  const glm53 = glm.rules.find((entry) => entry.model === 'glm-5.3')
+  const glm53 = rules.find((rule) => rule.model === 'glm-5.3')
   assert.deepEqual([glm53.input, glm53.cacheRead, glm53.output], [1.4, 0.26, 4.4], 'GLM-5.3：$1.4 / $0.26 / $4.4')
-  const glmFlash = glm.rules.find((entry) => entry.model === 'glm-5.3-flash')
+  const glmFlash = rules.find((rule) => rule.model === 'glm-5.3-flash')
   assert.deepEqual([glmFlash.input, glmFlash.cacheRead, glmFlash.output], [0.15, 0.03, 0.50], 'GLM-5.3-Flash：$0.15 / $0.03 / $0.50')
 
-  // 模板必须能被 normalizePricing 原样接受（否则套用后会被静默改值）
-  for (const template of PRICING_TEMPLATES) {
-    const normalized = normalizePricing({ version: 1, currency: 'CNY', rules: template.rules })
-    assert.equal(normalized.rules.length, template.rules.length, template.id + ' 模板全部通过归一化')
-    assert.deepEqual(normalized.rules[0], template.rules[0], template.id + ' 模板第一条数值不被改写')
-  }
+  // 下发形状必须能被 normalizePricing 原样接受（否则模板导入后会被静默改值）
+  const normalized = normalizePricing({ version: 1, currency: 'CNY', rules })
+  assert.equal(normalized.rules.length, rules.length, '全部通过归一化')
+  assert.deepEqual(normalized.rules[0], rules[0], '第一条数值不被改写（note 缺省为空串）')
 }
 
 // ===== 12. 规则合并与展示口径 =====
@@ -709,9 +718,21 @@ assert.equal(clockMinutes(900), null)
 
 // ===== 17. 价目数据本身的自检：来源、抓取日期、单位、缺档不用同类顶替 =====
 {
-  assert.ok(PRICING_CATALOG.length > 0, '内置价目非空')
+  const entries = catalogEntries()
+  assert.ok(entries.length > 0, '内置价目非空')
+
+  // 迁移回归基线：YAML 读出来的 18 条与迁移前 lib 导出的条目**逐字段深度相等**（含顺序）
+  assert.deepEqual(entries, GOLDEN_CATALOG, 'pricing-catalog.yml 必须与迁移基线 test/fixtures/pricing-catalog.golden.json 完全一致')
+
+  // 迁移过来的文件本身必须是干净的：一条 issue 都不能有，且文件真的在包根
+  assert.deepEqual(catalogIssues(), [], '内置价目文件不该有任何解析 issue')
+  const catalogFile = catalogFileInfo()
+  assert.equal(catalogFile.exists, true, 'pricing-catalog.yml 必须随包发布（package.json files 已包含）')
+  assert.ok(/pricing-catalog\.yml$/.test(catalogFile.path), '价目文件路径：' + catalogFile.path)
+  assert.equal(catalogFile.entries, entries.length)
+
   const seen = new Set()
-  for (const entry of PRICING_CATALOG) {
+  for (const entry of entries) {
     const key = entry.provider + '|' + entry.model
     assert.ok(!seen.has(key), '内置价目不得重复：' + key)
     seen.add(key)
@@ -745,7 +766,7 @@ assert.equal(clockMinutes(900), null)
   }
 
   // 未收录官方「缓存写入」档的条目必须真的留空，而不是被填成输入价
-  const kimiK2 = PRICING_CATALOG.find((entry) => entry.provider === 'moonshotai' && entry.model === 'kimi-k2.7-code')
+  const kimiK2 = entries.find((entry) => entry.provider === 'moonshotai' && entry.model === 'kimi-k2.7-code')
   assert.equal(kimiK2.cacheWrite, undefined, 'Kimi K2 系列文档没有缓存写入列 → 该档留空（不按输入价顶替）')
   const kimiK2Rule = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k2.7-code', calls: 1, cacheWriteTokens: 1_000_000 }], config([]), () => null)[0]
   assert.equal(kimiK2Rule.cost, 0, '留空的档位按 0 计，不会凭空产生费用')
@@ -753,16 +774,115 @@ assert.equal(clockMinutes(900), null)
   // 覆盖摘要：接口拿它渲染「已内置 N 条（来源见 …）」
   const sources = catalogSources()
   assert.ok(sources.length >= 4, '至少覆盖 DeepSeek / Kimi / Z.ai / OpenRouter 四个来源')
-  assert.equal(sources.reduce((total, entry) => total + entry.count, 0), PRICING_CATALOG.length, '来源条数之和等于总条数')
+  assert.equal(sources.reduce((total, entry) => total + entry.count, 0), entries.length, '来源条数之和等于总条数')
   for (const source of sources) {
     assert.ok(source.providers.length > 0, source.source + ' 必须标出覆盖的通道')
+    assert.equal(new Set(source.providers).size, source.providers.length, source.source + ' 通道去重')
+    assert.deepEqual([...source.providers].sort(), source.providers, source.source + ' 通道按字典序（界面显示稳定）')
     assert.ok(source.count > 0)
   }
-  assert.equal(catalogEntryCount(), PRICING_CATALOG.length)
+  assert.equal(catalogEntryCount(), entries.length)
 
-  // 文档里的覆盖清单必须与代码一致（docs/05 附录 A.5 写了「18 条」并列了 18 行）
+  // 文档里的覆盖清单必须与 YAML 一致（docs/05 附录 A.5 写了「18 条」并列了 18 行）
   assert.equal(catalogEntryCount(), 18, '条数变了要同步更新 docs/05 附录 A.5 的清单与条数')
 }
+
+// ===== 17b. 内置价目文件的容错：坏条目跳过 + issue 带行号（绝不抛错、绝不猜单价）=====
+{
+  const parsed = parseCatalogText([
+    'version: 1',                              // 1
+    'rules:',                                  // 2
+    '  - provider: ok',                        // 3
+    '    model: kept',                         // 4
+    '    unit: perMillionTokens',              // 5
+    '    currency: CNY',                       // 6
+    '    input: 1',                            // 7
+    '    cacheRead: 0.1',                      // 8
+    '    cacheWrite: 1',                       // 9
+    '    output: 2',                           // 10
+    '    source: https://example.com/pricing', // 11
+    '    fetchedAt: 2026-10-13',               // 12
+    '    note: 测试',                          // 13
+    '    offPeak:',                            // 14
+    '      windows: []',                       // 15 空窗口 → 按无错峰 + issue
+    '  - provider: broken',                    // 16 缺 model
+    '    unit: perMillionTokens',              // 17
+    '  - provider: broken2',                   // 18
+    '    model: bad-unit',                     // 19
+    '    unit: perToken',                      // 20 非法 unit
+    '  - provider: broken3',                   // 21
+    '    model: negative',                     // 22
+    '    unit: perMillionTokens',              // 23
+    '    currency: CNY',                       // 24
+    '    input: -1',                           // 25 负数
+    '    output: 2',                           // 26
+    '    source: https://example.com',         // 27
+    '    fetchedAt: 2026-10-13',               // 28
+    '    note: x',                             // 29
+    '  - provider: broken4',                   // 30 缺 output
+    '    model: no-output',                    // 31
+    '    unit: perMillionTokens',              // 32
+    '    currency: CNY',                       // 33
+    '    input: 1',                            // 34
+    '    cacheRead: 0.1',                      // 35
+    '    cacheWrite: 1',                       // 36
+    '    source: https://example.com',         // 37
+    '    fetchedAt: 2026-10-13',               // 38
+    '    note: x',                             // 39
+    '  - provider: broken5',                   // 40 缺 source
+    '    model: no-source',                    // 41
+    '    unit: perMillionTokens',              // 42
+    '    currency: CNY',                       // 43
+    '    input: 1',                            // 44
+    '    cacheRead: 0.1',                      // 45
+    '    cacheWrite: 1',                       // 46
+    '    output: 2',                           // 47
+    '    fetchedAt: 2026-10-13',               // 48
+    '    note: x',                             // 49
+    '  - provider: broken6',                   // 50
+    '    model: typo',                         // 51 未知字段不影响条目
+    '    unit: perMillionTokens',              // 52
+    '    currency: CNY',                       // 53
+    '    input: 1',                            // 54
+    '    cacheRead: 0.1',                      // 55
+    '    cacheWrite: 1',                       // 56
+    '    output: 2',                           // 57
+    '    source: https://example.com',         // 58
+    '    fetchedAt: 2026-10-13',               // 59
+    '    note: x',                             // 60
+    '    sources: 打错的键',                    // 61
+  ].join('\n'))
+
+  assert.deepEqual(
+    parsed.entries.map((entry) => entry.provider + '|' + entry.model),
+    ['ok|kept', 'broken6|typo'],
+    '坏条目跳过，好条目保留',
+  )
+  assert.equal(parsed.entries[0].offPeak, undefined, '没有可用窗口 → 按无错峰处理')
+  assert.deepEqual(Object.keys(parsed.entries[0]).sort(), [
+    'cacheRead', 'cacheWrite', 'currency', 'fetchedAt', 'input', 'model', 'note', 'output', 'provider', 'source', 'unit',
+  ], '空窗口的条目不该留下 offPeak 键')
+  assert.equal(parsed.entries[1].cacheWrite, 1, '打错的 sources 不当成 source')
+
+  const messages = parsed.issues.map((issue) => issue.message)
+  assert.equal(messages.some((message) => message.includes('缺少 model')), true)
+  assert.equal(messages.some((message) => message.includes('unit 必须是')), true)
+  assert.equal(messages.some((message) => message.includes('input 必须是非负数字')), true)
+  assert.equal(messages.some((message) => message.includes('缺少有效的 input / output')), true)
+  assert.equal(messages.some((message) => message.includes('缺少 source')), true)
+  assert.equal(messages.some((message) => message.includes('offPeak 没有可用窗口')), true)
+  assert.equal(messages.some((message) => message.includes('未知字段 sources')), true)
+  assert.equal(parsed.issues.every((issue) => typeof issue.line === 'number'), true, '每条 issue 都带行号')
+  assert.equal(parsed.issues.find((issue) => issue.message.includes('缺少 model')).line, 16)
+  assert.equal(parsed.issues.find((issue) => issue.message.includes('input 必须是非负数字')).line, 25)
+  assert.equal(parsed.issues.find((issue) => issue.message.includes('未知字段 sources')).line, 61)
+
+  // 语法级不支持（tab 缩进）同样只是 issue，不抛错
+  const tabbed = parseCatalogText('version: 1\nrules:\n\t- provider: a\n')
+  assert.equal(tabbed.entries.length, 0)
+  assert.equal(tabbed.issues.some((issue) => issue.message.includes('tab')), true)
+}
+
 
 // ===== 18. DeepSeek 内置价目：CNY、高峰价数值、错峰半价、四段窗口 =====
 {
@@ -773,7 +893,7 @@ assert.equal(clockMinutes(900), null)
     { model: 'deepseek-v4-pro', input: 9, cacheRead: 0.3, cacheWrite: 9, output: 27 },
   ]
   for (const want of expected) {
-    const entry = PRICING_CATALOG.find((candidate) => candidate.provider === 'deepseek-official' && candidate.model === want.model)
+    const entry = catalogEntries().find((candidate) => candidate.provider === 'deepseek-official' && candidate.model === want.model)
     assert.notEqual(entry, undefined, want.model + ' 必须在内置价目里')
     assert.equal(entry.currency, 'CNY', want.model + ' 取中文文档的 CNY 价（英文页同价不同币种）')
     assert.deepEqual(

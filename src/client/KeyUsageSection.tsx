@@ -3,11 +3,9 @@
  * 台账类数据（通道 / 台账 / 热力图 / 汇总 / 快照）来自本地文件端点；
  * 项目与会话数据来自宿主会话事件折叠，切到对应 Tab 时才首次拉取。
  */
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { loadBudget, loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
-import { budgetAlertTextOf } from './budget.ts'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
-import { pricingSettings } from './pricingSettings.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
@@ -17,7 +15,6 @@ import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
 import type { DetailSortState } from './components/DailyDetailTable.tsx'
 import type {
-  BudgetResponse,
   Channel,
   HeatmapDay,
   ModelsResponse,
@@ -61,26 +58,26 @@ export function KeyUsageSection() {
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
   const [pricing, setPricing] = useState<PricingResponse | null>(null)
-  const [budget, setBudget] = useState<BudgetResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  /**
+   * 计费规则版本号：规则写进 YAML 后成本要整体重算，所有按成本展示的数据都得重取。
+   * 规则只从面板保存（POST /pricing/rules）这一个入口变，所以用一个自增计数当失效信号即可。
+   */
+  const [pricingRevision, setPricingRevision] = useState(0)
   const tooltip = useTooltip()
-  // 规则或阈值改动会经 configForms 推回来，这里跟着重取一次服务端结果（成本、覆盖度与预算）
-  const pricingState = useSyncExternalStore(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot)
-  const settingsSignature = JSON.stringify(pricingState.config) + JSON.stringify(pricingState.budget)
 
   const reload = useCallback(async (includeSessionData: boolean, forceQuota = false) => {
     setLoading(true)
     // 先查余额：服务端会借这次调用预热实时结果，随后 /channels 的状态判定就能用上
     const quotaResult = await loadQuota(forceQuota)
-    const [channelResult, summaryResult, heatmapResult, budgetResult] = await Promise.all([
-      loadChannels(), loadSummary(), loadHeatmap(), loadBudget(),
+    const [channelResult, summaryResult, heatmapResult] = await Promise.all([
+      loadChannels(), loadSummary(), loadHeatmap(),
     ])
     setChannels(channelResult ?? [])
     setQuotas(quotaResult ?? [])
     setSummary(summaryResult)
     setHeatmap(heatmapResult ?? [])
-    setBudget(budgetResult)
     if (includeSessionData) {
       const [sessionResult, projectResult, modelResult] = await Promise.all([loadSessions(), loadProjects(), loadModels()])
       setSessions(sessionResult)
@@ -88,18 +85,18 @@ export function KeyUsageSection() {
       setModels(modelResult)
     }
     setLoading(false)
-    // settingsSignature 不是被用到的值，而是「规则或阈值变了」的失效信号：
-    // 成本在服务端按规则算、预算按阈值判定，设置一改这里就必须整体重取
-  }, [settingsSignature])
+    // pricingRevision 不是被用到的值，而是「规则变了」的失效信号：
+    // 成本在服务端按规则算，规则一改这里就必须整体重取
+  }, [pricingRevision])
 
   useEffect(() => { void reload(false) }, [reload])
 
-  // 计费规则面板的服务端对照：内置价目来源与覆盖度（规则一变就重取）
+  // 计费规则面板的服务端对照：内置价目来源、缺口覆盖度、两个 YAML 文件与解析问题（规则一变就重取）
   useEffect(() => {
     let cancelled = false
     void loadPricing().then((result) => { if (!cancelled) setPricing(result) })
     return () => { cancelled = true }
-  }, [settingsSignature])
+  }, [pricingRevision])
 
   // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时；余额页也需要按模型用量给「最值得补规则」排序）
   useEffect(() => {
@@ -127,7 +124,7 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [bounds.from, bounds.to, channelFilter, settingsSignature])
+  }, [bounds.from, bounds.to, channelFilter, pricingRevision])
 
   const refresh = useCallback(() => {
     void reload(
@@ -137,10 +134,6 @@ export function KeyUsageSection() {
     )
     void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => { if (result !== null) setUsage(result) })
   }, [reload, activeTab, sessions, projects, models, bounds.from, bounds.to, channelFilter])
-
-  // 越线才提示（level 与文案都出自服务端结论，两者取交集避免空横幅）；告警纯提示，不阻断任何操作
-  const budgetAlert = budget === null ? null : budgetAlertTextOf(budget)
-  const showBudgetAlert = budget !== null && budget.level !== 'ok' && budgetAlert !== null
 
   return (
     <div className={styles.section}>
@@ -152,16 +145,6 @@ export function KeyUsageSection() {
           </button>
         </span>
       </div>
-
-      {showBudgetAlert && budget !== null && (
-        <div
-          className={styles.budgetBanner + ' ' + (budget.level === 'over' ? styles.budgetBannerOver : styles.budgetBannerNear)}
-          role="status"
-        >
-          <span className={styles.budgetBannerText}>{budgetAlert}</span>
-          <button className={styles.budgetBannerAction} onClick={() => setActiveTab('detail')}>查看使用明细 →</button>
-        </div>
-      )}
 
       <div className={styles.tabBar}>
         {TABS.map(([tabId, label]) => (
@@ -175,7 +158,6 @@ export function KeyUsageSection() {
           summary={summary}
           quotas={quotas}
           heatmap={heatmap}
-          budget={budget}
           tooltip={tooltip}
           onOpenDetail={(provider) => { setChannelFilter(provider); setActiveTab('detail') }}
         />
@@ -198,6 +180,7 @@ export function KeyUsageSection() {
           onSort={setDetailSort}
           bounds={bounds}
           tooltip={tooltip}
+          pricingRevision={pricingRevision}
         />
       )}
       {activeTab === 'projects' && (
@@ -222,9 +205,8 @@ export function KeyUsageSection() {
           channels={channels}
           quotas={quotas}
           pricing={pricing}
-          pricingState={pricingState}
-          pricingSettings={pricingSettings}
           models={models}
+          onPricingReload={() => setPricingRevision((previous) => previous + 1)}
         />
       )}
 
@@ -241,13 +223,8 @@ export function KeyUsageSection() {
           <li>已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。</li>
           <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
           <li>
-            预算按<b>本地日历日 / 日历月</b>切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）；
-            成本上限<b>按币种独立比较</b>，不换算、不合计；阈值在「余额与配额」页的规则面板里配置，
-            <b>告警只是提示，不阻断任何操作</b>。
-          </li>
-          <li>
             成本来源与优先级见「余额与配额」页计费面板的 <b>成本口径</b>（ⓘ）：角标分 <b>官方</b> / <b>自定</b> / <b>官方价</b> / <b>估算</b>，
-            没有价格依据时显示 —；规则在面板下半部分维护，改完立即重算。
+            没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。
           </li>
           <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>
         </ul>

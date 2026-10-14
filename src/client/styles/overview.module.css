@@ -38,18 +38,6 @@
 .quotaText.danger { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-weight: 600; }
 .quotaText.dim { color: var(--dsw-alias-label-tertiary, #67676f); }
 
-/* ===== 预算进度：配了阈值才出现的一行，每项一个迷你进度条 + 百分比 ===== */
-.budgetRow { display: flex; align-items: center; gap: 6px 18px; flex-wrap: wrap; margin-bottom: 14px; }
-.budgetLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 12.5px; font-weight: 600; }
-.budgetItem { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; }
-.budgetName { color: var(--dsw-alias-label-tertiary, #67676f); }
-.budgetBar { width: 96px; height: 5px; border-radius: 3px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; flex-shrink: 0; }
-.budgetBar > i { display: block; height: 100%; border-radius: 3px; }
-.budgetValue { color: var(--dsw-alias-label-secondary, #9a9aa6); font-variant-numeric: tabular-nums; }
-/* 语义色只用在预算这一处，且只有「接近 / 超限」两档 */
-.budgetValue.warn { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-weight: 600; }
-.budgetValue.danger { color: var(--dsw-alias-state-error-primary, #e05a5a); font-weight: 600; }
-
 /* ===== 年度热力图 ===== */
 .heatmapCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; margin-top: 24px; }
 .heatmapHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }

@@ -19,6 +19,8 @@ const UTF8_BOM = '\ufeff'
 
 export const CSV_MIME = 'text/csv;charset=utf-8'
 export const JSON_MIME = 'application/json;charset=utf-8'
+export const YAML_MIME = 'text/yaml;charset=utf-8'
+export const TEXT_MIME = 'text/plain;charset=utf-8'
 
 /** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
 export function toCsv<Row>(rows: Row[], columns: Array<ExportColumn<Row>>): string {
@@ -34,7 +36,7 @@ export function toJson(value: unknown): string {
 }
 
 /** 下载文件名：`dsh-usage-<主题>-<当天>.<扩展名>`，主题用英文短名避免跨端中文文件名乱码。 */
-export function exportFileName(topic: string, extension: 'csv' | 'json'): string {
+export function exportFileName(topic: string, extension: 'csv' | 'json' | 'yml' | 'txt'): string {
   return 'dsh-usage-' + topic + '-' + isoDate(new Date()) + '.' + extension
 }
 

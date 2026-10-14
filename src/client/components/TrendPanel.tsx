@@ -3,13 +3,12 @@
  * 纯客户端实现 —— 复用同一个 /usage 端点按上期范围再请求一次，服务端不感知「环比」。
  * 涨跌只用中性色 + 上下箭头：用量涨不代表好、成本涨也不代表错，不引入红绿对错语义。
  */
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadUsage } from '../api.ts'
 import { channelOf, costCellText } from '../channels.ts'
 import { fmtCalls, fmtCost, fmtTokens, isoDate } from '../format.ts'
 import { COST_SOURCE_LABELS } from '../pricing.ts'
-import { pricingSettings } from '../pricingSettings.ts'
 import type { Channel, DaySummary, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import trendStyles from '../styles/trend.module.css'
@@ -115,15 +114,14 @@ export function TrendPanel(props: {
   range: TrendRangeKey
   bounds: { from: string; to: string }
   channelFilter: string
+  /** 计费规则版本号：规则一改两期就不是同一套成本口径，靠它触发上期重取。 */
+  pricingRevision: number
 }): ReactNode {
   const { usage, bounds, channelFilter } = props
   const comparable = props.range !== 'total'
   const previousWindow = useMemo(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to])
   const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready'>('loading')
-  // 成本由服务端按计费规则算，规则一改两期就不是同一套口径，所以跟着规则重取上期
-  const pricingState = useSyncExternalStore(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot)
-  const pricingSignature = JSON.stringify(pricingState.config)
 
   useEffect(() => {
     if (!comparable) return
@@ -135,7 +133,7 @@ export function TrendPanel(props: {
       setStatus('ready')
     })
     return () => { cancelled = true }
-  }, [comparable, previousWindow.from, previousWindow.to, channelFilter, pricingSignature])
+  }, [comparable, previousWindow.from, previousWindow.to, channelFilter, props.pricingRevision])
 
   const header = (
     <div className={trendStyles.head}>

@@ -1,12 +1,11 @@
 /**
  * 余额与配额：按通道展示官方余额快照与订阅窗口（原样数据，不换算不建议）。
- * 下半部分是计费规则面板（规则存在宿主设置服务里，成本重算在服务端）。
+ * 下半部分是计费规则面板（规则以用户 YAML 文件为唯一事实来源，成本重算在服务端）。
  */
 import { type ReactNode } from 'react'
 import { quotaBarColor, statusColorOf } from '../channels.ts'
 import { fmtDateTime } from '../format.ts'
 import type { Channel, ModelsResponse, PricingResponse, QuotaProvider } from '../types.ts'
-import type { PricingSettingsState, PricingSettingsStore } from '../pricingSettings.ts'
 import { PricingRulesPanel } from '../components/PricingRulesPanel.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
@@ -31,9 +30,9 @@ export function QuotaTab(props: {
   channels: Channel[]
   quotas: QuotaProvider[]
   pricing: PricingResponse | null
-  pricingState: PricingSettingsState
-  pricingSettings: PricingSettingsStore
   models: ModelsResponse | null
+  /** 规则保存成功后重取 /pricing 与用量（成本在服务端按规则算）。 */
+  onPricingReload: () => void
 }): ReactNode {
   const snapshotOf = (provider: string): QuotaProvider | null => props.quotas.find((item) => item.provider === provider) ?? null
   return (
@@ -110,12 +109,11 @@ export function QuotaTab(props: {
       {props.channels.length === 0 && <div className={styles.empty}>未读取到通道配置</div>}
 
       <PricingRulesPanel
-        settings={props.pricingSettings}
-        state={props.pricingState}
         pricing={props.pricing}
         channels={props.channels}
-        // 按模型用量交给抽屉里的「最值得补规则的模型」排序用
+        // 按模型用量交给抽屉里的缺口清单与规则模板排序用
         models={props.models}
+        onSaved={props.onPricingReload}
       />
     </div>
   )

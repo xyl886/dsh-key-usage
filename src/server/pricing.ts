@@ -1,9 +1,9 @@
 /**
  * 计费规则：用户可维护的单价表，作为成本估算的一手依据（替代「台账反推均价」）。
  *
- * 规则本体存放在宿主设置服务的 `dsh-key-usage` 命名空间里（见 index.ts 的 Config），
- * 本模块只做纯函数：归一化、优先级匹配、错峰判定、单位换算与费用 / 缓存省钱计算。
- * 不读文件、不联网，因此可以完全离线单测。
+ * 规则本体存在插件自己的 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（读写见 pricing-store.ts，
+ * 旧版 entry config 只作只读回退），本模块只做纯函数：归一化、优先级匹配、错峰判定、
+ * 单位换算与费用 / 缓存省钱计算。不读文件、不联网，因此可以完全离线单测。
  *
  * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 内置官方价目 > 台账反推均价
  * > 无（显示 —）。本模块负责「用户规则」与「内置官方价目」这两层。
@@ -95,20 +95,53 @@ const UNIT_FACTORS: Record<PricingUnit, number> = {
 }
 
 /** 规则条数上限：设置里的值不可信，超出的部分直接丢弃，避免一次请求把 CPU 打满。 */
-const MAX_RULES = 200
+export const PRICING_MAX_RULES = 200
+const MAX_RULES = PRICING_MAX_RULES
 
 export const EMPTY_PRICING: PricingConfig = { version: 1, currency: 'CNY', rules: [] }
 
-/** 服务端当前看到的规则视图（由 index.ts 从宿主设置服务或插件自身 Config 读出）。 */
-export interface PricingView {
-  config: PricingConfig
-  /** 宿主设置服务是否可用；false 时界面只能导入 / 导出，不能落盘。 */
-  writable: boolean
-  /** 设置命名空间的修订号，用作写入的乐观锁；null 表示拿不到。 */
-  revision: number | null
+/** 生效规则来自哪一层：`file` = 用户 YAML、`legacy` = 旧版 entry config、`none` = 都没有。 */
+export type PricingRulesOrigin = 'file' | 'legacy' | 'none'
+
+/** 一个价目文件的读取状态（存在性 + 条数 + 路径），面板据此显示「文件在哪 / 读到了几条」。 */
+export interface PricingFileInfo {
+  path: string
+  exists: boolean
+  entries: number
 }
 
-export const EMPTY_PRICING_VIEW: PricingView = { config: EMPTY_PRICING, writable: false, revision: null }
+/** 价目文件的解析问题；`file` 区分内置价目与用户规则文件。 */
+export interface PricingIssue {
+  file: 'catalog' | 'user'
+  /** 1 基行号；拿不到行号时为 null。 */
+  line: number | null
+  message: string
+}
+
+/** 服务端当前看到的规则视图：三层优先级的结果 + 两个文件的状态 + 解析问题。 */
+export interface PricingView {
+  config: PricingConfig
+  /** 能不能保存规则（本插件原子写自己的规则文件，正常恒为 true；写失败由 POST 返回原因）。 */
+  writable: boolean
+  /** 旧版设置服务的修订号：该链路已退役，恒为 null（保留字段是为了不改动客户端契约）。 */
+  revision: number | null
+  /** 规则本体实际来自哪一层。 */
+  origin: PricingRulesOrigin
+  files: { catalog: PricingFileInfo; user: PricingFileInfo }
+  issues: PricingIssue[]
+}
+
+export const EMPTY_PRICING_VIEW: PricingView = {
+  config: EMPTY_PRICING,
+  writable: false,
+  revision: null,
+  origin: 'none',
+  files: {
+    catalog: { path: '', exists: false, entries: 0 },
+    user: { path: '', exists: false, entries: 0 },
+  },
+  issues: [],
+}
 
 /** 单位文字说明（界面与文档共用一份，避免两侧口径漂移）。 */
 export const UNIT_LABELS: Record<PricingUnit, string> = {
@@ -119,7 +152,7 @@ export const UNIT_LABELS: Record<PricingUnit, string> = {
 
 /**
  * 设置服务里的 volatile 字段是 `{ get() }` 引用而不是裸值；
- * 框架用 `updateVolatile` 原地换内容，所以每次现取即是最新值。
+ * 框架用 `updateVolatile` 原地换内容，所以每次现取即是最新值（旧版 config 形状仍要兼容）。
  */
 export function unwrapSettingValue(value: unknown): unknown {
   if (value !== null && typeof value === 'object' && typeof (value as { get?: unknown }).get === 'function') {
@@ -129,9 +162,9 @@ export function unwrapSettingValue(value: unknown): unknown {
 }
 
 /**
- * 取设置服务里的一段：宿主 `describe()` / 客户端 `configForms` 给的是**命名空间根对象**
- * （`{ pricing: …, budget: … }`，见宿主 dsh-settings 的 `projectForm(form, plainConfig(config))`），
- * 字段在它下面。没有该键时（直传一段值、或宿主还没加载新 Config）就用整份值，两种形状都能读。
+ * 旧版 entry config 的兼容读法：宿主设置服务当年给的是**命名空间根对象**
+ * （`{ pricing: … }`，见宿主 dsh-settings 的 `projectForm(form, plainConfig(config))`），
+ * 字段在它下面。没有该键时（直传一段值、或配置里本来就只有这一段）就用整份值，两种形状都能读。
  */
 export function settingsSectionOf(raw: unknown, key: string): unknown {
   const value = unwrapSettingValue(raw)
@@ -550,88 +583,6 @@ export function summarizeCoverage(
     savingsDetail,
   }
 }
-
-export interface PricingTemplate {
-  id: string
-  label: string
-  /** 模板说明与官方价目来源（抓取日期）。 */
-  note: string
-  rules: PricingRule[]
-}
-
-/**
- * DeepSeek 错峰窗口（本地时间）：高峰 = 周一至周五 09:00–12:00 与 14:00–18:00，
- * 其余时段全是错峰，因此三段窗口都限定 `days` 为工作日，周末另给一条全天窗口。
- */
-const DEEPSEEK_RULE_OFFPEAK_WINDOWS: OffPeakWindow[] = [
-  { from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] },
-  { from: '12:00', to: '14:00', days: [1, 2, 3, 4, 5] },
-  { from: '18:00', to: '00:00', days: [1, 2, 3, 4, 5] },
-  { from: '00:00', to: '00:00', days: [6, 7] },
-]
-
-/**
- * 内置价目模板：只提供**结构与官方数值**，套用后由用户自行核对/修改。
- * 数值来自 docs/05 附录 A.5（2026-10-13 抓取）。
- * DeepSeek 取**中文文档的 CNY 价**（英文页同价不同币种）：peak = 北京时间周一至周五
- * 09:00–12:00 与 14:00–18:00，其余时段半价；错峰窗口因此必须带 `days`，
- * 否则周末会被算成高峰。法定节假日没有日历可查，仍按高峰价算，已在 note 写明。
- */
-export const PRICING_TEMPLATES: PricingTemplate[] = [
-  {
-    id: 'deepseek',
-    label: 'DeepSeek 官方',
-    note: 'CNY / 百万 tokens；错峰 = 高峰半价。高峰为北京时间周一至周五（仅工作日）09:00–12:00 与 14:00–18:00，其余时段（含周末全天）为错峰；中国法定节假日无法表达，会按高峰价算。来源：https://api-docs.deepseek.com/zh-cn/quick_start/pricing（2026-10-13）',
-    rules: [
-      {
-        provider: 'deepseek-official', model: 'deepseek-v4-pro', unit: 'perMillionTokens', currency: 'CNY',
-        input: 9, cacheRead: 0.3, cacheWrite: 9, output: 27,
-        offPeak: { windows: DEEPSEEK_RULE_OFFPEAK_WINDOWS, input: 4.5, cacheRead: 0.15, cacheWrite: 4.5, output: 13.5 },
-        note: 'v4-pro 高峰价；缓存写文档未单列，沿用未命中价。来源同上',
-      },
-      {
-        provider: 'deepseek-official', model: '*', unit: 'perMillionTokens', currency: 'CNY',
-        input: 2, cacheRead: 0.04, cacheWrite: 2, output: 8,
-        offPeak: { windows: DEEPSEEK_RULE_OFFPEAK_WINDOWS, input: 1, cacheRead: 0.02, cacheWrite: 1, output: 4 },
-        note: '该通道兜底按 Flash 档填写（高峰价）；缓存写文档未单列，沿用未命中价。来源同上',
-      },
-    ],
-  },
-  {
-    id: 'kimi',
-    label: 'Kimi（月之暗面）',
-    note: 'CNY / 百万 tokens。来源：https://www.kimi.com/help/kimi-api/api-pricing（2026-10-13）；缓存写未单独公布，按输入价填写',
-    rules: [
-      {
-        provider: 'moonshotai', model: 'kimi-k3', unit: 'perMillionTokens', currency: 'CNY',
-        input: 20, cacheRead: 2, cacheWrite: 20, output: 100, offPeak: null,
-        note: 'K3：输入 ¥20 / 输出 ¥100 / 缓存写 ¥20 / 命中 ¥2',
-      },
-      {
-        provider: 'moonshotai', model: 'kimi-k2.7-code', unit: 'perMillionTokens', currency: 'CNY',
-        input: 6.5, cacheRead: 1.3, cacheWrite: 6.5, output: 27, offPeak: null,
-        note: 'K2.7 Code：输入 ¥6.5 / 输出 ¥27 / 命中 ¥1.30',
-      },
-    ],
-  },
-  {
-    id: 'glm',
-    label: 'GLM（Z.ai）',
-    note: 'USD / 百万 tokens。来源：https://docs.z.ai/guides/overview/pricing（2026-10-13）；缓存写未单独公布，按输入价填写',
-    rules: [
-      {
-        provider: 'zai', model: 'glm-5.3', unit: 'perMillionTokens', currency: 'USD',
-        input: 1.4, cacheRead: 0.26, cacheWrite: 1.4, output: 4.4, offPeak: null,
-        note: 'GLM-5.3：$1.4 / 缓存 $0.26 / $4.4',
-      },
-      {
-        provider: 'zai', model: 'glm-5.3-flash', unit: 'perMillionTokens', currency: 'USD',
-        input: 0.15, cacheRead: 0.03, cacheWrite: 0.15, output: 0.50, offPeak: null,
-        note: 'GLM-5.3-Flash：$0.15 / 缓存 $0.03 / $0.50',
-      },
-    ],
-  },
-]
 
 /** 规则的键：导入合并与去重都用它（通道 + 模型）。 */
 export function ruleKeyOf(rule: PricingRule): string {

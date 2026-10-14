@@ -1,11 +1,11 @@
 /** 同源只读端点的取数封装：任何失败都返回 null，由调用方决定空态。 */
 
 import type {
-  BudgetResponse,
   Channel,
   HeatmapDay,
   ModelsResponse,
   PricingResponse,
+  PricingSaveResult,
   ProjectsResponse,
   QuotaProvider,
   SessionDetailResponse,
@@ -24,13 +24,18 @@ export function failureReasonOf(path: string): string | null {
   return failureReasons.get(path) ?? null
 }
 
+/** 404 单独说清「要重启宿主」：刷新页面不会让服务端新端点出现。 */
+function failureTextOf(status: number): string {
+  return status === 404
+    ? 'HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）'
+    : 'HTTP ' + String(status)
+}
+
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {
     const response = await fetch(path, { headers: { Accept: 'application/json' } })
     if (!response.ok) {
-      failureReasons.set(path, response.status === 404
-        ? 'HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）'
-        : 'HTTP ' + String(response.status))
+      failureReasons.set(path, failureTextOf(response.status))
       return null
     }
     failureReasons.delete(path)
@@ -93,12 +98,35 @@ export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
 }
 
-/** 计费规则面板的服务端对照：内置模板、错峰状态与近 30 天覆盖度。 */
+/** 计费规则面板的服务端对照：内置价目（含逐条规则）、错峰状态、缺口覆盖度、两个 YAML 文件与解析问题。 */
 export function loadPricing(): Promise<PricingResponse | null> {
   return fetchJson<PricingResponse>('/dsh-key-usage/pricing')
 }
 
-/** 预算与告警：今日 / 本月读数对阈值（未配置阈值时 `enabled:false`，界面不渲染）。 */
-export function loadBudget(): Promise<BudgetResponse | null> {
-  return fetchJson<BudgetResponse>('/dsh-key-usage/budget')
+/** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
+export const PRICING_RULES_PATH = '/dsh-key-usage/pricing/rules'
+
+/**
+ * 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
+ *
+ * 返回 null = 请求本身失败（原因记在 `failureReasonOf(PRICING_RULES_PATH)`）；
+ * 返回 `{ok:false, error}` = 服务端拒绝了这次写入（中文原因可直接展示）。
+ */
+export async function savePricingRules(rules: Array<Record<string, string | number>>): Promise<PricingSaveResult | null> {
+  try {
+    const response = await fetch(PRICING_RULES_PATH, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules }),
+    })
+    if (!response.ok) {
+      failureReasons.set(PRICING_RULES_PATH, failureTextOf(response.status))
+      return null
+    }
+    failureReasons.delete(PRICING_RULES_PATH)
+    return await response.json() as PricingSaveResult
+  } catch (error) {
+    failureReasons.set(PRICING_RULES_PATH, '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    return null
+  }
 }

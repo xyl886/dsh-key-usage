@@ -6,6 +6,150 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
+		//#region src/client/UsageIcon.tsx
+		function UsageIcon({ size = 18 }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+				width: size,
+				height: size,
+				viewBox: "0 0 16 16",
+				fill: "none",
+				"aria-hidden": "true",
+				focusable: "false",
+				style: { display: "block" },
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+						x: "2.6",
+						y: "8.8",
+						width: "2.6",
+						height: "4.2",
+						rx: "0.7",
+						fill: "currentColor"
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+						x: "6.7",
+						y: "5.6",
+						width: "2.6",
+						height: "7.4",
+						rx: "0.7",
+						fill: "currentColor"
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+						x: "10.8",
+						y: "2.8",
+						width: "2.6",
+						height: "10.2",
+						rx: "0.7",
+						fill: "currentColor"
+					})
+				]
+			});
+		}
+		//#endregion
+		//#region src/client/api.ts
+		/**
+		* 最近一次请求失败的原因，按路径记住。
+		* 空态文案需要能指向「怎么做」——最常见的失败是新端点 404（服务端代码要重启宿主才生效）。
+		*/
+		const failureReasons = /* @__PURE__ */ new Map();
+		function failureReasonOf(path) {
+			return failureReasons.get(path) ?? null;
+		}
+		/** 404 单独说清「要重启宿主」：刷新页面不会让服务端新端点出现。 */
+		function failureTextOf(status) {
+			return status === 404 ? "HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）" : "HTTP " + String(status);
+		}
+		async function fetchJson(path) {
+			try {
+				const response = await fetch(path, { headers: { Accept: "application/json" } });
+				if (!response.ok) {
+					failureReasons.set(path, failureTextOf(response.status));
+					return null;
+				}
+				failureReasons.delete(path);
+				return await response.json();
+			} catch (error) {
+				failureReasons.set(path, "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				return null;
+			}
+		}
+		async function loadChannels() {
+			const result = await fetchJson("/dsh-key-usage/channels");
+			return result === null ? null : result.channels;
+		}
+		async function loadUsage(from, to, provider) {
+			const params = new URLSearchParams({
+				from,
+				to
+			});
+			if (provider !== "ALL") params.set("provider", provider);
+			return fetchJson("/dsh-key-usage/usage?" + params.toString());
+		}
+		async function loadHeatmap() {
+			const result = await fetchJson("/dsh-key-usage/heatmap");
+			return result === null ? null : result.days;
+		}
+		/**
+		* 余额与订阅窗口：服务端实时优先、失败回落本机快照。
+		* @param fresh - 用户手动刷新时传 true，强制重新查一次官方接口
+		*/
+		async function loadQuota(fresh = false) {
+			const result = await fetchJson("/dsh-key-usage/quota" + (fresh ? "?fresh=1" : ""));
+			return result === null ? null : result.providers;
+		}
+		function loadSummary() {
+			return fetchJson("/dsh-key-usage/summary");
+		}
+		function loadSessions(limit = 300) {
+			return fetchJson("/dsh-key-usage/sessions?limit=" + String(limit));
+		}
+		/** 单会话详情的请求路径：界面要按同一串查失败原因，所以路径由这里统一拼。 */
+		function sessionDetailPath(id) {
+			return "/dsh-key-usage/session?id=" + encodeURIComponent(id);
+		}
+		/** 单会话详情：服务端只折叠这一个会话（列表已折叠过时直接吃缓存）。 */
+		function loadSessionDetail(id) {
+			return fetchJson(sessionDetailPath(id));
+		}
+		function loadProjects(limit = 200) {
+			return fetchJson("/dsh-key-usage/projects?limit=" + String(limit));
+		}
+		function loadModels(limit = 200) {
+			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
+		}
+		/** 计费规则面板的服务端对照：内置价目（含逐条规则）、错峰状态、缺口覆盖度、两个 YAML 文件与解析问题。 */
+		function loadPricing() {
+			return fetchJson("/dsh-key-usage/pricing");
+		}
+		/** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
+		const PRICING_RULES_PATH = "/dsh-key-usage/pricing/rules";
+		/**
+		* 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
+		*
+		* 返回 null = 请求本身失败（原因记在 `failureReasonOf(PRICING_RULES_PATH)`）；
+		* 返回 `{ok:false, error}` = 服务端拒绝了这次写入（中文原因可直接展示）。
+		*/
+		async function savePricingRules(rules) {
+			try {
+				const response = await fetch(PRICING_RULES_PATH, {
+					method: "POST",
+					headers: {
+						Accept: "application/json",
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({ rules })
+				});
+				if (!response.ok) {
+					failureReasons.set(PRICING_RULES_PATH, failureTextOf(response.status));
+					return null;
+				}
+				failureReasons.delete(PRICING_RULES_PATH);
+				return await response.json();
+			} catch (error) {
+				failureReasons.set(PRICING_RULES_PATH, "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				return null;
+			}
+		}
+		//#endregion
 		//#region src/client/format.ts
 		/** 展示层格式化：全部与统计口径无关，只负责把数字变成界面文本。 */
 		/** 本地日历 `YYYY-MM-DD`。 */
@@ -64,683 +208,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return `${Math.round(minutes / 1440)} 天前`;
 		}
 		//#endregion
-		//#region src/client/pricing.ts
-		const COST_SOURCE_LABELS = {
-			official: "官方",
-			rule: "自定",
-			catalog: "官方价",
-			estimate: "估算",
-			none: "—"
-		};
-		/** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
-		const COST_SOURCE_HINTS = {
-			official: "官方：台账记录的厂商账单金额",
-			rule: "自定：按你维护的计费规则算出",
-			catalog: "官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）",
-			estimate: "估算：按台账反推的均价推算",
-			none: "没有价格依据（未配置规则，台账也无成本数据）"
-		};
-		const UNIT_LABELS = {
-			perMillionTokens: "每百万 tokens",
-			perThousandTokens: "每千 tokens",
-			perCall: "每次调用"
-		};
-		const UNIT_OPTIONS = [
-			"perMillionTokens",
-			"perThousandTokens",
-			"perCall"
-		];
-		const CURRENCY_OPTIONS = ["CNY", "USD"];
-		const EMPTY_CONFIG = {
-			version: 1,
-			currency: "CNY",
-			rules: []
-		};
-		/** 币种符号；未知币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
-		function currencySymbolOf(currency) {
-			if (currency === "CNY") return "¥";
-			if (currency === "USD") return "$";
-			return currency + " ";
-		}
-		/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
-		const AMOUNT_DIGITS = 2;
-		/** 金额文本：币种符号 + 两位小数（规则面板与预算都用它，避免两处精度不一致）。 */
-		function moneyTextOf(currency, amount) {
-			return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS);
-		}
-		/**
-		* 取设置服务里的一段：宿主 `configForms` / `describe()` 给的是**命名空间根对象**
-		* （`{ pricing: …, budget: … }`），字段在它下面；没有该键时整份值就是这一段（两种形状都能读）。
-		* 与服务端 pricing.ts 的 `settingsSectionOf` 同一判定。
-		*/
-		function settingsSectionOf(value, key) {
-			if (value === null || typeof value !== "object") return value;
-			const record = value;
-			return key in record ? record[key] : value;
-		}
-		/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
-		function fetchedDaysAgo(fetchedAt, now = /* @__PURE__ */ new Date()) {
-			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fetchedAt.trim());
-			if (match === null) return null;
-			const fetched = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
-			if (!Number.isFinite(fetched)) return null;
-			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-			return Math.max(0, Math.round((today - fetched) / 864e5));
-		}
-		/** 最新一次抓取距今的天数；没有可解析的日期、或还没超过阈值时返回 null。 */
-		function catalogStaleDays(sources, now = /* @__PURE__ */ new Date()) {
-			const days = sources.map((entry) => fetchedDaysAgo(entry.fetchedAt, now)).filter((day) => day !== null);
-			if (days.length === 0) return null;
-			const newest = Math.min(...days);
-			return newest > 90 ? newest : null;
-		}
-		function ruleKeyOf(rule) {
-			return rule.provider + "|" + rule.model;
-		}
-		function ruleLabelOf(rule) {
-			const model = rule.model === "*" ? "全部模型" : rule.model;
-			return (rule.provider === "*" ? "任意通道" : rule.provider) + " · " + model;
-		}
-		/** 错峰窗口文案：`09:00–12:00、14:00–18:00`；带 `days` 的窗口补一个「（工作日）」之类的后缀。 */
-		function offPeakWindowsText(rule) {
-			if (rule.offPeak === null || rule.offPeak.windows.length === 0) return "";
-			return rule.offPeak.windows.map((window) => {
-				const base = window.from + "–" + window.to;
-				const suffix = dayScopeSuffixOf(window.days);
-				return suffix === "" ? base : base + "（" + suffix + "）";
-			}).join("、");
-		}
-		const DAY_SCOPE_OPTIONS = [
-			"every",
-			"weekday",
-			"weekend"
-		];
-		const DAY_SCOPE_LABELS = {
-			every: "每天",
-			weekday: "仅工作日",
-			weekend: "仅周末"
-		};
-		/** 「每天」刻意映射成 `days` 缺省（而不是 [1..7]），保证升级前的规则原样往返。 */
-		const DAY_SCOPE_DAYS = {
-			every: void 0,
-			weekday: [
-				1,
-				2,
-				3,
-				4,
-				5
-			],
-			weekend: [6, 7]
-		};
-		/** 已保存的 `days` → 编辑器取值；非法值一律当「每天」（与服务端容错口径一致）。 */
-		function dayScopeOf(days) {
-			const normalized = normalizeDays(days);
-			if (normalized === void 0) return "every";
-			const key = normalized.join(",");
-			if (key === "1,2,3,4,5") return "weekday";
-			if (key === "6,7") return "weekend";
-			return "every";
-		}
-		/** `days` 的简短说明；缺省或非三名组合返回空串（表示「每天」）。 */
-		function dayScopeSuffixOf(days) {
-			const scope = dayScopeOf(days);
-			return scope === "every" ? "" : DAY_SCOPE_LABELS[scope];
-		}
-		/**
-		* `days` 归一：只接受 1–7 的整数、去重排序；非法值返回 undefined = 每天适用。
-		* 与服务端 normalizeDays 同一口径：非法值不整段作废，避免金额突然变高。
-		*/
-		function normalizeDays(raw) {
-			if (!Array.isArray(raw)) return void 0;
-			const days = /* @__PURE__ */ new Set();
-			for (const entry of raw) {
-				if (typeof entry !== "number" || !Number.isInteger(entry) || entry < 1 || entry > 7) continue;
-				days.add(entry);
-			}
-			if (days.size === 0) return void 0;
-			return [...days].sort((first, second) => first - second);
-		}
-		function toNumber(value, fallback) {
-			return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : fallback;
-		}
-		function toText(value, fallback) {
-			return typeof value === "string" && value.trim() !== "" ? value.trim() : fallback;
-		}
-		function ratesOf(raw, fallback) {
-			return {
-				input: toNumber(raw.input, fallback.input),
-				cacheRead: toNumber(raw.cacheRead, fallback.cacheRead),
-				cacheWrite: toNumber(raw.cacheWrite, fallback.cacheWrite),
-				output: toNumber(raw.output, fallback.output)
-			};
-		}
-		function windowsOf(raw) {
-			if (!Array.isArray(raw)) return [];
-			const windows = [];
-			for (const entry of raw) {
-				if (typeof entry !== "object" || entry === null) continue;
-				const from = entry.from;
-				const to = entry.to;
-				if (typeof from !== "string" || typeof to !== "string") continue;
-				if (!/^\d{1,2}:\d{2}$/.test(from.trim()) || !/^\d{1,2}:\d{2}$/.test(to.trim())) continue;
-				const days = normalizeDays(entry.days);
-				windows.push({
-					from: from.trim(),
-					to: to.trim(),
-					...days === void 0 ? {} : { days }
-				});
-			}
-			return windows;
-		}
-		/**
-		* 设置服务返回的值做一次防御式归一：
-		* 宿主 schema 会把缺省的 `offPeak` 补成 `{windows: [], …}`，那种空壳要还原成「无错峰」。
-		*/
-		function normalizeClientPricing(value) {
-			const section = settingsSectionOf(value, "pricing");
-			if (typeof section !== "object" || section === null) return EMPTY_CONFIG;
-			const record = section;
-			const currency = toText(record.currency, EMPTY_CONFIG.currency);
-			const rules = [];
-			for (const entry of Array.isArray(record.rules) ? record.rules : []) {
-				if (typeof entry !== "object" || entry === null) continue;
-				const raw = entry;
-				const base = ratesOf(raw, {
-					input: 0,
-					cacheRead: 0,
-					cacheWrite: 0,
-					output: 0
-				});
-				let offPeak = null;
-				if (typeof raw.offPeak === "object" && raw.offPeak !== null) {
-					const offPeakRaw = raw.offPeak;
-					const windows = windowsOf(offPeakRaw.windows);
-					if (windows.length > 0) offPeak = {
-						...ratesOf(offPeakRaw, base),
-						windows
-					};
-				}
-				rules.push({
-					provider: toText(raw.provider, "*"),
-					model: toText(raw.model, "*"),
-					unit: UNIT_OPTIONS.includes(raw.unit) ? raw.unit : "perMillionTokens",
-					currency: toText(raw.currency, currency),
-					...base,
-					offPeak,
-					note: typeof raw.note === "string" ? raw.note : ""
-				});
-			}
-			return {
-				version: typeof record.version === "number" ? record.version : 1,
-				currency,
-				rules
-			};
-		}
-		/** 编辑器产出的规则必须只含 JSON 形状：写盘走宿主，`undefined` 会被拒绝。 */
-		function cleanRuleForWrite(rule) {
-			const values = {
-				provider: rule.provider.trim() === "" ? "*" : rule.provider.trim(),
-				model: rule.model.trim() === "" ? "*" : rule.model.trim(),
-				unit: rule.unit,
-				currency: rule.currency,
-				input: rule.input,
-				cacheRead: rule.cacheRead,
-				cacheWrite: rule.cacheWrite,
-				output: rule.output,
-				note: rule.note
-			};
-			if (rule.offPeak !== null && rule.offPeak.windows.length > 0) values.offPeak = {
-				windows: rule.offPeak.windows.map((window) => {
-					const days = normalizeDays(window.days);
-					return days === void 0 ? {
-						from: window.from,
-						to: window.to
-					} : {
-						from: window.from,
-						to: window.to,
-						days
-					};
-				}),
-				input: rule.offPeak.input,
-				cacheRead: rule.offPeak.cacheRead,
-				cacheWrite: rule.offPeak.cacheWrite,
-				output: rule.offPeak.output
-			};
-			return values;
-		}
-		function configForWrite(config) {
-			return {
-				version: config.version,
-				currency: config.currency,
-				rules: config.rules.map(cleanRuleForWrite)
-			};
-		}
-		/** 新增规则的初始值：全 0 单价会算成免费，因此先挡在保存之前（见编辑器校验）。 */
-		function blankRule(config) {
-			return {
-				provider: "*",
-				model: "*",
-				unit: "perMillionTokens",
-				currency: config.currency,
-				input: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-				output: 0,
-				offPeak: null,
-				note: ""
-			};
-		}
-		/** 导入：接受整份配置（`{version,currency,rules}`）或裸规则数组；解析失败给出中文原因。 */
-		function parseImportedPricing(text) {
-			let parsed;
-			try {
-				parsed = JSON.parse(text);
-			} catch (error) {
-				return {
-					config: null,
-					error: "不是合法 JSON：" + (error instanceof Error ? error.message : String(error))
-				};
-			}
-			const candidate = Array.isArray(parsed) ? {
-				version: 1,
-				currency: EMPTY_CONFIG.currency,
-				rules: parsed
-			} : parsed;
-			if (typeof candidate !== "object" || candidate === null) return {
-				config: null,
-				error: "顶层必须是对象或规则数组"
-			};
-			const config = normalizeClientPricing(candidate);
-			if (config.rules.length === 0) return {
-				config: null,
-				error: "没有解析出任何规则（检查 provider / model / 单价字段）"
-			};
-			return {
-				config,
-				error: null
-			};
-		}
-		/** 单价全为 0 的规则会把成本算成免费，保存前必须拦住。 */
-		function ruleProblemOf(rule) {
-			const values = [
-				rule.input,
-				rule.cacheRead,
-				rule.cacheWrite,
-				rule.output
-			];
-			if (values.every((value) => value === 0)) return "四档单价全为 0 会算成免费，至少填一个";
-			if (values.some((value) => !Number.isFinite(value) || value < 0)) return "单价必须是不小于 0 的数字";
-			if (rule.offPeak !== null && rule.offPeak.windows.length === 0) return "错峰时段至少要有一个窗口，或整段留空";
-			return null;
-		}
-		//#endregion
-		//#region src/client/budget.ts
-		/**
-		* 预算与告警的客户端视图模型：阈值形状、归一化、文案与配色。
-		*
-		* 阈值与计费规则同住宿主设置服务的 `dsh-key-usage` 命名空间（读写都经 `pricingSettings`），
-		* 判定在服务端（`src/server/budget.ts`），界面只负责把结论说清楚、把阈值编辑好。
-		*/
-		const EMPTY_BUDGET_THRESHOLDS = {
-			dailyTokens: 0,
-			monthlyTokens: 0,
-			monthlyCost: []
-		};
-		/** 与服务端 budget.ts 的 NEAR_PERCENT 同一口径：使用率到达这条线算「接近上限」。 */
-		const NEAR_PERCENT = 80;
-		function limitOr(value) {
-			return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
-		}
-		function textOr(value, fallback) {
-			return typeof value === "string" && value.trim() !== "" ? value.trim() : fallback;
-		}
-		/** 设置服务返回的值做防御式归一：认不出的字段一律当「不启用」，不猜数值。 */
-		function normalizeClientBudget(value) {
-			const record = settingsSectionOf(value, "budget");
-			if (record === null || typeof record !== "object") return EMPTY_BUDGET_THRESHOLDS;
-			const fields = record;
-			const monthlyCost = [];
-			for (const entry of Array.isArray(fields.monthlyCost) ? fields.monthlyCost : []) {
-				if (entry === null || typeof entry !== "object") continue;
-				const candidate = entry;
-				const amount = limitOr(candidate.amount);
-				if (amount === 0) continue;
-				monthlyCost.push({
-					currency: textOr(candidate.currency, "CNY"),
-					amount
-				});
-			}
-			return {
-				dailyTokens: limitOr(fields.dailyTokens),
-				monthlyTokens: limitOr(fields.monthlyTokens),
-				monthlyCost
-			};
-		}
-		/**
-		* 编辑器草稿 → 写盘形状：金额为 0（= 不启用）与空币种的条目丢掉，
-		* 同币种只保留第一条 —— 成本是逐币种独立比较，重复配置没有意义。
-		*/
-		function budgetThresholdsForWrite(thresholds) {
-			const seen = /* @__PURE__ */ new Set();
-			const monthlyCost = [];
-			for (const candidate of thresholds.monthlyCost) {
-				const currency = candidate.currency.trim();
-				const amount = limitOr(candidate.amount);
-				if (currency === "" || amount === 0 || seen.has(currency)) continue;
-				seen.add(currency);
-				monthlyCost.push({
-					currency,
-					amount
-				});
-			}
-			return {
-				dailyTokens: limitOr(thresholds.dailyTokens),
-				monthlyTokens: limitOr(thresholds.monthlyTokens),
-				monthlyCost
-			};
-		}
-		/** 条目名称：今日 Tokens / 本月 Tokens / 本月 CNY 成本。 */
-		function budgetEntryNameOf(entry) {
-			if (entry.kind === "dailyTokens") return "今日 Tokens";
-			if (entry.kind === "monthlyTokens") return "本月 Tokens";
-			return "本月 " + (entry.currency ?? "") + " 成本";
-		}
-		/** 已用 / 上限：「3.58B / 5B」「¥61.20 / ¥100.00」。 */
-		function budgetAmountTextOf(entry) {
-			if (entry.kind === "monthlyCost") {
-				const currency = entry.currency ?? "";
-				return moneyTextOf(currency, entry.used) + " / " + moneyTextOf(currency, entry.limit);
-			}
-			return fmtTokens(entry.used) + " / " + fmtTokens(entry.limit);
-		}
-		/** 使用率文本：服务端已算到 1 位小数，这里只补百分号。 */
-		function budgetPercentTextOf(percent) {
-			return percent.toFixed(1) + "%";
-		}
-		/** 单条的档位（与服务端 levelOf 同一套阈值，供逐条配色）。 */
-		function budgetLevelOf(percent) {
-			if (percent >= 100) return "over";
-			if (percent >= NEAR_PERCENT) return "near";
-			return "ok";
-		}
-		/** 进度条颜色：只在本处用对错语义色，正常档用强调色。 */
-		function budgetBarColorOf(level) {
-			if (level === "over") return "var(--dsw-alias-state-error-primary, #e05a5a)";
-			if (level === "near") return "var(--dsw-alias-state-warn-primary, #e0a13c)";
-			return "var(--dsw-alias-state-accent-primary, #5b8cff)";
-		}
-		/** 最严重的那一项：横幅只报一条，先说最要紧的。 */
-		function worstBudgetEntryOf(entries) {
-			const rank = {
-				ok: 0,
-				near: 1,
-				over: 2
-			};
-			let worst = null;
-			for (const entry of entries) if (worst === null || rank[budgetLevelOf(entry.percent)] > rank[budgetLevelOf(worst.percent)]) worst = entry;
-			return worst;
-		}
-		/**
-		* 横幅文案：「本月 Tokens 已用 3.58B / 5B（71.6%），接近上限」/「…，已超出上限」。
-		* 全部都在提醒线以内时返回 null（界面据此完全不渲染横幅）。
-		*/
-		function budgetAlertTextOf(response) {
-			const entry = worstBudgetEntryOf(response.entries);
-			if (entry === null) return null;
-			const level = budgetLevelOf(entry.percent);
-			if (level === "ok") return null;
-			const verdict = level === "near" ? "接近上限" : entry.percent > 100 ? "已超出上限" : "已用满上限";
-			return budgetEntryNameOf(entry) + "已用 " + budgetAmountTextOf(entry) + "（" + budgetPercentTextOf(entry.percent) + "），" + verdict;
-		}
-		//#endregion
-		//#region src/client/pricingSettings.ts
-		/**
-		* 计费规则与预算阈值的读写通道：把宿主的配置表单服务（`ctx.configForms`）包成一个 React 可订阅的 store。
-		*
-		* 为什么不用自己的 HTTP 路由写文件：插件只允许写 `quota-snapshots.json` 一个文件。
-		* 命名空间就是本插件在 profile 里的条目 id（`dsh-key-usage`），
-		* 写入由宿主的 config-editor 落到当前 profile 的 cordis patch 上，插件全程不碰文件系统。
-		* 两段值（`pricing` / `budget`）同住一个命名空间，因此共用这一条通路，各自只写自己那一段。
-		*/
-		function createPricingSettings() {
-			let state = {
-				status: "loading",
-				writable: false,
-				config: EMPTY_CONFIG,
-				budget: EMPTY_BUDGET_THRESHOLDS,
-				error: null
-			};
-			let form = null;
-			let unsubscribe = null;
-			const listeners = /* @__PURE__ */ new Set();
-			const publish = (next) => {
-				if (next.status === state.status && next.writable === state.writable && next.error === state.error && next.config === state.config && next.budget === state.budget) return;
-				state = next;
-				for (const listener of listeners) listener();
-			};
-			const sync = () => {
-				if (form === null) {
-					publish({
-						status: "unavailable",
-						writable: false,
-						config: state.config,
-						budget: state.budget,
-						error: state.error
-					});
-					return;
-				}
-				const snapshot = form.getSnapshot();
-				const ready = snapshot.status === "ready" && snapshot.value !== void 0;
-				publish({
-					status: ready ? "ready" : snapshot.status === "unavailable" ? "unavailable" : "loading",
-					writable: snapshot.writable === true,
-					config: ready ? normalizeClientPricing(snapshot.value) : state.config,
-					budget: ready ? normalizeClientBudget(snapshot.value) : state.budget,
-					error: state.error
-				});
-			};
-			const write = async (ops, failureNote) => {
-				if (form === null) {
-					publish({
-						...state,
-						error: failureNote
-					});
-					return false;
-				}
-				publish({
-					...state,
-					error: null
-				});
-				let accepted = false;
-				try {
-					accepted = await form.mutate(ops);
-				} catch (error) {
-					publish({
-						...state,
-						error: "写入失败：" + (error instanceof Error ? error.message : String(error))
-					});
-					return false;
-				}
-				if (!accepted) publish({
-					...state,
-					error: "写入被宿主拒绝（可能是配置在别处被同时修改，请重试）"
-				});
-				return accepted;
-			};
-			return {
-				store: {
-					subscribe(listener) {
-						listeners.add(listener);
-						return () => {
-							listeners.delete(listener);
-						};
-					},
-					getSnapshot: () => state
-				},
-				attach(next) {
-					unsubscribe?.();
-					unsubscribe = null;
-					form = next;
-					if (form !== null) {
-						unsubscribe = form.subscribe(sync);
-						publish({
-							...state,
-							error: null
-						});
-					}
-					sync();
-					return () => {
-						unsubscribe?.();
-						unsubscribe = null;
-						form = null;
-					};
-				},
-				save(config) {
-					return write([{
-						op: "set",
-						path: ["pricing"],
-						value: configForWrite(config)
-					}], "宿主没有提供配置表单服务，规则只能导出 / 导入，无法保存");
-				},
-				saveBudget(thresholds) {
-					return write([{
-						op: "set",
-						path: ["budget"],
-						value: budgetThresholdsForWrite(thresholds)
-					}], "宿主没有提供配置表单服务，预算阈值无法保存");
-				},
-				isServed: () => state.status !== "unavailable",
-				noteError(message) {
-					publish({
-						...state,
-						error: message
-					});
-				}
-			};
-		}
-		/**
-		* 进程内单例：插件在页面里只有一个实例，index.tsx 在 apply 时把它接到 `configForms` 上，
-		* 组件用 useSyncExternalStore 订阅即可（避免把服务对象一层层透传进 React 树）。
-		*/
-		const pricingSettings = createPricingSettings();
-		//#endregion
-		//#region src/client/UsageIcon.tsx
-		function UsageIcon({ size = 18 }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-				width: size,
-				height: size,
-				viewBox: "0 0 16 16",
-				fill: "none",
-				"aria-hidden": "true",
-				focusable: "false",
-				style: { display: "block" },
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
-						x: "2.6",
-						y: "8.8",
-						width: "2.6",
-						height: "4.2",
-						rx: "0.7",
-						fill: "currentColor"
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
-						x: "6.7",
-						y: "5.6",
-						width: "2.6",
-						height: "7.4",
-						rx: "0.7",
-						fill: "currentColor"
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
-						x: "10.8",
-						y: "2.8",
-						width: "2.6",
-						height: "10.2",
-						rx: "0.7",
-						fill: "currentColor"
-					})
-				]
-			});
-		}
-		//#endregion
-		//#region src/client/api.ts
-		/**
-		* 最近一次请求失败的原因，按路径记住。
-		* 空态文案需要能指向「怎么做」——最常见的失败是新端点 404（服务端代码要重启宿主才生效）。
-		*/
-		const failureReasons = /* @__PURE__ */ new Map();
-		function failureReasonOf(path) {
-			return failureReasons.get(path) ?? null;
-		}
-		async function fetchJson(path) {
-			try {
-				const response = await fetch(path, { headers: { Accept: "application/json" } });
-				if (!response.ok) {
-					failureReasons.set(path, response.status === 404 ? "HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）" : "HTTP " + String(response.status));
-					return null;
-				}
-				failureReasons.delete(path);
-				return await response.json();
-			} catch (error) {
-				failureReasons.set(path, "请求失败：" + (error instanceof Error ? error.message : String(error)));
-				return null;
-			}
-		}
-		async function loadChannels() {
-			const result = await fetchJson("/dsh-key-usage/channels");
-			return result === null ? null : result.channels;
-		}
-		async function loadUsage(from, to, provider) {
-			const params = new URLSearchParams({
-				from,
-				to
-			});
-			if (provider !== "ALL") params.set("provider", provider);
-			return fetchJson("/dsh-key-usage/usage?" + params.toString());
-		}
-		async function loadHeatmap() {
-			const result = await fetchJson("/dsh-key-usage/heatmap");
-			return result === null ? null : result.days;
-		}
-		/**
-		* 余额与订阅窗口：服务端实时优先、失败回落本机快照。
-		* @param fresh - 用户手动刷新时传 true，强制重新查一次官方接口
-		*/
-		async function loadQuota(fresh = false) {
-			const result = await fetchJson("/dsh-key-usage/quota" + (fresh ? "?fresh=1" : ""));
-			return result === null ? null : result.providers;
-		}
-		function loadSummary() {
-			return fetchJson("/dsh-key-usage/summary");
-		}
-		function loadSessions(limit = 300) {
-			return fetchJson("/dsh-key-usage/sessions?limit=" + String(limit));
-		}
-		/** 单会话详情的请求路径：界面要按同一串查失败原因，所以路径由这里统一拼。 */
-		function sessionDetailPath(id) {
-			return "/dsh-key-usage/session?id=" + encodeURIComponent(id);
-		}
-		/** 单会话详情：服务端只折叠这一个会话（列表已折叠过时直接吃缓存）。 */
-		function loadSessionDetail(id) {
-			return fetchJson(sessionDetailPath(id));
-		}
-		function loadProjects(limit = 200) {
-			return fetchJson("/dsh-key-usage/projects?limit=" + String(limit));
-		}
-		function loadModels(limit = 200) {
-			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
-		}
-		/** 计费规则面板的服务端对照：内置模板、错峰状态与近 30 天覆盖度。 */
-		function loadPricing() {
-			return fetchJson("/dsh-key-usage/pricing");
-		}
-		/** 预算与告警：今日 / 本月读数对阈值（未配置阈值时 `enabled:false`，界面不渲染）。 */
-		function loadBudget() {
-			return fetchJson("/dsh-key-usage/budget");
-		}
-		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);padding:16px 20px 32px;font-size:13.5px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-size:18px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit;font-size:11.5px}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px;font-size:13px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}.d29QNW_budgetBanner{background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:10px;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-bottom:12px;padding:8px 14px;font-size:12px;line-height:1.6;display:flex}.d29QNW_budgetBannerNear{border:1px solid var(--dsw-alias-state-warn-primary,#e0a13c);color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_budgetBannerOver{border:1px solid var(--dsw-alias-state-error-primary,#e05a5a);color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_budgetBannerText{flex:320px;min-width:0}.d29QNW_budgetBannerAction{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0;font-size:11.5px;text-decoration:underline}.d29QNW_budgetBannerAction:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:1180px){.d29QNW_cardGrid6{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:720px){.d29QNW_cardGrid6,.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:11.5px}.d29QNW_statValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:20px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:4px;font-size:11.5px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:4px 0 10px;font-size:12.5px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:18px 0 4px;font-size:11.5px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.d29QNW_table td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px;font-size:12px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{opacity:.8;margin-left:3px;font-size:8px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;font-size:12px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:11px}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-bottom:10px;font-size:11.5px}.d29QNW_legend{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;font-size:10.5px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:26px;padding-top:14px;font-size:11.5px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;line-height:1.5;position:fixed}.d29QNW_tipTitle{margin-bottom:2px;font-size:12px;font-weight:650}.d29QNW_tipSub{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px;font-size:11.5px}.d29QNW_tipRow{color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;font-size:11px;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;font-size:11px;display:flex}";
+		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);padding:16px 20px 32px;font-size:13.5px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-size:18px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit;font-size:11.5px}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px;font-size:13px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:1180px){.d29QNW_cardGrid6{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:720px){.d29QNW_cardGrid6,.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:11.5px}.d29QNW_statValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:20px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:4px;font-size:11.5px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:4px 0 10px;font-size:12.5px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:18px 0 4px;font-size:11.5px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.d29QNW_table td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px;font-size:12px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{opacity:.8;margin-left:3px;font-size:8px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;font-size:12px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:11px}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-bottom:10px;font-size:11.5px}.d29QNW_legend{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;font-size:10.5px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:26px;padding-top:14px;font-size:11.5px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;line-height:1.5;position:fixed}.d29QNW_tipTitle{margin-bottom:2px;font-size:12px;font-weight:650}.d29QNW_tipSub{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px;font-size:11.5px}.d29QNW_tipRow{color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;font-size:11px;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;font-size:11px;display:flex}";
 		const tagId$8 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
@@ -757,11 +226,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
 			"blockLabel": "d29QNW_blockLabel",
-			"budgetBanner": "d29QNW_budgetBanner",
-			"budgetBannerAction": "d29QNW_budgetBannerAction",
-			"budgetBannerNear": "d29QNW_budgetBannerNear",
-			"budgetBannerOver": "d29QNW_budgetBannerOver",
-			"budgetBannerText": "d29QNW_budgetBannerText",
 			"card": "d29QNW_card",
 			"cardGrid3": "d29QNW_cardGrid3",
 			"cardGrid4": "d29QNW_cardGrid4",
@@ -960,7 +424,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$7 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px;font-size:10.5px;font-weight:500}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px;font-size:12.5px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.tXjxsq_keyEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.tXjxsq_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;font-size:10.5px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_budgetRow{flex-wrap:wrap;align-items:center;gap:6px 18px;margin-bottom:14px;display:flex}.tXjxsq_budgetLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:12.5px;font-weight:600}.tXjxsq_budgetItem{align-items:center;gap:7px;font-size:11.5px;display:inline-flex}.tXjxsq_budgetName{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_budgetBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:96px;height:5px;overflow:hidden}.tXjxsq_budgetBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_budgetValue{color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums}.tXjxsq_budgetValue.tXjxsq_warn{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-weight:600}.tXjxsq_budgetValue.tXjxsq_danger{color:var(--dsw-alias-state-error-primary,#e05a5a);font-weight:600}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{flex-direction:column;flex-shrink:0;gap:3px;display:flex}.tXjxsq_heatWeekdays span{color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;font-size:9.5px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0;font-size:10px}";
+		const css$7 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px;font-size:10.5px;font-weight:500}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px;font-size:12.5px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.tXjxsq_keyEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.tXjxsq_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;font-size:10.5px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{flex-direction:column;flex-shrink:0;gap:3px;display:flex}.tXjxsq_heatWeekdays span{color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;font-size:9.5px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0;font-size:10px}";
 		const tagId$7 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
@@ -975,12 +439,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$7
 		});
 		var overview_module_css_default = {
-			"budgetBar": "tXjxsq_budgetBar",
-			"budgetItem": "tXjxsq_budgetItem",
-			"budgetLabel": "tXjxsq_budgetLabel",
-			"budgetName": "tXjxsq_budgetName",
-			"budgetRow": "tXjxsq_budgetRow",
-			"budgetValue": "tXjxsq_budgetValue",
 			"cellKey": "tXjxsq_cellKey",
 			"clickable": "tXjxsq_clickable",
 			"danger": "tXjxsq_danger",
@@ -1209,8 +667,406 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			] });
 		}
 		//#endregion
+		//#region src/client/pricing.ts
+		/**
+		* 客户端计费规则视图模型：响应类型、文案、表单校验与 YAML 文本生成。
+		*
+		* 规则的唯一事实来源是用户 YAML 文件（路径见 `/pricing` 的 `files.user.path`）：客户端只读 `/pricing`、
+		* 只经 `POST /pricing/rules` 整批提交，**不自己写文件**（服务端写盘时会按 provider|model 继承旧条目的
+		* unit / offPeak / note，客户端拼 YAML 反而会把这三项丢掉）。
+		*
+		* 面板表单只编辑 通道 / 模型 / 币种 / 四档单价；unit（计价单位）、offPeak（错峰窗口）、note（备注）
+		* 只由用户在 YAML 里维护。这里另外负责生成给人 / agent 看的 YAML 文本（规则模板、单条片段）
+		* 与「让 DSH 帮我配」的提示词 —— 生成物必须是服务端受限 YAML 子集能读回的写法。
+		* 定价算法在服务端（src/server/pricing.ts），界面不重复实现。
+		*/
+		const COST_SOURCE_LABELS = {
+			official: "官方",
+			rule: "自定",
+			catalog: "官方价",
+			estimate: "估算",
+			none: "—"
+		};
+		/** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
+		const COST_SOURCE_HINTS = {
+			official: "官方：台账记录的厂商账单金额",
+			rule: "自定：按你维护的计费规则算出",
+			catalog: "官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）",
+			estimate: "估算：按台账反推的均价推算",
+			none: "没有价格依据（未配置规则，台账也无成本数据）"
+		};
+		const UNIT_LABELS = {
+			perMillionTokens: "每百万 tokens",
+			perThousandTokens: "每千 tokens",
+			perCall: "每次调用"
+		};
+		const CURRENCY_OPTIONS = ["CNY", "USD"];
+		const RULES_ORIGIN_TEXT = {
+			file: "规则来自你的 YAML 文件",
+			legacy: "规则还是旧设置服务里的历史值，还没落盘成 YAML —— 在面板上保存一次就会写进文件",
+			none: "还没有用户规则：成本按内置官方价目与台账均价算"
+		};
+		/** 表单外的三个字段只能在 YAML 里维护，界面上必须有一句明示，否则用户以为保存会把它们清掉。 */
+		const FORM_EXTRAS_HINT = "错峰价、计价单位、备注由 YAML 维护；在这里保存不会清掉它们。";
+		/** 表单缺省单位：列表里只有「非缺省」才提示单位设置，避免每行都挂一句。 */
+		const DEFAULT_UNIT = "perMillionTokens";
+		/** 币种符号；未知币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
+		function currencySymbolOf(currency) {
+			if (currency === "CNY") return "¥";
+			if (currency === "USD") return "$";
+			return currency + " ";
+		}
+		/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
+		const AMOUNT_DIGITS = 2;
+		/** 金额文本：币种符号 + 两位小数（多处展示共用，避免精度不一致）。 */
+		function moneyTextOf(currency, amount) {
+			return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS);
+		}
+		/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
+		function fetchedDaysAgo(fetchedAt, now = /* @__PURE__ */ new Date()) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fetchedAt.trim());
+			if (match === null) return null;
+			const fetched = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
+			if (!Number.isFinite(fetched)) return null;
+			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+			return Math.max(0, Math.round((today - fetched) / 864e5));
+		}
+		/** 最新一次抓取距今的天数；没有可解析的日期、或还没超过阈值时返回 null。 */
+		function catalogStaleDays(sources, now = /* @__PURE__ */ new Date()) {
+			const days = sources.map((entry) => fetchedDaysAgo(entry.fetchedAt, now)).filter((day) => day !== null);
+			if (days.length === 0) return null;
+			const newest = Math.min(...days);
+			return newest > 90 ? newest : null;
+		}
+		function ruleKeyOf(rule) {
+			return rule.provider + "|" + rule.model;
+		}
+		function ruleLabelOf(rule) {
+			const model = rule.model === "*" ? "全部模型" : rule.model;
+			return (rule.provider === "*" ? "任意通道" : rule.provider) + " · " + model;
+		}
+		/** 错峰窗口文案：`09:00–12:00、14:00–18:00`；带 `days` 的窗口补一个「（工作日）」之类的后缀。 */
+		function offPeakWindowsText(rule) {
+			if (rule.offPeak === null || rule.offPeak.windows.length === 0) return "";
+			return rule.offPeak.windows.map((window) => {
+				const base = window.from + "–" + window.to;
+				const suffix = dayScopeSuffixOf(window.days);
+				return suffix === "" ? base : base + "（" + suffix + "）";
+			}).join("、");
+		}
+		const DAY_SCOPE_LABELS = {
+			every: "每天",
+			weekday: "仅工作日",
+			weekend: "仅周末"
+		};
+		/** 已保存的 `days` → 展示取值；非法值一律当「每天」（与服务端容错口径一致）。 */
+		function dayScopeOf(days) {
+			const normalized = normalizeDays(days);
+			if (normalized === void 0) return "every";
+			const key = normalized.join(",");
+			if (key === "1,2,3,4,5") return "weekday";
+			if (key === "6,7") return "weekend";
+			return "every";
+		}
+		/** `days` 的简短说明；缺省或非三名组合返回空串（表示「每天」）。 */
+		function dayScopeSuffixOf(days) {
+			const scope = dayScopeOf(days);
+			return scope === "every" ? "" : DAY_SCOPE_LABELS[scope];
+		}
+		/**
+		* `days` 归一：只接受 1–7 的整数、去重排序；非法值返回 undefined = 每天适用。
+		* 与服务端同一口径：非法值不整段作废，避免金额突然变高。
+		*/
+		function normalizeDays(raw) {
+			if (!Array.isArray(raw)) return void 0;
+			const days = /* @__PURE__ */ new Set();
+			for (const entry of raw) {
+				if (typeof entry !== "number" || !Number.isInteger(entry) || entry < 1 || entry > 7) continue;
+				days.add(entry);
+			}
+			if (days.size === 0) return void 0;
+			return [...days].sort((first, second) => first - second);
+		}
+		/**
+		* 列表里的「只在 YAML 里维护」提示：表单只改 通道 / 模型 / 币种 / 四档单价，
+		* 但已有规则的错峰与单位仍然生效 —— 必须显式标出来，否则用户会以为这些数据丢了。
+		*/
+		function ruleExtrasTextOf(rule) {
+			const extras = [];
+			if (rule.offPeak !== null) extras.push("含错峰窗口 " + offPeakWindowsText(rule));
+			if (rule.unit !== "perMillionTokens") extras.push("含单位设置：" + UNIT_LABELS[rule.unit]);
+			return extras.length === 0 ? "" : extras.join(" · ") + " —— 只在 YAML 里编辑";
+		}
+		/** 模型 id 归一：去掉 `vendor/` 前缀并转小写（与服务端内置价目的保守匹配同一口径）。 */
+		function normalizeModelId(model) {
+			const trimmed = model.trim();
+			const slash = trimmed.lastIndexOf("/");
+			return (slash >= 0 ? trimmed.slice(slash + 1) : trimmed).toLowerCase();
+		}
+		/**
+		* 内置价目匹配（顺序与服务端一致）：
+		* 精确 → 忽略大小写 → 去 `vendor/` 前缀 → 该通道通配；不做模糊匹配。
+		*/
+		function catalogRuleFor(catalogRules, provider, model) {
+			const wantedProvider = normalizeModelId(provider);
+			const wantedModel = normalizeModelId(model);
+			const tiers = [
+				(rule) => rule.provider === provider && rule.model === model,
+				(rule) => normalizeModelId(rule.provider) === wantedProvider && normalizeModelId(rule.model) === wantedModel,
+				(rule) => normalizeModelId(rule.provider) === wantedProvider && rule.model === "*"
+			];
+			for (const matches of tiers) {
+				const hit = catalogRules.find(matches);
+				if (hit !== void 0) return hit;
+			}
+			return null;
+		}
+		/** 与服务端 matchPricingRule 同序的粗判：精确 → 通道通配 → 模型通配 → 全通配。 */
+		function matchesAnyRule(rules, provider, model) {
+			return [
+				(rule) => rule.provider === provider && rule.model === model,
+				(rule) => rule.provider === provider && rule.model === "*",
+				(rule) => rule.provider === "*" && rule.model === model,
+				(rule) => rule.provider === "*" && rule.model === "*"
+			].some((matches) => rules.some(matches));
+		}
+		/**
+		* 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目。
+		* 逐模型判定优先用 `/models` 的 `costSource`（就是成本单元格上那个角标，口径一致），
+		* 角标缺失（旧响应）时退回本地规则匹配，避免整块不显示。
+		*/
+		function unpricedModelsOf(rows, rules, catalogRules) {
+			const used = (rows ?? []).filter((row) => row.tokens > 0);
+			if (used.length === 0) return [];
+			const uncovered = used.filter((row) => {
+				if (row.costSource === "rule" || row.costSource === "official" || row.costSource === "catalog") return false;
+				return row.costSource === "estimate" || row.costSource === "none" || !matchesAnyRule(rules, row.provider, row.model) && catalogRuleFor(catalogRules, row.provider, row.model) === null;
+			});
+			const total = uncovered.reduce((sum, row) => sum + row.tokens, 0);
+			if (total <= 0) return [];
+			return uncovered.map((row) => ({
+				provider: row.provider,
+				model: row.model,
+				tokens: row.tokens,
+				share: row.tokens / total,
+				estimated: row.costSource === "estimate"
+			})).sort((first, second) => second.tokens - first.tokens);
+		}
+		/** 单价全为 0 的规则会把成本算成免费，保存前必须拦住。 */
+		function ruleProblemOf(rule) {
+			const values = [
+				rule.input,
+				rule.cacheRead,
+				rule.cacheWrite,
+				rule.output
+			];
+			if (values.every((value) => value === 0)) return "四档单价全为 0 会算成免费，至少填一个";
+			if (values.some((value) => !Number.isFinite(value) || value < 0)) return "单价必须是不小于 0 的数字";
+			if (rule.provider.trim() === "") return "通道 id 不能为空（要匹配任意通道请填 *）";
+			if (rule.model.trim() === "") return "模型 id 不能为空（要匹配该通道全部模型请填 *）";
+			return null;
+		}
+		/** 新增规则的初始值：全 0 单价会算成免费，因此先挡在保存之前（见 `ruleProblemOf`）。 */
+		function blankRule(currency) {
+			return {
+				provider: "*",
+				model: "*",
+				unit: DEFAULT_UNIT,
+				currency,
+				input: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+				output: 0,
+				offPeak: null,
+				note: ""
+			};
+		}
+		/**
+		* 提交给 `POST /pricing/rules` 的那 7 个字段。
+		* 不带 unit / offPeak / note：服务端写盘时按 provider|model 从文件旧值继承，客户端传了反而可能覆盖掉。
+		*/
+		function submittableRuleOf(rule) {
+			return {
+				provider: rule.provider.trim(),
+				model: rule.model.trim(),
+				currency: rule.currency,
+				input: rule.input,
+				cacheRead: rule.cacheRead,
+				cacheWrite: rule.cacheWrite,
+				output: rule.output
+			};
+		}
+		/** YAML 标量：字符串一律单引号（裸 `*` 会被当成别名报错），内部单引号翻倍转义。 */
+		function yamlText(value) {
+			return "'" + value.replace(/'/g, "''") + "'";
+		}
+		/** 数字不加引号；非有限值按 0 兜底（表单已经拦过，这里只保证不生成非法文本）。 */
+		function yamlNumberText(value) {
+			return Number.isFinite(value) && value >= 0 ? String(value) : "0";
+		}
+		function padOf(indent) {
+			return " ".repeat(Math.max(0, indent));
+		}
+		/** 一条规则的块映射行（不含 `- ` 前缀）；`indent` 是第一个键的缩进。 */
+		function ruleFieldLines(rule, indent) {
+			const pad = padOf(indent);
+			const lines = [
+				pad + "provider: " + yamlText(rule.provider),
+				pad + "model: " + yamlText(rule.model),
+				pad + "unit: " + yamlText(rule.unit),
+				pad + "currency: " + yamlText(rule.currency),
+				pad + "input: " + yamlNumberText(rule.input),
+				pad + "cacheRead: " + yamlNumberText(rule.cacheRead),
+				pad + "cacheWrite: " + yamlNumberText(rule.cacheWrite),
+				pad + "output: " + yamlNumberText(rule.output)
+			];
+			if (rule.note.trim() !== "") lines.push(pad + "note: " + yamlText(rule.note));
+			if (rule.offPeak !== null && rule.offPeak.windows.length > 0) {
+				lines.push(pad + "offPeak:");
+				lines.push(pad + "  windows:");
+				for (const window of rule.offPeak.windows) {
+					lines.push(pad + "    - from: " + yamlText(window.from));
+					lines.push(pad + "      to: " + yamlText(window.to));
+					const days = normalizeDays(window.days);
+					if (days !== void 0) lines.push(pad + "      days: [" + days.join(", ") + "]");
+				}
+				lines.push(pad + "  input: " + yamlNumberText(rule.offPeak.input));
+				lines.push(pad + "  cacheRead: " + yamlNumberText(rule.offPeak.cacheRead));
+				lines.push(pad + "  cacheWrite: " + yamlNumberText(rule.offPeak.cacheWrite));
+				lines.push(pad + "  output: " + yamlNumberText(rule.offPeak.output));
+			}
+			return lines;
+		}
+		/** 规则作为 `rules:` 下的一项：`- provider: …`，后续键与首键内容对齐（服务端按 2 空格层级解析）。 */
+		function ruleBlockLines(rule, indent) {
+			const [first, ...rest] = ruleFieldLines(rule, indent + 2);
+			return [padOf(indent) + "- " + first.trimStart(), ...rest];
+		}
+		/** 把若干行整段注释掉（注释行会被解析器丢弃，因此不会影响文档结构）。 */
+		function commentOut(lines) {
+			return lines.map((line) => line.trim() === "" ? "#" : "# " + line);
+		}
+		/** 下载用的文件名里不能带空格与路径分隔符：通道 / 模型 id（如 openrouter 的 `vendor/model`）要压平。 */
+		function fileSafeOf(text) {
+			return text.trim().replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "rule";
+		}
+		/** 模板 / 片段的公共注释头：讲清文件的作用与能用的写法，避免用户写出解析器不认的语法。 */
+		function headerComments(extra) {
+			return [
+				"# dsh-key-usage 计费规则（YAML 是唯一事实来源）",
+				"# 作用：这份文本用于手改或交给 agent 填价，改完保存到面板上显示的「用户规则文件」路径即可。",
+				"# 允许的写法：2 空格缩进的块映射、`- ` 块序列、单行 `key: value`、短数组 `[1, 2]`；",
+				"#            不要用 tab、花括号 `{}`、锚点 `&` / 别名 `*`、块标量 `|` / `>`、`---`。",
+				"# 四档单价顺序：输入 / 缓存读 / 缓存写 / 输出；单位缺省是每百万 tokens（unit: perMillionTokens）。",
+				"# 错峰窗口（面板表单不提供，只能在 YAML 里改）写法：",
+				"#   offPeak:",
+				"#     windows:",
+				"#       - from: '00:30'",
+				"#         to: '08:30'",
+				"#     input: 0.5",
+				"#     cacheRead: 0.05",
+				"#     cacheWrite: 0.5",
+				"#     output: 1",
+				...extra
+			];
+		}
+		/**
+		* 「下载规则模板」：注释头 + 用户近期用到的模型 ∩ 内置官方价目（价格预填）+ 没有价格依据的待填条目。
+		*
+		* 待填条目整段注释掉：写 0 会把这批用量算成免费（比「没有依据」更糟），写成 null 会被解析器判为缺字段，
+		* 所以注释占位、填好单价后删掉行首的 `# ` 才是安全路径。
+		*/
+		function buildRulesTemplateYaml(catalog, usedModels, userRules, uncovered, currency) {
+			const catalogRules = catalog?.rules ?? [];
+			const prefilled = [];
+			const seen = /* @__PURE__ */ new Set();
+			for (const used of usedModels) {
+				if (matchesAnyRule(userRules, used.provider, used.model)) continue;
+				const hit = catalogRuleFor(catalogRules, used.provider, used.model);
+				if (hit === null) continue;
+				const key = ruleKeyOf(hit);
+				if (seen.has(key)) continue;
+				seen.add(key);
+				prefilled.push(hit);
+			}
+			const body = ["version: 1", "currency: " + yamlText(currency)];
+			if (prefilled.length === 0) body.push("rules: []");
+			else {
+				body.push("rules:");
+				for (const rule of prefilled) body.push(...ruleBlockLines(rule, 2));
+			}
+			const pending = [];
+			if (uncovered.length > 0) {
+				pending.push("", "# ---- 以下模型还没有价格依据（近 30 天用到，但既没有规则也没命中内置价目）----");
+				pending.push("# 填好四档单价后，把每条开头的「# 」删掉即可；不要用 0 占位 —— 0 会把这批用量算成免费。");
+				for (const model of uncovered) {
+					pending.push("#");
+					pending.push("# " + model.provider + " | " + model.model + " —— 近 30 天 " + fmtTokens(model.tokens) + " tokens" + (model.estimated ? "（当前按台账均价估算）" : "（当前无价格依据）"));
+					pending.push(...commentOut(ruleBlockLines({
+						...blankRule(currency),
+						provider: model.provider,
+						model: model.model
+					}, 2)));
+				}
+			}
+			return {
+				text: [
+					...headerComments(["# 注意：这是整份文档。已有规则文件时不要直接覆盖，只把需要的条目粘进 rules 下（或先备份原文件）。"]),
+					"",
+					...body,
+					...pending,
+					""
+				].join("\n"),
+				prefilledCount: prefilled.length,
+				pendingCount: uncovered.length
+			};
+		}
+		/**
+		* 「单条片段」：一条规则的 YAML，缩进按 `rules:` 下的位置排好，可直接粘进用户文件。
+		* `placeholder = true` 表示这是一条还没有价格的模型（四档单价先按 0 占位，必须填完再粘）。
+		*
+		* 注意这是**片段**不是完整文档：服务端的解析器不接受「文档第一行带缩进」，
+		* 所以片段必须粘到已有文件的 `rules:` 下面，不能单独当整份规则文件用。
+		*/
+		function buildRuleSnippetYaml(rule, placeholder = false) {
+			return [
+				...placeholder ? [
+					"# 单条规则片段（该模型还没有价格依据）：把四档单价换成厂商官方价后再粘到 rules 下。",
+					"# 现在四档都是 0，直接粘进去会把这批用量算成免费。",
+					commonSnippetNotice()
+				] : ["# 单条规则片段：unit / offPeak / note 由 YAML 维护，面板保存不会改动它们。", commonSnippetNotice()],
+				...ruleBlockLines(rule, 2),
+				""
+			].join("\n");
+		}
+		/** 片段的用法说明：它不是完整文档，必须粘进 rules 下（解析器不接受首行缩进的文档）。 */
+		function commonSnippetNotice() {
+			return "# 这是片段、不是完整文档：粘到规则文件的 rules: 下面即可（缩进已按 2 空格排好）；若文件里还是 rules: []，先换成 rules: 再粘。";
+		}
+		/**
+		* 「让 DSH 帮我配」的提示词：带上目标文件绝对路径与缺口模型清单，
+		* 并明确要求核对厂商官方定价页、不要编造价格、改完刷新页面即生效。
+		*/
+		function buildAgentPrompt(input) {
+			const lines = [
+				"请帮我配置 dsh-key-usage 插件（DSH 侧边栏「使用情况」→「余额与配额」）的计费规则。",
+				"",
+				"目标文件（唯一事实来源，请直接改它）：",
+				"  " + (input.filePath ?? "(面板还没读到路径，请先确认插件服务端已重启)"),
+				"",
+				"改完刷新 DSH 页面即生效（不需要重启宿主）。面板上的「保存规则」写的也是这个文件，",
+				"所以不要另建规则文件，也不要改插件目录里的内置官方价目。",
+				"当前状态：用户规则 " + String(input.rulesCount) + " 条，内置官方价目 " + String(input.catalogEntries) + " 条。"
+			];
+			lines.push("", "现在缺价格依据的模型（近 30 天用量，按 tokens 降序，共 " + String(input.uncovered.length) + " 个）：");
+			if (input.uncovered.length === 0) lines.push("  （没有缺口：你用到的模型都已有规则或命中内置价目。可以直接结束，或复核现有价格是否过期。）");
+			else for (const model of input.uncovered) lines.push("  - " + model.provider + " | " + model.model + " —— " + fmtTokens(model.tokens) + " tokens（占缺口 " + (model.share * 100).toFixed(1) + "%）" + (model.estimated ? "｜当前按台账均价估算" : "｜当前无价格依据"));
+			lines.push("", "请按这些要求做：", "1. 逐个去厂商**官方定价页**核对四档单价（输入 / 缓存读 / 缓存写 / 输出），并在回复里给出出处链接；", "   查不到官方价的模型就明确说「查不到」，保持原样，**不要凭记忆或推测编造价格**，", "   也不要用 0 占位 —— 0 会把这批用量算成免费。", "2. 币种按官方页面原币种写（CNY / USD）；本插件不换算、不合计，金额按币种分行显示。", "3. 计价单位缺省是每百万 tokens（unit: perMillionTokens）；按次计费的通道写 perCall。", "4. 文件格式：顶层只有 version / currency / rules 三个键；rules 用 `- provider: ...` 的块序列，", "   每个字段一行、2 空格缩进、字符串加引号；不要用 tab、花括号、锚点或 `---`。", "   已存在条目的 unit / offPeak / note 不要动（错峰窗口与备注只在 YAML 里维护）。", "5. 改完告诉我：新增 / 修改了哪几条、价格出处，以及仍然查不到价格的模型。", "");
+			return lines.join("\n");
+		}
+		//#endregion
 		//#region \0dsh-css:src/client/styles/pricing.module.css.mjs
-		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHead{flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:4px;display:flex}.aymcxa_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:14px;font-weight:650}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 12px;font-size:11.5px;line-height:1.7}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fieldWide{grid-column:span 2}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_windowRow{align-items:center;gap:8px;margin-bottom:6px;display:flex}.aymcxa_windowRow input{width:84px}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_hiddenFile{display:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
+		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_filterRow{flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 6px;display:flex}.aymcxa_filterLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-right:2px;font-size:11px}.aymcxa_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:2px 10px;font-size:11px;display:inline-flex}.aymcxa_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_chip b{font-variant-numeric:tabular-nums;font-weight:600}.aymcxa_chipOn{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fileLine{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;gap:4px 18px;margin:8px 0;font-size:10.5px;display:flex}.aymcxa_pathText{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:10.5px}.aymcxa_issueBlock{color:var(--dsw-alias-state-warning-primary,#e0a13c);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-state-warning-primary,#e0a13c);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_issueHead{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_issueNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_issueList{margin:6px 0 0;padding-left:18px}.aymcxa_issueWhere{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-right:6px}.aymcxa_promptBlock{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:8px 0 10px;padding:10px 14px}.aymcxa_promptHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.7}.aymcxa_promptActions{flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;display:flex}.aymcxa_promptText{background:var(--dsw-alias-bg-layer-3,#232329);max-height:260px;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:pre-wrap;word-break:break-word;border-radius:8px;margin:0;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:1.7;overflow:auto}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_ruleExtra{margin-top:2px;font-size:10px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
 		const tagId$6 = "dsh-key-usage/pricing.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1228,6 +1084,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"actionBtn": "aymcxa_actionBtn",
 			"catalogNote": "aymcxa_catalogNote",
 			"catalogStale": "aymcxa_catalogStale",
+			"chip": "aymcxa_chip",
+			"chipOn": "aymcxa_chipOn",
 			"drawer": "aymcxa_drawer",
 			"editing": "aymcxa_editing",
 			"editor": "aymcxa_editor",
@@ -1241,18 +1099,27 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"explanationList": "aymcxa_explanationList",
 			"explanationTitle": "aymcxa_explanationTitle",
 			"field": "aymcxa_field",
-			"fieldWide": "aymcxa_fieldWide",
-			"hiddenFile": "aymcxa_hiddenFile",
+			"fileLine": "aymcxa_fileLine",
+			"filterLabel": "aymcxa_filterLabel",
+			"filterRow": "aymcxa_filterRow",
 			"infoBtn": "aymcxa_infoBtn",
 			"infoBtnActive": "aymcxa_infoBtnActive",
+			"issueBlock": "aymcxa_issueBlock",
+			"issueHead": "aymcxa_issueHead",
+			"issueList": "aymcxa_issueList",
+			"issueNote": "aymcxa_issueNote",
+			"issueWhere": "aymcxa_issueWhere",
 			"linkBtn": "aymcxa_linkBtn",
 			"offPeakChip": "aymcxa_offPeakChip",
 			"panel": "aymcxa_panel",
-			"panelHead": "aymcxa_panelHead",
 			"panelHint": "aymcxa_panelHint",
-			"panelNote": "aymcxa_panelNote",
-			"panelTitle": "aymcxa_panelTitle",
+			"pathText": "aymcxa_pathText",
 			"primary": "aymcxa_primary",
+			"promptActions": "aymcxa_promptActions",
+			"promptBlock": "aymcxa_promptBlock",
+			"promptHead": "aymcxa_promptHead",
+			"promptText": "aymcxa_promptText",
+			"ruleExtra": "aymcxa_ruleExtra",
 			"ruleName": "aymcxa_ruleName",
 			"ruleNote": "aymcxa_ruleNote",
 			"ruleTable": "aymcxa_ruleTable",
@@ -1279,7 +1146,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"toolbar": "aymcxa_toolbar",
 			"toolbarSpacer": "aymcxa_toolbarSpacer",
 			"warning": "aymcxa_warning",
-			"windowRow": "aymcxa_windowRow",
 			"worthList": "aymcxa_worthList",
 			"worthMeta": "aymcxa_worthMeta"
 		};
@@ -1305,7 +1171,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function OverviewTab(props) {
 			const { channels, summary } = props;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-				props.budget !== null && props.budget.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BudgetRow, { budget: props.budget }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.groupLabel,
 					children: "Key 清单"
@@ -1384,46 +1249,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})
 			] });
 		}
-		/**
-		* 预算进度：只在配了阈值时出现（`enabled:false` 由调用方挡掉）。
-		* 逐项一条：今日 / 本月 Tokens、本月各币种成本 —— 超限与接近只改颜色与文案，不做任何拦截。
-		*/
-		function BudgetRow(props) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.budgetRow,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: overview_module_css_default.budgetLabel,
-					children: "预算"
-				}), props.budget.entries.map((entry) => {
-					const level = budgetLevelOf(entry.percent);
-					const levelClass = level === "over" ? overview_module_css_default.danger : level === "near" ? overview_module_css_default.warn : "";
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: overview_module_css_default.budgetItem,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: overview_module_css_default.budgetName,
-								children: budgetEntryNameOf(entry)
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: overview_module_css_default.budgetBar,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
-									width: Math.min(100, Math.max(2, entry.percent)) + "%",
-									background: budgetBarColorOf(level)
-								} })
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: [overview_module_css_default.budgetValue, levelClass].join(" ").trim(),
-								children: [
-									budgetAmountTextOf(entry),
-									" · ",
-									budgetPercentTextOf(entry.percent)
-								]
-							})
-						]
-					}, entry.kind + "|" + (entry.currency ?? ""));
-				})]
-			});
-		}
 		function tagClassOf(channel) {
 			const base = overview_module_css_default.tag;
 			if (channel.status === "off") return base + " " + overview_module_css_default.off;
@@ -1484,6 +1309,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const UTF8_BOM = "﻿";
 		const CSV_MIME = "text/csv;charset=utf-8";
 		const JSON_MIME = "application/json;charset=utf-8";
+		const YAML_MIME = "text/yaml;charset=utf-8";
 		/** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
 		function toCsv(rows, columns) {
 			const lines = [columns.map((column) => csvCell(column.label)).join(",")];
@@ -1836,8 +1662,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const previousWindow = (0, react.useMemo)(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to]);
 			const [previousUsage, setPreviousUsage] = (0, react.useState)(null);
 			const [status, setStatus] = (0, react.useState)("loading");
-			const pricingState = (0, react.useSyncExternalStore)(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot);
-			const pricingSignature = JSON.stringify(pricingState.config);
 			(0, react.useEffect)(() => {
 				if (!comparable) return;
 				let cancelled = false;
@@ -1855,7 +1679,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				previousWindow.from,
 				previousWindow.to,
 				channelFilter,
-				pricingSignature
+				props.pricingRevision
 			]);
 			const header = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: trend_module_css_default.head,
@@ -2543,7 +2367,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					channels,
 					range: props.range,
 					bounds,
-					channelFilter
+					channelFilter,
+					pricingRevision: props.pricingRevision
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShareBar, {
 					usage,
@@ -3229,35 +3054,57 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/PricingRulesPanel.tsx
 		/**
-		* 计费规则面板：并入「余额与配额」页下半部分（不新增 Tab），插件页卡片复用同一份。
+		* 计费规则面板：并入「余额与配额」页下半部分（不新增 Tab）。
 		*
 		* 层级：默认只显示一行摘要（依据 / 已省 / 口径 + 「配置规则」），细节全部收进抽屉。
-		* 目的是让「这一格钱凭什么」一眼可读，同时把矛盾提示合并成一条带优先级的提示。
-		* 规则本体存在宿主设置服务里，成本计算全在服务端（src/server/pricing.ts），界面不重复算。
+		*
+		* 事实来源是用户的 `pricing-rules.yml`：面板保存走 `POST /pricing/rules` 整批提交（服务端按
+		* provider|model 继承旧条目的 unit / offPeak / note），保存后由页面重取 `/pricing` 与用量。
+		* 表单只编辑 通道 / 模型 / 币种 / 四档单价 五个字段；unit / offPeak / note 只在 YAML 里维护，
+		* 界面上必须明示这一点（见 FORM_EXTRAS_HINT），否则用户会以为保存把它们清掉了。
+		* 规则列表上方的通道过滤只影响展示 —— 保存永远提交全部规则（包括被过滤掉的那些）。
 		*/
-		/** 「最值得补规则」最多列几条 —— 多于一屏就失去「最值得」的意义。 */
-		const WORTH_RULE_LIMIT = 3;
+		/** 解析问题默认只列几条：一屏列不完的清单没人读，展开再看全部。 */
+		const ISSUE_LIMIT = 5;
+		/** 缺口模型列表默认列几条（按 tokens 倒序），其余折叠。 */
+		const MODEL_LIST_LIMIT = 8;
+		/** 复制到剪贴板；拿不到剪贴板权限时返回 false，由调用方提示改用「下载」。 */
+		async function copyText(text) {
+			try {
+				if (navigator.clipboard === void 0) return false;
+				await navigator.clipboard.writeText(text);
+				return true;
+			} catch {
+				return false;
+			}
+		}
 		function PricingRulesPanel(props) {
-			const { settings, state, pricing, channels } = props;
-			const drawerId = (0, react.useId)();
+			const { pricing, channels } = props;
+			const instanceId = (0, react.useId)();
+			const drawerId = instanceId + "-drawer";
+			const providersListId = instanceId + "-providers";
+			const modelsListId = instanceId + "-models";
 			const [expanded, setExpanded] = (0, react.useState)(false);
 			const [draft, setDraft] = (0, react.useState)(null);
 			const [editingKey, setEditingKey] = (0, react.useState)(null);
 			const [editorError, setEditorError] = (0, react.useState)(null);
-			const [templateId, setTemplateId] = (0, react.useState)("");
+			const [saveError, setSaveError] = (0, react.useState)(null);
 			const [notice, setNotice] = (0, react.useState)(null);
+			const [saving, setSaving] = (0, react.useState)(false);
 			const [showAllSavings, setShowAllSavings] = (0, react.useState)(false);
 			const [showExplanation, setShowExplanation] = (0, react.useState)(false);
-			const fileInput = (0, react.useRef)(null);
-			const config = state.config;
-			const rules = config.rules;
-			const offPeakNowOf = (rule) => {
-				if (pricing === null) return false;
-				const index = rules.indexOf(rule);
-				return index >= 0 && pricing.offPeakNow[index] === true;
-			};
-			const templates = pricing?.templates ?? [];
+			const [showAllIssues, setShowAllIssues] = (0, react.useState)(false);
+			const [showAllModels, setShowAllModels] = (0, react.useState)(false);
+			const [showPrompt, setShowPrompt] = (0, react.useState)(false);
+			/** null = 不过滤（显示全部通道）；数组 = 只显示这些通道的规则。 */
+			const [providerFilter, setProviderFilter] = (0, react.useState)(null);
+			/** 默认过滤只设一次初值，之后完全交给用户点的芯片（否则用户取消过滤会被再次覆盖）。 */
+			const [filterInitialized, setFilterInitialized] = (0, react.useState)(false);
+			const rules = pricing?.rules ?? [];
 			const catalog = pricing?.catalog ?? null;
+			const files = pricing?.files;
+			const issues = pricing?.issues ?? [];
+			const currency = pricing?.currency ?? "CNY";
 			const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources);
 			const providerOptions = (0, react.useMemo)(() => channels.map((channel) => channel.provider), [channels]);
 			const modelOptions = (0, react.useMemo)(() => {
@@ -3266,26 +3113,67 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				for (const row of props.models?.rows ?? []) ids.add(row.model);
 				return [...ids];
 			}, [channels, props.models]);
-			const save = async (next, done) => {
-				if (await settings.save(next)) {
-					setNotice(done);
-					setDraft(null);
-					setEditingKey(null);
-					setEditorError(null);
-				}
+			/** 「你的通道」= cordis.yml 里配置过的 provider；内置价目的来源按它折叠无关项。 */
+			const usedProviders = (0, react.useMemo)(() => new Set(channels.map((channel) => channel.provider)), [channels]);
+			const catalogRules = catalog?.rules ?? [];
+			const relatedCatalogCount = catalogRules.filter((rule) => rule.provider === "*" || usedProviders.has(rule.provider)).length;
+			const visibleSources = (catalog?.sources ?? []).filter((entry) => entry.providers.some((provider) => usedProviders.has(provider)));
+			/** 过滤只影响展示：成本照旧按完整规则与内置价目算，保存也提交全部规则。 */
+			const visibleRules = providerFilter === null ? rules : rules.filter((rule) => providerFilter.includes(rule.provider));
+			const hiddenRulesCount = rules.length - visibleRules.length;
+			const uncovered = (0, react.useMemo)(() => unpricedModelsOf(props.models?.rows ?? [], rules, catalogRules), [
+				props.models,
+				rules,
+				catalogRules
+			]);
+			const shownUncovered = showAllModels ? uncovered : uncovered.slice(0, MODEL_LIST_LIMIT);
+			const providerChips = (0, react.useMemo)(() => chipEntriesOf(rules, channels), [rules, channels]);
+			const channelLabelOf = (provider) => channels.find((channel) => channel.provider === provider)?.displayName ?? provider;
+			/**
+			* 默认只显示「你的通道」：未配置通道的规则（通道被删掉或改过名）要主动点「显示全部」才看得到。
+			* `*` 通配规则对任何通道都生效，因此始终算在默认可见里；channels 是异步到的，所以到齐后才设初值。
+			*/
+			(0, react.useEffect)(() => {
+				if (filterInitialized || providerChips.length === 0) return;
+				setFilterInitialized(true);
+				const initial = providerChips.filter((chip) => chip.provider === "*" || usedProviders.has(chip.provider)).map((chip) => chip.provider);
+				if (initial.length < providerChips.length) setProviderFilter(initial);
+			}, [
+				filterInitialized,
+				providerChips,
+				usedProviders
+			]);
+			const maybeRefreshNotice = (message) => {
+				setNotice(message);
+				setSaveError(null);
 			};
-			const startNew = () => {
-				setDraft(blankRule(config));
+			/**
+			* 唯一的写盘入口：整批提交。
+			* 传进来的 `nextRules` 必须是**全部**规则（不是过滤后的子集），删除靠「不在列表里」表达。
+			*/
+			const submit = async (nextRules, doneText) => {
+				if (saving) return;
+				setSaving(true);
+				setSaveError(null);
+				const result = await savePricingRules(nextRules.map(submittableRuleOf));
+				setSaving(false);
+				if (result === null) {
+					setSaveError(failureReasonOf("/dsh-key-usage/pricing/rules") ?? "保存请求失败：没拿到服务端响应");
+					return;
+				}
+				if (!result.ok) {
+					setSaveError(result.error);
+					return;
+				}
+				const issueCount = (result.issues ?? []).length;
+				setNotice(doneText + "：已写入 " + result.path + "（" + String(result.entries) + " 条）" + (issueCount > 0 ? "；文件里还有 " + String(issueCount) + " 处解析问题，见下方列表" : ""));
+				setDraft(null);
 				setEditingKey(null);
 				setEditorError(null);
+				props.onSaved();
 			};
-			/** 「为它新增规则」：直接把 provider / model 预填进表单，省掉一次手抄。 */
-			const startNewFor = (provider, model) => {
-				setDraft({
-					...blankRule(config),
-					provider,
-					model
-				});
+			const startNew = () => {
+				setDraft(blankRule(currency));
 				setEditingKey(null);
 				setEditorError(null);
 			};
@@ -3309,55 +3197,63 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					if (duplicateIndex >= 0 && duplicateIndex !== editedIndex) nextRules.splice(duplicateIndex, 1);
 				} else if (duplicateIndex >= 0) nextRules[duplicateIndex] = draft;
 				else nextRules.push(draft);
-				await save({
-					...config,
-					rules: nextRules
-				}, "规则已保存");
+				await submit(nextRules, editingKey === null ? "规则已新增" : "规则已保存");
 			};
 			const removeRule = async (rule) => {
-				await save({
-					...config,
-					rules: rules.filter((candidate) => candidate !== rule)
-				}, "规则已删除");
+				await submit(rules.filter((candidate) => candidate !== rule), "规则已删除");
 			};
-			const applyTemplate = async () => {
-				const template = templates.find((candidate) => candidate.id === templateId);
-				if (template === void 0) return;
-				const nextRules = [...rules];
-				for (const rule of template.rules) {
-					const index = nextRules.findIndex((candidate) => ruleKeyOf(candidate) === ruleKeyOf(rule));
-					if (index >= 0) nextRules[index] = rule;
-					else nextRules.push(rule);
-				}
-				await save({
-					...config,
-					rules: nextRules
-				}, "已套用模板「" + template.label + "」，数值请自行核对");
+			const clearRules = async () => {
+				if (!window.confirm("清空后规则条目会从 YAML 文件里删除，成本回到内置官方价目与台账均价。确定清空吗？")) return;
+				await submit([], "已清空规则");
 			};
-			const exportRules = () => {
-				downloadFile(exportFileName("pricing-rules", "json"), toJson(config), JSON_MIME);
+			/** 「下载规则模板」：内置价目 ∩ 你实际用到的模型（价格预填）+ 缺价格依据的模型（注释占位待填）。 */
+			const downloadTemplate = () => {
+				const usedModels = (props.models?.rows ?? []).filter((row) => row.tokens > 0).map((row) => ({
+					provider: row.provider,
+					model: row.model
+				}));
+				const template = buildRulesTemplateYaml(catalog, usedModels, rules, uncovered, currency);
+				downloadFile(exportFileName("pricing-template", "yml"), template.text, YAML_MIME);
+				maybeRefreshNotice("模板已下载：按内置价目预填 " + String(template.prefilledCount) + " 条（只含你用到的模型）" + (template.pendingCount > 0 ? "，另有 " + String(template.pendingCount) + " 个缺价格依据的模型以注释占位 —— 填好后删掉行首的「# 」" : ""));
 			};
-			const importRules = async (file) => {
-				const parsed = parseImportedPricing(await file.text());
-				if (parsed.config === null) {
-					settings.noteError(parsed.error ?? "导入失败：文件内容无法识别");
-					return;
-				}
-				await save(parsed.config, "规则已导入（整份替换）");
+			const snippetOf = (rule, placeholder) => buildRuleSnippetYaml(rule, placeholder);
+			const ruleForModel = (model) => ({
+				...blankRule(currency),
+				provider: model.provider,
+				model: model.model
+			});
+			const downloadSnippet = (rule, placeholder, label) => {
+				downloadFile(exportFileName("pricing-rule-" + fileSafeOf(rule.provider + "-" + rule.model), "yml"), snippetOf(rule, placeholder), YAML_MIME);
+				maybeRefreshNotice("已下载片段：" + label + "（粘到规则文件的 rules: 下面即可）");
+			};
+			const copySnippet = async (rule, placeholder, label) => {
+				const copied = await copyText(snippetOf(rule, placeholder));
+				maybeRefreshNotice(copied ? "已复制片段：" + label : "复制失败：浏览器没有把剪贴板权限给这个页面，请改用「下载片段」");
+			};
+			const promptText = buildAgentPrompt({
+				filePath: files?.user.path ?? null,
+				currency,
+				rulesCount: rules.length,
+				catalogEntries: catalog?.entries ?? 0,
+				uncovered
+			});
+			const copyPrompt = async () => {
+				const copied = await copyText(promptText);
+				maybeRefreshNotice(copied ? "提示词已复制：粘给 DSH 即可（里面带着目标文件路径与 " + String(uncovered.length) + " 个缺口模型）" : "复制失败：浏览器没有把剪贴板权限给这个页面，请改用「下载提示词」");
 			};
 			const coverage = pricing?.coverage ?? null;
 			const savingsEntries = Object.entries(coverage?.savingsByCurrency ?? {}).filter(([, amount]) => amount > 0);
 			const savingsDetail = coverage?.savingsDetail ?? [];
 			const visibleSavings = showAllSavings ? savingsDetail : savingsDetail.slice(0, 3);
 			const ruleCostEntries = Object.entries(coverage?.ruleCostByCurrency ?? {}).filter(([, amount]) => amount > 0);
-			const worthRules = worthRuleCandidates(props.models, rules);
+			const shownIssues = showAllIssues ? issues : issues.slice(0, ISSUE_LIMIT);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: pricing_module_css_default.panel,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SummaryStrip, {
 						coverage,
 						rulesCount: rules.length,
-						loading: state.status === "loading",
+						loading: pricing === null,
 						savingsEntries,
 						expanded,
 						onToggle: () => setExpanded((previous) => !previous),
@@ -3370,10 +3266,64 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						className: pricing_module_css_default.drawer,
 						id: drawerId,
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatusNotice, { state }),
+							pricing !== null && pricing.rulesOrigin !== "file" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: pricing_module_css_default.warning,
+								children: RULES_ORIGIN_TEXT[pricing.rulesOrigin]
+							}),
+							pricing !== null && !pricing.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: pricing_module_css_default.warning,
+								children: "服务端拒绝写盘（只接受本机回环请求）：规则暂时只能在 YAML 文件里手改，改完刷新页面即生效。"
+							}),
+							saveError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.error,
+								children: ["保存失败：", saveError]
+							}),
 							notice !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: pricing_module_css_default.panelHint,
 								children: notice
+							}),
+							files !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.fileLine,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+									"用户规则 ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+										className: pricing_module_css_default.pathText,
+										children: files.user.path
+									}),
+									files.user.exists ? "（" + String(files.user.entries) + " 条）" : "（还没有这个文件，面板保存后会创建）"
+								] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+									"内置价目 ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+										className: pricing_module_css_default.pathText,
+										children: files.catalog.path
+									}),
+									files.catalog.exists ? "（" + String(files.catalog.entries) + " 条）" : "（读不到，成本会缺一层依据）"
+								] })]
+							}),
+							issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.issueBlock,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: pricing_module_css_default.issueHead,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处 YAML 解析问题"] }),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: pricing_module_css_default.issueNote,
+											children: "—— 这些问题所在的条目已被跳过，成本按内置价目 / 台账均价算"
+										}),
+										issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											className: pricing_module_css_default.linkBtn,
+											"aria-expanded": showAllIssues,
+											onClick: () => setShowAllIssues((previous) => !previous),
+											children: showAllIssues ? "收起" : "展开全部（" + String(issues.length) + " 条）"
+										})
+									]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+									className: pricing_module_css_default.issueList,
+									children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+										className: pricing_module_css_default.issueWhere,
+										children: [issue.file === "user" ? "用户规则" : "内置价目", issue.line === null ? "" : " 第 " + String(issue.line) + " 行"]
+									}), issue.message] }, issue.file + "|" + String(issue.line) + "|" + String(index)))
+								})]
 							}),
 							ruleCostEntries.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: pricing_module_css_default.statStrip,
@@ -3386,7 +3336,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: pricing_module_css_default.statNum,
-											children: ruleCostEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(" / ")
+											children: ruleCostEntries.map(([ruleCurrency, amount]) => moneyTextOf(ruleCurrency, amount)).join(" / ")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: pricing_module_css_default.statNote,
@@ -3401,9 +3351,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									"已内置 ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
 									" 条厂商官方价目，",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "无需套用模板即自动生效" }),
-									"（你的规则优先于它）。来源：",
-									catalog.sources.map((entry, index) => {
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自动生效，不需要你维护" }),
+									"（你的规则优先于它）",
+									catalogRules.length > 0 && relatedCatalogCount < catalogRules.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+										"，其中 ",
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(relatedCatalogCount) }),
+										" 条属于你的通道"
+									] }),
+									"。来源：",
+									visibleSources.map((entry, index) => {
 										const daysAgo = fetchedDaysAgo(entry.fetchedAt);
 										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 											index > 0 && "；",
@@ -3423,6 +3379,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											"）"
 										] }, entry.source);
 									}),
+									visibleSources.length < catalog.sources.length && "　其余来源属于未配置的通道，已折叠。",
 									catalogStale !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: ["　", /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [
 										"价目最新一次抓取距今 ",
 										String(catalogStale),
@@ -3433,131 +3390,199 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: pricing_module_css_default.toolbar,
 								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-										className: pricing_module_css_default.actionBtn,
-										value: templateId,
-										onChange: (event) => setTemplateId(event.target.value),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "",
-											children: "选择厂商模板…"
-										}), templates.map((template) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: template.id,
-											children: template.label
-										}, template.id))]
-									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										className: pricing_module_css_default.actionBtn,
-										disabled: templateId === "",
-										onClick: () => void applyTemplate(),
-										children: "套用模板"
+										disabled: pricing === null,
+										title: props.models == null ? "还没读到按模型用量：模板里只会给字段说明与空 rules" : "按内置价目预填你实际用到的模型，并把缺价格依据的模型注释占位",
+										onClick: downloadTemplate,
+										children: "下载规则模板"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
+										disabled: saving,
 										onClick: startNew,
 										children: "＋ 新增规则"
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										className: pricing_module_css_default.actionBtn,
+										"aria-expanded": showPrompt,
+										title: "生成一段可以直接交给 DSH 的提示词：带上这个文件的路径与缺价格依据的模型",
+										onClick: () => setShowPrompt((previous) => !previous),
+										children: "让 DSH 帮我配"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: pricing_module_css_default.toolbarSpacer }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										className: pricing_module_css_default.linkBtn,
-										disabled: rules.length === 0,
-										onClick: exportRules,
-										children: "导出 JSON"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										onClick: () => fileInput.current?.click(),
-										children: "导入 JSON"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										disabled: rules.length === 0,
-										onClick: () => void save({
-											...EMPTY_CONFIG,
-											currency: config.currency
-										}, "已清空规则：成本回到台账反推均价"),
+										disabled: rules.length === 0 || saving,
+										onClick: () => void clearRules(),
 										children: "清空规则"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										ref: fileInput,
-										className: pricing_module_css_default.hiddenFile,
-										type: "file",
-										accept: "application/json,.json",
-										onChange: (event) => {
-											const file = event.target.files?.[0];
-											event.target.value = "";
-											if (file !== void 0) importRules(file);
-										}
 									})
+								]
+							}),
+							showPrompt && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.promptBlock,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: pricing_module_css_default.promptHead,
+										children: "把这段提示词交给 DSH（也可以复制给别的 agent）：它会按下面这个路径直接改 YAML， 去厂商官方定价页核对价格 —— 改完刷新本页面即生效。"
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: pricing_module_css_default.promptActions,
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
+												onClick: () => void copyPrompt(),
+												children: "复制提示词"
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												className: pricing_module_css_default.actionBtn,
+												onClick: () => {
+													downloadFile(exportFileName("pricing-agent-prompt", "txt"), promptText, "text/plain;charset=utf-8");
+													maybeRefreshNotice("提示词已下载（.txt）");
+												},
+												children: "下载提示词"
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+												className: pricing_module_css_default.panelHint,
+												children: [
+													"缺口模型 ",
+													String(uncovered.length),
+													" 个",
+													files === void 0 ? "" : "；目标文件 " + files.user.path
+												]
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+										className: pricing_module_css_default.promptText,
+										children: promptText
+									})
+								]
+							}),
+							rules.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.filterRow,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: pricing_module_css_default.filterLabel,
+										children: "按通道过滤"
+									}),
+									providerChips.map((chip) => {
+										const active = providerFilter === null || providerFilter.includes(chip.provider);
+										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+											className: pricing_module_css_default.chip + (active ? " " + pricing_module_css_default.chipOn : ""),
+											"aria-pressed": active,
+											title: "只看 " + chip.provider + " 的规则（" + String(chip.count) + " 条）",
+											onClick: () => {
+												const current = providerFilter ?? providerChips.map((entry) => entry.provider);
+												const next = current.includes(chip.provider) ? current.filter((provider) => provider !== chip.provider) : [...current, chip.provider];
+												setProviderFilter(next.length === providerChips.length ? null : next);
+											},
+											children: [chip.provider === "*" ? "任意通道（*）" : channelLabelOf(chip.provider), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(chip.count) })]
+										}, chip.provider);
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										className: pricing_module_css_default.linkBtn,
+										disabled: providerFilter === null,
+										onClick: () => setProviderFilter(null),
+										children: "显示全部"
+									})
+								]
+							}),
+							providerFilter !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.panelHint,
+								children: [
+									"过滤只影响这里的显示；保存仍会提交全部 ",
+									String(rules.length),
+									" 条规则 （被过滤掉的 ",
+									String(hiddenRulesCount),
+									" 条不会被删掉）。"
 								]
 							}),
 							rules.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: pricing_module_css_default.empty,
-								children: "还没有规则。点「＋ 新增规则」手填，或从上方的厂商模板起步。"
+								children: "还没有规则。点「＋ 新增规则」手填，或先「下载规则模板」按内置价目起步。"
+							}) : visibleRules.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: pricing_module_css_default.empty,
+								children: "当前过滤条件下没有规则，点「显示全部」重置（这些规则不会被删除）。"
 							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 								className: pricing_module_css_default.ruleTable,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "单位" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "币种" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "错峰" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "备注" }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "备注 / 附加项（YAML 维护）" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "操作" })
-								] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: rules.map((rule) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-									className: editingKey === ruleKeyOf(rule) ? pricing_module_css_default.editing : "",
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: pricing_module_css_default.ruleName,
-											children: rule.provider
-										}) }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: pricing_module_css_default.ruleName,
-											children: rule.model
-										}) }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: UNIT_LABELS[rule.unit] }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.input }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheRead }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheWrite }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.output }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.currency }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.offPeak === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: shared_module_css_default.dim,
-											children: "—"
-										}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-											title: offPeakTooltipOf(rule),
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: visibleRules.map((rule) => {
+									const extras = ruleExtrasTextOf(rule);
+									const index = rules.indexOf(rule);
+									const offPeakNow = pricing !== null && index >= 0 && pricing.offPeakNow[index] === true;
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+										className: editingKey === ruleKeyOf(rule) ? pricing_module_css_default.editing : "",
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 												className: pricing_module_css_default.ruleName,
-												children: offPeakWindowsText(rule)
-											}), offPeakNowOf(rule) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: pricing_module_css_default.offPeakChip,
-												children: "错峰中"
-											})]
-										}) }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-											className: pricing_module_css_default.ruleNote,
-											children: rule.note === "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: shared_module_css_default.dim,
-												children: "—"
-											}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												title: rule.note,
-												children: rule.note
-											})
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											className: pricing_module_css_default.linkBtn,
-											onClick: () => startEdit(rule),
-											children: "编辑"
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											className: pricing_module_css_default.linkBtn,
-											onClick: () => void removeRule(rule),
-											children: "删除"
-										})] })
-									]
-								}, ruleKeyOf(rule))) })]
+												children: rule.provider
+											}) }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: pricing_module_css_default.ruleName,
+												children: rule.model
+											}) }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.input }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheRead }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheWrite }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.output }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.currency }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
+												className: pricing_module_css_default.ruleNote,
+												children: [rule.note === "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: shared_module_css_default.dim,
+													children: "—"
+												}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													title: rule.note,
+													children: rule.note
+												}), extras !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+													className: pricing_module_css_default.ruleExtra,
+													title: rule.offPeak === null ? void 0 : offPeakTooltipOf(rule),
+													children: [extras, offPeakNow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: pricing_module_css_default.offPeakChip,
+														children: "错峰中"
+													})]
+												})]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													className: pricing_module_css_default.linkBtn,
+													onClick: () => startEdit(rule),
+													children: "编辑"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													className: pricing_module_css_default.linkBtn,
+													title: "复制这一条规则的 YAML（含 unit / offPeak / note）",
+													onClick: () => void copySnippet(rule, false, ruleLabelOf(rule)),
+													children: "复制片段"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													className: pricing_module_css_default.linkBtn,
+													disabled: saving,
+													onClick: () => void removeRule(rule),
+													children: "删除"
+												})
+											] })
+										]
+									}, ruleKeyOf(rule));
+								}) })]
+							}),
+							hiddenRulesCount > 0 && visibleRules.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.panelHint,
+								children: [
+									"另有 ",
+									String(hiddenRulesCount),
+									" 条规则被过滤掉（只影响显示，保存时照旧提交）。"
+								]
 							}),
 							draft !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RuleEditor, {
 								draft,
@@ -3569,47 +3594,68 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								},
 								onSave: () => void commitDraft(),
 								error: editorError,
+								saving,
+								keyChanged: editingKey !== null && ruleKeyOf(draft) !== editingKey,
 								providerOptions,
-								modelOptions
-							}),
-							worthRules.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								modelOptions,
+								providersListId,
+								modelsListId
+							}, editingKey ?? "__new__"),
+							uncovered.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: pricing_module_css_default.sectionBlock,
 								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: pricing_module_css_default.subLabel,
-										children: "最值得补规则的模型"
+										children: [
+											"没有价格依据的模型（",
+											String(uncovered.length),
+											" 个）"
+										]
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 										className: pricing_module_css_default.panelHint,
-										children: "这些模型要么按台账均价估算、要么没有任何价格依据，但用量占比最高 —— 给它们补规则最能提升准确度。"
+										children: "近 30 天用到了、但既没有规则也没命中内置价目：这些用量的成本现在按台账均价估算或显示 —。 可以下载 / 复制单条片段填好价格后粘进规则文件，或点「让 DSH 帮我配」把清单交给 DSH。"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 										className: pricing_module_css_default.worthList,
-										children: worthRules.map((candidate) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: pricing_module_css_default.ruleName,
-												children: candidate.model
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: shared_module_css_default.dim,
-												children: [" · ", candidate.provider]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: pricing_module_css_default.worthMeta,
-												children: [
-													fmtTokens(candidate.tokens),
-													" tokens（",
-													percentText(candidate.share),
-													"）",
-													candidate.estimated ? " · 现为估算" : " · 无价格依据"
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-												className: pricing_module_css_default.linkBtn,
-												onClick: () => startNewFor(candidate.provider, candidate.model),
-												children: "为它新增规则"
-											})
-										] }, candidate.provider + "|" + candidate.model))
+										children: shownUncovered.map((model) => {
+											const label = model.provider + " · " + model.model;
+											return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: pricing_module_css_default.ruleName,
+													children: model.model
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: shared_module_css_default.dim,
+													children: [" · ", model.provider]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: pricing_module_css_default.worthMeta,
+													children: [
+														fmtTokens(model.tokens),
+														" tokens（占缺口 ",
+														percentText(model.share),
+														"）",
+														model.estimated ? " · 现为估算" : " · 无价格依据"
+													]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													className: pricing_module_css_default.linkBtn,
+													onClick: () => downloadSnippet(ruleForModel(model), true, label),
+													children: "下载片段"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													className: pricing_module_css_default.linkBtn,
+													onClick: () => void copySnippet(ruleForModel(model), true, label),
+													children: "复制片段"
+												})
+											] }, model.provider + "|" + model.model);
+										})
+									}),
+									uncovered.length > MODEL_LIST_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										className: pricing_module_css_default.linkBtn,
+										onClick: () => setShowAllModels((previous) => !previous),
+										children: showAllModels ? "收起" : "展开全部（" + String(uncovered.length) + " 个）"
 									})
 								]
 							}),
@@ -3651,164 +3697,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										children: showAllSavings ? "收起" : "展开全部（" + String(savingsDetail.length) + " 条）"
 									})
 								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(BudgetEditor, {
-								settings,
-								state
 							})
 						]
 					})
 				]
 			});
 		}
-		/**
-		* 预算与告警：阈值与规则同住一个设置命名空间，保存只写 `budget` 一段（不碰规则）。
-		* 判定在服务端（src/server/budget.ts），越线时页面顶部的横幅与总览的进度条才会出现。
-		*/
-		function BudgetEditor(props) {
-			const [draft, setDraft] = (0, react.useState)(null);
-			const [notice, setNotice] = (0, react.useState)(null);
-			const editable = props.state.status === "ready" && props.state.writable;
-			const value = draft ?? props.state.budget;
-			const numberField = (label, key, hint) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.field,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: label }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-						type: "number",
-						min: 0,
-						step: "any",
-						value: String(value[key]),
-						onChange: (event) => {
-							const next = Number(event.target.value);
-							setDraft({
-								...value,
-								[key]: Number.isFinite(next) && next > 0 ? next : 0
-							});
-						}
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: pricing_module_css_default.editorHint,
-						children: hint
-					})
-				]
-			}, key);
-			const save = async () => {
-				if (!await props.settings.saveBudget(draft ?? props.state.budget)) return;
-				setDraft(null);
-				setNotice("预算阈值已保存");
-			};
-			const clear = async () => {
-				if (!await props.settings.saveBudget(EMPTY_BUDGET_THRESHOLDS)) return;
-				setDraft(null);
-				setNotice("已清除预算阈值：不再告警");
-			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.sectionBlock,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.subLabel,
-						children: "预算与告警"
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.panelHint,
-						children: [
-							"按",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地日历日 / 日历月" }),
-							"切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）； 成本上限",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "按币种独立比较" }),
-							"，不换算、不合计；",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "0 或留空 = 该项不启用" }),
-							"； 告警只是提示，不阻断任何操作。"
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorGrid,
-						children: [numberField("每日 Tokens 上限", "dailyTokens", "留空 / 0 = 不启用"), numberField("每月 Tokens 上限", "monthlyTokens", "留空 / 0 = 不启用")]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.subLabel,
-						children: "每月成本上限（逐币种独立比较，不换算）"
-					}),
-					value.monthlyCost.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.panelHint,
-						children: "还没有币种上限。"
-					}),
-					value.monthlyCost.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.windowRow,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-								className: pricing_module_css_default.actionBtn,
-								value: entry.currency,
-								onChange: (event) => setDraft({
-									...value,
-									monthlyCost: value.monthlyCost.map((candidate, position) => position === index ? {
-										...candidate,
-										currency: event.target.value
-									} : candidate)
-								}),
-								children: CURRENCY_OPTIONS.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-									value: currency,
-									children: currency
-								}, currency))
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-								type: "number",
-								min: 0,
-								step: "any",
-								value: String(entry.amount),
-								onChange: (event) => {
-									const next = Number(event.target.value);
-									setDraft({
-										...value,
-										monthlyCost: value.monthlyCost.map((candidate, position) => position === index ? {
-											...candidate,
-											amount: Number.isFinite(next) && next > 0 ? next : 0
-										} : candidate)
-									});
-								}
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: pricing_module_css_default.linkBtn,
-								onClick: () => setDraft({
-									...value,
-									monthlyCost: value.monthlyCost.filter((_, position) => position !== index)
-								}),
-								children: "移除"
-							})
-						]
-					}, index)),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						className: pricing_module_css_default.actionBtn,
-						onClick: () => setDraft({
-							...value,
-							monthlyCost: [...value.monthlyCost, {
-								currency: CURRENCY_OPTIONS[0],
-								amount: 0
-							}]
-						}),
-						children: "+ 添加币种上限"
-					}),
-					notice !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.panelHint,
-						children: notice
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorActions,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
-							disabled: !editable,
-							onClick: () => void save(),
-							children: "保存阈值"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn,
-							disabled: !editable,
-							onClick: () => void clear(),
-							children: "清除阈值"
-						})]
-					})
-				]
-			});
+		/** 过滤芯片：按通道分组计数；配置过的通道排前面，`*` 通配规则永远排最后。 */
+		function chipEntriesOf(rules, channels) {
+			const counts = /* @__PURE__ */ new Map();
+			for (const rule of rules) counts.set(rule.provider, (counts.get(rule.provider) ?? 0) + 1);
+			const known = channels.map((channel) => channel.provider).filter((provider) => counts.has(provider));
+			const rest = [...counts.keys()].filter((provider) => provider !== "*" && !known.includes(provider)).sort((first, second) => first.localeCompare(second));
+			return [
+				...known,
+				...rest,
+				...counts.has("*") ? ["*"] : []
+			].map((provider) => ({
+				provider,
+				count: counts.get(provider) ?? 0
+			}));
 		}
 		/**
 		* 摘要行：默认收起的全部内容就这一行。
@@ -3887,15 +3795,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
 							"：按插件",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "内置的厂商官方价目" }),
-							"算出（自动生效，无需套用模板）；你的规则优先于它。匹配只做精确 / 忽略大小写 / 去 ",
+							"算出（自动生效，不需要你维护）；你的规则优先于它。匹配只做精确 / 忽略大小写 / 去 ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "vendor/" }),
 							" 前缀，不做模糊匹配。"
 						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }), "：按台账反推的均价推算，仅供参照，不是账单。"] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：没有价格依据（规则与内置价目都没命中，台账也没有成本数据）。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "单位与按次计费：规则里显式声明「每百万 / 每千 tokens / 每次调用」；按次计费只用「输入」档当每次调用价。" }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"错峰：窗口按",
+							"单位与按次计费：在 YAML 里写 —— ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perMillionTokens" }),
+							"（每百万，缺省）/ ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perThousandTokens" }),
+							"（每千）/ ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perCall" }),
+							"（每次调用，只用「输入」档当每次调用价）。"
+						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							"错峰：也在 YAML 里写。窗口按",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地时间" }),
 							"判断，起止相同表示全天，",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "from" }),
@@ -3903,38 +3819,38 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "to" }),
 							" 表示跨午夜；每个窗口可按",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "每天 / 仅工作日 / 仅周末" }),
-							"限定生效的星期（不选即每天）。跨天范围拿不到小时分布，按标准价算。"
+							"限定生效的星期（不写即每天）。跨天范围拿不到小时分布，按标准价算。"
 						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "多币种不换算、不合计：规则与内置价目各按文档原币种算（DeepSeek 取中文文档的 CNY，Kimi 为 CNY，OpenRouter / Z.ai 为 USD），金额按币种分行显示。" })
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "多币种不换算、不合计：规则与内置价目各按文档原币种算（DeepSeek 取中文文档的 CNY，Kimi 为 CNY，OpenRouter / Z.ai 为 USD），金额按币种分行显示。" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							"文件写法：点「",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "下载规则模板" }),
+							"」拿一份带注释说明与错峰写法示例的 YAML；面板保存写的是同一个文件。"
+						] })
 					]
 				})]
 			});
 		}
-		/**
-		* 状态提示：优先级从高到低只渲染一条，避免「写入被拒绝」和「无法保存」同时出现。
-		* 1) 命名空间不可写 / 取不到配置表单服务 —— 规则根本存不下去，说清楚「重启 DSH 后可用」；
-		* 2) 刚发生的写入失败（如乐观锁冲突）—— 可重试；
-		* 3) 正常 —— 不显示任何提示。
-		*/
-		function StatusNotice(props) {
-			const { state } = props;
-			if (state.status === "unavailable" || state.status === "ready" && !state.writable) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.warning,
-				children: [
-					"规则暂不可编辑：宿主还没加载本插件的配置（",
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "重启 DSH 后可用" }),
-					"）；现在仍可导入 / 导出 JSON。"
-				]
+		/** 单价输入框：用文本态承接输入，避免「0.」在数字态里被吃掉后小数点打不进去。 */
+		function RateField(props) {
+			const [text, setText] = (0, react.useState)(String(props.value));
+			(0, react.useEffect)(() => {
+				setText(String(props.value));
+			}, [props.value]);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: pricing_module_css_default.field,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: props.label }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+					type: "text",
+					inputMode: "decimal",
+					value: text,
+					onChange: (event) => {
+						setText(event.target.value);
+						const next = Number(event.target.value);
+						props.onChange(Number.isFinite(next) && next >= 0 ? next : 0);
+					},
+					onBlur: () => setText(String(props.value))
+				})]
 			});
-			if (state.error !== null) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.error,
-				children: [
-					"保存失败：",
-					state.error,
-					"，可重试"
-				]
-			});
-			return null;
 		}
 		function percentText(share) {
 			return (share * 100).toFixed(1) + "%";
@@ -3955,78 +3871,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return "错峰时段（本地时间，跨午夜用 from > to 表示；括号内是生效的星期）：" + windows + "\n" + peak + "\n" + offPeak + "\n四档顺序：输入 / 缓存读 / 缓存写 / 输出";
 		}
 		/**
-		* 「最值得补规则」的判定：先筛出**没有价格依据**的模型，再按近 30 天 tokens 占比倒序取前 3。
-		* 「没有价格依据」用两处数据交叉确认：/pricing 的 coverage 计数只给总数，
-		* 逐模型是否命中则用 /models 的 costSource —— 它正是成本单元格上那个角标，口径一致。
-		* `catalog`（内置官方价目）已有官方价，不算缺口，因此不列入候选。
+		* 单条规则的编辑器：只暴露 通道 / 模型 / 币种 / 四档单价。
+		* unit / offPeak / note 不在这里渲染（只在 YAML 里维护），保存也不提交它们 —— 服务端按
+		* provider|model 从文件旧值继承，所以表单变窄不会让用户数据丢。
 		*/
-		function worthRuleCandidates(models, rules) {
-			const rows = (models?.rows ?? []).filter((row) => row.tokens > 0);
-			if (rows.length === 0) return [];
-			const unpriced = rows.filter((row) => {
-				if (row.costSource === "rule" || row.costSource === "official" || row.costSource === "catalog") return false;
-				return row.costSource === "estimate" || row.costSource === "none" || !matchesAnyRule(rules, row.provider, row.model);
-			});
-			const total = unpriced.reduce((sum, row) => sum + row.tokens, 0);
-			if (total <= 0) return [];
-			return unpriced.map((row) => ({
-				provider: row.provider,
-				model: row.model,
-				tokens: row.tokens,
-				share: row.tokens / total,
-				estimated: row.costSource === "estimate"
-			})).sort((first, second) => second.tokens - first.tokens).slice(0, WORTH_RULE_LIMIT);
-		}
-		/** 与服务端 matchPricingRule 同序的粗判：精确 → 通道通配 → 模型通配 → 全通配。 */
-		function matchesAnyRule(rules, provider, model) {
-			return [
-				(rule) => rule.provider === provider && rule.model === model,
-				(rule) => rule.provider === provider && rule.model === "*",
-				(rule) => rule.provider === "*" && rule.model === model,
-				(rule) => rule.provider === "*" && rule.model === "*"
-			].some((matches) => rules.some(matches));
-		}
-		/** 单条规则的编辑器：单位换算、错峰窗口都在这里显式呈现，避免「按千 / 按百万」填错 1000 倍。 */
 		function RuleEditor(props) {
 			const { draft, onChange } = props;
-			const numberField = (label, key, value, extra) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.field,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: label }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-					type: "number",
-					min: 0,
-					step: "any",
-					value: String(value),
-					onChange: (event) => {
-						const next = Number(event.target.value);
-						const safe = Number.isFinite(next) && next >= 0 ? next : 0;
-						if (extra?.onChange !== void 0) extra.onChange(safe);
-						else onChange({
-							...draft,
-							[key]: safe
-						});
-					}
-				})]
-			}, label);
-			const windows = draft.offPeak?.windows ?? [];
-			const setWindows = (next) => {
-				if (next.length === 0) {
-					onChange({
-						...draft,
-						offPeak: null
-					});
-					return;
-				}
-				onChange({
-					...draft,
-					offPeak: {
-						windows: next,
-						input: draft.offPeak?.input ?? draft.input,
-						cacheRead: draft.offPeak?.cacheRead ?? draft.cacheRead,
-						cacheWrite: draft.offPeak?.cacheWrite ?? draft.cacheWrite,
-						output: draft.offPeak?.output ?? draft.output
-					}
-				});
-			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: pricing_module_css_default.editor,
 				children: [
@@ -4038,7 +3888,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "通道 id（* = 任意通道）" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										list: "dsh-ku-providers",
+										list: props.providersListId,
 										value: draft.provider,
 										onChange: (event) => onChange({
 											...draft,
@@ -4046,7 +3896,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										})
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("datalist", {
-										id: "dsh-ku-providers",
+										id: props.providersListId,
 										children: props.providerOptions.map((provider) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", { value: provider }, provider))
 									})
 								]
@@ -4056,7 +3906,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "模型 id（* = 该通道全部）" }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										list: "dsh-ku-models",
+										list: props.modelsListId,
 										value: draft.model,
 										onChange: (event) => onChange({
 											...draft,
@@ -4064,24 +3914,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										})
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("datalist", {
-										id: "dsh-ku-models",
+										id: props.modelsListId,
 										children: props.modelOptions.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", { value: model }, model))
 									})
 								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.field,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "计价单位" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-									value: draft.unit,
-									onChange: (event) => onChange({
-										...draft,
-										unit: event.target.value
-									}),
-									children: UNIT_OPTIONS.map((unit) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: unit,
-										children: UNIT_LABELS[unit]
-									}, unit))
-								})]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: pricing_module_css_default.field,
@@ -4097,84 +3933,40 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}, currency))
 								})]
 							}),
-							numberField("输入（未命中缓存）", "input", draft.input),
-							numberField("缓存读（命中）", "cacheRead", draft.cacheRead),
-							numberField("缓存写", "cacheWrite", draft.cacheWrite),
-							numberField("输出", "output", draft.output),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.field + " " + pricing_module_css_default.fieldWide,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "备注（建议写价目来源与日期）" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									value: draft.note,
-									onChange: (event) => onChange({
-										...draft,
-										note: event.target.value
-									})
-								})]
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
+								label: "输入（未命中缓存）",
+								value: draft.input,
+								onChange: (value) => onChange({
+									...draft,
+									input: value
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
+								label: "缓存读（命中）",
+								value: draft.cacheRead,
+								onChange: (value) => onChange({
+									...draft,
+									cacheRead: value
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
+								label: "缓存写",
+								value: draft.cacheWrite,
+								onChange: (value) => onChange({
+									...draft,
+									cacheWrite: value
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
+								label: "输出",
+								value: draft.output,
+								onChange: (value) => onChange({
+									...draft,
+									output: value
+								})
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.subLabel,
-						children: "错峰时段（本地时间；留空表示没有错峰价）"
-					}),
-					windows.map((window, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.windowRow,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-								value: window.from,
-								placeholder: "00:00",
-								onChange: (event) => setWindows(windows.map((candidate, position) => position === index ? {
-									...candidate,
-									from: event.target.value
-								} : candidate))
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: shared_module_css_default.dim,
-								children: "至"
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-								value: window.to,
-								placeholder: "09:00",
-								onChange: (event) => setWindows(windows.map((candidate, position) => position === index ? {
-									...candidate,
-									to: event.target.value
-								} : candidate))
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-								value: dayScopeOf(window.days),
-								onChange: (event) => setWindows(windows.map((candidate, position) => position === index ? withDayScope(candidate, event.target.value) : candidate)),
-								children: DAY_SCOPE_OPTIONS.map((scope) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-									value: scope,
-									children: DAY_SCOPE_LABELS[scope]
-								}, scope))
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: pricing_module_css_default.linkBtn,
-								onClick: () => setWindows(windows.filter((_, position) => position !== index)),
-								children: "移除"
-							})
-						]
-					}, index)),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						className: pricing_module_css_default.actionBtn,
-						onClick: () => setWindows([...windows, {
-							from: "00:00",
-							to: "08:00"
-						}]),
-						children: "+ 加时间窗"
-					}),
-					draft.offPeak !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.subLabel,
-						children: "错峰价（留空即与标准价相同）"
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorGrid,
-						children: [
-							numberField("错峰输入", "input", draft.offPeak.input, { onChange: (value) => patchOffPeak(draft, onChange, { input: value }) }),
-							numberField("错峰缓存读", "cacheRead", draft.offPeak.cacheRead, { onChange: (value) => patchOffPeak(draft, onChange, { cacheRead: value }) }),
-							numberField("错峰缓存写", "cacheWrite", draft.offPeak.cacheWrite, { onChange: (value) => patchOffPeak(draft, onChange, { cacheWrite: value }) }),
-							numberField("错峰输出", "output", draft.offPeak.output, { onChange: (value) => patchOffPeak(draft, onChange, { output: value }) })
-						]
-					})] }),
 					props.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: pricing_module_css_default.editorError,
 						children: props.error
@@ -4185,52 +3977,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							"正在编辑：",
 							ruleLabelOf(draft),
 							" · 单位 ",
-							UNIT_LABELS[draft.unit]
+							UNIT_LABELS[draft.unit],
+							draft.offPeak === null ? "" : " · 含错峰窗口 " + offPeakWindowsText(draft),
+							draft.note === "" ? "" : " · 备注 " + draft.note
 						]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.editorHint,
+						children: FORM_EXTRAS_HINT
+					}),
+					props.keyChanged && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.editorHint,
+						children: "改通道或模型等于换一条规则：原条目的错峰价 / 单位 / 备注不会跟过来，需要在 YAML 里补。"
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: pricing_module_css_default.editorActions,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
+							disabled: props.saving,
 							onClick: props.onSave,
-							children: "保存规则"
+							children: props.saving ? "保存中…" : "保存规则"
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							className: pricing_module_css_default.actionBtn,
+							disabled: props.saving,
 							onClick: props.onCancel,
 							children: "取消"
 						})]
 					})
 				]
 			});
-		}
-		function patchOffPeak(draft, onChange, patch) {
-			if (draft.offPeak === null) return;
-			onChange({
-				...draft,
-				offPeak: {
-					...draft.offPeak,
-					...patch
-				}
-			});
-		}
-		/**
-		* 单个窗口的星期范围：三选一直接改写 `days`。
-		* 「每天」删掉该字段（而不是写 [1..7]），这样升级前保存的规则往返后字节一致；
-		* 手改 JSON 得到的自定义组合在下拉里显示为「每天」，但只要用户不碰这个下拉，原值原样保留。
-		*/
-		function withDayScope(window, scope) {
-			const days = DAY_SCOPE_DAYS[scope];
-			if (days === void 0) {
-				const { from, to } = window;
-				return {
-					from,
-					to
-				};
-			}
-			return {
-				...window,
-				days: [...days]
-			};
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
@@ -4420,11 +4195,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: "未读取到通道配置"
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PricingRulesPanel, {
-						settings: props.pricingSettings,
-						state: props.pricingState,
 						pricing: props.pricing,
 						channels: props.channels,
-						models: props.models
+						models: props.models,
+						onSaved: props.onPricingReload
 					})
 				]
 			});
@@ -5404,26 +5178,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [projects, setProjects] = (0, react.useState)(null);
 			const [models, setModels] = (0, react.useState)(null);
 			const [pricing, setPricing] = (0, react.useState)(null);
-			const [budget, setBudget] = (0, react.useState)(null);
 			const [available, setAvailable] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(false);
+			/**
+			* 计费规则版本号：规则写进 YAML 后成本要整体重算，所有按成本展示的数据都得重取。
+			* 规则只从面板保存（POST /pricing/rules）这一个入口变，所以用一个自增计数当失效信号即可。
+			*/
+			const [pricingRevision, setPricingRevision] = (0, react.useState)(0);
 			const tooltip = useTooltip();
-			const pricingState = (0, react.useSyncExternalStore)(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot);
-			const settingsSignature = JSON.stringify(pricingState.config) + JSON.stringify(pricingState.budget);
 			const reload = (0, react.useCallback)(async (includeSessionData, forceQuota = false) => {
 				setLoading(true);
 				const quotaResult = await loadQuota(forceQuota);
-				const [channelResult, summaryResult, heatmapResult, budgetResult] = await Promise.all([
+				const [channelResult, summaryResult, heatmapResult] = await Promise.all([
 					loadChannels(),
 					loadSummary(),
-					loadHeatmap(),
-					loadBudget()
+					loadHeatmap()
 				]);
 				setChannels(channelResult ?? []);
 				setQuotas(quotaResult ?? []);
 				setSummary(summaryResult);
 				setHeatmap(heatmapResult ?? []);
-				setBudget(budgetResult);
 				if (includeSessionData) {
 					const [sessionResult, projectResult, modelResult] = await Promise.all([
 						loadSessions(),
@@ -5435,7 +5209,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					setModels(modelResult);
 				}
 				setLoading(false);
-			}, [settingsSignature]);
+			}, [pricingRevision]);
 			(0, react.useEffect)(() => {
 				reload(false);
 			}, [reload]);
@@ -5447,7 +5221,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return () => {
 					cancelled = true;
 				};
-			}, [settingsSignature]);
+			}, [pricingRevision]);
 			(0, react.useEffect)(() => {
 				if (activeTab === "sessions" && sessions === null) loadSessions().then(setSessions);
 				if (activeTab === "projects" && projects === null) loadProjects().then(setProjects);
@@ -5503,7 +5277,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				bounds.from,
 				bounds.to,
 				channelFilter,
-				settingsSignature
+				pricingRevision
 			]);
 			const refresh = (0, react.useCallback)(() => {
 				reload(activeTab === "sessions" || activeTab === "projects" || activeTab === "models" || sessions !== null || projects !== null || models !== null, true);
@@ -5520,8 +5294,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				bounds.to,
 				channelFilter
 			]);
-			const budgetAlert = budget === null ? null : budgetAlertTextOf(budget);
-			const showBudgetAlert = budget !== null && budget.level !== "ok" && budgetAlert !== null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.section,
 				children: [
@@ -5537,18 +5309,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							})
 						})]
 					}),
-					showBudgetAlert && budget !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: shared_module_css_default.budgetBanner + " " + (budget.level === "over" ? shared_module_css_default.budgetBannerOver : shared_module_css_default.budgetBannerNear),
-						role: "status",
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: shared_module_css_default.budgetBannerText,
-							children: budgetAlert
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: shared_module_css_default.budgetBannerAction,
-							onClick: () => setActiveTab("detail"),
-							children: "查看使用明细 →"
-						})]
-					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.tabBar,
 						children: TABS.map(([tabId, label]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -5562,7 +5322,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						summary,
 						quotas,
 						heatmap,
-						budget,
 						tooltip,
 						onOpenDetail: (provider) => {
 							setChannelFilter(provider);
@@ -5588,7 +5347,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						sort: detailSort,
 						onSort: setDetailSort,
 						bounds,
-						tooltip
+						tooltip,
+						pricingRevision
 					}),
 					activeTab === "projects" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProjectsTab, {
 						data: projects,
@@ -5613,9 +5373,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						channels,
 						quotas,
 						pricing,
-						pricingState,
-						pricingSettings,
-						models
+						models,
+						onPricingReload: () => setPricingRevision((previous) => previous + 1)
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: shared_module_css_default.footnote,
@@ -5632,15 +5391,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-									"预算按",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地日历日 / 日历月" }),
-									"切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）； 成本上限",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "按币种独立比较" }),
-									"，不换算、不合计；阈值在「余额与配额」页的规则面板里配置，",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "告警只是提示，不阻断任何操作" }),
-									"。"
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
 									"成本来源与优先级见「余额与配额」页计费面板的 ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "成本口径" }),
 									"（ⓘ）：角标分 ",
@@ -5651,7 +5401,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
 									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }),
-									"， 没有价格依据时显示 —；规则在面板下半部分维护，改完立即重算。"
+									"， 没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。"
 								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。" })
 							]
@@ -5694,54 +5444,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/components/PricingCard.tsx
-		/**
-		* 插件页（`plugins.bundle.config` 槽，以包名为键）里的计费规则卡片。
-		* 与「余额与配额」页下半部分共用同一个面板与同一份状态（存在宿主设置服务里），
-		* 这里只是多一个入口，不做第二套逻辑。
-		*/
-		function PricingCard() {
-			const state = (0, react.useSyncExternalStore)(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot);
-			const [pricing, setPricing] = (0, react.useState)(null);
-			const [channels, setChannels] = (0, react.useState)([]);
-			const [models, setModels] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				let cancelled = false;
-				loadPricing().then((result) => {
-					if (!cancelled) setPricing(result);
-				});
-				loadChannels().then((result) => {
-					if (!cancelled) setChannels(result ?? []);
-				});
-				loadModels().then((result) => {
-					if (!cancelled) setModels(result);
-				});
-				return () => {
-					cancelled = true;
-				};
-			}, [state.config]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PricingRulesPanel, {
-				settings: pricingSettings,
-				state,
-				pricing,
-				channels,
-				models
-			});
-		}
-		//#endregion
 		//#region src/client/index.tsx
 		/**
-		* dsh-key-usage 客户端入口：注册「使用情况」侧边栏导航项 + 主区域页面，
-		* 并把计费规则面板接到宿主的配置表单服务上。
+		* dsh-key-usage 客户端入口：注册「使用情况」侧边栏导航项 + 主区域页面。
 		* UI 逻辑在 UsagePage / KeyUsageSection 里；本文件只做 cordis apply 接线。
 		*
 		* slot 契约（对齐已装的 dsh-context「上下文洞察」写法）：
 		* - `sidebar.panellist`：宿主自持整行（标签 / hover / active），插件只提供图标，`id` 是面板标识；
-		* - `main`：同一标识放在 `key` 上，宿主在主内容区按它渲染整页 —— 因此不是弹窗、也不占设置页；
-		* - `plugins.bundle.config`：插件页（以包名为键）里的配置卡片，与页面里的规则面板共用同一份状态。
+		* - `main`：同一标识放在 `key` 上，宿主在主内容区按它渲染整页 —— 因此不是弹窗、也不占设置页。
 		*
-		* 计费规则的存储：命名空间就是本包在 profile 里的条目 id，写入由宿主的 config-editor
-		* 落到当前 profile 的 cordis patch 上；本插件不写任何文件（见 AGENTS.md 硬约束）。
+		* 计费规则以用户 YAML 文件为唯一事实来源：客户端只经 `/pricing` 读、经 `POST /pricing/rules` 写，
+		* 宿主的设置服务链路（配置表单 + 插件页配置卡片）已随该方案整条退役。
 		*/
 		const NS = "dsh-key-usage";
 		/** 侧边栏条目与 main 页面共用的面板标识（宿主 MainPanelId 域，命名空间化避免撞车）。 */
@@ -5759,15 +5472,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				order: 30,
 				label: () => "使用情况"
 			}, (props) => (0, react.createElement)(UsageIcon, { size: props.size })));
-			ctx.inject?.(["configForms"], (scope) => {
-				const forms = scope.configForms;
-				if (forms === void 0) return;
-				scope.effect?.(() => pricingSettings.attach(forms.get(NS)), "dsh-key-usage: pricing rules binding");
-				scope.effect?.(() => forms.whileServed([NS], () => scope.slots.inject("plugins.bundle.config", () => scope.slots.register({
-					name: "plugins.bundle.config",
-					key: NS
-				}, PricingCard))), "dsh-key-usage: plugins page card");
-			});
 		}
 		//#endregion
 		exports.apply = apply;
