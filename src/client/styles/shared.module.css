@@ -1,5 +1,14 @@
 /* 跨 Tab 共享样式：容器、Tab 栏、卡片、表格、按钮、浮层。全部走宿主 --dsw-alias-* 令牌。 */
-.section { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 13.5px; line-height: 1.55; }
+/* 外层内边距对齐宿主页面（与「上下文洞察」dsh-context 的根容器同值）：
+   宿主 main 容器本身不带内边距，页面自己负责，所以这里必须给。 */
+.section {
+  box-sizing: border-box; height: 100%; overflow-y: auto;
+  padding: 16px 20px 32px;
+  color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 13.5px; line-height: 1.55;
+}
+/* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
+[data-sidebar-right-open] .section,
+[data-sidebar-right-float-host] .section { padding: 12px; }
 .title { font-size: 18px; font-weight: 650; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .titleActions { display: inline-flex; align-items: center; gap: 8px; }
 .refreshBtn {
