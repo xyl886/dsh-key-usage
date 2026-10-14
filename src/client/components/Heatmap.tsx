@@ -1,6 +1,6 @@
 /**
  * 活跃热力图：最近约 9 个月的滚动窗口（含未来格占位）。
- * 强度分档取活跃日的三分位（p33 / p67），阈值随可见区间自动变化，
+ * 强度分档取活跃日的五分位（p20 / p40 / p60 / p80），阈值随可见区间自动变化，
  * 具体数值并入页面底部的口径说明，不再单独占一行。
  * 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
  */
@@ -22,21 +22,31 @@ interface HeatCell {
   level: number
 }
 
-function levelThresholds(days: HeatmapDay[]): [number, number] {
+function levelThresholds(days: HeatmapDay[]): number[] {
   const active = days.map((day) => day.totalTokens).filter((tokens) => tokens > 0).sort((first, second) => first - second)
-  if (active.length < 3) return [5e7, 2e8]
+  if (active.length < 5) return [1e7, 3e7, 6e7, 1.5e8]
   const pick = (fraction: number): number => active[Math.min(active.length - 1, Math.floor(active.length * fraction))]
-  return [pick(0.33), pick(0.67)]
+  return [pick(0.2), pick(0.4), pick(0.6), pick(0.8)]
 }
 
-function levelOf(tokens: number, thresholds: [number, number]): number {
+function levelOf(tokens: number, thresholds: number[]): number {
   if (tokens <= 0) return 0
-  if (tokens < thresholds[0]) return 1
-  if (tokens < thresholds[1]) return 2
-  return 3
+  let level = 1
+  for (const threshold of thresholds) {
+    if (tokens >= threshold) level += 1
+  }
+  return level
 }
 
-const LEVEL_COLORS = ['rgba(128,128,140,.22)', 'rgba(91,140,255,.25)', 'rgba(91,140,255,.55)', '#5b8cff']
+/** 五档由浅到深，末档用满色；灰色是「无用量」，与「无数据」的 ghost 区分。 */
+const LEVEL_COLORS = [
+  'rgba(128,128,140,.22)',
+  'rgba(91,140,255,.18)',
+  'rgba(91,140,255,.36)',
+  'rgba(91,140,255,.56)',
+  'rgba(91,140,255,.78)',
+  '#5b8cff',
+]
 
 export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; tooltip: TooltipApi }): ReactNode {
   const { days, channels, tooltip } = props
@@ -108,8 +118,10 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
           <span><i className="ghost" />无数据</span>
           <span><i style={{ background: LEVEL_COLORS[0] }} />无用量</span>
           <span><i style={{ background: LEVEL_COLORS[1] }} />少</span>
-          <span><i style={{ background: LEVEL_COLORS[2] }} />中</span>
-          <span><i style={{ background: LEVEL_COLORS[3] }} />高</span>
+          <span><i style={{ background: LEVEL_COLORS[2] }} />较少</span>
+          <span><i style={{ background: LEVEL_COLORS[3] }} />中</span>
+          <span><i style={{ background: LEVEL_COLORS[4] }} />较多</span>
+          <span><i style={{ background: LEVEL_COLORS[5] }} />多</span>
         </span>
       </div>
       <div className={styles.heatmapScroll} ref={scrollRef}>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安装与常见问题
+    url: https://github.com/xyl886/dsh-key-usage#常见问题
+    about: 装完看不到界面、余额显示未配置 Key、成本为什么是 0 —— 先看 README 的常见问题
+  - name: 使用与口径说明
+    url: https://github.com/xyl886/dsh-key-usage#成本与内置价目
+    about: 成本来源角标（官方 / 自定 / 官方价 / 估算）与内置价目的覆盖范围

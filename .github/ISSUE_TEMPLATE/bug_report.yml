@@ -1,0 +1,72 @@
+name: 缺陷报告
+description: 界面显示不对、数字对不上、装不上或崩溃
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量把下面的信息填全 —— 用量类问题**十有八九是数据口径或数据源**的问题，缺了版本号与截图往往只能来回猜。
+
+        ⚠️ **不要粘贴任何密钥**：`Authorization`、cookie、`.credentials.yaml` / `auth.json` 的内容、`apiKeyEnv` 的**值**都不要贴。需要说明「哪个通道没配 Key」时，写通道名即可。
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: 侧边栏「使用情况」页脚或 `npm ls dsh-key-usage` 里的版本号
+      placeholder: 例如 0.1.5
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: 运行环境
+      options:
+        - 桌面端（Electron 应用）
+        - Web profile（dsh web）
+        - 其它 / 不确定
+    validations:
+      required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      description: 应用「关于」里的版本号；Web 端可用 `dsh --version`
+      placeholder: 例如 0.2.0-rc.2
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 哪个 Tab、哪个数字不对、期望是什么、实际是什么
+      placeholder: |
+        在「使用明细」选「本月」时，成本列显示 ——，但「按模型」里同一个模型有金额。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开侧边栏「使用情况」
+        2. 切到「使用明细」
+        3. 范围选「本月」
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 拖入图片即可；**请先给项目路径、金额等敏感信息打码**
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已经**完全退出并重新打开过** DSH（服务端改动只在宿主启动时加载）
+          required: true
+        - label: 我确认上面没有粘贴任何密钥或凭据内容
+          required: true

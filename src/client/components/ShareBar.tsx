@@ -61,10 +61,16 @@ export function ShareBar(props: {
     }))
   }
   rows.sort((first, second) => second.tokens - first.tokens)
+  // 每段的数值只有悬停才看得到，读屏用户拿不到；这里给出前几名的文本概述
+  const shareSummary = rows.length === 0
+    ? title + '：暂无数据'
+    : title + '：' + rows.slice(0, 3)
+      .map((row) => row.label + ' ' + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + '%')
+      .join('、') + (rows.length > 3 ? '，等 ' + String(rows.length) + ' 项' : '')
   return (
     <div className={styles.card}>
       <div className={styles.statLabel}>{title}</div>
-      <div className={detailStyles.shareBar}>
+      <div className={detailStyles.shareBar} role="img" aria-label={shareSummary}>
         {rows.map((row) => {
           const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0
           return (

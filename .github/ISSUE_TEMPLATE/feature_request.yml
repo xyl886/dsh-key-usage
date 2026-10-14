@@ -1,0 +1,33 @@
+name: 功能建议
+description: 想要的新视图、新指标或交互改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这个插件的两条底线：**默认不联网**（只有「余额与配额」会查各通道官方接口）、**只写一个自己的文件**（`$DSH_HOME/dsh-key-usage/quota-snapshots.json`）。
+        如果你的建议需要突破其中任何一条，请在下面说明理由。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 先说场景，再说方案 —— 「我想知道 X」比「加个 Y 按钮」更容易做对
+      placeholder: 我想知道每个月的成本趋势是不是在涨，现在只能一天天看。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你设想的做法（可选）
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: 约束确认
+      options:
+        - label: 这个建议不需要插件在运行时访问新的外部接口
+          required: false
+        - label: 这个建议不需要插件写入除 quota-snapshots.json 以外的文件
+          required: false

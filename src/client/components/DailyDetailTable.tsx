@@ -169,8 +169,21 @@ export function DailyDetailTable(props: {
                   onClick={expandable ? () => onTogglePeriod(period.period) : undefined}
                 >
                   <td>
-                    {expandable && <span className={detailStyles.toggleArrow}>{isOpen ? '▼' : '▶'}</span>}
-                    {period.period}
+                    {expandable ? (
+                      // 行点击只方便鼠标；键盘用户需要一个真正的按钮（stopPropagation 避免与行点击重复触发）
+                      <button
+                        type="button"
+                        className={detailStyles.rowToggle}
+                        aria-expanded={isOpen}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onTogglePeriod(period.period)
+                        }}
+                      >
+                        <span className={detailStyles.toggleArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
+                        {period.period}
+                      </button>
+                    ) : period.period}
                   </td>
                   <td>{fmtTokens(period.totalTokens)}</td>
                   <td>{fmtCalls(period.calls)}</td>

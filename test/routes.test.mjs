@@ -1,6 +1,6 @@
 /**
  * 路由集成测试：把 DSH_HOME 指向临时夹具，直接调用各端点 handler 校验响应结构。
- * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、非回环 403。
+ * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、非回环 403、预算判定。
  * 运行：node test/routes.test.mjs
  */
 import assert from 'node:assert/strict'
@@ -350,6 +350,63 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   const unpricedUsage = await callEndpoint('/dsh-key-usage/usage?from=2026-10-20&to=2026-10-20')
   assert.equal(unpricedUsage.body.days[0].costSource, 'none')
   assert.equal(unpricedUsage.body.days[0].cost, 0)
+}
+
+// ===== 预算与告警：阈值来自宿主设置服务，未配置时必须 enabled:false（而不是报错） =====
+{
+  // 期望值按夹具算：日历月内「台账优先、缺日由会话补位」的展示口径之和
+  // （与 /summary 一样，夹具日期被假设落在当前自然月；月份变了这里跟着变，断言不会失真）
+  const ledgerDayTokens = { '2026-10-12': 9200 + 120, '2026-10-13': 18400 }
+  const sessionOnlyDayTokens = { '2026-10-20': 440 }
+  const expectedTokensBetween = (from, to) => {
+    let total = 0
+    for (const [date, tokens] of Object.entries({ ...sessionOnlyDayTokens, ...ledgerDayTokens })) {
+      if (date >= from && date <= to) total += tokens
+    }
+    return total
+  }
+  const now = new Date()
+  const pad = (value) => String(value).padStart(2, '0')
+  const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  const monthFromKey = todayKey.slice(0, 8) + '01'
+  const expectedMonthTokens = expectedTokensBetween(monthFromKey, todayKey)
+  const expectedTodayTokens = expectedTokensBetween(todayKey, todayKey)
+
+  const unconfigured = await callEndpoint('/dsh-key-usage/budget')
+  assert.equal(unconfigured.status, 200)
+  assert.equal(unconfigured.body.enabled, false, '没有任何阈值 = 不启用（不是报错）')
+  assert.equal(unconfigured.body.level, 'ok')
+  assert.deepEqual(unconfigured.body.entries, [])
+  assert.deepEqual(unconfigured.body.thresholds, { dailyTokens: 0, monthlyTokens: 0, monthlyCost: [] })
+  assert.equal(unconfigured.body.today.date, todayKey, '「今日」按服务器本地日历日')
+  assert.equal(unconfigured.body.month.from, monthFromKey, '「本月」按本地日历月首日，不是滚动 30 天')
+  assert.equal(unconfigured.body.month.to, todayKey)
+  assert.equal(unconfigured.body.today.tokens, expectedTodayTokens)
+  assert.equal(unconfigured.body.month.tokens, expectedMonthTokens, '与台账 × 会话合并同一口径')
+
+  // 非回环一律 403（与其它端点同一写法）
+  const foreignBudget = await callEndpoint('/dsh-key-usage/budget', '10.0.0.7')
+  assert.equal(foreignBudget.status, 403)
+  assert.deepEqual(foreignBudget.body, { error: 'loopback only' })
+
+  // 配了阈值：阈值 = 本月 Tokens 时正好用满（夹具不在本月则该阈值等于 0 → 不启用，两种都断言）
+  const configuredBudgetHandlers = new Map()
+  mountKeyUsageRoutes(
+    { register: (route) => { configuredBudgetHandlers.set(route.path, route.handler) } },
+    sessionSource,
+    undefined,
+    undefined,
+    undefined,
+    { current: () => ({ dailyTokens: 0, monthlyTokens: expectedMonthTokens, monthlyCost: [] }) },
+  )
+  const configured = await callHandler(configuredBudgetHandlers, '/dsh-key-usage/budget')
+  const hasMonthUsage = expectedMonthTokens > 0
+  assert.equal(configured.body.enabled, hasMonthUsage, '阈值 > 0 才启用')
+  assert.equal(configured.body.thresholds.monthlyTokens, expectedMonthTokens, '透出归一后的阈值')
+  assert.equal(configured.body.level, hasMonthUsage ? 'over' : 'ok', '用满上限即视为超限')
+  assert.equal(configured.body.entries[0]?.kind ?? null, hasMonthUsage ? 'monthlyTokens' : null)
+  assert.equal(configured.body.entries[0]?.used ?? 0, hasMonthUsage ? expectedMonthTokens : 0)
+  assert.equal(configured.body.entries[0]?.percent ?? 0, hasMonthUsage ? 100 : 0)
 }
 
 // 台账整体缺失时不会变成空态，而是全量走会话事件

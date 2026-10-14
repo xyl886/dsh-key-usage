@@ -6,6 +6,64 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
+		//#region src/client/format.ts
+		/** 展示层格式化：全部与统计口径无关，只负责把数字变成界面文本。 */
+		/** 本地日历 `YYYY-MM-DD`。 */
+		function isoDate(date) {
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			const day = String(date.getDate()).padStart(2, "0");
+			return `${date.getFullYear()}-${month}-${day}`;
+		}
+		function shiftedIsoDate(offsetDays) {
+			return isoDate(new Date(Date.now() + offsetDays * 864e5));
+		}
+		function fmtTokens(count) {
+			if (count >= 1e9) return (count / 1e9).toFixed(2) + "B";
+			if (count >= 1e6) return (count / 1e6).toFixed(1) + "M";
+			if (count >= 1e3) return (count / 1e3).toFixed(0) + "K";
+			return String(count);
+		}
+		function fmtCost(amount) {
+			return "¥" + amount.toFixed(2);
+		}
+		function fmtCalls(count) {
+			return count.toLocaleString("en-US").replace(/,/g, " ");
+		}
+		/** `MM-DD`（图表坐标轴与范围文案用）。 */
+		function fmtShortDate(dateKey) {
+			return dateKey.slice(5);
+		}
+		/** 毫秒时间戳 → `YYYY-MM-DD HH:mm`（本地时区）。 */
+		function fmtDateTime(timeMs) {
+			if (timeMs === null) return "—";
+			const date = new Date(timeMs);
+			const hours = String(date.getHours()).padStart(2, "0");
+			const minutes = String(date.getMinutes()).padStart(2, "0");
+			return `${isoDate(date)} ${hours}:${minutes}`;
+		}
+		/** 毫秒时间戳 → `HH:mm`。 */
+		function fmtTime(timeMs) {
+			if (timeMs === null) return "—";
+			const date = new Date(timeMs);
+			return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+		}
+		/** 时长（毫秒）→ `2h 15m` / `43m` / `—`。 */
+		function fmtDuration(milliseconds) {
+			if (milliseconds === null || milliseconds <= 0) return "—";
+			const minutes = Math.max(1, Math.round(milliseconds / 6e4));
+			if (minutes < 60) return `${minutes}m`;
+			return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+		}
+		/** 最近活跃：刚刚 / N 分钟前 / N 小时前 / N 天前。 */
+		function fmtRelative(timeMs, nowMs) {
+			if (timeMs === null) return "—";
+			const minutes = Math.round((nowMs - timeMs) / 6e4);
+			if (minutes < 1) return "刚刚";
+			if (minutes < 60) return `${minutes} 分钟前`;
+			if (minutes < 1440) return `${Math.round(minutes / 60)} 小时前`;
+			return `${Math.round(minutes / 1440)} 天前`;
+		}
+		//#endregion
 		//#region src/client/pricing.ts
 		const COST_SOURCE_LABELS = {
 			official: "官方",
@@ -43,6 +101,38 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (currency === "CNY") return "¥";
 			if (currency === "USD") return "$";
 			return currency + " ";
+		}
+		/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
+		const AMOUNT_DIGITS = 2;
+		/** 金额文本：币种符号 + 两位小数（规则面板与预算都用它，避免两处精度不一致）。 */
+		function moneyTextOf(currency, amount) {
+			return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS);
+		}
+		/**
+		* 取设置服务里的一段：宿主 `configForms` / `describe()` 给的是**命名空间根对象**
+		* （`{ pricing: …, budget: … }`），字段在它下面；没有该键时整份值就是这一段（两种形状都能读）。
+		* 与服务端 pricing.ts 的 `settingsSectionOf` 同一判定。
+		*/
+		function settingsSectionOf(value, key) {
+			if (value === null || typeof value !== "object") return value;
+			const record = value;
+			return key in record ? record[key] : value;
+		}
+		/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
+		function fetchedDaysAgo(fetchedAt, now = /* @__PURE__ */ new Date()) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fetchedAt.trim());
+			if (match === null) return null;
+			const fetched = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
+			if (!Number.isFinite(fetched)) return null;
+			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+			return Math.max(0, Math.round((today - fetched) / 864e5));
+		}
+		/** 最新一次抓取距今的天数；没有可解析的日期、或还没超过阈值时返回 null。 */
+		function catalogStaleDays(sources, now = /* @__PURE__ */ new Date()) {
+			const days = sources.map((entry) => fetchedDaysAgo(entry.fetchedAt, now)).filter((day) => day !== null);
+			if (days.length === 0) return null;
+			const newest = Math.min(...days);
+			return newest > 90 ? newest : null;
 		}
 		function ruleKeyOf(rule) {
 			return rule.provider + "|" + rule.model;
@@ -147,8 +237,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 宿主 schema 会把缺省的 `offPeak` 补成 `{windows: [], …}`，那种空壳要还原成「无错峰」。
 		*/
 		function normalizeClientPricing(value) {
-			if (typeof value !== "object" || value === null) return EMPTY_CONFIG;
-			const record = value;
+			const section = settingsSectionOf(value, "pricing");
+			if (typeof section !== "object" || section === null) return EMPTY_CONFIG;
+			const record = section;
 			const currency = toText(record.currency, EMPTY_CONFIG.currency);
 			const rules = [];
 			for (const entry of Array.isArray(record.rules) ? record.rules : []) {
@@ -283,26 +374,147 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return null;
 		}
 		//#endregion
+		//#region src/client/budget.ts
+		/**
+		* 预算与告警的客户端视图模型：阈值形状、归一化、文案与配色。
+		*
+		* 阈值与计费规则同住宿主设置服务的 `dsh-key-usage` 命名空间（读写都经 `pricingSettings`），
+		* 判定在服务端（`src/server/budget.ts`），界面只负责把结论说清楚、把阈值编辑好。
+		*/
+		const EMPTY_BUDGET_THRESHOLDS = {
+			dailyTokens: 0,
+			monthlyTokens: 0,
+			monthlyCost: []
+		};
+		/** 与服务端 budget.ts 的 NEAR_PERCENT 同一口径：使用率到达这条线算「接近上限」。 */
+		const NEAR_PERCENT = 80;
+		function limitOr(value) {
+			return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+		}
+		function textOr(value, fallback) {
+			return typeof value === "string" && value.trim() !== "" ? value.trim() : fallback;
+		}
+		/** 设置服务返回的值做防御式归一：认不出的字段一律当「不启用」，不猜数值。 */
+		function normalizeClientBudget(value) {
+			const record = settingsSectionOf(value, "budget");
+			if (record === null || typeof record !== "object") return EMPTY_BUDGET_THRESHOLDS;
+			const fields = record;
+			const monthlyCost = [];
+			for (const entry of Array.isArray(fields.monthlyCost) ? fields.monthlyCost : []) {
+				if (entry === null || typeof entry !== "object") continue;
+				const candidate = entry;
+				const amount = limitOr(candidate.amount);
+				if (amount === 0) continue;
+				monthlyCost.push({
+					currency: textOr(candidate.currency, "CNY"),
+					amount
+				});
+			}
+			return {
+				dailyTokens: limitOr(fields.dailyTokens),
+				monthlyTokens: limitOr(fields.monthlyTokens),
+				monthlyCost
+			};
+		}
+		/**
+		* 编辑器草稿 → 写盘形状：金额为 0（= 不启用）与空币种的条目丢掉，
+		* 同币种只保留第一条 —— 成本是逐币种独立比较，重复配置没有意义。
+		*/
+		function budgetThresholdsForWrite(thresholds) {
+			const seen = /* @__PURE__ */ new Set();
+			const monthlyCost = [];
+			for (const candidate of thresholds.monthlyCost) {
+				const currency = candidate.currency.trim();
+				const amount = limitOr(candidate.amount);
+				if (currency === "" || amount === 0 || seen.has(currency)) continue;
+				seen.add(currency);
+				monthlyCost.push({
+					currency,
+					amount
+				});
+			}
+			return {
+				dailyTokens: limitOr(thresholds.dailyTokens),
+				monthlyTokens: limitOr(thresholds.monthlyTokens),
+				monthlyCost
+			};
+		}
+		/** 条目名称：今日 Tokens / 本月 Tokens / 本月 CNY 成本。 */
+		function budgetEntryNameOf(entry) {
+			if (entry.kind === "dailyTokens") return "今日 Tokens";
+			if (entry.kind === "monthlyTokens") return "本月 Tokens";
+			return "本月 " + (entry.currency ?? "") + " 成本";
+		}
+		/** 已用 / 上限：「3.58B / 5B」「¥61.20 / ¥100.00」。 */
+		function budgetAmountTextOf(entry) {
+			if (entry.kind === "monthlyCost") {
+				const currency = entry.currency ?? "";
+				return moneyTextOf(currency, entry.used) + " / " + moneyTextOf(currency, entry.limit);
+			}
+			return fmtTokens(entry.used) + " / " + fmtTokens(entry.limit);
+		}
+		/** 使用率文本：服务端已算到 1 位小数，这里只补百分号。 */
+		function budgetPercentTextOf(percent) {
+			return percent.toFixed(1) + "%";
+		}
+		/** 单条的档位（与服务端 levelOf 同一套阈值，供逐条配色）。 */
+		function budgetLevelOf(percent) {
+			if (percent >= 100) return "over";
+			if (percent >= NEAR_PERCENT) return "near";
+			return "ok";
+		}
+		/** 进度条颜色：只在本处用对错语义色，正常档用强调色。 */
+		function budgetBarColorOf(level) {
+			if (level === "over") return "var(--dsw-alias-state-error-primary, #e05a5a)";
+			if (level === "near") return "var(--dsw-alias-state-warn-primary, #e0a13c)";
+			return "var(--dsw-alias-state-accent-primary, #5b8cff)";
+		}
+		/** 最严重的那一项：横幅只报一条，先说最要紧的。 */
+		function worstBudgetEntryOf(entries) {
+			const rank = {
+				ok: 0,
+				near: 1,
+				over: 2
+			};
+			let worst = null;
+			for (const entry of entries) if (worst === null || rank[budgetLevelOf(entry.percent)] > rank[budgetLevelOf(worst.percent)]) worst = entry;
+			return worst;
+		}
+		/**
+		* 横幅文案：「本月 Tokens 已用 3.58B / 5B（71.6%），接近上限」/「…，已超出上限」。
+		* 全部都在提醒线以内时返回 null（界面据此完全不渲染横幅）。
+		*/
+		function budgetAlertTextOf(response) {
+			const entry = worstBudgetEntryOf(response.entries);
+			if (entry === null) return null;
+			const level = budgetLevelOf(entry.percent);
+			if (level === "ok") return null;
+			const verdict = level === "near" ? "接近上限" : entry.percent > 100 ? "已超出上限" : "已用满上限";
+			return budgetEntryNameOf(entry) + "已用 " + budgetAmountTextOf(entry) + "（" + budgetPercentTextOf(entry.percent) + "），" + verdict;
+		}
+		//#endregion
 		//#region src/client/pricingSettings.ts
 		/**
-		* 计费规则的读写通道：把宿主的配置表单服务（`ctx.configForms`）包成一个 React 可订阅的 store。
+		* 计费规则与预算阈值的读写通道：把宿主的配置表单服务（`ctx.configForms`）包成一个 React 可订阅的 store。
 		*
 		* 为什么不用自己的 HTTP 路由写文件：插件只允许写 `quota-snapshots.json` 一个文件。
-		* 规则的命名空间就是本插件在 profile 里的条目 id（`dsh-key-usage`），
+		* 命名空间就是本插件在 profile 里的条目 id（`dsh-key-usage`），
 		* 写入由宿主的 config-editor 落到当前 profile 的 cordis patch 上，插件全程不碰文件系统。
+		* 两段值（`pricing` / `budget`）同住一个命名空间，因此共用这一条通路，各自只写自己那一段。
 		*/
 		function createPricingSettings() {
 			let state = {
 				status: "loading",
 				writable: false,
 				config: EMPTY_CONFIG,
+				budget: EMPTY_BUDGET_THRESHOLDS,
 				error: null
 			};
 			let form = null;
 			let unsubscribe = null;
 			const listeners = /* @__PURE__ */ new Set();
 			const publish = (next) => {
-				if (next.status === state.status && next.writable === state.writable && next.error === state.error && next.config === state.config) return;
+				if (next.status === state.status && next.writable === state.writable && next.error === state.error && next.config === state.config && next.budget === state.budget) return;
 				state = next;
 				for (const listener of listeners) listener();
 			};
@@ -312,6 +524,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						status: "unavailable",
 						writable: false,
 						config: state.config,
+						budget: state.budget,
 						error: state.error
 					});
 					return;
@@ -322,8 +535,37 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					status: ready ? "ready" : snapshot.status === "unavailable" ? "unavailable" : "loading",
 					writable: snapshot.writable === true,
 					config: ready ? normalizeClientPricing(snapshot.value) : state.config,
+					budget: ready ? normalizeClientBudget(snapshot.value) : state.budget,
 					error: state.error
 				});
+			};
+			const write = async (ops, failureNote) => {
+				if (form === null) {
+					publish({
+						...state,
+						error: failureNote
+					});
+					return false;
+				}
+				publish({
+					...state,
+					error: null
+				});
+				let accepted = false;
+				try {
+					accepted = await form.mutate(ops);
+				} catch (error) {
+					publish({
+						...state,
+						error: "写入失败：" + (error instanceof Error ? error.message : String(error))
+					});
+					return false;
+				}
+				if (!accepted) publish({
+					...state,
+					error: "写入被宿主拒绝（可能是配置在别处被同时修改，请重试）"
+				});
+				return accepted;
 			};
 			return {
 				store: {
@@ -353,37 +595,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						form = null;
 					};
 				},
-				async save(config) {
-					if (form === null) {
-						publish({
-							...state,
-							error: "宿主没有提供配置表单服务，规则只能导出 / 导入，无法保存"
-						});
-						return false;
-					}
-					publish({
-						...state,
-						error: null
-					});
-					let accepted = false;
-					try {
-						accepted = await form.mutate([{
-							op: "set",
-							path: ["pricing"],
-							value: configForWrite(config)
-						}]);
-					} catch (error) {
-						publish({
-							...state,
-							error: "写入失败：" + (error instanceof Error ? error.message : String(error))
-						});
-						return false;
-					}
-					if (!accepted) publish({
-						...state,
-						error: "写入被宿主拒绝（可能是规则在别处被同时修改，请重试）"
-					});
-					return accepted;
+				save(config) {
+					return write([{
+						op: "set",
+						path: ["pricing"],
+						value: configForWrite(config)
+					}], "宿主没有提供配置表单服务，规则只能导出 / 导入，无法保存");
+				},
+				saveBudget(thresholds) {
+					return write([{
+						op: "set",
+						path: ["budget"],
+						value: budgetThresholdsForWrite(thresholds)
+					}], "宿主没有提供配置表单服务，预算阈值无法保存");
 				},
 				isServed: () => state.status !== "unavailable",
 				noteError(message) {
@@ -502,67 +726,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function loadPricing() {
 			return fetchJson("/dsh-key-usage/pricing");
 		}
-		//#endregion
-		//#region src/client/format.ts
-		/** 展示层格式化：全部与统计口径无关，只负责把数字变成界面文本。 */
-		/** 本地日历 `YYYY-MM-DD`。 */
-		function isoDate(date) {
-			const month = String(date.getMonth() + 1).padStart(2, "0");
-			const day = String(date.getDate()).padStart(2, "0");
-			return `${date.getFullYear()}-${month}-${day}`;
-		}
-		function shiftedIsoDate(offsetDays) {
-			return isoDate(new Date(Date.now() + offsetDays * 864e5));
-		}
-		function fmtTokens(count) {
-			if (count >= 1e9) return (count / 1e9).toFixed(2) + "B";
-			if (count >= 1e6) return (count / 1e6).toFixed(1) + "M";
-			if (count >= 1e3) return (count / 1e3).toFixed(0) + "K";
-			return String(count);
-		}
-		function fmtCost(amount) {
-			return "¥" + amount.toFixed(2);
-		}
-		function fmtCalls(count) {
-			return count.toLocaleString("en-US").replace(/,/g, " ");
-		}
-		/** `MM-DD`（图表坐标轴与范围文案用）。 */
-		function fmtShortDate(dateKey) {
-			return dateKey.slice(5);
-		}
-		/** 毫秒时间戳 → `YYYY-MM-DD HH:mm`（本地时区）。 */
-		function fmtDateTime(timeMs) {
-			if (timeMs === null) return "—";
-			const date = new Date(timeMs);
-			const hours = String(date.getHours()).padStart(2, "0");
-			const minutes = String(date.getMinutes()).padStart(2, "0");
-			return `${isoDate(date)} ${hours}:${minutes}`;
-		}
-		/** 毫秒时间戳 → `HH:mm`。 */
-		function fmtTime(timeMs) {
-			if (timeMs === null) return "—";
-			const date = new Date(timeMs);
-			return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-		}
-		/** 时长（毫秒）→ `2h 15m` / `43m` / `—`。 */
-		function fmtDuration(milliseconds) {
-			if (milliseconds === null || milliseconds <= 0) return "—";
-			const minutes = Math.max(1, Math.round(milliseconds / 6e4));
-			if (minutes < 60) return `${minutes}m`;
-			return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-		}
-		/** 最近活跃：刚刚 / N 分钟前 / N 小时前 / N 天前。 */
-		function fmtRelative(timeMs, nowMs) {
-			if (timeMs === null) return "—";
-			const minutes = Math.round((nowMs - timeMs) / 6e4);
-			if (minutes < 1) return "刚刚";
-			if (minutes < 60) return `${minutes} 分钟前`;
-			if (minutes < 1440) return `${Math.round(minutes / 60)} 小时前`;
-			return `${Math.round(minutes / 1440)} 天前`;
+		/** 预算与告警：今日 / 本月读数对阈值（未配置阈值时 `enabled:false`，界面不渲染）。 */
+		function loadBudget() {
+			return fetchJson("/dsh-key-usage/budget");
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);padding:16px 20px 32px;font-size:13.5px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-size:18px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit;font-size:11.5px}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px;font-size:13px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:1180px){.d29QNW_cardGrid6{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:720px){.d29QNW_cardGrid6,.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:11.5px}.d29QNW_statValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:20px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:4px;font-size:11.5px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:4px 0 10px;font-size:12.5px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:18px 0 4px;font-size:11.5px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.d29QNW_table td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px;font-size:12px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{opacity:.8;margin-left:3px;font-size:8px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;font-size:12px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:11px}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-bottom:10px;font-size:11.5px}.d29QNW_legend{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;font-size:10.5px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:26px;padding-top:14px;font-size:11.5px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;line-height:1.5;position:fixed}.d29QNW_tipTitle{margin-bottom:2px;font-size:12px;font-weight:650}.d29QNW_tipSub{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px;font-size:11.5px}.d29QNW_tipRow{color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;font-size:11px;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;font-size:11px;display:flex}";
+		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);padding:16px 20px 32px;font-size:13.5px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-size:18px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit;font-size:11.5px}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px;font-size:13px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}.d29QNW_budgetBanner{background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:10px;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-bottom:12px;padding:8px 14px;font-size:12px;line-height:1.6;display:flex}.d29QNW_budgetBannerNear{border:1px solid var(--dsw-alias-state-warn-primary,#e0a13c);color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_budgetBannerOver{border:1px solid var(--dsw-alias-state-error-primary,#e05a5a);color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_budgetBannerText{flex:320px;min-width:0}.d29QNW_budgetBannerAction{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0;font-size:11.5px;text-decoration:underline}.d29QNW_budgetBannerAction:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:1180px){.d29QNW_cardGrid6{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:720px){.d29QNW_cardGrid6,.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:11.5px}.d29QNW_statValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:20px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:4px;font-size:11.5px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:4px 0 10px;font-size:12.5px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:18px 0 4px;font-size:11.5px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.d29QNW_table td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px;font-size:12px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{opacity:.8;margin-left:3px;font-size:8px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;font-size:12px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:11px}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-bottom:10px;font-size:11.5px}.d29QNW_legend{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;font-size:10.5px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:26px;padding-top:14px;font-size:11.5px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;line-height:1.5;position:fixed}.d29QNW_tipTitle{margin-bottom:2px;font-size:12px;font-weight:650}.d29QNW_tipSub{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px;font-size:11.5px}.d29QNW_tipRow{color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;font-size:11px;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;font-size:11px;display:flex}";
 		const tagId$8 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
@@ -579,6 +749,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
 			"blockLabel": "d29QNW_blockLabel",
+			"budgetBanner": "d29QNW_budgetBanner",
+			"budgetBannerAction": "d29QNW_budgetBannerAction",
+			"budgetBannerNear": "d29QNW_budgetBannerNear",
+			"budgetBannerOver": "d29QNW_budgetBannerOver",
+			"budgetBannerText": "d29QNW_budgetBannerText",
 			"card": "d29QNW_card",
 			"cardGrid3": "d29QNW_cardGrid3",
 			"cardGrid4": "d29QNW_cardGrid4",
@@ -777,7 +952,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$7 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px;font-size:10.5px;font-weight:500}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px;font-size:12.5px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.tXjxsq_keyEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.tXjxsq_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;font-size:10.5px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{flex-direction:column;flex-shrink:0;gap:3px;display:flex}.tXjxsq_heatWeekdays span{color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;font-size:9.5px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0;font-size:10px}";
+		const css$7 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px;font-size:10.5px;font-weight:500}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px;font-size:12.5px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.tXjxsq_keyEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.tXjxsq_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;font-size:10.5px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_budgetRow{flex-wrap:wrap;align-items:center;gap:6px 18px;margin-bottom:14px;display:flex}.tXjxsq_budgetLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:12.5px;font-weight:600}.tXjxsq_budgetItem{align-items:center;gap:7px;font-size:11.5px;display:inline-flex}.tXjxsq_budgetName{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_budgetBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:96px;height:5px;overflow:hidden}.tXjxsq_budgetBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_budgetValue{color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums}.tXjxsq_budgetValue.tXjxsq_warn{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-weight:600}.tXjxsq_budgetValue.tXjxsq_danger{color:var(--dsw-alias-state-error-primary,#e05a5a);font-weight:600}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{flex-direction:column;flex-shrink:0;gap:3px;display:flex}.tXjxsq_heatWeekdays span{color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;font-size:9.5px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0;font-size:10px}";
 		const tagId$7 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
@@ -792,6 +967,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$7
 		});
 		var overview_module_css_default = {
+			"budgetBar": "tXjxsq_budgetBar",
+			"budgetItem": "tXjxsq_budgetItem",
+			"budgetLabel": "tXjxsq_budgetLabel",
+			"budgetName": "tXjxsq_budgetName",
+			"budgetRow": "tXjxsq_budgetRow",
+			"budgetValue": "tXjxsq_budgetValue",
 			"cellKey": "tXjxsq_cellKey",
 			"clickable": "tXjxsq_clickable",
 			"danger": "tXjxsq_danger",
@@ -827,27 +1008,40 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/components/Heatmap.tsx
 		/**
 		* 活跃热力图：最近约 9 个月的滚动窗口（含未来格占位）。
-		* 强度分档取活跃日的三分位（p33 / p67），阈值随可见区间自动变化，
+		* 强度分档取活跃日的五分位（p20 / p40 / p60 / p80），阈值随可见区间自动变化，
 		* 具体数值并入页面底部的口径说明，不再单独占一行。
 		* 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
 		*/
 		const DAY_MS$1 = 864e5;
 		function levelThresholds(days) {
 			const active = days.map((day) => day.totalTokens).filter((tokens) => tokens > 0).sort((first, second) => first - second);
-			if (active.length < 3) return [5e7, 2e8];
+			if (active.length < 5) return [
+				1e7,
+				3e7,
+				6e7,
+				15e7
+			];
 			const pick = (fraction) => active[Math.min(active.length - 1, Math.floor(active.length * fraction))];
-			return [pick(.33), pick(.67)];
+			return [
+				pick(.2),
+				pick(.4),
+				pick(.6),
+				pick(.8)
+			];
 		}
 		function levelOf(tokens, thresholds) {
 			if (tokens <= 0) return 0;
-			if (tokens < thresholds[0]) return 1;
-			if (tokens < thresholds[1]) return 2;
-			return 3;
+			let level = 1;
+			for (const threshold of thresholds) if (tokens >= threshold) level += 1;
+			return level;
 		}
+		/** 五档由浅到深，末档用满色；灰色是「无用量」，与「无数据」的 ghost 区分。 */
 		const LEVEL_COLORS = [
 			"rgba(128,128,140,.22)",
-			"rgba(91,140,255,.25)",
-			"rgba(91,140,255,.55)",
+			"rgba(91,140,255,.18)",
+			"rgba(91,140,255,.36)",
+			"rgba(91,140,255,.56)",
+			"rgba(91,140,255,.78)",
 			"#5b8cff"
 		];
 		function Heatmap(props) {
@@ -931,8 +1125,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: "ghost" }), "无数据"] }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), "无用量"] }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[1] } }), "少"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[2] } }), "中"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[3] } }), "高"] })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[2] } }), "较少"] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[3] } }), "中"] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[4] } }), "较多"] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[5] } }), "多"] })
 						]
 					})]
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1006,7 +1202,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/pricing.module.css.mjs
-		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHead{flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:4px;display:flex}.aymcxa_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:14px;font-weight:650}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 12px;font-size:11.5px;line-height:1.7}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fieldWide{grid-column:span 2}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_windowRow{align-items:center;gap:8px;margin-bottom:6px;display:flex}.aymcxa_windowRow input{width:84px}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_hiddenFile{display:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
+		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHead{flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:4px;display:flex}.aymcxa_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:14px;font-weight:650}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 12px;font-size:11.5px;line-height:1.7}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fieldWide{grid-column:span 2}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_windowRow{align-items:center;gap:8px;margin-bottom:6px;display:flex}.aymcxa_windowRow input{width:84px}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_hiddenFile{display:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
 		const tagId$6 = "dsh-key-usage/pricing.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1023,6 +1219,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var pricing_module_css_default = {
 			"actionBtn": "aymcxa_actionBtn",
 			"catalogNote": "aymcxa_catalogNote",
+			"catalogStale": "aymcxa_catalogStale",
 			"drawer": "aymcxa_drawer",
 			"editing": "aymcxa_editing",
 			"editor": "aymcxa_editor",
@@ -1100,6 +1297,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function OverviewTab(props) {
 			const { channels, summary } = props;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+				props.budget !== null && props.budget.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BudgetRow, { budget: props.budget }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.groupLabel,
 					children: "Key 清单"
@@ -1177,6 +1375,46 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: "未读取到余额快照，余额 / 窗口列显示为 —"
 				})
 			] });
+		}
+		/**
+		* 预算进度：只在配了阈值时出现（`enabled:false` 由调用方挡掉）。
+		* 逐项一条：今日 / 本月 Tokens、本月各币种成本 —— 超限与接近只改颜色与文案，不做任何拦截。
+		*/
+		function BudgetRow(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.budgetRow,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: overview_module_css_default.budgetLabel,
+					children: "预算"
+				}), props.budget.entries.map((entry) => {
+					const level = budgetLevelOf(entry.percent);
+					const levelClass = level === "over" ? overview_module_css_default.danger : level === "near" ? overview_module_css_default.warn : "";
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: overview_module_css_default.budgetItem,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: overview_module_css_default.budgetName,
+								children: budgetEntryNameOf(entry)
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: overview_module_css_default.budgetBar,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+									width: Math.min(100, Math.max(2, entry.percent)) + "%",
+									background: budgetBarColorOf(level)
+								} })
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: [overview_module_css_default.budgetValue, levelClass].join(" ").trim(),
+								children: [
+									budgetAmountTextOf(entry),
+									" · ",
+									budgetPercentTextOf(entry.percent)
+								]
+							})
+						]
+					}, entry.kind + "|" + (entry.currency ?? ""));
+				})]
+			});
 		}
 		function tagClassOf(channel) {
 			const base = overview_module_css_default.tag;
@@ -1269,7 +1507,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
-		const css$5 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px;font-size:12px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}._91PKKq_rangeInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;background:0 0;border-radius:7px;padding:3px 8px;font-size:12px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex}._91PKKq_barColumn:hover{filter:brightness(1.2)}._91PKKq_segCache{background:var(--dsw-alias-state-accent-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-accent-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1;font-size:9.5px}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0;font-size:10px}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);padding:5px 0;font-size:11.5px}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:11px;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:10px;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:9px;display:inline-block}";
+		const css$5 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px;font-size:12px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}._91PKKq_rangeInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;background:0 0;border-radius:7px;padding:3px 8px;font-size:12px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}._91PKKq_rowToggle{font:inherit;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums;background:0 0;border:0;align-items:center;gap:6px;padding:0;font-size:12px;display:inline-flex}._91PKKq_rowToggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex}._91PKKq_barColumn:hover{filter:brightness(1.2)}._91PKKq_segCache{background:var(--dsw-alias-state-accent-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-accent-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1;font-size:9.5px}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0;font-size:10px}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);padding:5px 0;font-size:11.5px}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:11px;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:10px;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:9px;display:inline-block}";
 		const tagId$5 = "dsh-key-usage/detail.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1295,6 +1533,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rangeInput": "_91PKKq_rangeInput",
 			"rangeLeft": "_91PKKq_rangeLeft",
 			"rangeTabs": "_91PKKq_rangeTabs",
+			"rowToggle": "_91PKKq_rowToggle",
 			"segCache": "_91PKKq_segCache",
 			"segIn": "_91PKKq_segIn",
 			"segOut": "_91PKKq_segOut",
@@ -1354,6 +1593,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}));
 			}
 			rows.sort((first, second) => second.tokens - first.tokens);
+			const shareSummary = rows.length === 0 ? title + "：暂无数据" : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? "，等 " + String(rows.length) + " 项" : "");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1361,6 +1601,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: title
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: detail_module_css_default.shareBar,
+					role: "img",
+					"aria-label": shareSummary,
 					children: rows.map((row) => {
 						const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
@@ -1881,10 +2123,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: expandable ? shared_module_css_default.clickable : "",
 							onClick: expandable ? () => onTogglePeriod(period.period) : void 0,
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [expandable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: detail_module_css_default.toggleArrow,
-									children: isOpen ? "▼" : "▶"
-								}), period.period] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: expandable ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: detail_module_css_default.rowToggle,
+									"aria-expanded": isOpen,
+									onClick: (event) => {
+										event.stopPropagation();
+										onTogglePeriod(period.period);
+									},
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.toggleArrow,
+										"aria-hidden": "true",
+										children: isOpen ? "▼" : "▶"
+									}), period.period]
+								}) : period.period }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(period.totalTokens) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(period.calls) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: tokenCellOf(period.inputTokens) }),
@@ -2919,8 +3171,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 目的是让「这一格钱凭什么」一眼可读，同时把矛盾提示合并成一条带优先级的提示。
 		* 规则本体存在宿主设置服务里，成本计算全在服务端（src/server/pricing.ts），界面不重复算。
 		*/
-		/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
-		const AMOUNT_DIGITS = 2;
 		/** 「最值得补规则」最多列几条 —— 多于一屏就失去「最值得」的意义。 */
 		const WORTH_RULE_LIMIT = 3;
 		function PricingRulesPanel(props) {
@@ -2944,6 +3194,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const templates = pricing?.templates ?? [];
 			const catalog = pricing?.catalog ?? null;
+			const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources);
 			const providerOptions = (0, react.useMemo)(() => channels.map((channel) => channel.provider), [channels]);
 			const modelOptions = (0, react.useMemo)(() => {
 				const ids = /* @__PURE__ */ new Set();
@@ -3071,7 +3322,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: pricing_module_css_default.statNum,
-											children: ruleCostEntries.map(([currency, amount]) => moneyText(currency, amount)).join(" / ")
+											children: ruleCostEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(" / ")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: pricing_module_css_default.statNote,
@@ -3081,28 +3332,38 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								})
 							}),
 							catalog !== null && catalog.entries > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.catalogNote,
+								className: pricing_module_css_default.catalogNote + (catalogStale === null ? "" : " " + pricing_module_css_default.catalogStale),
 								children: [
 									"已内置 ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
 									" 条厂商官方价目，",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "无需套用模板即自动生效" }),
 									"（你的规则优先于它）。来源：",
-									catalog.sources.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										index > 0 && "；",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-											className: pricing_module_css_default.linkBtn,
-											href: entry.source,
-											target: "_blank",
-											rel: "noreferrer",
-											children: entry.providers.join(" / ")
-										}),
-										"（",
-										entry.count,
-										" 条，",
-										entry.fetchedAt,
-										" 抓取）"
-									] }, entry.source))
+									catalog.sources.map((entry, index) => {
+										const daysAgo = fetchedDaysAgo(entry.fetchedAt);
+										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											index > 0 && "；",
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+												className: pricing_module_css_default.linkBtn,
+												href: entry.source,
+												target: "_blank",
+												rel: "noreferrer",
+												children: entry.providers.join(" / ")
+											}),
+											"（",
+											entry.count,
+											" 条，",
+											entry.fetchedAt,
+											" 抓取",
+											daysAgo === null ? "" : "，距今 " + String(daysAgo) + " 天",
+											"）"
+										] }, entry.source);
+									}),
+									catalogStale !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: ["　", /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [
+										"价目最新一次抓取距今 ",
+										String(catalogStale),
+										" 天，建议按官方文档复核价目。"
+									] })] })
 								]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3316,7 +3577,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 												className: pricing_module_css_default.saving,
-												children: ["省 ", moneyText(entry.currency, entry.amount)]
+												children: ["省 ", moneyTextOf(entry.currency, entry.amount)]
 											})
 										] }, entry.provider + "|" + entry.model))
 									}),
@@ -3326,8 +3587,161 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										children: showAllSavings ? "收起" : "展开全部（" + String(savingsDetail.length) + " 条）"
 									})
 								]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(BudgetEditor, {
+								settings,
+								state
 							})
 						]
+					})
+				]
+			});
+		}
+		/**
+		* 预算与告警：阈值与规则同住一个设置命名空间，保存只写 `budget` 一段（不碰规则）。
+		* 判定在服务端（src/server/budget.ts），越线时页面顶部的横幅与总览的进度条才会出现。
+		*/
+		function BudgetEditor(props) {
+			const [draft, setDraft] = (0, react.useState)(null);
+			const [notice, setNotice] = (0, react.useState)(null);
+			const editable = props.state.status === "ready" && props.state.writable;
+			const value = draft ?? props.state.budget;
+			const numberField = (label, key, hint) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: pricing_module_css_default.field,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: label }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+						type: "number",
+						min: 0,
+						step: "any",
+						value: String(value[key]),
+						onChange: (event) => {
+							const next = Number(event.target.value);
+							setDraft({
+								...value,
+								[key]: Number.isFinite(next) && next > 0 ? next : 0
+							});
+						}
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: pricing_module_css_default.editorHint,
+						children: hint
+					})
+				]
+			}, key);
+			const save = async () => {
+				if (!await props.settings.saveBudget(draft ?? props.state.budget)) return;
+				setDraft(null);
+				setNotice("预算阈值已保存");
+			};
+			const clear = async () => {
+				if (!await props.settings.saveBudget(EMPTY_BUDGET_THRESHOLDS)) return;
+				setDraft(null);
+				setNotice("已清除预算阈值：不再告警");
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: pricing_module_css_default.sectionBlock,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.subLabel,
+						children: "预算与告警"
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.panelHint,
+						children: [
+							"按",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地日历日 / 日历月" }),
+							"切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）； 成本上限",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "按币种独立比较" }),
+							"，不换算、不合计；",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "0 或留空 = 该项不启用" }),
+							"； 告警只是提示，不阻断任何操作。"
+						]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.editorGrid,
+						children: [numberField("每日 Tokens 上限", "dailyTokens", "留空 / 0 = 不启用"), numberField("每月 Tokens 上限", "monthlyTokens", "留空 / 0 = 不启用")]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.subLabel,
+						children: "每月成本上限（逐币种独立比较，不换算）"
+					}),
+					value.monthlyCost.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.panelHint,
+						children: "还没有币种上限。"
+					}),
+					value.monthlyCost.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.windowRow,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+								className: pricing_module_css_default.actionBtn,
+								value: entry.currency,
+								onChange: (event) => setDraft({
+									...value,
+									monthlyCost: value.monthlyCost.map((candidate, position) => position === index ? {
+										...candidate,
+										currency: event.target.value
+									} : candidate)
+								}),
+								children: CURRENCY_OPTIONS.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: currency,
+									children: currency
+								}, currency))
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+								type: "number",
+								min: 0,
+								step: "any",
+								value: String(entry.amount),
+								onChange: (event) => {
+									const next = Number(event.target.value);
+									setDraft({
+										...value,
+										monthlyCost: value.monthlyCost.map((candidate, position) => position === index ? {
+											...candidate,
+											amount: Number.isFinite(next) && next > 0 ? next : 0
+										} : candidate)
+									});
+								}
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								className: pricing_module_css_default.linkBtn,
+								onClick: () => setDraft({
+									...value,
+									monthlyCost: value.monthlyCost.filter((_, position) => position !== index)
+								}),
+								children: "移除"
+							})
+						]
+					}, index)),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						className: pricing_module_css_default.actionBtn,
+						onClick: () => setDraft({
+							...value,
+							monthlyCost: [...value.monthlyCost, {
+								currency: CURRENCY_OPTIONS[0],
+								amount: 0
+							}]
+						}),
+						children: "+ 添加币种上限"
+					}),
+					notice !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.panelHint,
+						children: notice
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.editorActions,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
+							disabled: !editable,
+							onClick: () => void save(),
+							children: "保存阈值"
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							className: pricing_module_css_default.actionBtn,
+							disabled: !editable,
+							onClick: () => void clear(),
+							children: "清除阈值"
+						})]
 					})
 				]
 			});
@@ -3370,7 +3784,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							children: "缓存命中已省"
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: pricing_module_css_default.summaryValue + (props.savingsEntries.length > 0 ? " " + pricing_module_css_default.saving : ""),
-							children: props.savingsEntries.length === 0 ? "—" : props.savingsEntries.map(([currency, amount]) => moneyText(currency, amount)).join(" / ")
+							children: props.savingsEntries.length === 0 ? "—" : props.savingsEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(" / ")
 						})]
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3462,10 +3876,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			});
 			return null;
-		}
-		/** 两位小数 + 币种符号；未知币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
-		function moneyText(currency, amount) {
-			return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS);
 		}
 		function percentText(share) {
 			return (share * 100).toFixed(1) + "%";
@@ -4372,23 +4782,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [projects, setProjects] = (0, react.useState)(null);
 			const [models, setModels] = (0, react.useState)(null);
 			const [pricing, setPricing] = (0, react.useState)(null);
+			const [budget, setBudget] = (0, react.useState)(null);
 			const [available, setAvailable] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(false);
 			const tooltip = useTooltip();
 			const pricingState = (0, react.useSyncExternalStore)(pricingSettings.store.subscribe, pricingSettings.store.getSnapshot);
-			const pricingSignature = JSON.stringify(pricingState.config);
+			const settingsSignature = JSON.stringify(pricingState.config) + JSON.stringify(pricingState.budget);
 			const reload = (0, react.useCallback)(async (includeSessionData, forceQuota = false) => {
 				setLoading(true);
 				const quotaResult = await loadQuota(forceQuota);
-				const [channelResult, summaryResult, heatmapResult] = await Promise.all([
+				const [channelResult, summaryResult, heatmapResult, budgetResult] = await Promise.all([
 					loadChannels(),
 					loadSummary(),
-					loadHeatmap()
+					loadHeatmap(),
+					loadBudget()
 				]);
 				setChannels(channelResult ?? []);
 				setQuotas(quotaResult ?? []);
 				setSummary(summaryResult);
 				setHeatmap(heatmapResult ?? []);
+				setBudget(budgetResult);
 				if (includeSessionData) {
 					const [sessionResult, projectResult, modelResult] = await Promise.all([
 						loadSessions(),
@@ -4400,7 +4813,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					setModels(modelResult);
 				}
 				setLoading(false);
-			}, [pricingSignature]);
+			}, [settingsSignature]);
 			(0, react.useEffect)(() => {
 				reload(false);
 			}, [reload]);
@@ -4412,7 +4825,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return () => {
 					cancelled = true;
 				};
-			}, [pricingSignature]);
+			}, [settingsSignature]);
 			(0, react.useEffect)(() => {
 				if (activeTab === "sessions" && sessions === null) loadSessions().then(setSessions);
 				if (activeTab === "projects" && projects === null) loadProjects().then(setProjects);
@@ -4468,7 +4881,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				bounds.from,
 				bounds.to,
 				channelFilter,
-				pricingSignature
+				settingsSignature
 			]);
 			const refresh = (0, react.useCallback)(() => {
 				reload(activeTab === "sessions" || activeTab === "projects" || activeTab === "models" || sessions !== null || projects !== null || models !== null, true);
@@ -4485,6 +4898,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				bounds.to,
 				channelFilter
 			]);
+			const budgetAlert = budget === null ? null : budgetAlertTextOf(budget);
+			const showBudgetAlert = budget !== null && budget.level !== "ok" && budgetAlert !== null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.section,
 				children: [
@@ -4500,6 +4915,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							})
 						})]
 					}),
+					showBudgetAlert && budget !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: shared_module_css_default.budgetBanner + " " + (budget.level === "over" ? shared_module_css_default.budgetBannerOver : shared_module_css_default.budgetBannerNear),
+						role: "status",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: shared_module_css_default.budgetBannerText,
+							children: budgetAlert
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							className: shared_module_css_default.budgetBannerAction,
+							onClick: () => setActiveTab("detail"),
+							children: "查看使用明细 →"
+						})]
+					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.tabBar,
 						children: TABS.map(([tabId, label]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -4513,6 +4940,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						summary,
 						quotas,
 						heatmap,
+						budget,
 						tooltip,
 						onOpenDetail: (provider) => {
 							setChannelFilter(provider);
@@ -4570,10 +4998,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									summary !== null && summary.todaySource === "session" ? "（当前有 " + summary.sessionDates.length + " 天由会话补位）" : "",
 									"。两套来源按天取舍、不相加。"
 								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "热力图按可见区间内活跃日的三分位分档（少 / 中 / 高）。" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "热力图按可见区间内活跃日的五分位分档（少 / 较少 / 中 / 较多 / 多，即 p20 / p40 / p60 / p80）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "项目用量、会话用量、按模型与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+									"预算按",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地日历日 / 日历月" }),
+									"切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）； 成本上限",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "按币种独立比较" }),
+									"，不换算、不合计；阈值在「余额与配额」页的规则面板里配置，",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "告警只是提示，不阻断任何操作" }),
+									"。"
+								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
 									"成本优先级：",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "台账当天的官方成本" }),
