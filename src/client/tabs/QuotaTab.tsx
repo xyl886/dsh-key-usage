@@ -17,7 +17,7 @@ import {
   megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
   type AggregateIssue, type CostSource, type ModelPriceAggregate, type PricingRefreshResult, type PricingResponse,
 } from '../pricing.ts'
-import type { Channel, ModelRateRow, QuotaProvider, RatesResponse } from '../types.ts'
+import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../types.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
@@ -62,6 +62,8 @@ export function QuotaTab(props: {
   channels: Channel[]
   quotas: QuotaProvider[]
   pricing: PricingResponse | null
+  /** 配额执行结果：哪个通道这次查到实时值、展示值时间与失败原因（用来标「本机快照 + 数据时间」）。 */
+  quotaOutcome: SnapshotQuotaOutcome | null
   /** 价目版本号：刷新价目后单价表与用量口径都要重取。 */
   reloadToken: number
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本整体重算）。 */
@@ -256,6 +258,7 @@ export function QuotaTab(props: {
       <div className={quotaStyles.quotaList}>
         {props.channels.map((channel, index) => {
           const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null
+          const outcome = props.quotaOutcome?.providers.find((item) => item.provider === channel.provider) ?? null
           const balance = snapshot?.balance ?? null
           const plan = snapshot?.plan ?? null
           const isLive = snapshot?.source === 'live'
@@ -283,6 +286,13 @@ export function QuotaTab(props: {
                 <span className={quotaStyles.quotaProvider}>{channel.provider} · {channel.costLabel}</span>
                 <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
               </button>
+
+              {outcome !== null && outcome.ok === false && (
+                <div className={quotaStyles.staleLine}>
+                  数据时间 {outcome.capturedAt === null ? '未知' : localTimeTextOf(outcome.capturedAt)} · 本机快照 · 本次失败：
+                  {outcome.error ?? '未查询'}
+                </div>
+              )}
 
               {balance !== null && (
                 <div className={quotaStyles.balanceStrip}>

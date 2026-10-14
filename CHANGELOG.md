@@ -12,18 +12,26 @@
 - **LiteLLM 聚合价目层（第三方、USD）**：随包快照 `data/litellm-model-prices.json`（MIT，来源 / commit / 日期 / sha256 见 `data/README.md`），本地刷新副本优先；匹配按通道别名表，别名不命中且模型名不唯一时跳过，只收录一档缓存价时缺档按未命中价代并标「· 部分」；
 - **实时汇率与 ¥ / $ 折算**：`GET /dsh-key-usage/fx`（主 `open.er-api.com`、备 `api.frankfurter.app`，6 秒超时 / 64 KiB 上限 / 12 小时 TTL，失败回落缓存、再失败用默认 7.1 并在界面明示）；全页金额收口到 `moneyTextOf`，折算值带 `≈`，**汇总改用 `costsByCurrency` 逐币种折算后相加**，修掉「人民币行与美元行直接相加」的老隐患；单价小值改用 4 位小数（避免缓存读价显示成 0.00）；
 - **每通道单价表**：`GET /dsh-key-usage/rates` 给出该通道近 30 天模型的四档单价与来源（官方价 / 聚合 / 估算 / 无依据），含「· 部分」与「错峰中」；
-- **「刷新价目」按钮与 `POST /dsh-key-usage/pricing/refresh`**：先 GitHub raw 再 jsDelivr 镜像，服务端 20 秒预算 / 12 MiB 上限，校验不过不覆盖旧文件。
+- **「刷新价目」按钮与 `POST /dsh-key-usage/pricing/refresh`**：先 GitHub raw 再 jsDelivr 镜像，服务端 20 秒预算 / 12 MiB 上限，校验不过不覆盖旧文件；
+- **统一快照 `$DSH_HOME/dsh-key-usage/snapshot.json`**：6 个 Tab（总览 / 使用明细 / 热力图 / 按模型 / 项目 / 会话 / 余额与配额）共用一份、含明细；本地段每 5 分钟重建（不联网），配额段只在页面打开（超 10 分钟 TTL 后台补查）与手动刷新时联网。配套 `GET /dsh-key-usage/snapshot`（构建中返回上一份完整内容）与 `POST /dsh-key-usage/refresh`（手动刷新，串行化，撞上重建最多等 10 秒）。参数化端点保留但调用同一批构建器函数，**不存在快照之外的独立数据源**；
+- 每个通道带 `quotaCapturedAt` / `quotaStale` / `quotaError`，查不到时界面标「数据时间 X · 本机快照 · 本次失败：原因」。
 
 ### 变更
 
 - **价目固定为四层**：`官方账单 > 内置官方价目（CNY） > LiteLLM 聚合价（USD） > 台账反推均价`；
 - **「余额与配额」页改版**：每张通道卡片可点击展开查看该通道单价表；工具条放 ¥ RMB / $ USD 切换、刷新汇率、刷新价目与成本口径 ⓘ；
-- 端点 **13 个 = 12 个只读 GET + 1 个写 POST**；写盘目录固定为 `quota-snapshots.json` / `model-prices.json` / `fx-rate.json` 三个文件；随包体积 +2.7 MB（未压缩快照 2,797,533 B）。
+- 端点 **15 个 = 13 个只读 GET + 2 个写 POST**；写盘目录固定为 `snapshot.json` / `model-prices.json` / `fx-rate.json` 三个文件（`quota-snapshots.json` 不再写入）；离线测试 **15 个**；随包体积 +2.7 MB（未压缩快照 2,797,533 B）。
 
 ### 移除
 
 - **「你的规则」整层删除**：`pricing-rules.yml` 的读写、`POST /dsh-key-usage/pricing/rules`、`pricing-store.ts`、规则编辑器 / 模板 / 片段 / 「让 DSH 帮我配」提示词，以及宿主设置服务链路（schemastery `Config`、`configForms`、`PricingCard.tsx`、`pricingSettings.ts`）全部删除 —— **用户不再需要填任何价格**；
 - **预算与告警整块移除**：`/budget` 端点、客户端横幅与阈值配置、`src/server/budget.ts`、`src/client/budget.ts`、`test/budget.test.mjs` 一起删除。
+
+### 修复
+
+- **总览「余额或窗口」显示很久以前的旧值**：该列此前读**宿主**的 `dsh-usage/provider-snapshots.json`（本机那份是 14 天前的 `opencode-go = month 76%`）+ 60 秒内存缓存，从不读插件自己的快照 —— 两个页面数字不同，且旧值没有任何时间标注。现在统一走插件自己的快照，失败时回落**上一份自己的快照**并标出数据时间与失败原因；
+- **手动刷新后「只有一个通道更新」**：`opencode-go` 与 `opencode` 是两个通道、两把 Key、同一个上游 URL，一把 Key 失败时该通道静默沿用旧值。现在失败通道带 `error` 与 `capturedAt`，界面明示；
+- 顺手清掉「会话用量」搜索框右侧与 placeholder 重复的提示文字。
 
 ### 文档
 

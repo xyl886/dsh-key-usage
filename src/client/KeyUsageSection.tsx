@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll } from './api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './currency.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
@@ -19,6 +19,8 @@ import type {
   ProjectsResponse,
   QuotaProvider,
   SessionsResponse,
+  SnapshotQuotaOutcome,
+  SnapshotResponse,
   SummaryResponse,
   UsageResponse,
 } from './types.ts'
@@ -59,17 +61,42 @@ export function KeyUsageSection() {
   const [loading, setLoading] = useState(false)
   /** 价目版本号：点「刷新价目」后自增，用来让服务端重算成本并整体重取数据。 */
   const [pricingRevision, setPricingRevision] = useState(0)
+  /** 配额执行结果：哪个通道这次查到实时值、展示值的时间与失败原因（界面据此标「本机快照 + 数据时间」）。 */
+  const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
+  const lastSnapshotAt = useRef(0)
   const tooltip = useTooltip()
   /** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
   const currency = useCurrencyDisplay()
 
-  const reload = useCallback(async (includeSessionData: boolean, forceQuota = false) => {
-    setLoading(true)
-    // 先查余额：服务端会借这次调用预热实时结果，随后 /channels 的状态判定就能用上
+  /** 用户是否还在看默认范围（近 30 天 / 全部通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
+  const usageIsDefaultRef = useRef(true)
+  usageIsDefaultRef.current = range === 'month' && channelFilter === 'ALL'
+
+  /** 把一份快照落到各 Tab 的状态上（快照是 6 个 Tab 的唯一数据来源）。 */
+  const applySnapshot = useCallback((snapshot: SnapshotResponse) => {
+    const sections = snapshot.sections
+    setQuotaOutcome(snapshot.quotaOutcome)
+    if (sections.channels !== null) setChannels(sections.channels.channels ?? [])
+    if (sections.quota !== null) setQuotas(sections.quota.providers ?? [])
+    setSummary(sections.overview)
+    if (sections.heatmap !== null) setHeatmap(sections.heatmap.days ?? [])
+    setSessions(sections.sessions)
+    setProjects(sections.projects)
+    setModels(sections.models)
+    const usageSection = sections.usage
+    if (usageIsDefaultRef.current && usageSection !== null) {
+      setUsage(usageSection)
+      if (usageSection.availableFrom !== null && usageSection.availableTo !== null) {
+        setAvailable({ from: usageSection.availableFrom, to: usageSection.availableTo })
+      }
+    }
+    lastSnapshotAt.current = Date.now()
+  }, [])
+
+  /** 逐端点兜底：服务端还是旧版本（没有 /snapshot）时用，语义与升级前一致。 */
+  const reloadFromEndpoints = useCallback(async (includeSessionData: boolean, forceQuota: boolean) => {
     const quotaResult = await loadQuota(forceQuota)
-    const [channelResult, summaryResult, heatmapResult] = await Promise.all([
-      loadChannels(), loadSummary(), loadHeatmap(),
-    ])
+    const [channelResult, summaryResult, heatmapResult] = await Promise.all([loadChannels(), loadSummary(), loadHeatmap()])
     setChannels(channelResult ?? [])
     setQuotas(quotaResult ?? [])
     setSummary(summaryResult)
@@ -80,12 +107,34 @@ export function KeyUsageSection() {
       setProjects(projectResult)
       setModels(modelResult)
     }
-    setLoading(false)
-    // pricingRevision 不是被用到的值，而是「价目变了」的失效信号：
-    // 成本在服务端按价目算，价目一换这里就必须整体重取
-  }, [pricingRevision])
+  }, [])
 
-  useEffect(() => { void reload(false) }, [reload])
+  // 首次打开：取快照（还没有时服务端会现算一份），失败才退回逐端点
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      setLoading(true)
+      const snapshot = await loadSnapshot()
+      if (cancelled) return
+      if (snapshot !== null) applySnapshot(snapshot)
+      else await reloadFromEndpoints(false, false)
+      if (!cancelled) setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [applySnapshot, reloadFromEndpoints])
+
+  // 5 分钟本地刷新：服务端每 5 分钟重建一次快照，这里跟着取最新那份；页面隐藏时暂停，切回且已超期立刻补一次
+  useEffect(() => {
+    const pollMs = 5 * 60 * 1000
+    const tick = (): void => {
+      if (document.visibilityState === 'hidden') return
+      if (Date.now() - lastSnapshotAt.current < pollMs) return
+      void loadSnapshot().then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+    }
+    const timer = setInterval(tick, pollMs)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick) }
+  }, [applySnapshot])
 
   // 价目信息：内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态（刷新价目后重取）
   useEffect(() => {
@@ -94,7 +143,13 @@ export function KeyUsageSection() {
     return () => { cancelled = true }
   }, [pricingRevision])
 
-  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时）
+  // 价目换了 → 让服务端重算一次（成本按价目算）并取回新快照
+  useEffect(() => {
+    if (pricingRevision === 0) return
+    void refreshAll().then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+  }, [pricingRevision, applySnapshot])
+
+  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab；快照已经带了就直接用）
   useEffect(() => {
     if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
     if (activeTab === 'projects' && projects === null) void loadProjects().then(setProjects)
@@ -123,13 +178,16 @@ export function KeyUsageSection() {
   }, [bounds.from, bounds.to, channelFilter, pricingRevision])
 
   const refresh = useCallback(() => {
-    void reload(
-      activeTab === 'sessions' || activeTab === 'projects' || activeTab === 'models'
-      || sessions !== null || projects !== null || models !== null,
-      true,
-    )
-    void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => { if (result !== null) setUsage(result) })
-  }, [reload, activeTab, sessions, projects, models, bounds.from, bounds.to, channelFilter])
+    setLoading(true)
+    void (async () => {
+      const snapshot = await refreshAll()
+      if (snapshot !== null) applySnapshot(snapshot)
+      else await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true)
+      const usageResult = await loadUsage(bounds.from, bounds.to, channelFilter)
+      if (usageResult !== null) setUsage(usageResult)
+      setLoading(false)
+    })()
+  }, [applySnapshot, reloadFromEndpoints, sessions, projects, models, bounds.from, bounds.to, channelFilter])
 
   return (
     <div className={styles.section}>
@@ -201,6 +259,7 @@ export function KeyUsageSection() {
           channels={channels}
           quotas={quotas}
           pricing={pricing}
+          quotaOutcome={quotaOutcome}
           reloadToken={pricingRevision}
           onPricingReload={() => setPricingRevision((previous) => previous + 1)}
         />
@@ -228,6 +287,10 @@ export function KeyUsageSection() {
             折算值前缀 <code>≈</code>；当前 {currency.fx === null ? '还没取到汇率，跨币种金额按原币种显示' : fxSummaryTextOf(currency.fx)}。
           </li>
           <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），按官方原值 + 币种原样展示（余额不折算、不给建议）；成本金额按上面的显示币种折算。</li>
+          <li>
+            页面数据来自统一快照：本地段每 5 分钟重建一次；余额与订阅窗口只在你打开页面或点「刷新」时联网，
+            查不到的通道沿用上一份快照并标出数据时间与失败原因。
+          </li>
         </ul>
       </div>
 

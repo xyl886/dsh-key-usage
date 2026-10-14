@@ -62,7 +62,6 @@
 .projectTable th:nth-child(5) { width: 12%; }
 .projectTable th:nth-child(6) { width: 15%; }
 
-.searchHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: nowrap; }
 .crossDayTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); }
 /* 行内工作目录是按钮：点了切到「项目用量」并只看这个项目 */
 .linkBtn {

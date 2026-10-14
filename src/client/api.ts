@@ -12,6 +12,7 @@ import type {
   RatesResponse,
   SessionDetailResponse,
   SessionsResponse,
+  SnapshotResponse,
   SummaryResponse,
   UsageResponse,
 } from './types.ts'
@@ -144,5 +145,36 @@ export async function refreshModelPrices(): Promise<PricingRefreshResult | null>
     return null
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/** 统一快照端点：6 个 Tab 的唯一数据来源（服务端每 5 分钟重建本地段）。 */
+export const SNAPSHOT_PATH = '/dsh-key-usage/snapshot'
+
+/** 手动刷新端点：重算全部本地段 + 查配额（联网）+ 写快照。 */
+export const REFRESH_PATH = '/dsh-key-usage/refresh'
+
+export function loadSnapshot(): Promise<SnapshotResponse | null> {
+  return fetchJson<SnapshotResponse>(SNAPSHOT_PATH)
+}
+
+/** 手动刷新：服务端自己串行化（撞上重建会等，最多 10 秒），超时才回 `{ok:false}`。 */
+export async function refreshAll(): Promise<SnapshotResponse | null> {
+  try {
+    const response = await fetch(REFRESH_PATH, { method: 'POST', headers: { Accept: 'application/json' } })
+    if (!response.ok) {
+      failureReasons.set(REFRESH_PATH, failureTextOf(response.status))
+      return null
+    }
+    failureReasons.delete(REFRESH_PATH)
+    const result = await response.json() as SnapshotResponse & { ok?: boolean; error?: string }
+    if (result.ok !== true) {
+      failureReasons.set(REFRESH_PATH, typeof result.error === 'string' ? result.error : '刷新被服务端拒绝')
+      return null
+    }
+    return result
+  } catch (error) {
+    failureReasons.set(REFRESH_PATH, '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    return null
   }
 }

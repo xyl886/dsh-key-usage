@@ -383,3 +383,40 @@ export interface FxResponse {
   ttlHours?: number
   note?: string | null
 }
+
+/** 某个通道这次配额查询的结果：查到没、展示值的时间、失败原因（界面据此标「本机快照 + 数据时间」）。 */
+export interface SnapshotQuotaProvider {
+  provider: string
+  ok: boolean
+  error: string | null
+  capturedAt: string | null
+  stale: boolean
+}
+
+export interface SnapshotQuotaOutcome {
+  refreshedAt: string | null
+  providers: SnapshotQuotaProvider[]
+}
+
+/** 快照里的 6 个 Tab 数据段，每段形状与对应端点一致（null = 该段这次没构建成功）。 */
+export interface SnapshotSections {
+  overview: SummaryResponse | null
+  channels: { channels: Channel[] } | null
+  usage: UsageResponse | null
+  heatmap: { days: HeatmapDay[] } | null
+  models: ModelsResponse | null
+  projects: ProjectsResponse | null
+  sessions: SessionsResponse | null
+  quota: { providers: QuotaProvider[] } | null
+}
+
+/** `/snapshot` 与 `POST /refresh` 的同一份响应形状。 */
+export interface SnapshotResponse {
+  ok: true
+  updatedAt: string
+  buildSource: 'scheduled' | 'manual' | 'initial'
+  building: boolean
+  sections: SnapshotSections
+  quotaOutcome: SnapshotQuotaOutcome
+  issues: Array<{ kind: string; message: string }>
+}

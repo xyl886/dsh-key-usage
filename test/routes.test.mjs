@@ -197,17 +197,41 @@ assert.equal(heatmap.body.days[2].date, '2026-10-20')
 assert.equal(heatmap.body.days[2].totalTokens, 440, '台账缺的日期由会话事件补进热力图')
 assert.deepEqual(heatmap.body.sessionDates, ['2026-10-20'])
 
-// 余额 / 窗口：按配置的通道逐个返回；实时不可用时回落快照并标出来源
+// 余额 / 窗口：按配置的通道逐个返回；首次构建（还没有快照）就把结果写进快照
 const quota = await callEndpoint('/dsh-key-usage/quota')
 assert.equal(quota.body.providers.length, 2, '每个通道一条')
 const opencodeQuota = quota.body.providers.find((row) => row.provider === 'opencode-go')
 assert.equal(opencodeQuota.source, 'snapshot', '未注入实时服务时回落快照')
-assert.equal(opencodeQuota.plan.windows.length, 2)
+assert.equal(opencodeQuota.snapshotOrigin, 'host', '插件自己还没有值时，如实标出值来自宿主那份')
+assert.equal(opencodeQuota.plan.windows.length, 2, '宿主快照里 week / month 两个窗口')
+assert.equal(opencodeQuota.updatedAt, 1791000000000, '值的时间就是宿主快照的时间（旧的，界面要标出来）')
 const localQuota = quota.body.providers.find((row) => row.provider === 'local')
 assert.equal(localQuota.source, 'snapshot')
+assert.equal(localQuota.supported, false, '本地端点没有余额接口，界面不该提示「查询失败」')
 assert.equal(localQuota.error, 'no-snapshot', '既无实时也无快照时给出原因')
 
-// 实时优先：注入 stub 实时服务后，成功的通道标 live，失败的仍回落快照
+// 统一快照：首次请求物化一份，6 个 tab 共用（写盘 + 读回）
+const snapshotFile = join(home, 'dsh-key-usage', 'snapshot.json')
+assert.equal(existsSync(snapshotFile), true, '首次请求后应写出统一快照')
+const firstSnapshot = await callEndpoint('/dsh-key-usage/snapshot')
+assert.equal(firstSnapshot.body.ok, true)
+assert.equal(firstSnapshot.body.buildSource, 'initial')
+assert.equal(firstSnapshot.body.building, false)
+assert.deepEqual(Object.keys(firstSnapshot.body.sections).sort(), [
+  'channels', 'heatmap', 'models', 'overview', 'projects', 'quota', 'sessions', 'usage',
+])
+assert.equal(firstSnapshot.body.sections.overview.channels.length, 2, '总览段 = /summary 响应体')
+assert.equal(firstSnapshot.body.sections.channels.channels.length, 2, '通道段 = /channels 响应体')
+assert.equal(firstSnapshot.body.sections.usage.availableFrom, '2026-10-12', '使用明细段 = 默认范围（近 30 天 / 全部通道）')
+assert.equal(firstSnapshot.body.quotaOutcome.providers.length, 2)
+assert.equal(firstSnapshot.body.stale === undefined, true, 'stale 只出现在 quotaOutcome 的通道条目里')
+assert.ok(firstSnapshot.body.issues.some((issue) => issue.kind === 'build-duration'), '构建耗时进 issues')
+
+// 只读端点与快照同源：/channels 与 /summary 直接给快照里的对应段
+assert.deepEqual((await callEndpoint('/dsh-key-usage/channels')).body, firstSnapshot.body.sections.channels)
+assert.deepEqual((await callEndpoint('/dsh-key-usage/summary')).body, firstSnapshot.body.sections.overview)
+
+// 手动刷新（POST /refresh）：重算全部 + 查配额（联网），成功的通道标 live
 const liveHandlers = new Map()
 const liveCache = new Map([['opencode-go', {
   provider: 'opencode-go',
@@ -222,26 +246,40 @@ const liveCache = new Map([['opencode-go', {
   ],
 }]])
 const stubLiveQuota = { cached: () => liveCache, refreshIfStale: async () => liveCache }
-mountKeyUsageRoutes({ register: (route) => { liveHandlers.set(route.path, route.handler) } }, sessionSource, stubLiveQuota)
+mountKeyUsageRoutes(
+  { register: (route) => { liveHandlers.set(route.path, route.handler) } },
+  sessionSource,
+  stubLiveQuota,
+  undefined,
+  { snapshotIntervalMs: 0 },
+)
 
-const liveQuotaBody = await callHandler(liveHandlers, '/dsh-key-usage/quota')
-const liveOpencode = liveQuotaBody.body.providers.find((row) => row.provider === 'opencode-go')
+const refreshed = await callHandler(liveHandlers, '/dsh-key-usage/refresh', '127.0.0.1', '')
+assert.equal(refreshed.body.ok, true)
+assert.equal(refreshed.body.buildSource, 'manual')
+const liveOpencode = refreshed.body.sections.quota.providers.find((row) => row.provider === 'opencode-go')
 assert.equal(liveOpencode.source, 'live', '实时成功时用实时值')
 assert.equal(liveOpencode.fetchedAt, 1791000900000)
 assert.deepEqual(liveOpencode.plan.windows.map((window) => window.key), ['5h', 'week', 'month'])
-const liveLocal = liveQuotaBody.body.providers.find((row) => row.provider === 'local')
-assert.equal(liveLocal.source, 'snapshot', '实时没有结果的通道继续回落快照')
 assert.equal(liveOpencode.supported, true, '有查询方案的通道标 supported')
-assert.equal(liveLocal.supported, false, '本地端点没有余额接口，界面不该提示「查询失败」')
+const liveState = refreshed.body.quotaOutcome.providers.find((entry) => entry.provider === 'opencode-go')
+assert.equal(liveState.ok, true)
+assert.equal(liveState.stale, false)
+assert.equal(liveState.capturedAt, new Date(1791000900000).toISOString(), 'capturedAt = 这次实时取数时间')
+const localState = refreshed.body.quotaOutcome.providers.find((entry) => entry.provider === 'local')
+assert.equal(localState.ok, false, '没有查询方案的通道不算「查到了」')
+assert.equal(localState.stale, false, '没有值可展示时不该谎称「正在展示旧值」')
+assert.equal(localState.capturedAt, null)
 
-// 快照持久化：实时一成功就落一份自己的快照（宿主那份已经 13 天没更新了）
-const ownSnapshotPath = join(home, 'dsh-key-usage', 'quota-snapshots.json')
-assert.equal(existsSync(ownSnapshotPath), true, '实时成功后应写出自己的快照文件')
-const ownSnapshot = JSON.parse(readFileSync(ownSnapshotPath, 'utf8'))
-assert.equal(ownSnapshot.providers['opencode-go'].updatedAt, 1791000900000)
-assert.equal(ownSnapshot.providers['opencode-go'].windows.length, 3)
+// 通道段按最新配额重建：额度百分比取实时窗口（5h 19%），不是宿主那份 month 76%
+const liveChannels = await callHandler(liveHandlers, '/dsh-key-usage/channels')
+const liveOpencodeChannel = liveChannels.body.channels.find((channel) => channel.provider === 'opencode-go')
+assert.equal(liveOpencodeChannel.quotaPercent, 19, '额度百分比取实时窗口')
+assert.equal(liveOpencodeChannel.quotaWindowKey, '5h')
+assert.equal(liveOpencodeChannel.quotaStale, false)
+assert.equal(liveOpencodeChannel.quotaError, null)
 
-// 之后实时失败时，回落的是这份「最近一次成功」的快照，而不是宿主那份旧值
+// 实时失败的通道：显示「最近一次成功」的旧值 + 数据时间 + 本次失败原因，绝不静默当最新
 const failedCache = new Map([['opencode-go', {
   provider: 'opencode-go',
   ok: false,
@@ -255,19 +293,32 @@ mountKeyUsageRoutes(
   { register: (route) => { failedHandlers.set(route.path, route.handler) } },
   sessionSource,
   { cached: () => failedCache, refreshIfStale: async () => failedCache },
+  undefined,
+  { snapshotIntervalMs: 0 },
 )
-const afterFailure = await callHandler(failedHandlers, '/dsh-key-usage/quota')
-const staleOpencode = afterFailure.body.providers.find((row) => row.provider === 'opencode-go')
+const afterFailure = await callHandler(failedHandlers, '/dsh-key-usage/refresh', '127.0.0.1', '')
+assert.equal(afterFailure.body.ok, true, '配额失败不影响刷新本身')
+const staleOpencode = afterFailure.body.sections.quota.providers.find((row) => row.provider === 'opencode-go')
 assert.equal(staleOpencode.source, 'snapshot')
 assert.equal(staleOpencode.error, 'timeout', '失败原因照常透出')
-assert.equal(staleOpencode.updatedAt, 1791000900000, '回落的是最近一次成功的快照，不是宿主的旧值')
+assert.equal(staleOpencode.updatedAt, 1791000900000, '回落的是插件自己「最近一次成功」的值，不是宿主那份 14 天前的 76%')
+assert.equal(staleOpencode.snapshotOrigin, 'own', '并如实标出值来自本机快照')
 assert.deepEqual(staleOpencode.plan.windows.map((window) => window.key), ['5h', 'week', 'month'])
+const staleState = afterFailure.body.quotaOutcome.providers.find((entry) => entry.provider === 'opencode-go')
+assert.equal(staleState.ok, false)
+assert.equal(staleState.stale, true, '正在展示旧值 → stale')
+assert.equal(staleState.capturedAt, new Date(1791000900000).toISOString(), '带上数据时间')
+assert.equal(staleState.error, 'timeout')
 
-// 通道判定要吃实时值：快照里峰值是 month 76%，实时峰值是 rolling 19%
-const liveChannels = await callHandler(liveHandlers, '/dsh-key-usage/channels')
-const liveOpencodeChannel = liveChannels.body.channels.find((channel) => channel.provider === 'opencode-go')
-assert.equal(liveOpencodeChannel.quotaPercent, 19, '额度百分比取实时窗口')
-assert.equal(liveOpencodeChannel.quotaWindowKey, '5h')
+// 总览的窗口单元格同样能标出「数据时间 · 本机快照 · 本次失败原因」，且百分比仍是最近一次成功的值
+const staleChannels = await callHandler(failedHandlers, '/dsh-key-usage/channels')
+const staleChannel = staleChannels.body.channels.find((channel) => channel.provider === 'opencode-go')
+assert.equal(staleChannel.quotaStale, true)
+assert.equal(staleChannel.quotaCapturedAt, new Date(1791000900000).toISOString())
+assert.equal(staleChannel.quotaError, 'timeout')
+assert.equal(staleChannel.quotaSnapshotOrigin, 'own')
+assert.equal(staleChannel.quotaPercent, 19, '不再回落到宿主那份 month 76%')
+assert.equal(staleChannel.quotaWindowKey, '5h')
 
 // 总览汇总：今日与近 30 天
 const summary = await callEndpoint('/dsh-key-usage/summary')
@@ -570,7 +621,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
     assert.ok(source.providers.length > 0 && source.count > 0)
   }
 
-  // 端点表就是这些：用户规则写入端点已整条删除，价目刷新端点保留（新增端点必须同步测试与文档）
+  // 端点表就是这些：新增统一快照 /snapshot 与手动刷新 /refresh，删掉 /pricing/rules
   assert.deepEqual([...contractHandlers.keys()].sort(), [
     '/dsh-key-usage/channels',
     '/dsh-key-usage/fx',
@@ -581,11 +632,13 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
     '/dsh-key-usage/projects',
     '/dsh-key-usage/quota',
     '/dsh-key-usage/rates',
+    '/dsh-key-usage/refresh',
     '/dsh-key-usage/session',
     '/dsh-key-usage/sessions',
+    '/dsh-key-usage/snapshot',
     '/dsh-key-usage/summary',
     '/dsh-key-usage/usage',
-  ], '12 个只读 GET + 1 个写 POST（价目刷新）')
+  ], '15 个端点 = 14 个只读 GET + 1 个写 POST（手动刷新）')
 
   // /rates：夹具里两个模型都没有价格依据 → source = none，rates 为 null
   const rates = await priced('/dsh-key-usage/rates')
@@ -682,6 +735,9 @@ writeFileSync(join(home, 'profiles', 'desktop', 'cordis.patch.yml'), [
   '            name: sensenova-6.8-flash-lite',
   '',
 ].join('\n'), 'utf8')
+// 手动刷新后，快照的通道段按新配置重建
+const afterConfigRefresh = await callHandler(handlers, '/dsh-key-usage/refresh', '127.0.0.1', '')
+assert.equal(afterConfigRefresh.body.ok, true)
 const fallbackChannels = await callEndpoint('/dsh-key-usage/channels')
 assert.equal(fallbackChannels.body.channels.length, 1, '组合产物为空时回退到 patch 层')
 assert.equal(fallbackChannels.body.channels[0].provider, 'sensenova')

@@ -27,7 +27,7 @@ import {
   type ChannelInfo,
   type ProviderSnapshot,
 } from './collect.js'
-import { schemeIdOf, type LiveQuota, type LiveQuotaService } from './live-quota.js'
+import { schemeIdOf, type LiveQuota, type LiveQuotaService, type LiveWindow } from './live-quota.js'
 import {
   emptySessionDetail,
   hoursOfDate,
@@ -42,7 +42,7 @@ import {
   type SessionRow,
 } from './sessions.js'
 import { createArchiveSource, createTitleSource, normalizeSessionId } from './session-meta.js'
-import { readQuotaSnapshots, writeQuotaSnapshots, type QuotaSnapshotEntry } from './quota-snapshots.js'
+import { readQuotaSnapshots } from './quota-snapshots.js'
 import {
   mergeDailySeries,
   sessionDayRows,
@@ -79,6 +79,12 @@ import {
 } from './pricing-catalog.js'
 import { aggregateStatus, refreshModelPrices } from './model-prices.js'
 import { resolveFxRate } from './fx-rate.js'
+import { SNAPSHOT_FILE, createSnapshotService, type SnapshotQuotaBuild, type SnapshotQuotaOutcome } from './snapshot.js'
+
+/** 挂载选项：定时器周期（0 = 关闭，测试用）。 */
+export interface KeyUsageMountOptions {
+  snapshotIntervalMs?: number
+}
 
 interface WebServer {
   register(route: { kind: string; path: string; handler: (request: IncomingMessage, response: ServerResponse) => Promise<void> | void }): void
@@ -125,6 +131,22 @@ type AnnotatedDaySummary = ChannelDailySummary & {
   partial: boolean
   costsByCurrency: MoneyByCurrency
   models: AnnotatedModelSummary[]
+}
+
+/** 快照配额段里的一行（`/quota` 响应体的 providers[]）。 */
+interface QuotaProviderRow {
+  provider: string
+  displayName: string | null
+  credential: string | null
+  supported: boolean
+  source: 'live' | 'snapshot'
+  /** 旧值来自插件自己的快照还是宿主那份（仅用于如实标注）。 */
+  snapshotOrigin: 'own' | 'host' | null
+  fetchedAt: number | null
+  updatedAt: number | null
+  error: string | null
+  balance: Record<string, unknown> | null
+  plan: { windows: LiveWindow[] } | null
 }
 
 /** 一天里最弱的那一格决定整天的角标：宁可标弱，也不把估算冒充成官方价。 */
@@ -379,6 +401,7 @@ export function mountKeyUsageRoutes(
   sessionSource: SessionSource = unavailableSessionSource,
   liveQuota: LiveQuotaService = disabledLiveQuota,
   hostServices: { get(name: string): unknown } = { get: () => undefined },
+  options: KeyUsageMountOptions = {},
 ): void {
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
@@ -465,28 +488,395 @@ export function mountKeyUsageRoutes(
     })
   }
 
-  const loadChannels = (live: Map<string, LiveQuota> = new Map()): ChannelInfo[] => {
-    // cordis.yml 是应用按需重写的组合产物：插件集变化期间会短暂变成空模板，
-    // 因此先读它，取不到再回退到用户 patch 层 cordis.patch.yml。
-    // 两个文件都含 !!js 表达式，只做文本提取，不执行任何表达式。
+  /** 通道配置：cordis.yml 优先、空模板时回退 cordis.patch.yml（两个文件都含 !!js，只做文本提取）。 */
+  const readChannelConfig = (): ChannelInfo[] => {
     const profileDir = join(dshHomePath(), 'profiles', 'desktop')
-    const snapshots = mergeLiveSnapshots(readSnapshots(), live)
     const composed = readTextFile(join(profileDir, 'cordis.yml'))
     if (composed !== null) {
-      const channels = classifyChannels(extractChannels(composed), snapshots)
+      const channels = extractChannels(composed)
       if (channels.length > 0) return channels
     }
     const patch = readTextFile(join(profileDir, 'cordis.patch.yml'))
-    return patch === null ? [] : classifyChannels(extractChannels(patch), snapshots)
+    return patch === null ? [] : extractChannels(patch)
   }
+  const knownProviders = (): string[] => readChannelConfig().map((channel) => channel.provider)
+
+  /** 快照里的配额段（`/quota` 响应体）。 */
+  const quotaRowsOf = (quota: unknown): QuotaProviderRow[] => {
+    if (typeof quota !== 'object' || quota === null) return []
+    const providers = (quota as { providers?: unknown }).providers
+    return Array.isArray(providers) ? providers as QuotaProviderRow[] : []
+  }
+
+  /** 通道清单（形状 = `/channels` 响应）：窗口 / 余额取自快照的配额段，并带上「数据时间 + 是否陈旧 + 本次失败原因」。 */
+  const channelsPayloadOf = (quota: unknown, outcome: SnapshotQuotaOutcome): { channels: Record<string, unknown>[] } => {
+    const rows = quotaRowsOf(quota)
+    const snapshots: ProviderSnapshot[] = rows.map((row) => ({
+      provider: row.provider,
+      displayName: row.displayName,
+      credential: row.credential,
+      updatedAt: row.updatedAt,
+      balance: row.balance,
+      plan: row.plan,
+    }))
+    const stateOf = new Map(outcome.providers.map((entry) => [entry.provider, entry]))
+    return {
+      channels: classifyChannels(readChannelConfig(), snapshots).map((channel) => {
+        const state = stateOf.get(channel.provider) ?? null
+        const row = rows.find((entry) => entry.provider === channel.provider) ?? null
+        return {
+          ...channelPayload(channel),
+          // 旧值必须能被界面标出来（数据时间 · 本机快照 · 本次失败原因），不许静默当成最新
+          quotaCapturedAt: state?.capturedAt ?? null,
+          quotaStale: state?.stale === true,
+          quotaError: state?.error ?? null,
+          quotaSnapshotOrigin: row?.snapshotOrigin ?? null,
+        }
+      }),
+    }
+  }
+
+  /** 使用明细：默认范围由快照物化；参数化请求走同一函数、同一份本地缓存，不另算一份。 */
+  const usagePayload = async (from: string, to: string, providerFilter: string[] | null): Promise<Record<string, unknown>> => {
+    const ledger = loadLedger()
+    const collection = await sessionSource.collect()
+    const sessionRows = sessionDayRows(collection.records, knownProviders())
+      .filter((row) => providerFilter === null || providerFilter.includes(row.provider))
+    const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
+    const dayKeys = Object.keys(ledger.days).sort()
+    const availableFrom = minKey(dayKeys[0], sessionDates[0]) ?? null
+    const availableTo = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? null
+    const merged = mergeDailySeries(aggregateRange(ledger, from, to, providerFilter).days, sessionRows, from, to)
+    // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
+    const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
+    // 单日有小时槽时按错峰占比加权；跨天拿不到小时分布，只能按标准价（不猜折扣）
+    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), hoursAsPricingRows(hours))
+    const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
+    const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
+    return {
+      days,
+      totals: rawTotals === null ? null : {
+        ...rawTotals,
+        cost: totalsCost,
+        costSource: weakestSource(days.map((day) => day.costSource)),
+        partial: days.some((day) => day.partial),
+        costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(days.map((day) => day.costsByCurrency)), totalsCost),
+      },
+      sessionDates: merged.sessionDates,
+      availableFrom,
+      availableTo,
+      hours,
+    }
+  }
+
+  /** 热力图：近 364 天，与使用明细同一口径（会话补位天按价目/均价估算，台账天保留官方成本）。 */
+  const heatmapPayload = async (): Promise<Record<string, unknown>> => {
+    const ledger = loadLedger()
+    const collection = await sessionSource.collect()
+    const sessionRows = sessionDayRows(collection.records, knownProviders())
+    const dayKeys = Object.keys(ledger.days).sort()
+    const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
+    const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10)
+    const earliest = minKey(dayKeys[0], sessionDates[0]) ?? yearAgo
+    const from = earliest > yearAgo ? earliest : yearAgo
+    const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
+    const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
+    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
+    return {
+      days: days
+        .map((day) => ({
+          date: day.date,
+          totalTokens: day.inputTokens + day.outputTokens + day.cacheReadTokens,
+          models: day.models
+            .map((model) => ({
+              provider: model.provider,
+              model: model.model,
+              totalTokens: model.inputTokens + model.outputTokens + model.cacheReadTokens,
+            }))
+            .filter((model) => model.totalTokens > 0)
+            .sort((first, second) => second.totalTokens - first.totalTokens),
+        }))
+        .filter((day) => day.totalTokens > 0),
+      sessionDates: merged.sessionDates,
+    }
+  }
+
+  /** 总览表：今日 / 近 30 天两列（与使用明细同一口径，否则两页数字对不上）。 */
+  const summaryPayload = async (): Promise<Record<string, unknown>> => {
+    const today = dayKeyOf(new Date())
+    const monthFrom = shiftedDayKey(-29)
+    const ledger = loadLedger()
+    const collection = await sessionSource.collect()
+    const channels = classifyChannels(readChannelConfig(), [])
+    const sessionRows = sessionDayRows(collection.records, channels.map((channel) => channel.provider))
+    const merged = mergeDailySeries(aggregateRange(ledger, monthFrom, today, null).days, sessionRows, monthFrom, today)
+    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
+    const todaySummary = summarizeMergedByProvider(days, today, today)
+    const monthSummary = summarizeMergedByProvider(days, monthFrom, today)
+    const rows = channels.map((channel) => {
+      const todayRow = todaySummary.find((row) => row.provider === channel.provider)
+      const monthRow = monthSummary.find((row) => row.provider === channel.provider)
+      const todayCost = todayRow === undefined ? 0 : Math.round(todayRow.cost * 100) / 100
+      const monthCost = monthRow === undefined ? 0 : Math.round(monthRow.cost * 100) / 100
+      const currency = ledgerCurrencyOf(channel.provider)
+      return {
+        provider: channel.provider,
+        today: {
+          ...todayRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
+          cost: todayCost,
+          costSource: sourceOfProvider(days, channel.provider, today, today),
+          partial: partialOfProvider(days, channel.provider, today, today),
+          costsByCurrency: moneyOrZero(moneyOfProvider(days, channel.provider, today, today), todayCost, currency),
+        },
+        month: {
+          ...monthRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
+          cost: monthCost,
+          costSource: sourceOfProvider(days, channel.provider, monthFrom, today),
+          partial: partialOfProvider(days, channel.provider, monthFrom, today),
+          costsByCurrency: moneyOrZero(moneyOfProvider(days, channel.provider, monthFrom, today), monthCost, currency),
+        },
+      }
+    })
+    return {
+      channels: rows,
+      range: { today, monthFrom },
+      todaySource: merged.sessionDates.includes(today) ? 'session' : 'ledger',
+      sessionDates: merged.sessionDates,
+    }
+  }
+
+  /** 会话用量列表（`limit` 只影响展示条数；快照段用大 limit 物化全量）。 */
+  const sessionsPayload = async (limit: number, quota: unknown): Promise<Record<string, unknown>> => {
+    const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
+    const known = channels.map((channel) => channel.provider)
+    const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+    const { records, coverage } = await sessionSource.collect()
+    const priceTable = buildPriceTable(loadLedger())
+    const averageOf = averagePriceOf(priceTable)
+    const meta = sessionMeta()
+    const rows = sessionRowsOf(records, known, meta).slice(0, limit).map((row) => {
+      const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
+      const cost = costs.length === 0 ? null : sumOrNull(costs)
+      return {
+        ...row,
+        providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
+        costMode: row.provider === null ? null : costModeOf.get(row.provider) ?? null,
+        cost,
+        costsByCurrency: alignMoneyWithCost(
+          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
+          cost,
+        ),
+        costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
+        partial: costs.some((entry) => entry.partial),
+        // 行内展开的模型构成：全量算成本（总额不受截断影响），只把长尾合并成「其它」
+        models: cappedModelRows(row, costs),
+      }
+    })
+    return { rows, coverage, priced: priceTable.size > 0 }
+  }
+
+  /** 项目用量列表。 */
+  const projectsPayload = async (limit: number): Promise<Record<string, unknown>> => {
+    const known = knownProviders()
+    const { records, coverage } = await sessionSource.collect()
+    const priceTable = buildPriceTable(loadLedger())
+    const averageOf = averagePriceOf(priceTable)
+    const rows = projectRowsOf(records, known, sessionMeta()).slice(0, limit).map((row) => {
+      const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
+      const cost = costs.length === 0 ? null : sumOrNull(costs)
+      return {
+        ...row,
+        dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
+        cost,
+        costsByCurrency: alignMoneyWithCost(
+          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
+          cost,
+        ),
+        costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
+        partial: costs.some((entry) => entry.partial),
+      }
+    })
+    return { rows, coverage, priced: priceTable.size > 0 }
+  }
+
+  /** 按模型用量列表。 */
+  const modelsPayload = async (limit: number, quota: unknown): Promise<Record<string, unknown>> => {
+    const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
+    const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+    const { records, coverage } = await sessionSource.collect()
+    const priceTable = buildPriceTable(loadLedger())
+    const averageOf = averagePriceOf(priceTable)
+    const rows = modelRowsOf(records, channels.map((channel) => channel.provider)).slice(0, limit).map((row) => {
+      const costs = rowCostsOf([pricingRowOf(row)], averageOf)
+      const cost = sumOrNull(costs)
+      return {
+        ...row,
+        providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
+        costMode: costModeOf.get(row.provider) ?? null,
+        // 与 /sessions 同一口径：内置官方价目 → 聚合价 → 台账反推均价
+        cost,
+        costsByCurrency: alignMoneyWithCost(
+          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
+          cost,
+        ),
+        costSource: costs[0]?.source ?? 'none',
+        partial: costs[0]?.partial === true,
+      }
+    })
+    return { rows, coverage, priced: priceTable.size > 0 }
+  }
+
+  /**
+   * 配额段（余额与订阅窗口）：**唯一会联网取余额的地方**，只在首次构建与手动刷新时调用。
+   * 实时成功的通道标 `source: 'live'`；失败的通道回落本机快照（插件自己的 snapshot.json，
+   * 首次构建时兼容读一次旧版 `quota-snapshots.json` 当种子），并给出 `capturedAt`（数据时间）、
+   * `stale`（正在展示旧值）与 `error`（本次失败原因）—— 界面据此标注，绝不静默当最新。
+   */
+  const quotaPayload = async (seedLegacy: boolean, previousSection: unknown): Promise<SnapshotQuotaBuild> => {
+    const channels = classifyChannels(readChannelConfig(), [])
+    const live = await liveQuota.refreshIfStale(channels, true)
+    const seeded = seedLegacy ? readQuotaSnapshots(quotaSnapshotPath) : []
+    const hostSnapshots = readSnapshots()
+    // 回落优先级：上一份快照的配额段（插件自己最近一次成功值）> 旧版 quota-snapshots.json（仅首次构建）> 宿主快照
+    const previousRows = quotaRowsOf(previousSection)
+    const fallbackOf = (provider: string): { updatedAt: number | null; balance: Record<string, unknown> | null; plan: QuotaProviderRow['plan']; origin: 'own' | 'host' | null } => {
+      const previous = previousRows.find((row) => row.provider === provider && row.updatedAt !== null)
+      if (previous !== undefined) {
+        return { updatedAt: previous.updatedAt, balance: previous.balance, plan: previous.plan, origin: 'own' }
+      }
+      const own = seeded.find((entry) => entry.provider === provider) ?? null
+      const hostEntry = hostSnapshots.find((entry) => entry.provider === provider) ?? null
+      const useOwn = own !== null && (hostEntry === null || own.updatedAt >= (hostEntry.updatedAt ?? 0))
+      if (useOwn) {
+        return {
+          updatedAt: own.updatedAt,
+          balance: own.balance,
+          plan: own.windows === null ? null : { windows: own.windows },
+          origin: 'own',
+        }
+      }
+      return {
+        updatedAt: hostEntry?.updatedAt ?? null,
+        balance: hostEntry?.balance ?? null,
+        plan: (hostEntry?.plan as QuotaProviderRow['plan']) ?? null,
+        origin: hostEntry === null ? null : 'host',
+      }
+    }
+    const providers: QuotaProviderRow[] = channels.map((channel) => {
+      const liveEntry = live.get(channel.provider)
+      const supported = schemeIdOf(channel.provider) !== null
+      const liveOk = liveEntry !== undefined && liveEntry.ok
+      const hostEntry = hostSnapshots.find((entry) => entry.provider === channel.provider) ?? null
+      if (liveOk) {
+        return {
+          provider: channel.provider,
+          displayName: channel.displayName,
+          credential: channel.apiKeyEnv,
+          supported,
+          source: 'live',
+          snapshotOrigin: null,
+          fetchedAt: liveEntry.fetchedAt,
+          updatedAt: liveEntry.fetchedAt,
+          error: null,
+          balance: liveEntry.balance,
+          plan: liveEntry.windows === null ? null : { windows: liveEntry.windows },
+        }
+      }
+      const fallback = fallbackOf(channel.provider)
+      return {
+        provider: channel.provider,
+        displayName: hostEntry?.displayName ?? channel.displayName,
+        credential: hostEntry?.credential ?? channel.apiKeyEnv,
+        supported,
+        source: 'snapshot',
+        snapshotOrigin: fallback.origin,
+        fetchedAt: null,
+        updatedAt: fallback.updatedAt,
+        // 实时失败的原因要透出（未配置凭据 / 网络 / 鉴权），界面据此提示
+        error: liveEntry?.error ?? (fallback.updatedAt === null ? 'no-snapshot' : null),
+        balance: fallback.balance,
+        plan: fallback.plan,
+      }
+    })
+    const outcome: SnapshotQuotaOutcome = {
+      refreshedAt: new Date().toISOString(),
+      providers: providers.map((row) => {
+        const capturedAt = row.updatedAt === null ? null : new Date(row.updatedAt).toISOString()
+        return {
+          provider: row.provider,
+          ok: row.source === 'live',
+          error: row.error,
+          capturedAt,
+          // 「陈旧」= 正在展示的不是本次实时值，而是确实有值可展示的旧快照
+          stale: row.supported && row.source !== 'live' && capturedAt !== null,
+        }
+      }),
+    }
+    return { quota: { providers }, outcome, issues: [] }
+  }
+
+  /**
+   * 统一快照：6 个 tab 的唯一数据来源（`$DSH_HOME/dsh-key-usage/snapshot.json`）。
+   * 本地段由定时器每 5 分钟重算（不联网）；配额段只在首次构建与手动刷新时联网。
+   */
+  const snapshotService = createSnapshotService({
+    path: join(dshHomePath(), 'dsh-key-usage', SNAPSHOT_FILE),
+    intervalMs: options.snapshotIntervalMs,
+    builders: {
+      local: async ({ quota }) => ({
+        sections: {
+          overview: await summaryPayload(),
+          // 快照存默认范围：近 30 天 / 全部通道
+          usage: await usagePayload(shiftedDayKey(-29), dayKeyOf(new Date()), null),
+          heatmap: await heatmapPayload(),
+          models: await modelsPayload(Number.MAX_SAFE_INTEGER, quota),
+          projects: await projectsPayload(Number.MAX_SAFE_INTEGER),
+          sessions: await sessionsPayload(Number.MAX_SAFE_INTEGER, quota),
+        },
+        issues: [],
+      }),
+      quota: async (input) => quotaPayload(input.seedLegacy, input.previous),
+      channels: async ({ quota, outcome }) => ({ channels: channelsPayloadOf(quota, outcome), issues: [] }),
+    },
+  })
+  snapshotService.start()
+
+  /** 通道清单（含配额判定）：与快照同源，供 /session、/rates 这类按需端点复用。 */
+  const channelsWithQuota = async (): Promise<ChannelInfo[]> =>
+    classifyChannels(readChannelConfig(), quotaRowsOf((await snapshotService.view()).sections.quota))
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/snapshot',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      // 首次没有快照时会现算一次（含配额联网）；构建中返回上一份完整内容 + building:true
+      sendJson(response, 200, await snapshotService.view())
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/refresh',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      if (request.method !== 'POST') {
+        sendJson(response, 200, { ok: false, error: '该端点只支持 POST（面板右上角「刷新」按钮会发 POST）' })
+        return
+      }
+      const result = await snapshotService.refresh()
+      sendJson(response, 200, result.ok ? result.view : { ok: false, error: result.error })
+    },
+  })
 
   webServer.register({
     kind: 'exact',
     path: '/dsh-key-usage/channels',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      // 只用缓存：状态判定不该为了一次刷新去等网络，实时结果由 /quota 预热
-      sendJson(response, 200, { channels: loadChannels(liveQuota.cached()).map(channelPayload) })
+      // 与快照同源：不再单独读宿主快照 + 内存缓存（那正是「总览显示 14 天前 76%」的来源）
+      const view = await snapshotService.view()
+      sendJson(response, 200, view.sections.channels ?? { channels: [] })
     },
   })
 
@@ -496,41 +886,14 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      const ledger = loadLedger()
-      const collection = await sessionSource.collect()
-      const knownProviders = loadChannels().map((channel) => channel.provider)
-      const dayKeys = Object.keys(ledger.days).sort()
+      const view = await snapshotService.view()
+      const available = view.sections.usage as { availableFrom?: string | null; availableTo?: string | null } | null
+      const from = url.searchParams.get('from') ?? available?.availableFrom ?? ''
+      const to = url.searchParams.get('to') ?? available?.availableTo ?? ''
       const providerParam = url.searchParams.get('provider')
       const providerFilter = providerParam !== null && providerParam !== '' ? providerParam.split(',').filter(Boolean) : null
-      const sessionRows = sessionDayRows(collection.records, knownProviders)
-        .filter((row) => providerFilter === null || providerFilter.includes(row.provider))
-      const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
-      const availableFrom = minKey(dayKeys[0], sessionDates[0])
-      const availableTo = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1])
-      const from = url.searchParams.get('from') ?? availableFrom ?? ''
-      const to = url.searchParams.get('to') ?? availableTo ?? ''
-      const ledgerResult = aggregateRange(ledger, from, to, providerFilter)
-      const merged = mergeDailySeries(ledgerResult.days, sessionRows, from, to)
-      // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
-      const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
-      // 单日有小时槽时按错峰占比加权；跨天拿不到小时分布，只能按标准价（不猜折扣）
-      const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), hoursAsPricingRows(hours))
-      const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
-      const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
-      sendJson(response, 200, {
-        days,
-        totals: rawTotals === null ? null : {
-          ...rawTotals,
-          cost: totalsCost,
-          costSource: weakestSource(days.map((day) => day.costSource)),
-          partial: days.some((day) => day.partial),
-          costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(days.map((day) => day.costsByCurrency)), totalsCost),
-        },
-        sessionDates: merged.sessionDates,
-        availableFrom: availableFrom ?? null,
-        availableTo: availableTo ?? null,
-        hours,
-      })
+      // 参数化请求与快照同源：同一套聚合函数、同一份本地 mtime 缓存
+      sendJson(response, 200, await usagePayload(from, to, providerFilter))
     },
   })
 
@@ -539,36 +902,7 @@ export function mountKeyUsageRoutes(
     path: '/dsh-key-usage/heatmap',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      const ledger = loadLedger()
-      const collection = await sessionSource.collect()
-      const knownProviders = loadChannels().map((channel) => channel.provider)
-      const sessionRows = sessionDayRows(collection.records, knownProviders)
-      const dayKeys = Object.keys(ledger.days).sort()
-      const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
-      const yearAgo = new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10)
-      const earliest = minKey(dayKeys[0], sessionDates[0]) ?? yearAgo
-      const from = earliest > yearAgo ? earliest : yearAgo
-      const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
-      const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
-      // 与「使用明细」同一口径：会话补位天按价目/均价估算，台账天保留官方成本
-      const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
-      sendJson(response, 200, {
-        days: days
-          .map((day) => ({
-            date: day.date,
-            totalTokens: day.inputTokens + day.outputTokens + day.cacheReadTokens,
-            models: day.models
-              .map((model) => ({
-                provider: model.provider,
-                model: model.model,
-                totalTokens: model.inputTokens + model.outputTokens + model.cacheReadTokens,
-              }))
-              .filter((model) => model.totalTokens > 0)
-              .sort((first, second) => second.totalTokens - first.totalTokens),
-          }))
-          .filter((day) => day.totalTokens > 0),
-        sessionDates: merged.sessionDates,
-      })
+      sendJson(response, 200, await heatmapPayload())
     },
   })
 
@@ -578,67 +912,15 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      const channels = loadChannels()
-      // 打开「余额与配额」时才等网络：缓存过期就刷新一次，失败一律回落快照
-      const live = url.searchParams.get('fresh') === '1'
-        ? await liveQuota.refreshIfStale(channels, true)
-        : await liveQuota.refreshIfStale(channels)
-      // 实时成功立刻落一份自己的快照：下次失败时回落的是「最近一次成功」，而不是宿主那份十几天前的旧值
-      const succeeded: QuotaSnapshotEntry[] = []
-      for (const entry of live.values()) {
-        if (!entry.ok) continue
-        succeeded.push({
-          provider: entry.provider,
-          displayName: channels.find((channel) => channel.provider === entry.provider)?.displayName ?? null,
-          updatedAt: entry.fetchedAt,
-          balance: entry.balance,
-          windows: entry.windows,
-        })
+      // fresh=1 语义并入快照的手动刷新（只重查配额）；否则直接给快照里的配额段
+      const result = url.searchParams.get('fresh') === '1'
+        ? await snapshotService.refreshQuota()
+        : { ok: true as const, view: await snapshotService.view() }
+      if (!result.ok) {
+        sendJson(response, 200, { error: result.error, providers: [] })
+        return
       }
-      writeQuotaSnapshots(quotaSnapshotPath, succeeded)
-      const ownSnapshots = readQuotaSnapshots(quotaSnapshotPath)
-      const snapshots = readSnapshots()
-      const providers = channels.map((channel) => {
-        const liveEntry = live.get(channel.provider)
-        const supported = schemeIdOf(channel.provider) !== null
-        if (liveEntry !== undefined && liveEntry.ok) {
-          return {
-            provider: channel.provider,
-            displayName: channel.displayName,
-            credential: channel.apiKeyEnv,
-            supported,
-            source: 'live',
-            fetchedAt: liveEntry.fetchedAt,
-            updatedAt: liveEntry.fetchedAt,
-            error: null,
-            balance: liveEntry.balance,
-            plan: liveEntry.windows === null ? null : { windows: liveEntry.windows },
-          }
-        }
-        // 回落顺序：自己的快照与宿主的快照里，取 updatedAt 更新的那一份
-        const own = ownSnapshots.find((entry) => entry.provider === channel.provider) ?? null
-        const host = snapshots.find((entry) => entry.provider === channel.provider) ?? null
-        const useOwn = own !== null && (host === null || own.updatedAt >= (host.updatedAt ?? 0))
-        const updatedAt = useOwn ? own.updatedAt : host?.updatedAt ?? null
-        const fallbackBalance = useOwn ? own.balance : host?.balance ?? null
-        const fallbackPlan = useOwn
-          ? (own.windows === null ? null : { windows: own.windows })
-          : host?.plan ?? null
-        return {
-          provider: channel.provider,
-          displayName: host?.displayName ?? channel.displayName,
-          credential: host?.credential ?? channel.apiKeyEnv,
-          supported,
-          source: 'snapshot',
-          fetchedAt: null,
-          updatedAt,
-          // 实时失败的原因要透出（未配置凭据 / 网络 / 鉴权），界面据此提示
-          error: liveEntry?.error ?? (updatedAt === null ? 'no-snapshot' : null),
-          balance: fallbackBalance,
-          plan: fallbackPlan,
-        }
-      })
-      sendJson(response, 200, { providers })
+      sendJson(response, 200, result.view.sections.quota ?? { providers: [] })
     },
   })
 
@@ -647,48 +929,8 @@ export function mountKeyUsageRoutes(
     path: '/dsh-key-usage/summary',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      const today = dayKeyOf(new Date())
-      const monthFrom = shiftedDayKey(-29)
-      const ledger = loadLedger()
-      const collection = await sessionSource.collect()
-      const channels = loadChannels()
-      const knownProviders = channels.map((channel) => channel.provider)
-      const sessionRows = sessionDayRows(collection.records, knownProviders)
-      const merged = mergeDailySeries(aggregateRange(ledger, monthFrom, today, null).days, sessionRows, monthFrom, today)
-      // 总览的「今日 / 近 30 天」成本必须与使用明细同一口径，否则两页数字对不上
-      const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
-      const todaySummary = summarizeMergedByProvider(days, today, today)
-      const monthSummary = summarizeMergedByProvider(days, monthFrom, today)
-      const rows = channels.map((channel) => {
-        const todayRow = todaySummary.find((row) => row.provider === channel.provider)
-        const monthRow = monthSummary.find((row) => row.provider === channel.provider)
-        const todayCost = todayRow === undefined ? 0 : Math.round(todayRow.cost * 100) / 100
-        const monthCost = monthRow === undefined ? 0 : Math.round(monthRow.cost * 100) / 100
-        const currency = ledgerCurrencyOf(channel.provider)
-        return {
-          provider: channel.provider,
-          today: {
-            ...todayRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
-            cost: todayCost,
-            costSource: sourceOfProvider(days, channel.provider, today, today),
-            partial: partialOfProvider(days, channel.provider, today, today),
-            costsByCurrency: moneyOrZero(moneyOfProvider(days, channel.provider, today, today), todayCost, currency),
-          },
-          month: {
-            ...monthRow ?? { provider: channel.provider, calls: 0, tokens: 0, cost: 0 },
-            cost: monthCost,
-            costSource: sourceOfProvider(days, channel.provider, monthFrom, today),
-            partial: partialOfProvider(days, channel.provider, monthFrom, today),
-            costsByCurrency: moneyOrZero(moneyOfProvider(days, channel.provider, monthFrom, today), monthCost, currency),
-          },
-        }
-      })
-      sendJson(response, 200, {
-        channels: rows,
-        range: { today, monthFrom },
-        todaySource: merged.sessionDates.includes(today) ? 'session' : 'ledger',
-        sessionDates: merged.sessionDates,
-      })
+      const view = await snapshotService.view()
+      sendJson(response, 200, view.sections.overview ?? { channels: [], range: null, todaySource: 'ledger', sessionDates: [] })
     },
   })
 
@@ -698,35 +940,8 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      const limit = parseLimit(url.searchParams.get('limit'), 200)
-      const channels = loadChannels()
-      const knownProviders = channels.map((channel) => channel.provider)
-      const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
-      const { records, coverage } = await sessionSource.collect()
-      const ledger = loadLedger()
-      const priceTable = buildPriceTable(ledger)
-      const averageOf = averagePriceOf(priceTable)
-      const meta = sessionMeta()
-      const rows = sessionRowsOf(records, knownProviders, meta).slice(0, limit).map((row) => {
-        const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
-        const cost = costs.length === 0 ? null : sumOrNull(costs)
-        return {
-          ...row,
-          providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
-          costMode: row.provider === null ? null : costModeOf.get(row.provider) ?? null,
-          cost,
-          // 无依据的行 cost 为 null，拆分里自然也是空的（0 元不是金额）
-          costsByCurrency: alignMoneyWithCost(
-            costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-            cost,
-          ),
-          costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
-          partial: costs.some((entry) => entry.partial),
-          // 行内展开的模型构成：全量算成本（总额不受截断影响），只把长尾合并成「其它」
-          models: cappedModelRows(row, costs),
-        }
-      })
-      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+      const view = await snapshotService.view()
+      sendJson(response, 200, await sessionsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota))
     },
   })
 
@@ -754,7 +969,7 @@ export function mountKeyUsageRoutes(
         sendJson(response, 404, { error: '会话不存在', id: lookup.id, reason: lookup.reason ?? '宿主会话列表里没有这个 id' })
         return
       }
-      const channels = loadChannels()
+      const channels = await channelsWithQuota()
       const knownProviders = channels.map((channel) => channel.provider)
       const priceTable = buildPriceTable(loadLedger())
       const meta = sessionMeta()
@@ -806,28 +1021,7 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      const limit = parseLimit(url.searchParams.get('limit'), 200)
-      const channels = loadChannels()
-      const knownProviders = channels.map((channel) => channel.provider)
-      const { records, coverage } = await sessionSource.collect()
-      const priceTable = buildPriceTable(loadLedger())
-      const averageOf = averagePriceOf(priceTable)
-      const rows = projectRowsOf(records, knownProviders, sessionMeta()).slice(0, limit).map((row) => {
-        const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
-        const cost = costs.length === 0 ? null : sumOrNull(costs)
-        return {
-          ...row,
-          dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
-          cost,
-          costsByCurrency: alignMoneyWithCost(
-            costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-            cost,
-          ),
-          costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
-          partial: costs.some((entry) => entry.partial),
-        }
-      })
-      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+      sendJson(response, 200, await projectsPayload(parseLimit(url.searchParams.get('limit'), 200)))
     },
   })
 
@@ -837,31 +1031,8 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      const limit = parseLimit(url.searchParams.get('limit'), 200)
-      const channels = loadChannels()
-      const knownProviders = channels.map((channel) => channel.provider)
-      const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
-      const { records, coverage } = await sessionSource.collect()
-      const priceTable = buildPriceTable(loadLedger())
-      const averageOf = averagePriceOf(priceTable)
-      const rows = modelRowsOf(records, knownProviders).slice(0, limit).map((row) => {
-        const costs = rowCostsOf([pricingRowOf(row)], averageOf)
-        const cost = sumOrNull(costs)
-        return {
-          ...row,
-          providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
-          costMode: costModeOf.get(row.provider) ?? null,
-          // 与 /sessions 同一口径：内置官方价目 → 聚合价 → 台账反推均价
-          cost,
-          costsByCurrency: alignMoneyWithCost(
-            costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-            cost,
-          ),
-          costSource: costs[0]?.source ?? 'none',
-          partial: costs[0]?.partial === true,
-        }
-      })
-      sendJson(response, 200, { rows, coverage, priced: priceTable.size > 0 })
+      const view = await snapshotService.view()
+      sendJson(response, 200, await modelsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota))
     },
   })
 
@@ -880,7 +1051,7 @@ export function mountKeyUsageRoutes(
       const today = dayKeyOf(new Date())
       const from = shiftedDayKey(-(days - 1))
       const ledger = loadLedger()
-      const channels = loadChannels()
+      const channels = await channelsWithQuota()
       const knownProviders = channels.map((channel) => channel.provider)
       const collection = await sessionSource.collect()
       const merged = mergeDailySeries(
@@ -966,7 +1137,7 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const ledger = loadLedger()
-      const channels = loadChannels()
+      const channels = classifyChannels(readChannelConfig(), [])
       const knownProviders = channels.map((channel) => channel.provider)
       const collection = await sessionSource.collect()
       const today = dayKeyOf(new Date())
@@ -1041,23 +1212,4 @@ export function mountKeyUsageRoutes(
       sendJson(response, 200, result)
     },
   })
-}
-
-/** 把实时余额 / 窗口并进快照数组（只覆盖成功的条目，其余保持原值），供通道状态判定用。 */
-function mergeLiveSnapshots(snapshots: ProviderSnapshot[], live: Map<string, LiveQuota>): ProviderSnapshot[] {
-  if (live.size === 0) return snapshots
-  const byProvider = new Map(snapshots.map((entry) => [entry.provider, entry]))
-  for (const [provider, result] of live) {
-    if (!result.ok) continue
-    const existing = byProvider.get(provider)
-    byProvider.set(provider, {
-      provider,
-      displayName: existing?.displayName ?? null,
-      credential: existing?.credential ?? null,
-      updatedAt: result.fetchedAt,
-      balance: result.balance ?? existing?.balance ?? null,
-      plan: result.windows === null ? (existing?.plan ?? null) : { windows: result.windows },
-    })
-  }
-  return [...byProvider.values()]
 }

@@ -143,7 +143,6 @@ export function SessionsTab(props: {
       )}
       <div className={listStyles.filterBar}>
         <input className={listStyles.searchInput} placeholder="搜索会话标题、首条提问、session id、工作区…" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <span className={listStyles.searchHint}>可搜：标题 · 首条提问 · session id · 工作区</span>
         <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
           <option value="ALL">全部通道</option>
           {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
