@@ -1,7 +1,8 @@
 /** 使用明细：范围切换 + 三张统计卡 + 占比条 + 通道筛选 + 按天/按小时图表 + 每日细目。 */
 import type { ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellText, displayNameOf, showsAmount, statusColorOf } from '../channels.ts'
-import { fmtCalls, fmtCost, fmtShortDate, fmtTokens, isoDate } from '../format.ts'
+import { channelColorOf, channelOf, costCellOf, displayNameOf, statusColorOf } from '../channels.ts'
+import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../format.ts'
+import { rowMoneyViewOf } from '../currency.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import type { Channel, ChannelDailySummary, DaySummary, UsageResponse } from '../types.ts'
 import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
@@ -32,7 +33,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<ChannelDailySummary>> = [
   { key: 'outputTokens', label: '输出', value: (row) => row.outputTokens },
   { key: 'cacheReadTokens', label: '缓存读', value: (row) => row.cacheReadTokens },
   { key: 'cacheHitRate', label: '命中率(%)', value: (row) => hitRateValueOf(row) },
-  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
 ]
 
 /** 命中率数值（导出用；界面上的带 % 文本由 `hitRateOf` 生成）。 */
@@ -44,6 +45,12 @@ function hitRateValueOf(row: ChannelDailySummary): number | null {
 function hitRateOf(cacheReadTokens: number, inputTokens: number, outputTokens: number): string {
   const total = inputTokens + outputTokens + cacheReadTokens
   return total > 0 ? (cacheReadTokens / total * 100).toFixed(1) + '%' : '—'
+}
+
+/** 每日成本文本：合计按逐币种小计折算后相加（缺字段时回落旧的单值口径）。 */
+function dayMoneyOf(row: ChannelDailySummary): string {
+  const view = rowMoneyViewOf(row)
+  return view.amount > 0 ? view.text : '—'
 }
 
 function daysBetween(from: string, to: string): number {
@@ -78,7 +85,7 @@ export function DetailTab(props: {
   onSort: (sort: DetailSortState) => void
   bounds: { from: string; to: string }
   tooltip: TooltipApi
-  /** 计费规则版本号：成本在服务端按规则算，规则一改这里要重取上期数据。 */
+  /** 价目版本号：成本在服务端按价目算，价目一换这里要重取上期数据。 */
   pricingRevision: number
 }): ReactNode {
   const { usage, channels, bounds, tooltip, channelFilter } = props
@@ -95,7 +102,7 @@ export function DetailTab(props: {
   /** 范围内「有用量」的天数：日均 Tokens 的分母（拿日历天数去除会把空闲日算成用量偏低）。 */
   const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(channels, channelFilter)
-  const costCell = costCellText(singleChannel, safeTotals.cost)
+  const costCell = costCellOf(singleChannel, safeTotals)
   const singleDay = bounds.from === bounds.to
   const rangeDays = Math.min(daysBetween(bounds.from, bounds.to), MAX_AXIS_DAYS)
 
@@ -191,7 +198,7 @@ export function DetailTab(props: {
           />
           <TipDivider>
             <span>成本</span>
-            <b>{day.cost > 0 ? fmtCost(day.cost) : '—'}</b>
+            <b>{dayMoneyOf(day)}</b>
           </TipDivider>
           {fromSession && <TipSub>来源：会话事件（该日台账无记录，不含官方成本）</TipSub>}
           {topModels.map((model) => (
@@ -259,7 +266,7 @@ export function DetailTab(props: {
           label="成本"
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
-            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
+            : <>{costCell.text}{costCell.amount && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
           extra="按所选范围与筛选聚合"
         />
       </div>

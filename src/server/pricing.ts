@@ -1,24 +1,27 @@
 /**
- * 计费规则：用户可维护的单价表，作为成本估算的一手依据（替代「台账反推均价」）。
+ * 计费口径：单价匹配、错峰判定、单位换算与费用 / 缓存省钱计算（纯函数，可离线单测）。
  *
- * 规则本体存在插件自己的 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（读写见 pricing-store.ts，
- * 旧版 entry config 只作只读回退），本模块只做纯计算：归一化、优先级匹配、错峰判定、
- * 单位换算与费用 / 缓存省钱计算；聚合价那一层由 model-prices.ts 查（只读本地 JSON、不联网）。
- * 因此本模块可以完全离线单测。
+ * 真价格只有两层，且都只读、不可编辑：内置官方价目（`pricing-catalog.yml`，随包发布）
+ * 与 LiteLLM 聚合价（`data/litellm-model-prices.json` 或本机刷新副本，USD，见 model-prices.ts）。
+ * 两层都没命中时由调用方回落「台账反推均价」。用户规则层已整条移除：不再读、不再写、
+ * 不再出现在任何响应里（要改价就改随包价目，或让 agent 改它）。
  *
- * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 内置官方价目（CNY）
- * > LiteLLM 聚合价（USD）> 台账反推均价 > 无（显示 —）。本模块负责中间四层。
+ * 成本优先级（routes 逐格取值）：台账当天**官方成本** > 内置官方价目（catalog）> 聚合价（aggregate）
+ * > 台账反推均价（estimate）> 无（none，界面显示 —）。本模块负责中间两层与均价回落的判定。
+ *
+ * 币种：内置价目按文档原样记（CNY / USD），聚合价恒为 USD，**不做任何汇率换算**；
+ * 需要跨币种展示时由客户端按用户选择的显示币种折算（服务端并列下发 `costsByCurrency`）。
  */
 import { catalogRuleFor } from './pricing-catalog.js'
 import { aggregateRuleFor } from './model-prices.js'
 
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
-/** 成本来源：官方账单 / 用户规则 / 内置官方价目 / 聚合价目 / 台账反推均价 / 无依据。 */
-export type CostSource = 'official' | 'rule' | 'catalog' | 'aggregate' | 'estimate' | 'none'
+/** 成本来源：官方账单 / 内置官方价目 / 聚合价目 / 台账反推均价 / 无依据。 */
+export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
 /** 命中的价目来自哪一层；`catalog` = 内置官方价目，`aggregate` = LiteLLM 聚合价（USD）。 */
-export type PricingRuleSource = 'rule' | 'catalog' | 'aggregate'
+export type PricingRuleSource = 'catalog' | 'aggregate'
 
 export interface OffPeakWindow {
   /** 本地时间 `HH:MM`。 */
@@ -27,7 +30,7 @@ export interface OffPeakWindow {
   to: string
   /**
    * 该窗口只在哪些星期生效，ISO 编号 1=周一 … 7=周日；**缺省 = 每天都适用**。
-   * 缺省必须是「每天」：已有规则与已保存配置都没有这个字段，语义不能变。
+   * 缺省必须是「每天」：错峰窗口是官方文档的原始口径，语义不能变。
    */
   days?: number[]
 }
@@ -45,22 +48,15 @@ export interface OffPeakPricing extends PricingRates {
 }
 
 export interface PricingRule extends PricingRates {
-  /** 通道 id；`*` 表示任意通道。 */
+  /** 通道 id（价目声明的那一侧，不是查询里的事件通道名）。 */
   provider: string
-  /** 模型 id；`*` 表示该通道全部模型。 */
+  /** 模型 id；`*` 表示该通道兜底（只有官方文档给出通道统一价时才会存在）。 */
   model: string
   unit: PricingUnit
   currency: string
   offPeak: OffPeakPricing | null
   /** 价目来源链接与抓取日期，便于复核。 */
   note: string
-}
-
-export interface PricingConfig {
-  version: number
-  /** 默认币种；单条规则可覆盖。 */
-  currency: string
-  rules: PricingRule[]
 }
 
 /** 待计费的一行用量；分桶缺失时用 `tokens` 按输入价兜底。 */
@@ -78,10 +74,10 @@ export interface PricingUsageRow {
 
 export interface PricedRow {
   cost: number | null
-  /** `rule` = 命中用户规则；`catalog` / `aggregate` = 命中内置官方价目 / 聚合价；`none` = 没有价目可算（由调用方回落台账均价）。 */
+  /** 命中的价目层；`none` = 两层都没命中（由调用方回落台账均价）。 */
   source: PricingRuleSource | 'none'
   rule: PricingRule | null
-  /** 相邻时间窗内该规则是否处于错峰（`at` 以参数传入时才有意义）。 */
+  /** 相邻时间窗内该价目是否处于错峰（`at` 以参数传入时才有意义）。 */
   offPeak: boolean
   /** 命中的聚合价目缺一档缓存价、已按未命中价代（界面标「部分」）。 */
   partial: boolean
@@ -98,60 +94,33 @@ const UNIT_FACTORS: Record<PricingUnit, number> = {
   perCall: 0,
 }
 
-/** 规则条数上限：设置里的值不可信，超出的部分直接丢弃，避免一次请求把 CPU 打满。 */
-export const PRICING_MAX_RULES = 200
-const MAX_RULES = PRICING_MAX_RULES
+/** 单位文字说明（界面与文档共用一份，避免两侧口径漂移）。 */
+export const UNIT_LABELS: Record<PricingUnit, string> = {
+  perMillionTokens: '每百万 tokens',
+  perThousandTokens: '每千 tokens',
+  perCall: '每次调用',
+}
 
-export const EMPTY_PRICING: PricingConfig = { version: 1, currency: 'CNY', rules: [] }
+/** 成本来源强弱序：数字越大越弱（官方账单最可信，无依据最弱）。 */
+export const SOURCE_RANK: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, estimate: 3, none: 4 }
 
-/** 生效规则来自哪一层：`file` = 用户 YAML、`legacy` = 旧版 entry config、`none` = 都没有。 */
-export type PricingRulesOrigin = 'file' | 'legacy' | 'none'
+/** 两个来源取更弱的那个：整批金额的来源由最弱的一格决定（宁可标弱，也不把估算冒充成官方价）。 */
+export function weakestOf(current: CostSource, candidate: CostSource): CostSource {
+  return SOURCE_RANK[candidate] > SOURCE_RANK[current] ? candidate : current
+}
 
-/** 一个价目文件的读取状态（存在性 + 条数 + 路径），面板据此显示「文件在哪 / 读到了几条」。 */
+/** 一个可计费文件的读取状态（存在性 + 条数 + 路径），界面据此显示「文件在哪 / 读到了几条」。 */
 export interface PricingFileInfo {
   path: string
   exists: boolean
   entries: number
 }
 
-/** 价目文件的解析问题；`file` 区分内置价目与用户规则文件。 */
+/** 价目文件的解析问题（1 基行号；拿不到行号时为 null）。内置价目是唯一还会报 issue 的文件。 */
 export interface PricingIssue {
-  file: 'catalog' | 'user'
-  /** 1 基行号；拿不到行号时为 null。 */
+  file: 'catalog'
   line: number | null
   message: string
-}
-
-/** 服务端当前看到的规则视图：三层优先级的结果 + 两个文件的状态 + 解析问题。 */
-export interface PricingView {
-  config: PricingConfig
-  /** 能不能保存规则（本插件原子写自己的规则文件，正常恒为 true；写失败由 POST 返回原因）。 */
-  writable: boolean
-  /** 旧版设置服务的修订号：该链路已退役，恒为 null（保留字段是为了不改动客户端契约）。 */
-  revision: number | null
-  /** 规则本体实际来自哪一层。 */
-  origin: PricingRulesOrigin
-  files: { catalog: PricingFileInfo; user: PricingFileInfo }
-  issues: PricingIssue[]
-}
-
-export const EMPTY_PRICING_VIEW: PricingView = {
-  config: EMPTY_PRICING,
-  writable: false,
-  revision: null,
-  origin: 'none',
-  files: {
-    catalog: { path: '', exists: false, entries: 0 },
-    user: { path: '', exists: false, entries: 0 },
-  },
-  issues: [],
-}
-
-/** 单位文字说明（界面与文档共用一份，避免两侧口径漂移）。 */
-export const UNIT_LABELS: Record<PricingUnit, string> = {
-  perMillionTokens: '每百万 tokens',
-  perThousandTokens: '每千 tokens',
-  perCall: '每次调用',
 }
 
 /**
@@ -177,28 +146,11 @@ export function settingsSectionOf(raw: unknown, key: string): unknown {
   return key in record ? record[key] : value
 }
 
-function finiteOr(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
-}
-
-function textOr(value: unknown, fallback: string): string {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback
-}
-
-function ratesOf(raw: Record<string, unknown>, fallback: PricingRates): PricingRates {
-  return {
-    input: finiteOr(raw.input, fallback.input),
-    cacheRead: finiteOr(raw.cacheRead, fallback.cacheRead),
-    cacheWrite: finiteOr(raw.cacheWrite, fallback.cacheWrite),
-    output: finiteOr(raw.output, fallback.output),
-  }
-}
-
 /**
  * `days` 归一：只接受 1–7 的整数并去重排序。
  * 非法值（空数组 / 越界 / 非整数 / 非数组）一律**返回 undefined = 每天适用**：
- * 这些值只会来自手改 JSON 或旧配置，把整段错峰作废会让金额突然变高，
- * 而「每天适用」正是缺省语义，最保守也最接近用户原意（不静默改变已有行为）。
+ * 这些值只会来自手改价目文件，把整段错峰作废会让金额突然变高，
+ * 而「每天适用」正是缺省语义，最保守也最接近官方口径（不静默改变已有行为）。
  */
 export function normalizeDays(raw: unknown): number[] | undefined {
   if (!Array.isArray(raw)) return undefined
@@ -209,62 +161,6 @@ export function normalizeDays(raw: unknown): number[] | undefined {
   }
   if (days.size === 0) return undefined
   return [...days].sort((first, second) => first - second)
-}
-
-function windowsOf(raw: unknown): OffPeakWindow[] {
-  if (!Array.isArray(raw)) return []
-  const windows: OffPeakWindow[] = []
-  for (const entry of raw) {
-    if (typeof entry !== 'object' || entry === null) continue
-    const from = (entry as { from?: unknown }).from
-    const to = (entry as { to?: unknown }).to
-    if (clockMinutes(from) === null || clockMinutes(to) === null) continue
-    const days = normalizeDays((entry as { days?: unknown }).days)
-    windows.push({ from: (from as string).trim(), to: (to as string).trim(), ...(days === undefined ? {} : { days }) })
-  }
-  return windows
-}
-
-/**
- * 防御式解析设置值：设置服务里的内容是用户手填 / 导入的，任何字段都可能缺失或类型不对。
- * 无法解释的规则整条丢弃（而不是填 0），否则 0 价会被当成「免费」静默算错。
- */
-export function normalizePricing(raw: unknown): PricingConfig {
-  const value = settingsSectionOf(raw, 'pricing')
-  if (typeof value !== 'object' || value === null) return EMPTY_PRICING
-  const record = value as Record<string, unknown>
-  const currency = textOr(record.currency, EMPTY_PRICING.currency)
-  const rules: PricingRule[] = []
-  const rawRules = Array.isArray(record.rules) ? record.rules.slice(0, MAX_RULES) : []
-  for (const entry of rawRules) {
-    if (typeof entry !== 'object' || entry === null) continue
-    const rule = entry as Record<string, unknown>
-    const provider = textOr(rule.provider, '*')
-    const model = textOr(rule.model, '*')
-    const unit = PRICING_UNITS.includes(rule.unit as PricingUnit) ? rule.unit as PricingUnit : 'perMillionTokens'
-    const base = ratesOf(rule, { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 })
-    let offPeak: OffPeakPricing | null = null
-    if (typeof rule.offPeak === 'object' && rule.offPeak !== null) {
-      const offPeakRecord = rule.offPeak as Record<string, unknown>
-      const windows = windowsOf(offPeakRecord.windows)
-      // 没有可用窗口的错峰段等同于没填：留着会让人以为折扣生效了
-      if (windows.length > 0) offPeak = { ...ratesOf(offPeakRecord, base), windows }
-    }
-    rules.push({
-      provider,
-      model,
-      unit,
-      currency: textOr(rule.currency, currency),
-      ...base,
-      offPeak,
-      note: typeof rule.note === 'string' ? rule.note : '',
-    })
-  }
-  return {
-    version: typeof record.version === 'number' && Number.isFinite(record.version) ? record.version : 1,
-    currency,
-    rules,
-  }
 }
 
 /** `HH:MM` → 当天分钟数；`24:00` 归一为 1440。无法解析返回 null。 */
@@ -281,20 +177,20 @@ export function clockMinutes(text: unknown): number | null {
 }
 
 /**
- * 规则匹配：`provider+model` 精确 → `provider+*` → `*+model` → `*+*`。
- * 同一档内按规则声明顺序取第一条，用户可以用上下移动调整优先级。
+ * 找一条可用于该行的价目：内置官方价目（CNY / USD，随包）> LiteLLM 聚合价（USD）。
+ * 两层都不命中时返回 null，由调用方回落台账反推均价（或显示 —）。
  */
-export function matchPricingRule(rules: PricingRule[], provider: string, model: string): PricingRule | null {
-  const tiers: Array<(rule: PricingRule) => boolean> = [
-    (rule) => rule.provider === provider && rule.model === model,
-    (rule) => rule.provider === provider && rule.model === '*',
-    (rule) => rule.provider === '*' && rule.model === model,
-    (rule) => rule.provider === '*' && rule.model === '*',
-  ]
-  for (const matches of tiers) {
-    const hit = rules.find(matches)
-    if (hit !== undefined) return hit
+export function matchPricedRule(provider: string, model: string): PricedRuleHit | null {
+  const catalogRule = catalogRuleFor(provider, model)
+  if (catalogRule !== null) return { rule: catalogRule, source: 'catalog', partial: false }
+  // 聚合价目是可选层：它坏掉只该让这一层失效，绝不能影响其它端点（上层已保证不抛错，这里再兜一次底）
+  let aggregate: ReturnType<typeof aggregateRuleFor> | null = null
+  try {
+    aggregate = aggregateRuleFor(provider, model)
+  } catch {
+    aggregate = null
   }
+  if (aggregate !== null && aggregate.ok) return { rule: aggregate.hit.rule, source: 'aggregate', partial: aggregate.hit.partial }
   return null
 }
 
@@ -307,31 +203,7 @@ export interface PricedRuleHit {
 }
 
 /**
- * 找一条可用于该行的价目：用户规则 > 内置官方价目（CNY）> LiteLLM 聚合价（USD）。
- * 前两层不落盘、用户也不可编辑，因此只有「查得到 / 查不到」两种结果；聚合价查不到时由调用方回落均价。
- */
-export function matchPricedRule(
-  rules: PricingRule[],
-  provider: string,
-  model: string,
-): PricedRuleHit | null {
-  const userRule = matchPricingRule(rules, provider, model)
-  if (userRule !== null) return { rule: userRule, source: 'rule', partial: false }
-  const catalogRule = catalogRuleFor(provider, model)
-  if (catalogRule !== null) return { rule: catalogRule, source: 'catalog', partial: false }
-  // 聚合价目是可选层：它坏掉只该让这一层失效，绝不能影响其它端点（上层已保证不抛错，这里再兜一次底）
-  let aggregate
-  try {
-    aggregate = aggregateRuleFor(provider, model)
-  } catch {
-    aggregate = null
-  }
-  if (aggregate !== null && aggregate.ok) return { rule: aggregate.hit.rule, source: 'aggregate', partial: aggregate.hit.partial }
-  return null
-}
-
-/**
- * 一个时间点是否落在规则的错峰窗口内（按**本地时间**判断，跨午夜窗口取并集）。
+ * 一个时间点是否落在价目的错峰窗口内（按**本地时间**判断，跨午夜窗口取并集）。
  * 星期几也取本地时间，与时间判定保持同一口径。
  */
 export function isOffPeakAt(rule: PricingRule, at: Date): boolean {
@@ -348,13 +220,13 @@ export function isoDayOf(at: Date): number {
 function isOffPeakAtMinutes(rule: PricingRule, minutes: number, day?: number): boolean {
   if (rule.offPeak === null) return false
   for (const window of rule.offPeak.windows) {
-    // days 缺省或非法都当作「每天」；这里再归一一次，防住绕过 normalizePricing 的调用方
+    // days 缺省或非法都当作「每天」；这里再归一一次，防住绕过解析器的调用方
     const days = normalizeDays(window.days)
     if (day !== undefined && days !== undefined && !days.includes(day)) continue
     const from = clockMinutes(window.from)
     const to = clockMinutes(window.to)
     if (from === null || to === null) continue
-    // 起止相同视为「全天」：用户写 00:00–00:00 想表达的是一整天
+    // 起止相同视为「全天」：官方写 00:00–00:00 想表达的是一整天
     if (from === to) return true
     if (from < to) {
       if (minutes >= from && minutes < to) return true
@@ -365,12 +237,7 @@ function isOffPeakAtMinutes(rule: PricingRule, minutes: number, day?: number): b
   return false
 }
 
-/** 该规则此刻是否处于错峰（规则面板上的「错峰中」角标）。 */
-export function isOffPeakNow(rule: PricingRule, at: Date = new Date()): boolean {
-  return isOffPeakAt(rule, at)
-}
-
-/** 规则生效的四档单价；`at` 为 null（无法定位时间点）时按标准价。 */
+/** 价目在某个时间点的生效单价；`at` 为 null（无法定位时间点）时按标准价，不猜折扣。 */
 export function ratesAt(rule: PricingRule, at: Date | null): { rates: PricingRates; offPeak: boolean } {
   if (at === null || rule.offPeak === null || !isOffPeakAt(rule, at)) {
     return { rates: rule, offPeak: false }
@@ -384,7 +251,8 @@ export function displayTokensOf(row: PricingUsageRow): number {
   return (row.inputTokens ?? 0) + (row.outputTokens ?? 0) + (row.cacheReadTokens ?? 0)
 }
 
-function costAtRates(row: PricingUsageRow, rule: PricingRule, rates: PricingRates): number {
+/** 一档单价下的金额：`perCall` 用「输入」档当每次调用价，token 数不参与。 */
+export function costOfRowAtRates(row: PricingUsageRow, rule: PricingRule, rates: PricingRates): number {
   if (rule.unit === 'perCall') return (row.calls ?? 0) * rates.input
   const factor = UNIT_FACTORS[rule.unit]
   return ((row.inputTokens ?? 0) * rates.input
@@ -413,28 +281,27 @@ export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | 
 }
 
 /**
- * 按规则估算一组行的成本。
+ * 按命中价目估算一组行的成本（内置官方价目 > 聚合价；两层都没命中时 cost 为 null）。
  * @param at - 时间点；null 表示这段用量跨了峰谷、无法定位，按标准价算（不猜折扣）
  * @param hours - 24 个小时槽（本地时间，索引即小时）；给了就按错峰占比加权
  */
-export function priceRowsByRules(
+export function priceRowsOf(
   rows: PricingUsageRow[],
-  config: PricingConfig,
   options: { at?: Date | null; hours?: PricingUsageRow[] | null } = {},
 ): PricedRow[] {
   const at = options.at ?? null
   const sharedHours = options.hours ?? null
   return rows.map((row) => {
-    const matched = matchPricedRule(config.rules, row.provider, row.model)
+    const matched = matchPricedRule(row.provider, row.model)
     if (matched === null) {
       return { cost: null, source: 'none', rule: null, offPeak: false, partial: false, cacheSavings: 0 }
     }
     const rule = matched.rule
-    const standard = costAtRates(row, rule, rule)
+    const standard = costOfRowAtRates(row, rule, rule)
     const share = rule.offPeak === null
       ? (at !== null && isOffPeakAt(rule, at) ? 1 : 0)
       : offPeakTokenShare(rule, sharedHours)
-    const offPeakCost = rule.offPeak === null ? standard : costAtRates(row, rule, rule.offPeak)
+    const offPeakCost = rule.offPeak === null ? standard : costOfRowAtRates(row, rule, rule.offPeak)
     const cost = standard * (1 - share) + offPeakCost * share
     return {
       cost,
@@ -448,16 +315,7 @@ export function priceRowsByRules(
   })
 }
 
-export interface RowCostSummary {
-  cost: number | null
-  /** 只要有一行回落台账均价，整体就降级为 estimate（宁可标弱也不冒称精确）。 */
-  source: CostSource
-  /** 命中价目（用户规则 / 内置官方价目 / 聚合价）的行数。 */
-  ruleRows: number
-  /** 缓存命中省下的钱（只统计命中价目的行）。 */
-  cacheSavings: number
-}
-
+/** 一格成本：金额 + 来源 + 命中的价目 + 这一格金额的币种。 */
 export interface RowCost {
   cost: number | null
   source: CostSource
@@ -465,7 +323,17 @@ export interface RowCost {
   /** 这一格的成本来自「部分收录」的聚合价目（缺一档缓存价，按未命中价代）。 */
   partial: boolean
   cacheSavings: number
+  /** 命中价目时是价目币种，回落均价时是调用方给的台账币种；无金额时为 null。 */
+  currency: string | null
 }
+
+/** 台账反推均价：金额 + 币种（台账只记金额、不记币种，币种由调用方按通道判定）。 */
+export interface AveragePrice {
+  cost: number
+  currency: string
+}
+
+export type AveragePriceLookup = (row: PricingUsageRow) => AveragePrice | null
 
 function round4(value: number): number {
   return Math.round(value * 10000) / 10000
@@ -476,61 +344,32 @@ function round2(value: number): number {
 }
 
 /**
- * 逐行定价：用户规则 > 内置官方价目 > LiteLLM 聚合价，都没命中时回落调用方给的均价查价（台账反推均价）。
- * @param averagePrice - 台账反推均价查价函数（由调用方注入，避免本模块依赖 ledger）
+ * 逐行定价：内置官方价目 > LiteLLM 聚合价，都没命中时回落调用方给的均价查价（台账反推均价）。
  */
 export function rowCostsOf(
   rows: PricingUsageRow[],
-  config: PricingConfig,
-  averagePrice: (row: PricingUsageRow) => number | null = () => null,
+  averagePrice: AveragePriceLookup = () => null,
   options: { at?: Date | null; hours?: PricingUsageRow[] | null } = {},
 ): RowCost[] {
-  const priced = priceRowsByRules(rows, config, options)
+  const priced = priceRowsOf(rows, options)
   return rows.map((row, index) => {
     const hit = priced[index]
-    if (hit.cost !== null) {
-      return { cost: round2(hit.cost), source: hit.source as CostSource, rule: hit.rule, partial: hit.partial, cacheSavings: hit.cacheSavings }
+    if (hit.cost !== null && hit.rule !== null) {
+      return {
+        cost: round2(hit.cost),
+        source: hit.source as CostSource,
+        rule: hit.rule,
+        partial: hit.partial,
+        cacheSavings: hit.cacheSavings,
+        currency: hit.rule.currency,
+      }
     }
     const average = averagePrice(row)
-    if (average !== null) return { cost: average, source: 'estimate' as CostSource, rule: null, partial: false, cacheSavings: 0 }
-    return { cost: null, source: 'none' as CostSource, rule: null, partial: false, cacheSavings: 0 }
+    if (average !== null) {
+      return { cost: round2(average.cost), source: 'estimate', rule: null, partial: false, cacheSavings: 0, currency: average.currency }
+    }
+    return { cost: null, source: 'none', rule: null, partial: false, cacheSavings: 0, currency: null }
   })
-}
-
-/** 组合「用户规则 → 内置官方价目 → 聚合价 → 台账反推均价」四层估算，给出金额、最弱来源、命中行数与缓存省钱。 */
-export function costOfUsageRows(
-  rows: PricingUsageRow[],
-  config: PricingConfig,
-  averagePrice: (row: PricingUsageRow) => number | null = () => null,
-  options: { at?: Date | null; hours?: PricingUsageRow[] | null } = {},
-): RowCostSummary {
-  const priced = rowCostsOf(rows, config, averagePrice, options)
-  let total = 0
-  let matched = false
-  let ruleRows = 0
-  let cacheSavings = 0
-  let weakest: CostSource = 'official'
-  for (const row of priced) {
-    if (row.cost === null) continue
-    total += row.cost
-    matched = true
-    cacheSavings += row.cacheSavings
-    if (row.source === 'rule' || row.source === 'catalog' || row.source === 'aggregate') ruleRows += 1
-    weakest = weakestOf(weakest, row.source)
-  }
-  if (!matched) return { cost: null, source: 'none', ruleRows: 0, cacheSavings: 0 }
-  return {
-    cost: round2(total),
-    source: weakest,
-    ruleRows,
-    cacheSavings: round4(cacheSavings),
-  }
-}
-
-/** 两个来源取更弱的那个（与 routes 的 `weakestSource` 同一顺序）。 */
-function weakestOf(current: CostSource, candidate: CostSource): CostSource {
-  const rank: Record<CostSource, number> = { official: 0, rule: 1, catalog: 2, aggregate: 3, estimate: 4, none: 5 }
-  return rank[candidate] > rank[current] ? candidate : current
 }
 
 /** 按币种分组累加：跨币种不换算、不合计（不同通道币种不同，混加没有意义）。 */
@@ -542,16 +381,49 @@ export function addMoney(target: MoneyByCurrency, currency: string, amount: numb
 }
 
 /**
- * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中用户规则 / 命中内置官方价目 / 命中聚合价 /
- * 回落均价 / 无依据，并按**所有行**累加金额与缓存省钱（各按价目自己的币种分组，跨币种不换算不合计）。
+ * 把一组金额格按币种分组（金额保留两位小数）。
+ * 累加顺序与调用方算 `cost` 的顺序一致，因此**单币种时拆分值与 `cost` 完全相同**（只是同一个和的另一种写法）。
+ * 金额为 null（无依据）的格子不参与；没有币种的格子直接跳过（宁可少一行小计，也不硬塞一个币种）。
+ */
+export function costsByCurrencyOf(cells: Array<{ cost: number | null; currency: string | null }>): MoneyByCurrency {
+  const sums: MoneyByCurrency = {}
+  for (const cell of cells) {
+    if (cell.cost === null || cell.currency === null) continue
+    sums[cell.currency] = (sums[cell.currency] ?? 0) + cell.cost
+  }
+  for (const currency of Object.keys(sums)) sums[currency] = round2(sums[currency])
+  return sums
+}
+
+/** 合并子行的按币种金额（父行的小计）：单币种时同样等于父行 `cost`。 */
+export function sumMoneyByCurrency(parts: MoneyByCurrency[]): MoneyByCurrency {
+  const sums: MoneyByCurrency = {}
+  for (const part of parts) {
+    for (const [currency, amount] of Object.entries(part)) sums[currency] = (sums[currency] ?? 0) + amount
+  }
+  for (const currency of Object.keys(sums)) sums[currency] = round2(sums[currency])
+  return sums
+}
+
+/**
+ * 把父金额与它的按币种拆分对齐：单币种时拆分值直接取父金额（两者是同一个和，只是累加顺序不同
+ * 会带来浮点尾差）；多币种或父金额为 null 时原样返回。保证「单币种时拆分值等于 cost」这条契约。
+ */
+export function alignMoneyWithCost(money: MoneyByCurrency, cost: number | null): MoneyByCurrency {
+  const currencies = Object.keys(money)
+  if (cost === null || currencies.length !== 1) return money
+  return { [currencies[0]]: cost }
+}
+
+/**
+ * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中内置官方价目 / 命中聚合价 /
+ * 回落均价 / 无依据，并按**所有行**累加金额与缓存省钱（各按自己的币种分组，跨币种不换算不合计）。
  * `partialModels` = 命中的聚合价目里缺一档缓存价（按未命中价代）的模型数。
  */
 export function summarizeCoverage(
   rows: PricingUsageRow[],
-  config: PricingConfig,
-  averagePrice: (row: PricingUsageRow) => number | null = () => null,
+  averagePrice: AveragePriceLookup = () => null,
 ): {
-  ruleModels: number
   catalogModels: number
   aggregateModels: number
   partialModels: number
@@ -564,7 +436,6 @@ export function summarizeCoverage(
   const costByCurrency: MoneyByCurrency = {}
   const savingsByCurrency: MoneyByCurrency = {}
   const savingsByModel = new Map<string, { provider: string; model: string; currency: string; cacheReadTokens: number; amount: number }>()
-  const rulerKeys = new Set<string>()
   const catalogKeys = new Set<string>()
   const aggregateKeys = new Set<string>()
   const partialKeys = new Set<string>()
@@ -572,7 +443,7 @@ export function summarizeCoverage(
   const unpricedKeys = new Set<string>()
   for (const row of rows) {
     const key = row.provider + '|' + row.model
-    const priced = priceRowsByRules([row], config)[0]
+    const priced = priceRowsOf([row])[0]
     if (priced.cost === null || priced.rule === null) {
       // 与成本口径一致：先看台账反推均价还能不能给出数字，再判「无依据」
       if (averagePrice(row) !== null) averagedKeys.add(key)
@@ -580,8 +451,7 @@ export function summarizeCoverage(
       continue
     }
     if (priced.source === 'catalog') catalogKeys.add(key)
-    else if (priced.source === 'aggregate') aggregateKeys.add(key)
-    else rulerKeys.add(key)
+    else aggregateKeys.add(key)
     if (priced.partial) partialKeys.add(key)
     addMoney(costByCurrency, priced.rule.currency, priced.cost)
     if (priced.cacheSavings <= 0) continue
@@ -604,7 +474,6 @@ export function summarizeCoverage(
     .map((entry) => ({ ...entry, amount: round4(entry.amount) }))
     .sort((first, second) => second.amount - first.amount)
   return {
-    ruleModels: rulerKeys.size,
     catalogModels: catalogKeys.size,
     aggregateModels: aggregateKeys.size,
     partialModels: partialKeys.size,
@@ -614,20 +483,4 @@ export function summarizeCoverage(
     savingsByCurrency,
     savingsDetail,
   }
-}
-
-/** 规则的键：导入合并与去重都用它（通道 + 模型）。 */
-export function ruleKeyOf(rule: PricingRule): string {
-  return rule.provider + '|' + rule.model
-}
-
-/** 导入合并：同键覆盖、新键追加，保留原有顺序。 */
-export function mergePricingRules(current: PricingRule[], incoming: PricingRule[]): PricingRule[] {
-  const merged = [...current]
-  for (const rule of incoming) {
-    const index = merged.findIndex((candidate) => ruleKeyOf(candidate) === ruleKeyOf(rule))
-    if (index >= 0) merged[index] = rule
-    else merged.push(rule)
-  }
-  return merged.slice(0, MAX_RULES)
 }

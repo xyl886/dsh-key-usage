@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
+import { fxSummaryTextOf, useCurrencyDisplay } from './currency.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
@@ -61,11 +62,13 @@ export function KeyUsageSection() {
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
   /**
-   * 计费规则版本号：规则写进 YAML 后成本要整体重算，所有按成本展示的数据都得重取。
-   * 规则只从面板保存（POST /pricing/rules）这一个入口变，所以用一个自增计数当失效信号即可。
+   * 价目版本号：价目换了一份（点「刷新价目」）成本要整体重算，所有按成本展示的数据都得重取。
+   * 价目只从「刷新价目」这一个入口变，所以用一个自增计数当失效信号即可。
    */
   const [pricingRevision, setPricingRevision] = useState(0)
   const tooltip = useTooltip()
+  /** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
+  const currency = useCurrencyDisplay()
 
   const reload = useCallback(async (includeSessionData: boolean, forceQuota = false) => {
     setLoading(true)
@@ -85,24 +88,24 @@ export function KeyUsageSection() {
       setModels(modelResult)
     }
     setLoading(false)
-    // pricingRevision 不是被用到的值，而是「规则变了」的失效信号：
-    // 成本在服务端按规则算，规则一改这里就必须整体重取
+    // pricingRevision 不是被用到的值，而是「价目变了」的失效信号：
+    // 成本在服务端按价目算，价目一换这里就必须整体重取
   }, [pricingRevision])
 
   useEffect(() => { void reload(false) }, [reload])
 
-  // 计费规则面板的服务端对照：内置价目来源、缺口覆盖度、两个 YAML 文件与解析问题（规则一变就重取）
+  // 价目信息：内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态（刷新价目后重取）
   useEffect(() => {
     let cancelled = false
     void loadPricing().then((result) => { if (!cancelled) setPricing(result) })
     return () => { cancelled = true }
   }, [pricingRevision])
 
-  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时；余额页也需要按模型用量给「最值得补规则」排序）
+  // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab 时）
   useEffect(() => {
     if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
     if (activeTab === 'projects' && projects === null) void loadProjects().then(setProjects)
-    if ((activeTab === 'models' || activeTab === 'quota') && models === null) void loadModels().then(setModels)
+    if (activeTab === 'models' && models === null) void loadModels().then(setModels)
   }, [activeTab, sessions, projects, models])
 
   const bounds = useMemo(() => {
@@ -205,7 +208,7 @@ export function KeyUsageSection() {
           channels={channels}
           quotas={quotas}
           pricing={pricing}
-          models={models}
+          reloadToken={pricingRevision}
           onPricingReload={() => setPricingRevision((previous) => previous + 1)}
         />
       )}
@@ -223,11 +226,15 @@ export function KeyUsageSection() {
           <li>已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。</li>
           <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
           <li>
-            成本来源与优先级见「余额与配额」页计费面板的 <b>成本口径</b>（ⓘ）：角标分 <b>官方</b> / <b>自定</b> / <b>官方价</b> / <b>聚合</b> / <b>估算</b>，
-            没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。
-            「聚合」是随包内置的 LiteLLM 聚合价目（第三方、美元），只有点面板上的「刷新价目」才会联网更新，平时完全离线。
+            成本三层自动生效，<b>不需要你填任何价格</b>：厂商账单（台账）&gt; 内置厂商官方价目 &gt; LiteLLM 聚合价目 &gt; 台账反推均价兜底；
+            角标分 <b>官方</b> / <b>官方价</b> / <b>聚合</b> / <b>估算</b>，没有价格依据时显示 —。
+            逐模型单价与来源在「余额与配额」页<b>展开通道卡片</b>查看，「聚合」只有点「刷新价目」才会联网更新，平时完全离线。
           </li>
-          <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>
+          <li>
+            金额按当前显示币种折算（工具条可切 <b>¥ RMB</b> / <b>$ USD</b>）：换算是把逐币种小计各自折成显示币种后再相加，
+            折算值前缀 <code>≈</code>；当前 {currency.fx === null ? '还没取到汇率，跨币种金额按原币种显示' : fxSummaryTextOf(currency.fx)}。
+          </li>
+          <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），按官方原值 + 币种原样展示（余额不折算、不给建议）；成本金额按上面的显示币种折算。</li>
         </ul>
       </div>
 

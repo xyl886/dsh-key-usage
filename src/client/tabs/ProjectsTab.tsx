@@ -1,6 +1,6 @@
 /** 项目用量：按会话工作目录聚合（数据来自宿主会话事件折叠）。 */
 import { useMemo, useState, type ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellText, displayNameOf, showsAmount } from '../channels.ts'
+import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtRelative, fmtTokens } from '../format.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
@@ -20,7 +20,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
   { key: 'calls', label: '调用', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
   { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
   { key: 'sessionCount', label: '会话数', value: (row) => row.sessionCount },
   { key: 'archivedSessionCount', label: '已归档会话数', value: (row) => row.archivedSessionCount },
@@ -108,7 +108,7 @@ export function ProjectsTab(props: {
             const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0
             const dominant = row.dominantProvider
             const channel = channelOf(props.channels, dominant)
-            const costCell = costCellText(channel, row.cost ?? 0)
+            const costCell = costCellOf(channel, row)
             return (
               <tr key={row.workspace}>
                 <td>
@@ -131,7 +131,7 @@ export function ProjectsTab(props: {
                 </td>
                 <td>{row.cost === null || channel?.costMode === 'sub' || channel?.costMode === 'free' || channel?.costMode === 'none'
                   ? <span className={styles.dim}>{costCell.text}</span>
-                  : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}</td>
+                  : <>{costCell.text}{costCell.amount && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}</td>
                 <td>{fmtRelative(row.lastTime, nowMs)}</td>
               </tr>
             )
@@ -143,7 +143,7 @@ export function ProjectsTab(props: {
       </table>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        成本按台账模型中位均价估算{props.data.priced ? '' : '（台账无成本数据，暂不可估）'}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
+        成本按三层价目自动估算{props.data.priced ? '' : '（台账无成本数据，暂不可估）'}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
       </div>
     </div>
   )

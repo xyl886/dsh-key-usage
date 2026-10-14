@@ -1,15 +1,28 @@
 /**
  * 路由集成测试：把 DSH_HOME 指向临时夹具，直接调用各端点 handler 校验响应结构。
- * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、计费规则、非回环 403。
+ * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、按模型、
+ * 价目装载（新契约：无用户规则层）、每通道单价表、按币种拆分金额、非回环 403。
  * 运行：node test/routes.test.mjs
  */
 import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mountKeyUsageRoutes } from '../lib/routes.js'
+import { mountKeyUsageRoutes, parseDays, parseRatesLimit } from '../lib/routes.js'
 import { createSessionSource } from '../lib/sessions.js'
 import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
+
+/** 本地日历日（与 routes 的 shiftedDayKey 同一口径）；夹具用相对日期，避免依赖运行当天的具体日期。 */
+function localDayKey(offsetDays) {
+  const date = new Date(Date.now() + offsetDays * 86400000)
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
+/** 本地某天的某个小时（毫秒时间戳）。 */
+function localTimeOf(offsetDays, hour, minute = 0) {
+  const date = new Date(Date.now() + offsetDays * 86400000)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0).getTime()
+}
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-routes-'))
 mkdirSync(join(home, 'profiles', 'desktop'), { recursive: true })
@@ -129,6 +142,26 @@ async function callHandler(handlers, path, remoteAddress = '127.0.0.1', body = n
 
 async function callEndpoint(path, remoteAddress = '127.0.0.1') {
   return callHandler(handlers, path, remoteAddress)
+}
+
+/**
+ * 递归校验「单币种时 costsByCurrency 只有一个键、值等于 cost」这条契约：
+ * 响应里凡是同时带 cost 与 costsByCurrency 的对象都要满足，避免漏改某个端点。
+ */
+function assertMoneyInvariant(value, path = '$') {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertMoneyInvariant(entry, path + '[' + String(index) + ']'))
+    return
+  }
+  if (value === null || typeof value !== 'object') return
+  if (Object.prototype.hasOwnProperty.call(value, 'cost') && value.costsByCurrency !== undefined) {
+    const currencies = Object.keys(value.costsByCurrency)
+    if (currencies.length === 1) {
+      assert.equal(value.costsByCurrency[currencies[0]], value.cost, path + '：单币种时拆分值必须等于 cost')
+    }
+    if (value.cost === null) assert.deepEqual(value.costsByCurrency, {}, path + '：没有金额就不该有币种小计')
+  }
+  for (const [key, entry] of Object.entries(value)) assertMoneyInvariant(entry, path + '.' + key)
 }
 
 // 通道：本地端点判定 + 订阅窗口判定
@@ -252,6 +285,7 @@ assert.equal(sessions.body.rows.length, 1)
 assert.equal(sessions.body.rows[0].provider, 'opencode-go', 'pi-ai 路由归一到通道')
 assert.equal(sessions.body.rows[0].providerLabel, 'opencode-go')
 assert.equal(sessions.body.rows[0].cost, null, '台账无成本数据时不给估算值')
+assert.deepEqual(sessions.body.rows[0].costsByCurrency, {}, '没有金额依据时按币种拆分为空（0 元不是金额）')
 assert.equal(sessions.body.rows[0].costMode, 'sub')
 assert.equal(sessions.body.coverage.status, 'complete')
 assert.equal(sessions.body.rows[0].archived, false, '没有归档集合时标记为未归档')
@@ -276,6 +310,8 @@ assert.equal(projects.body.rows.length, 1)
 assert.equal(projects.body.rows[0].workspace, 'D:\\EasyJob')
 assert.equal(projects.body.rows[0].tokens, 9200 + 440, '两次结算样本的 tokens 之和')
 assert.equal(projects.body.rows[0].dominantProvider, 'opencode-go')
+assert.equal(projects.body.rows[0].cost, null)
+assert.deepEqual(projects.body.rows[0].costsByCurrency, {})
 
 // 按模型：通道 + 模型聚合，口径与 /sessions 一致（tokens 不含 cacheWrite）
 const models = await callEndpoint('/dsh-key-usage/models')
@@ -293,6 +329,7 @@ assert.equal(modelRow.cacheHitRate, 83, '8000 / 9640')
 assert.equal(modelRow.sessionCount, 1)
 assert.equal(modelRow.costMode, 'sub')
 assert.equal(modelRow.cost, null, '台账无成本数据时不给估算值（与 /sessions 同口径）')
+assert.deepEqual(modelRow.costsByCurrency, {})
 assert.equal(models.body.coverage.status, 'complete')
 assert.equal(models.body.priced, false)
 
@@ -313,6 +350,16 @@ assert.deepEqual(spanning.body.days.map((day) => day.date), ['2026-10-12', '2026
 assert.deepEqual(spanning.body.sessionDates, ['2026-10-20'], '只有台账缺的那天标为会话来源')
 assert.equal(spanning.body.days[1].cost, 0, '台账那两天不重算成本')
 assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带上了用量')
+
+// 按币种拆分：台账天的官方 0 元带币种（CNY），纯会话且无价格依据的天为空
+assert.deepEqual(spanning.body.days[0].costsByCurrency, { CNY: 0 }, '台账金额带台账币种（该通道无内置价目 → 基准 CNY）')
+assert.equal(spanning.body.days[0].models[0].costSource, 'official')
+assert.deepEqual(spanning.body.days[0].models[0].costsByCurrency, { CNY: 0 })
+assert.deepEqual(spanning.body.days[2].costsByCurrency, {}, '没有价格依据的会话天不产生币种小计')
+assert.deepEqual(spanning.body.days[2].models[0].costsByCurrency, {})
+assert.equal(spanning.body.days[2].models[0].costSource, 'none')
+assert.equal(spanning.body.totals.cost, 0)
+assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
 
 // ===== 单会话详情端点 /session：只折一个会话、404 / 403 / 降级、标题过滤、模型构成截断 =====
 {
@@ -401,9 +448,11 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.equal(session.models[0].providerLabel, 'opencode-go')
   assert.equal(session.models[0].model, 'GLM-5.3-Flash')
   assert.equal(session.models[0].sharePercent, 100)
-  assert.equal(session.models[0].cost, null, '台账成本为 0 且没有规则时不编造金额')
+  assert.equal(session.models[0].cost, null, '台账成本为 0 且没有价目时不编造金额')
   assert.equal(session.models[0].costSource, 'none')
+  assert.deepEqual(session.models[0].costsByCurrency, {})
   assert.equal(session.cost, null)
+  assert.deepEqual(session.costsByCurrency, {}, '没有金额依据时按币种拆分为空')
   assert.equal(session.costSource, 'none')
   assert.equal(detail.body.priced, false)
 
@@ -442,34 +491,6 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.equal(manyRow.tokens, 7700, '合并只影响展示，行合计仍是全量')
   assert.equal(manyRow.models[0].sharePercent, 14.3)
 
-  // 带规则：逐模型与合计都按规则算，来源角标为「自定」
-  const pricedDetailHandlers = new Map()
-  mountKeyUsageRoutes(
-    { register: (route) => { pricedDetailHandlers.set(route.path, route.handler) } },
-    detailSource,
-    undefined,
-    undefined,
-    // 注入的是旧版 entry config 那一段（`config.pricing`）
-    {
-      current: () => ({
-        version: 1, currency: 'CNY',
-        rules: [{ provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY', input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则' }],
-      }),
-    },
-  )
-  const pricedDetail = await callHandler(pricedDetailHandlers, '/dsh-key-usage/session?id=session-many')
-  assert.equal(pricedDetail.body.session.models.length, 7, '详情给全部模型，不合并长尾')
-  assert.equal(pricedDetail.body.session.models[0].cost, 2.8, '(1000×2 + 100×8) / 1000')
-  assert.equal(pricedDetail.body.session.models[0].costSource, 'rule')
-  assert.equal(pricedDetail.body.session.cost, 19.6, '七个模型 × 2.8')
-  assert.equal(pricedDetail.body.session.costSource, 'rule')
-  const pricedRows = await callHandler(pricedDetailHandlers, '/dsh-key-usage/sessions')
-  const pricedManyRow = pricedRows.body.rows.find((row) => row.id === 'session-many')
-  assert.equal(pricedManyRow.cost, 19.6, '行合计按全量模型算，不受「其它」合并影响')
-  assert.equal(pricedManyRow.costSource, 'rule')
-  assert.equal(pricedManyRow.models[5].cost, 5.6, '合并行的成本是两个长尾模型之和')
-  assert.equal(pricedManyRow.models[5].costSource, 'rule')
-
   // 数据源没有 detail 能力时（外部注入的旧实现）：404 而不是抛错
   const noCapability = new Map()
   mountKeyUsageRoutes({ register: (route) => { noCapability.set(route.path, route.handler) } }, { collect: sessionSource.collect })
@@ -486,35 +507,24 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.equal(unavailable.body.session.calls, 0)
 }
 
-// ===== 计费规则：带规则再挂一份路由，验证四处成本按规则重算与来源角标 =====
-// 台账仍在（下面的 rmSync 才删），所以同一次请求里既有「官方」也有「自定」两种来源
+// ===== 价目端点新契约：用户规则层已移除，只剩内置价目 + 聚合价 + 覆盖度 + 问题 =====
 {
-  const pricedHandlers = new Map()
-  const rules = [{
-    provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY',
-    input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则',
-  }]
-  mountKeyUsageRoutes(
-    { register: (route) => { pricedHandlers.set(route.path, route.handler) } },
-    sessionSource,
-    undefined,
-    undefined,
-    // 注入的是**旧版 entry config**（apply 的 config.pricing 那一段）；设置服务已退役，只作只读回退
-    { current: () => ({ version: 1, currency: 'CNY', rules }) },
-  )
-  const priced = (path) => callHandler(pricedHandlers, path)
+  const contractHandlers = new Map()
+  mountKeyUsageRoutes({ register: (route) => { contractHandlers.set(route.path, route.handler) } }, sessionSource)
+  const priced = (path, remoteAddress) => callHandler(contractHandlers, path, remoteAddress)
 
   const pricing = await priced('/dsh-key-usage/pricing')
   assert.equal(pricing.status, 200)
   // 冻结契约：字段集合就是这些，多一个少一个客户端都要跟着改
-  assert.deepEqual(
-    Object.keys(pricing.body).sort(),
-    ['aggregate', 'catalog', 'coverage', 'currency', 'files', 'issues', 'offPeakNow', 'revision', 'rules', 'rulesOrigin', 'writable'],
-  )
+  assert.deepEqual(Object.keys(pricing.body).sort(), ['aggregate', 'catalog', 'coverage', 'currency', 'files', 'issues'])
+  for (const removed of ['rules', 'rulesOrigin', 'writable', 'revision', 'offPeakNow', 'templates']) {
+    assert.equal(pricing.body[removed], undefined, removed + ' 已随「你的规则」层移除')
+  }
   assert.deepEqual(Object.keys(pricing.body.catalog).sort(), ['entries', 'rules', 'sources'])
-  assert.deepEqual(Object.keys(pricing.body.files).sort(), ['catalog', 'user'])
+  assert.deepEqual(Object.keys(pricing.body.files).sort(), ['catalog'])
   assert.deepEqual(Object.keys(pricing.body.files.catalog).sort(), ['entries', 'exists', 'path'])
-  assert.deepEqual(Object.keys(pricing.body.files.user).sort(), ['entries', 'exists', 'path'])
+  assert.equal(pricing.body.currency, 'CNY', '内置价目的基准币种')
+
   // 聚合价目（第三方 USD）：随包快照装载状态；客户端按这些字段渲染「装载来源 / 条目 / 模型 / 来源与许可」
   assert.equal(pricing.body.aggregate.loaded, 'shipped', '没有本地刷新文件时读随包快照')
   assert.ok(pricing.body.aggregate.path.endsWith(join('data', 'litellm-model-prices.json')), pricing.body.aggregate.path)
@@ -535,261 +545,102 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
     pricing.body.aggregate.issues.some((issue) => issue.kind === 'match-ambiguous' && issue.message.includes('GLM-5.3-Flash')),
     '定不了通道时要给出可读的问题：' + JSON.stringify(pricing.body.aggregate.issues),
   )
-  assert.equal(pricing.body.writable, true, '规则由本插件的 POST 端点写盘，恒为可写')
-  assert.equal(pricing.body.revision, null, '设置服务已退役：修订号恒为 null')
-  assert.equal(pricing.body.rulesOrigin, 'legacy', '没有用户文件时回落到旧版 entry config')
-  assert.equal(pricing.body.rules.length, 1)
-  assert.equal(pricing.body.currency, 'CNY')
-  assert.equal(pricing.body.offPeakNow.length, 1, '每条规则一个错峰状态')
-  assert.equal(pricing.body.offPeakNow[0], false, '没有错峰窗口的规则永远不是错峰')
-  assert.equal(pricing.body.templates, undefined, '模板字段已随设置服务退役')
-  // 两个价目文件的状态：内置价目在包根、用户文件还没建
+  assert.equal(pricing.body.coverage.catalogModels, 0, '夹具里的模型都不在内置价目里')
+  assert.equal(pricing.body.coverage.averagedModels, 0, '台账成本为 0 → 反推不出均价')
+  assert.ok(pricing.body.coverage.unpricedModels >= 1)
+  assert.deepEqual(Object.keys(pricing.body.coverage).sort(), [
+    'aggregateModels', 'averagedModels', 'catalogModels', 'costByCurrency', 'from', 'partialModels',
+    'savingsByCurrency', 'savingsDetail', 'to', 'unpricedModels',
+  ])
+  assert.deepEqual(pricing.body.coverage.costByCurrency, {}, '没有命中价目的行 → 没有金额')
+  assert.deepEqual(pricing.body.coverage.savingsByCurrency, {})
+  assert.deepEqual(pricing.body.coverage.savingsDetail, [])
+  assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.from), true)
+  assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.to), true)
+
+  // 内置价目文件状态与解析问题
   assert.equal(pricing.body.files.catalog.exists, true, '内置价目随包发布')
   assert.ok(pricing.body.files.catalog.path.includes('pricing-catalog.yml'))
   assert.equal(pricing.body.files.catalog.entries, pricing.body.catalog.entries)
-  assert.equal(pricing.body.files.user.exists, false, '用户文件还没建')
-  assert.ok(pricing.body.files.user.path.endsWith(join('dsh-key-usage', 'pricing-rules.yml')))
-  assert.equal(pricing.body.files.user.entries, 0)
-  assert.deepEqual(pricing.body.issues, [], '内置价目干净 + 没有用户文件 → 没有问题')
-  // 内置官方价目：自动生效，界面靠这段渲染「已内置 N 条（来源见 …）」与「下载规则模板」
+  assert.deepEqual(pricing.body.issues, [], '内置价目干净 → 没有问题')
   assert.ok(pricing.body.catalog.entries > 0, '内置价目条数透出给界面')
   assert.ok(pricing.body.catalog.sources.length >= 4, '按来源分组：DeepSeek / Kimi / Z.ai / OpenRouter')
-  assert.equal(pricing.body.catalog.rules.length, pricing.body.catalog.entries, '逐条规则与条数一致（模板下载用）')
+  assert.equal(pricing.body.catalog.rules.length, pricing.body.catalog.entries, '逐条数值与条数一致')
   assert.equal(pricing.body.catalog.rules[0].note, '', '长 note 不下发：来源与抓取日期走 sources')
-  assert.ok(
-    pricing.body.catalog.rules.some((rule) => rule.offPeak !== null && rule.offPeak.windows.length > 0),
-    '内置价目里带错峰窗口（模板的错峰示例由它提供）',
-  )
   for (const source of pricing.body.catalog.sources) {
     assert.ok(/^https:\/\//.test(source.source), '每条来源都是精确 URL：' + source.source)
     assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(source.fetchedAt), '每条来源都带抓取日期')
     assert.ok(source.providers.length > 0 && source.count > 0)
   }
-  assert.equal(pricing.body.coverage.ruleModels, 1, 'opencode-go 命中规则')
-  assert.equal(pricing.body.coverage.unpricedModels, 1, 'local 既没规则也没台账成本')
-  // 参照值：近 30 天所有行按规则口径算 = 台账两天（1000+200+8000 与 2000+400+16000）
-  const ledgerDayCost = (1000 * 2 + 200 * 8 + 8000 * 0.2) / 1000 + (2000 * 2 + 400 * 8 + 16000 * 0.2) / 1000
-  assert.ok(Math.abs(pricing.body.coverage.ruleCostByCurrency.CNY - ledgerDayCost) < 1e-9)
 
-  // 台账天保留官方成本，会话补位天按规则算
-  const pricedUsage = await priced('/dsh-key-usage/usage?from=2026-10-12&to=2026-10-20')
-  assert.deepEqual(pricedUsage.body.days.map((day) => day.costSource), ['official', 'official', 'rule'])
-  assert.equal(pricedUsage.body.days[0].models[0].costSource, 'official', '台账天不重算')
-  assert.equal(pricedUsage.body.days[2].cost, 1.12, '规则算出的会话天成本')
-  assert.equal(pricedUsage.body.totals.costSource, 'rule', '总计划到最弱的那一格')
+  // 端点表就是这些：用户规则写入端点已整条删除，价目刷新端点保留（新增端点必须同步测试与文档）
+  assert.deepEqual([...contractHandlers.keys()].sort(), [
+    '/dsh-key-usage/channels',
+    '/dsh-key-usage/fx',
+    '/dsh-key-usage/heatmap',
+    '/dsh-key-usage/models',
+    '/dsh-key-usage/pricing',
+    '/dsh-key-usage/pricing/refresh',
+    '/dsh-key-usage/projects',
+    '/dsh-key-usage/quota',
+    '/dsh-key-usage/rates',
+    '/dsh-key-usage/session',
+    '/dsh-key-usage/sessions',
+    '/dsh-key-usage/summary',
+    '/dsh-key-usage/usage',
+  ], '12 个只读 GET + 1 个写 POST（价目刷新）')
 
-  // /models /sessions /projects 三处同一口径：输入 1400 + 输出 240 + 缓存读 8000
-  const expectedCost = Math.round((1400 * 2 + 240 * 8 + 8000 * 0.2) / 1000 * 100) / 100
-  const pricedModels = await priced('/dsh-key-usage/models')
-  assert.equal(pricedModels.body.rows[0].cost, expectedCost)
-  assert.equal(pricedModels.body.rows[0].costSource, 'rule')
-  assert.equal(pricedModels.body.rows[0].buckets.cacheWriteTokens, 0, '分桶补上 cacheWrite（只用于计费）')
+  // /rates：夹具里两个模型都没有价格依据 → source = none，rates 为 null
+  const rates = await priced('/dsh-key-usage/rates')
+  assert.equal(rates.status, 200)
+  assert.deepEqual(Object.keys(rates.body).sort(), ['channels', 'from', 'to'])
+  assert.deepEqual(rates.body.channels.map((row) => row.provider), ['opencode-go', 'local'], '按展示 tokens 降序')
+  const ratesOpencode = rates.body.channels.find((row) => row.provider === 'opencode-go')
+  assert.equal(ratesOpencode.label, 'opencode-go', '通道名兜底为 provider id')
+  assert.equal(ratesOpencode.currency, null, '没有任何币种依据')
+  assert.equal(ratesOpencode.models.length, 1)
+  assert.deepEqual(Object.keys(ratesOpencode.models[0]).sort(), [
+    'calls', 'currency', 'model', 'note', 'offPeak', 'partial', 'rates', 'source', 'tokens',
+  ])
+  assert.equal(ratesOpencode.models[0].model, 'GLM-5.3-Flash')
+  assert.equal(ratesOpencode.models[0].source, 'none')
+  assert.equal(ratesOpencode.models[0].rates, null)
+  assert.equal(ratesOpencode.models[0].currency, null)
+  assert.equal(ratesOpencode.models[0].partial, false)
+  assert.equal(ratesOpencode.models[0].offPeak, false)
+  assert.ok(ratesOpencode.models[0].note.includes('没有任何价格依据'), ratesOpencode.models[0].note)
+  assert.equal(ratesOpencode.models[0].calls, 9, '台账两天的调用数之和')
 
-  const pricedSessions = await priced('/dsh-key-usage/sessions')
-  assert.equal(pricedSessions.body.rows[0].cost, expectedCost)
-  assert.equal(pricedSessions.body.rows[0].costSource, 'rule')
+  // limit / days 归一：非法值回落默认，越大越截断
+  const limitedRates = await priced('/dsh-key-usage/rates?limit=1')
+  assert.equal(limitedRates.body.channels.every((row) => row.models.length <= 1), true)
+  const tinyRange = await priced('/dsh-key-usage/rates?days=1')
+  assert.deepEqual(tinyRange.body.channels, [], '近 1 天（今天）没有用量')
+  assert.equal(parseDays(null), 30)
+  assert.equal(parseDays('0'), 30)
+  assert.equal(parseDays('abc'), 30)
+  assert.equal(parseDays('7'), 7)
+  assert.equal(parseDays('9999'), 400, '天数上限 400（与合并序列一致）')
+  assert.equal(parseRatesLimit(null), 20)
+  assert.equal(parseRatesLimit('-1'), 20)
+  assert.equal(parseRatesLimit('abc'), 20)
+  assert.equal(parseRatesLimit('50'), 50)
+  assert.equal(parseRatesLimit('999'), 50, '每通道模型数上限 50')
 
-  const pricedProjects = await priced('/dsh-key-usage/projects')
-  assert.equal(pricedProjects.body.rows[0].cost, expectedCost)
-  assert.equal(pricedProjects.body.rows[0].costSource, 'rule')
+  const foreignRates = await priced('/dsh-key-usage/rates', '10.0.0.7')
+  assert.equal(foreignRates.status, 403, '单价表端点同样只允许回环')
+  assert.deepEqual(foreignRates.body, { error: 'loopback only' })
 
-  // 总览「近 30 天」窗口内 opencode-go 只有台账天（10-12/10-13），所以仍然是官方；
-  // 规则路径由上面的 /usage（含 10-20 会话天）覆盖，两处共用同一个 annotateCosts
-  const pricedSummary = await priced('/dsh-key-usage/summary')
-  const pricedChannel = pricedSummary.body.channels.find((row) => row.provider === 'opencode-go')
-  assert.equal(pricedChannel.month.costSource, 'official', '台账覆盖期内标官方，不按规则重算')
-  const localChannelSummary = pricedSummary.body.channels.find((row) => row.provider === 'local')
-  assert.equal(localChannelSummary.month.costSource, 'official', '台账里有官方成本时标官方')
-
-  // 没有规则源（默认）时行为与升级前一致：既没有规则也没有台账成本 → 无依据
-  const unpricedUsage = await callEndpoint('/dsh-key-usage/usage?from=2026-10-20&to=2026-10-20')
-  assert.equal(unpricedUsage.body.days[0].costSource, 'none')
-  assert.equal(unpricedUsage.body.days[0].cost, 0)
-}
-
-// ===== 用户规则文件：文件 > 旧版 entry config；改文件刷新即生效；POST 原子写 + 按 provider|model 合并 =====
-{
-  const userRulesPath = join(home, 'dsh-key-usage', 'pricing-rules.yml')
-  const fileHandlers = new Map()
-  mountKeyUsageRoutes(
-    { register: (route) => { fileHandlers.set(route.path, route.handler) } },
-    sessionSource,
-    undefined,
-    undefined,
-    // 旧版 entry config 里有一条规则：用户文件一出现就必须被顶掉
-    { current: () => ({ rules: [{ provider: 'legacy-only', model: '*', unit: 'perMillionTokens', currency: 'CNY', input: 1, cacheRead: 0.1, cacheWrite: 1, output: 2, offPeak: null, note: '旧配置' }] }) },
-  )
-  const fileCall = (path, body = null, remoteAddress = '127.0.0.1') => callHandler(fileHandlers, path, remoteAddress, body)
-
-  // 默认挂载（没有旧版配置）且没有文件：origin = none，成本只剩内置价目与台账均价两层
-  const noneView = await callEndpoint('/dsh-key-usage/pricing')
-  assert.equal(noneView.body.rulesOrigin, 'none')
-  assert.deepEqual(noneView.body.rules, [])
-  assert.equal(noneView.body.files.user.exists, false)
-
-  const legacyView = await fileCall('/dsh-key-usage/pricing')
-  assert.equal(legacyView.body.rulesOrigin, 'legacy', '没有文件时回落到旧版 entry config')
-  assert.deepEqual(legacyView.body.rules.map((ruleItem) => ruleItem.provider), ['legacy-only'])
-
-  /** 文件里的 opencode-go 规则带 unit / offPeak / note：这三项面板不编辑，保存时必须保留。 */
-  const fileWithOptions = [
-    'version: 1',
-    'currency: CNY',
-    'rules:',
-    '  - provider: opencode-go',
-    '    model: "*"',
-    '    unit: perThousandTokens',
-    '    currency: CNY',
-    '    input: 2',
-    '    cacheRead: 0.2',
-    '    cacheWrite: 2',
-    '    output: 8',
-    '    note: 文件备注',
-    '    offPeak:',
-    '      windows:',
-    '        - from: "00:00"',
-    '          to: "09:00"',
-    '          days: [1, 2, 3, 4, 5]',
-    '      input: 1',
-    '      cacheRead: 0.1',
-    '      cacheWrite: 1',
-    '      output: 4',
-    '  - provider: zai',
-    '    model: glm-5',
-    '    input: 1',
-    '    cacheRead: 0.2',
-    '    cacheWrite: 0',
-    '    output: 3.2',
-  ].join('\n')
-
-  writeFileSync(userRulesPath, fileWithOptions, 'utf8')
-  const fileView = await fileCall('/dsh-key-usage/pricing')
-  assert.equal(fileView.body.rulesOrigin, 'file', '文件存在时文件优先，旧版配置作废')
-  assert.deepEqual(fileView.body.rules.map((ruleItem) => ruleItem.provider + '|' + ruleItem.model), ['opencode-go|*', 'zai|glm-5'])
-  assert.equal(fileView.body.rules[0].unit, 'perThousandTokens')
-  assert.equal(fileView.body.rules[0].note, '文件备注')
-  assert.equal(fileView.body.rules[0].offPeak.windows.length, 1)
-  assert.equal(fileView.body.files.user.exists, true)
-  assert.equal(fileView.body.files.user.entries, 2)
-  assert.deepEqual(fileView.body.issues, [])
-  assert.equal(fileView.body.offPeakNow.length, 2)
-
-  // 成本按文件里的规则算（台账缺的 10-20 由会话补位 → 规则口径）
-  const fileUsage = await fileCall('/dsh-key-usage/usage?from=2026-10-20&to=2026-10-20')
-  assert.equal(fileUsage.body.days[0].costSource, 'rule')
-  assert.ok(fileUsage.body.days[0].cost > 0, '按文件规则算出金额：' + fileUsage.body.days[0].cost)
-
-  // 改文件 → 下一次请求立刻生效（mtime/size 缓存失效，不需要重启宿主）
-  writeFileSync(userRulesPath, 'version: 1\ncurrency: CNY\nrules:\n  - provider: zai\n    model: glm-5\n    input: 9\n    cacheRead: 0.9\n    cacheWrite: 9\n    output: 27\n', 'utf8')
-  const editedView = await fileCall('/dsh-key-usage/pricing')
-  assert.deepEqual(editedView.body.rules.map((ruleItem) => ruleItem.provider), ['zai'], '改完文件刷新即可生效')
-  assert.equal(editedView.body.rules[0].input, 9)
-
-  // YAML 写坏：issue 带行号、坏条目跳过、端点照常 200（绝不影响其它端点）
-  writeFileSync(userRulesPath, [
-    'version: 1',
-    'rules:',
-    '  - provider: broken',
-    '    model: missing-output',
-    '    input: 1',
-    '    cacheRead: 0.1',
-    '    cacheWrite: 1',
-    '  - provider: ok',
-    '    model: kept',
-    '    input: 1',
-    '    cacheRead: 0.1',
-    '    cacheWrite: 1',
-    '    output: 2',
-  ].join('\n'), 'utf8')
-  const brokenView = await fileCall('/dsh-key-usage/pricing')
-  assert.equal(brokenView.status, 200)
-  assert.deepEqual(brokenView.body.rules.map((ruleItem) => ruleItem.model), ['kept'], '坏条目跳过，好条目保留')
-  assert.equal(brokenView.body.issues.length > 0, true, '坏写法必须报出来')
-  assert.equal(brokenView.body.issues.every((issue) => issue.file === 'user'), true, '问题归属用户文件')
-  assert.equal(brokenView.body.issues[0].line, 3, 'issue 带行号')
-  assert.equal(brokenView.body.files.user.entries, 1)
-  assert.equal((await fileCall('/dsh-key-usage/channels')).status, 200, '计费文件坏掉不影响其它端点')
-
-  // ===== POST /dsh-key-usage/pricing/rules =====
-  // 非回环一律 403（与其它端点同一写法）
-  const foreignPost = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({ rules: [] }), '10.0.0.7')
-  assert.equal(foreignPost.status, 403)
-  assert.deepEqual(foreignPost.body, { error: 'loopback only' })
-
-  // 非 POST / 非 JSON / 空体 / 超 256 KiB / 非法字段：一律 HTTP 200 + ok:false
-  const wrongMethod = await fileCall('/dsh-key-usage/pricing/rules')
-  assert.equal(wrongMethod.status, 200)
-  assert.equal(wrongMethod.body.ok, false)
-  assert.ok(wrongMethod.body.error.includes('POST'), wrongMethod.body.error)
-
-  const badJson = await fileCall('/dsh-key-usage/pricing/rules', '{oops')
-  assert.equal(badJson.status, 200)
-  assert.equal(badJson.body.ok, false)
-  assert.ok(badJson.body.error.includes('JSON'), badJson.body.error)
-
-  const emptyBody = await fileCall('/dsh-key-usage/pricing/rules', '')
-  assert.equal(emptyBody.status, 200)
-  assert.equal(emptyBody.body.ok, false)
-
-  const oversize = await fileCall('/dsh-key-usage/pricing/rules', 'x'.repeat(300 * 1024))
-  assert.equal(oversize.status, 200)
-  assert.equal(oversize.body.ok, false)
-  assert.ok(oversize.body.error.includes('256 KiB'), oversize.body.error)
-
-  const badRule = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({
-    rules: [{ provider: 'a', model: 'b', currency: 'CNY', input: -1, cacheRead: 0, cacheWrite: 0, output: 1 }],
-  }))
-  assert.equal(badRule.status, 200)
-  assert.equal(badRule.body.ok, false)
-  assert.ok(badRule.body.error.includes('input'), badRule.body.error)
-  const untouched = await fileCall('/dsh-key-usage/pricing')
-  assert.deepEqual(untouched.body.rules.map((ruleItem) => ruleItem.model), ['kept'], '请求非法时一个字节都不写')
-
-  // 合法请求：原子写文件 + 按 provider|model 合并（unit / offPeak / note 保留旧值，其余以请求为准，顺序按请求）
-  writeFileSync(userRulesPath, fileWithOptions, 'utf8')
-  const written = await fileCall('/dsh-key-usage/pricing/rules', JSON.stringify({
-    rules: [
-      { provider: 'opencode-go', model: '*', currency: 'CNY', input: 4, cacheRead: 0.4, cacheWrite: 4, output: 16 },
-      { provider: 'moonshotai', model: 'kimi-k3', currency: 'CNY', input: 20, cacheRead: 2, cacheWrite: 20, output: 100 },
-    ],
-  }))
-  assert.equal(written.status, 200)
-  assert.equal(written.body.ok, true, JSON.stringify(written.body))
-  assert.deepEqual(Object.keys(written.body).sort(), ['entries', 'issues', 'ok', 'path'], '写入响应契约')
-  assert.equal(written.body.path, userRulesPath)
-  assert.equal(written.body.entries, 2)
-  assert.deepEqual(written.body.issues, [])
-
-  const afterWrite = await fileCall('/dsh-key-usage/pricing')
-  assert.equal(afterWrite.body.rulesOrigin, 'file')
-  assert.deepEqual(
-    afterWrite.body.rules.map((ruleItem) => ruleItem.provider + '|' + ruleItem.model),
-    ['opencode-go|*', 'moonshotai|kimi-k3'],
-    '顺序按请求',
-  )
-  assert.equal(afterWrite.body.rules[0].input, 4, '单价以请求为准')
-  assert.equal(afterWrite.body.rules[0].unit, 'perThousandTokens', 'unit 保留文件旧值')
-  assert.equal(afterWrite.body.rules[0].note, '文件备注', 'note 保留文件旧值')
-  assert.equal(afterWrite.body.rules[0].offPeak.windows.length, 1, 'offPeak 保留文件旧值')
-  assert.equal(afterWrite.body.rules[1].unit, 'perMillionTokens', '新条目 unit 默认每百万 tokens')
-  assert.equal(afterWrite.body.rules[1].offPeak, null, '新条目 offPeak 默认 null')
-  assert.equal(afterWrite.body.rules[1].note, '', '新条目 note 默认空串')
-  assert.equal(afterWrite.body.files.user.entries, 2)
-  assert.equal(afterWrite.body.rules.some((ruleItem) => ruleItem.model === 'glm-5'), false, '请求里没有的条目被移出（文件列表以请求为准）')
-
-  // 落盘的是带中文注释头的 YAML；`*` 必须加引号；临时文件不残留
-  const writtenText = readFileSync(userRulesPath, 'utf8')
-  assert.ok(writtenText.includes('刷新页面即生效'), '文件头要写明改完刷新即生效')
-  assert.ok(writtenText.includes('provider: opencode-go'))
-  assert.ok(writtenText.includes("model: '*'"), '`*` 必须加引号（否则被当别名）')
-  assert.equal(existsSync(userRulesPath + '.tmp'), false)
-
-  // 收尾：留一份干净的空规则文件，避免影响后面的端点断言
-  writeFileSync(userRulesPath, 'version: 1\ncurrency: CNY\nrules: []\n', 'utf8')
-  const cleared = await fileCall('/dsh-key-usage/pricing')
-  assert.equal(cleared.body.rulesOrigin, 'file', '文件存在但为空 → 仍是 file（文件是唯一事实来源）')
-  assert.deepEqual(cleared.body.rules, [])
-  assert.equal(cleared.body.files.user.entries, 0)
+  // 契约不变量：主夹具（没有价格依据）同样满足「没有金额就没有币种小计」
+  for (const path of [
+    '/dsh-key-usage/usage?from=2026-10-12&to=2026-10-20',
+    '/dsh-key-usage/summary',
+    '/dsh-key-usage/sessions',
+    '/dsh-key-usage/projects',
+    '/dsh-key-usage/models',
+  ]) {
+    assertMoneyInvariant((await priced(path)).body)
+  }
 }
 
 // ===== POST /dsh-key-usage/pricing/refresh：只允许回环 + 只接受 POST =====
@@ -838,6 +689,212 @@ const fallbackChannels = await callEndpoint('/dsh-key-usage/channels')
 assert.equal(fallbackChannels.body.channels.length, 1, '组合产物为空时回退到 patch 层')
 assert.equal(fallbackChannels.body.channels[0].provider, 'sensenova')
 assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
+
+// ===== 有价格依据的夹具：内置官方价目（CNY）+ 聚合价（USD）+ 台账反推均价 + 无依据，四处金额按币种拆分 =====
+// 单独一个 DSH_HOME：台账只有一条「没有价目覆盖」的模型（走 estimate），其余用量全来自会话事件。
+{
+  const pricedHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-priced-'))
+  mkdirSync(join(pricedHome, 'profiles', 'desktop'), { recursive: true })
+  mkdirSync(join(pricedHome, 'dsh-usage'), { recursive: true })
+
+  // moonshotai → 内置官方价目（CNY）；opencode-go → 没有内置价目，moonshot-v1-8k 命中聚合价（USD）
+  writeFileSync(join(pricedHome, 'profiles', 'desktop', 'cordis.yml'), [
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      moonshotai:',
+    '        apiKeyEnv: MOONSHOT_API_KEY',
+    '        models:',
+    '          - id: kimi-k3',
+    '            name: Kimi K3',
+    '      opencode-go:',
+    '        apiKeyEnv: OPENCODE_GO_API_KEY',
+    '        models:',
+    '          - id: moonshot-v1-8k',
+    '            name: Moonshot v1 8k',
+    '',
+  ].join('\n'), 'utf8')
+
+  // 台账：mystery-model 没有内置价目、聚合价也定不了通道 → 只能反推均价（12.5 元 / 5M tokens）
+  writeFileSync(join(pricedHome, 'dsh-usage', 'usage-ledger.json'), JSON.stringify({
+    version: 1,
+    days: {
+      [localDayKey(-3)]: {
+        'opencode-go': {
+          'mystery-model': { inputTokens: 4000000, outputTokens: 1000000, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, calls: 7, cost: 12.5 },
+        },
+      },
+    },
+  }), 'utf8')
+
+  const pricedEvents = [
+    { seq: 0, time: localTimeOf(-1, 10), type: 'user/message', data: { content: [{ type: 'text', text: '价目夹具' }] } },
+    // 内置官方价目：kimi-k3 未命中 ¥20 / MTok、输出 ¥100 / MTok → 1M 输入 + 0.1M 输出 = ¥30
+    { seq: 1, time: localTimeOf(-1, 10), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000000, outputTokens: 100000, cacheReadTokens: 0 } }, message: { source: { provider: 'pi-ai/moonshotai', model: 'kimi-k3' } } } },
+    // 聚合价：moonshot-v1-8k 在 LiteLLM 里全库唯一 → USD 0.2 / MTok × 1M
+    { seq: 2, time: localTimeOf(-1, 11), type: 'assistant/chunk', data: { turn: 2, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000000, outputTokens: 0, cacheReadTokens: 0 } }, message: { source: { provider: 'pi-ai/opencode-go', model: 'moonshot-v1-8k' } } } },
+    // 未配置的通道 + 没有任何价目依据
+    { seq: 3, time: localTimeOf(0, 9), type: 'assistant/chunk', data: { turn: 3, step: 1, chunk: { type: 'usage', usage: { inputTokens: 500000, outputTokens: 0, cacheReadTokens: 0 } }, message: { source: { provider: 'unlisted-vendor', model: 'unknown-model-x' } } } },
+  ]
+  const pricedFixture = createFakePersistence([
+    ['session-priced', { header: { id: 'session-priced', title: '价目夹具会话', cwd: 'D:\\EasyJob', updatedAt: localTimeOf(0, 9) }, revision: Symbol('r1'), events: pricedEvents }],
+  ])
+  const pricedSessionSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? pricedFixture.service : undefined) })
+
+  const pricedHandlers = new Map()
+  process.env.DSH_HOME = pricedHome
+  mountKeyUsageRoutes({ register: (route) => { pricedHandlers.set(route.path, route.handler) } }, pricedSessionSource)
+  const pricedCall = (path, remoteAddress) => callHandler(pricedHandlers, path, remoteAddress)
+
+  // ---- /rates：四档单价（catalog / aggregate）、estimate、none 与通道币种 ----
+  const rates = await pricedCall('/dsh-key-usage/rates?days=30')
+  assert.equal(rates.status, 200)
+  assert.equal(rates.body.from, localDayKey(-29), '近 30 天的起点 = 今天 − 29 天')
+  assert.equal(rates.body.to, localDayKey(0))
+  assert.deepEqual(rates.body.channels.map((row) => row.provider), ['opencode-go', 'moonshotai', 'unlisted-vendor'], '按 tokens 降序')
+
+  const opencodeRates = rates.body.channels[0]
+  assert.equal(opencodeRates.currency, null, '同一通道混了 CNY（均价）与 USD（聚合价）→ 不给单一币种')
+  assert.deepEqual(opencodeRates.models.map((row) => row.model), ['mystery-model', 'moonshot-v1-8k'])
+  const estimateRow = opencodeRates.models[0]
+  assert.equal(estimateRow.source, 'estimate', '只有台账反推均价')
+  assert.equal(estimateRow.rates, null, 'estimate 不给单价表')
+  assert.equal(estimateRow.currency, 'CNY', '台账币种按通道的官方价目推断，推断不出来用基准币种')
+  assert.equal(estimateRow.tokens, 5000000)
+  assert.equal(estimateRow.calls, 7)
+  assert.equal(estimateRow.offPeak, false)
+  assert.ok(estimateRow.note.includes('台账反推均价'), estimateRow.note)
+  const aggregateRow = opencodeRates.models[1]
+  assert.equal(aggregateRow.source, 'aggregate')
+  assert.equal(aggregateRow.currency, 'USD')
+  assert.deepEqual(aggregateRow.rates, { input: 0.2, cacheRead: 0, cacheWrite: 0, output: 2 }, 'LiteLLM 聚合价：USD / 每百万 tokens')
+  assert.equal(aggregateRow.partial, false)
+  assert.equal(aggregateRow.tokens, 1000000)
+
+  const moonshotRates = rates.body.channels[1]
+  assert.equal(moonshotRates.currency, 'CNY', '内置官方价目是 CNY')
+  const catalogRow = moonshotRates.models[0]
+  assert.equal(catalogRow.model, 'kimi-k3')
+  assert.equal(catalogRow.source, 'catalog')
+  assert.equal(catalogRow.currency, 'CNY')
+  assert.deepEqual(catalogRow.rates, { input: 20, cacheRead: 2, cacheWrite: 20, output: 100 }, '内置官方价目：CNY / 每百万 tokens')
+  assert.equal(catalogRow.partial, false)
+  assert.equal(catalogRow.offPeak, false, 'kimi-k3 没有错峰价')
+  assert.ok(catalogRow.note.includes('K3'), 'note 带官方价目口径说明')
+
+  const unlistedRates = rates.body.channels[2]
+  assert.equal(unlistedRates.provider, 'unlisted-vendor')
+  assert.equal(unlistedRates.label, 'unlisted-vendor', '未配置的通道用 raw provider id 当 label')
+  assert.equal(unlistedRates.currency, null)
+  assert.equal(unlistedRates.models[0].source, 'none')
+  assert.equal(unlistedRates.models[0].currency, null)
+  assert.equal(unlistedRates.models[0].rates, null)
+  assert.ok(unlistedRates.models[0].note.includes('没有任何价格依据'), unlistedRates.models[0].note)
+
+  // limit：每通道只留前 N 个模型
+  const limitedRates = await pricedCall('/dsh-key-usage/rates?limit=1')
+  assert.deepEqual(limitedRates.body.channels.map((row) => row.models.length), [1, 1, 1])
+  assert.deepEqual(limitedRates.body.channels.map((row) => row.models[0].model), ['mystery-model', 'kimi-k3', 'unknown-model-x'])
+
+  // days：只算今天 → 只剩今天那条用量
+  const oneDay = await pricedCall('/dsh-key-usage/rates?days=1')
+  assert.deepEqual(oneDay.body.channels.map((row) => row.provider), ['unlisted-vendor'])
+  assert.equal(oneDay.body.from, localDayKey(0))
+
+  // ---- /usage：官方天 + 会话天，逐天与合计都给按币种拆分 ----
+  const usage = await pricedCall('/dsh-key-usage/usage?from=' + localDayKey(-3) + '&to=' + localDayKey(0))
+  assert.equal(usage.status, 200)
+  assert.deepEqual(usage.body.days.map((day) => day.date), [localDayKey(-3), localDayKey(-1), localDayKey(0)])
+  assert.deepEqual(usage.body.days.map((day) => day.costSource), ['official', 'aggregate', 'none'])
+  assert.equal(usage.body.days[0].cost, 12.5, '台账天保留官方账单金额')
+  assert.deepEqual(usage.body.days[0].costsByCurrency, { CNY: 12.5 })
+  assert.equal(usage.body.days[1].cost, 30.2, 'CNY 30 + USD 0.2 按行相加（cost 语义不变）')
+  assert.deepEqual(usage.body.days[1].costsByCurrency, { CNY: 30, USD: 0.2 }, '混币种按币种分列，不换算')
+  assert.equal(usage.body.days[2].cost, 0, '没有任何价格依据的模型不产生金额')
+  assert.deepEqual(usage.body.days[2].costsByCurrency, {})
+
+  const kimiDay = usage.body.days[1]
+  const kimiModelRow = kimiDay.models.find((row) => row.model === 'kimi-k3')
+  assert.equal(kimiModelRow.costSource, 'catalog')
+  assert.equal(kimiModelRow.cost, 30)
+  assert.deepEqual(kimiModelRow.costsByCurrency, { CNY: 30 }, '单币种时拆分值等于 cost')
+  const aggregateModelRow = kimiDay.models.find((row) => row.model === 'moonshot-v1-8k')
+  assert.equal(aggregateModelRow.costSource, 'aggregate')
+  assert.equal(aggregateModelRow.cost, 0.2)
+  assert.deepEqual(aggregateModelRow.costsByCurrency, { USD: 0.2 })
+
+  assert.equal(usage.body.totals.cost, 42.7)
+  assert.deepEqual(usage.body.totals.costsByCurrency, { CNY: 42.5, USD: 0.2 }, '合计按币种分列：CNY 12.5 + 30、USD 0.2')
+  assert.equal(usage.body.totals.costSource, 'none', '总计划到最弱的那一格')
+
+  // ---- /summary：今日 / 近 30 天两列都带按币种拆分 ----
+  const summary = await pricedCall('/dsh-key-usage/summary')
+  const summaryMoonshot = summary.body.channels.find((row) => row.provider === 'moonshotai')
+  const summaryOpencode = summary.body.channels.find((row) => row.provider === 'opencode-go')
+  assert.equal(summaryMoonshot.month.cost, 30)
+  assert.deepEqual(summaryMoonshot.month.costsByCurrency, { CNY: 30 }, '单币种时拆分值等于 cost')
+  assert.equal(summaryMoonshot.month.costSource, 'catalog')
+  assert.equal(summaryMoonshot.today.cost, 0)
+  assert.deepEqual(summaryMoonshot.today.costsByCurrency, { CNY: 0 }, '没有用量也给一个 0（币种按台账币种）')
+  assert.equal(summaryOpencode.month.cost, 12.7, '官方 12.5 + 聚合 0.2')
+  assert.deepEqual(summaryOpencode.month.costsByCurrency, { CNY: 12.5, USD: 0.2 })
+  assert.equal(summaryOpencode.month.costSource, 'aggregate')
+
+  // ---- /sessions 与 /session：行、模型、详情三处都带拆分 ----
+  const sessions = await pricedCall('/dsh-key-usage/sessions')
+  assert.equal(sessions.body.rows.length, 1)
+  const sessionRow = sessions.body.rows[0]
+  assert.equal(sessionRow.id, 'session-priced')
+  assert.equal(sessionRow.cost, 30.2, '无依据的模型不计入，但不影响其它模型的金额')
+  assert.deepEqual(sessionRow.costsByCurrency, { CNY: 30, USD: 0.2 })
+  assert.equal(sessionRow.costSource, 'none', '最弱的一格决定整行角标')
+  assert.deepEqual(sessionRow.models.map((row) => row.model), ['kimi-k3', 'moonshot-v1-8k', 'unknown-model-x'])
+  assert.deepEqual(sessionRow.models[0].costsByCurrency, { CNY: 30 })
+  assert.deepEqual(sessionRow.models[1].costsByCurrency, { USD: 0.2 })
+  assert.equal(sessionRow.models[2].cost, null)
+  assert.deepEqual(sessionRow.models[2].costsByCurrency, {}, '没有金额的模型不带币种')
+
+  const detail = await pricedCall('/dsh-key-usage/session?id=session-priced')
+  assert.equal(detail.status, 200)
+  assert.equal(detail.body.session.cost, 30.2)
+  assert.deepEqual(detail.body.session.costsByCurrency, { CNY: 30, USD: 0.2 })
+  assert.equal(detail.body.session.models.length, 3, '详情给全部模型')
+  assert.deepEqual(detail.body.session.models.map((row) => row.costSource), ['catalog', 'aggregate', 'none'])
+
+  // ---- /models 与 /projects：单币种行拆分值等于 cost，混币种行分列 ----
+  const models = await pricedCall('/dsh-key-usage/models')
+  const modelRows = new Map(models.body.rows.map((row) => [row.provider + '|' + row.model, row]))
+  assert.equal(modelRows.get('moonshotai|kimi-k3').cost, 30)
+  assert.deepEqual(modelRows.get('moonshotai|kimi-k3').costsByCurrency, { CNY: 30 })
+  assert.equal(modelRows.get('opencode-go|moonshot-v1-8k').cost, 0.2)
+  assert.deepEqual(modelRows.get('opencode-go|moonshot-v1-8k').costsByCurrency, { USD: 0.2 })
+  assert.equal(modelRows.get('unlisted-vendor|unknown-model-x').cost, null)
+  assert.deepEqual(modelRows.get('unlisted-vendor|unknown-model-x').costsByCurrency, {})
+
+  const projects = await pricedCall('/dsh-key-usage/projects')
+  assert.equal(projects.body.rows.length, 1)
+  assert.equal(projects.body.rows[0].cost, 30.2)
+  assert.deepEqual(projects.body.rows[0].costsByCurrency, { CNY: 30, USD: 0.2 })
+
+  // ---- /pricing：覆盖度按命中层次计数（catalog / aggregate / estimate / none） ----
+  const pricing = await pricedCall('/dsh-key-usage/pricing')
+  assert.equal(pricing.body.coverage.catalogModels, 1, 'kimi-k3 命中内置官方价目')
+  assert.equal(pricing.body.coverage.aggregateModels, 1, 'moonshot-v1-8k 命中聚合价')
+  assert.equal(pricing.body.coverage.partialModels, 0)
+  assert.equal(pricing.body.coverage.averagedModels, 1, 'mystery-model 只能反推均价')
+  assert.equal(pricing.body.coverage.unpricedModels, 1, 'unknown-model-x 没有任何依据')
+  assert.deepEqual(pricing.body.coverage.costByCurrency, { CNY: 30, USD: 0.2 }, '命中价目的行按币种分组（参照值）')
+  assert.deepEqual(pricing.body.coverage.savingsByCurrency, {}, '没有缓存命中 → 不省任何钱')
+  assert.deepEqual(pricing.body.coverage.savingsDetail, [])
+
+  // ---- 契约不变量：上面所有响应里，单币种的 costsByCurrency 都必须等于 cost ----
+  for (const response of [usage.body, summary.body, sessions.body, detail.body, models.body, projects.body, rates.body]) {
+    assertMoneyInvariant(response)
+  }
+
+  process.env.DSH_HOME = home
+  rmSync(pricedHome, { recursive: true, force: true })
+}
 
 rmSync(home, { recursive: true, force: true })
 console.log('routes.test: 全部通过')

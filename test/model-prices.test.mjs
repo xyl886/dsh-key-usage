@@ -275,7 +275,6 @@ const status = aggregateStatus()
   // deepseek-v4-flash 两层都有：内置官方价目（CNY）必须压过聚合价（USD）
   const official = rowCostsOf(
     [{ provider: 'deepseek-official', model: 'deepseek-v4-flash', calls: 1, inputTokens: 1_000_000 }],
-    { version: 1, currency: 'CNY', rules: [] },
     () => null,
   )[0]
   assert.equal(official.source, 'catalog', '人民币官方价目仍在聚合价之上')
@@ -285,7 +284,6 @@ const status = aggregateStatus()
   // 官方价目没收录、聚合价能定的模型 → 走 aggregate（USD）
   const aggregate = rowCostsOf(
     [{ provider: 'opencode-go', model: 'moonshot-v1-8k', calls: 1, inputTokens: 1_000_000 }],
-    { version: 1, currency: 'CNY', rules: [] },
     () => null,
   )[0]
   assert.equal(aggregate.source, 'aggregate')
@@ -296,7 +294,6 @@ const status = aggregateStatus()
   // 缺一档缓存价的条目：partial 要一路传到成本行（界面据此标「部分」）
   const partial = rowCostsOf(
     [{ provider: 'opencode-go', model: 'amazon.nova-2-lite-v1:0', calls: 1, inputTokens: 1_000_000, cacheWriteTokens: 1_000_000 }],
-    { version: 1, currency: 'CNY', rules: [] },
     () => null,
   )[0]
   assert.equal(partial.source, 'aggregate')
@@ -306,11 +303,11 @@ const status = aggregateStatus()
   // 定不了通道的模型仍然回落均价，不会被聚合价硬套一个通道
   const skipped = rowCostsOf(
     [{ provider: 'opencode-go', model: 'glm-5.3-flash', calls: 1, inputTokens: 1_000_000 }],
-    { version: 1, currency: 'CNY', rules: [] },
-    () => 7,
+    () => ({ cost: 7, currency: 'CNY' }),
   )[0]
   assert.equal(skipped.source, 'estimate')
   assert.equal(skipped.cost, 7)
+  assert.equal(skipped.currency, 'CNY', '回落均价的行带上台账币种')
 }
 
 // ===== 8. 本地刷新文件优先 + 坏文件降级（绝不抛错） =====

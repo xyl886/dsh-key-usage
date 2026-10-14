@@ -58,17 +58,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function failureTextOf(status) {
 			return status === 404 ? "HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）" : "HTTP " + String(status);
 		}
-		async function fetchJson(path) {
+		async function fetchJson(path, failureKey = path) {
 			try {
 				const response = await fetch(path, { headers: { Accept: "application/json" } });
 				if (!response.ok) {
-					failureReasons.set(path, failureTextOf(response.status));
+					failureReasons.set(failureKey, failureTextOf(response.status));
 					return null;
 				}
-				failureReasons.delete(path);
+				failureReasons.delete(failureKey);
 				return await response.json();
 			} catch (error) {
-				failureReasons.set(path, "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				failureReasons.set(failureKey, "请求失败：" + (error instanceof Error ? error.message : String(error)));
 				return null;
 			}
 		}
@@ -116,12 +116,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function loadModels(limit = 200) {
 			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
 		}
-		/** 计费规则面板的服务端对照：内置价目（含逐条规则）、错峰状态、缺口覆盖度、两个 YAML 文件与解析问题。 */
+		/** 价目信息（内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态）。 */
 		function loadPricing() {
 			return fetchJson("/dsh-key-usage/pricing");
 		}
-		/** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
-		const PRICING_RULES_PATH = "/dsh-key-usage/pricing/rules";
+		/** 单价表的请求路径：空态文案要按同一串查失败原因，所以路径由这里统一拼。 */
+		const RATES_PATH = "/dsh-key-usage/rates";
+		/** 汇率的请求路径（`?refresh=1` 强制刷新；失败原因都记在这个基路径上）。 */
+		const FX_PATH = "/dsh-key-usage/fx";
+		/** 近 N 天每个通道用到的模型单价表（展开通道卡片时展示的单价依据）。 */
+		function loadRates(days = 30, limit = 20) {
+			const params = new URLSearchParams({
+				days: String(days),
+				limit: String(limit)
+			});
+			return fetchJson(RATES_PATH + "?" + params.toString(), RATES_PATH);
+		}
+		/**
+		* 取人民币对美元汇率：服务端 12 小时内走缓存，所以打开「余额与配额」与切币种时都可以直接调；
+		* `force = true` 是用户点「刷新汇率」时的强制刷新。失败返回 null（界面按「没取到汇率」降级显示）。
+		*/
+		function loadFxRate(force = false) {
+			return fetchJson(force ? FX_PATH + "?refresh=1" : FX_PATH, FX_PATH);
+		}
 		/** 刷新聚合价目的端点：同样按这个键取失败原因（404 = 服务端还是旧版本）。 */
 		const MODEL_PRICE_REFRESH_PATH = "/dsh-key-usage/pricing/refresh";
 		/**
@@ -131,33 +148,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 超时仍要落成可读提示，否则用户面对一个不动的按钮只会以为界面卡死。
 		*/
 		const MODEL_PRICE_REFRESH_TIMEOUT_MS = 3e4;
-		/**
-		* 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
-		*
-		* 返回 null = 请求本身失败（原因记在 `failureReasonOf(PRICING_RULES_PATH)`）；
-		* 返回 `{ok:false, error}` = 服务端拒绝了这次写入（中文原因可直接展示）。
-		*/
-		async function savePricingRules(rules) {
-			try {
-				const response = await fetch(PRICING_RULES_PATH, {
-					method: "POST",
-					headers: {
-						Accept: "application/json",
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify({ rules })
-				});
-				if (!response.ok) {
-					failureReasons.set(PRICING_RULES_PATH, failureTextOf(response.status));
-					return null;
-				}
-				failureReasons.delete(PRICING_RULES_PATH);
-				return await response.json();
-			} catch (error) {
-				failureReasons.set(PRICING_RULES_PATH, "请求失败：" + (error instanceof Error ? error.message : String(error)));
-				return null;
-			}
-		}
 		/**
 		* 拉取上游最新聚合价目（全插件唯一会联网的用户动作，只能由「刷新价目」按钮触发）。
 		*
@@ -204,9 +194,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (count >= 1e3) return (count / 1e3).toFixed(0) + "K";
 			return String(count);
 		}
-		function fmtCost(amount) {
-			return "¥" + amount.toFixed(2);
-		}
 		function fmtCalls(count) {
 			return count.toLocaleString("en-US").replace(/,/g, " ");
 		}
@@ -228,6 +215,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const date = new Date(timeMs);
 			return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 		}
+		/** ISO 时间戳 → 本地 `YYYY-MM-DD HH:mm`；解析不出来返回 null（ISO 之外的写法一律不猜）。 */
+		function localTimeTextOf(timestamp) {
+			if (typeof timestamp !== "string" || timestamp.trim() === "") return null;
+			const parsed = new Date(timestamp);
+			if (Number.isNaN(parsed.getTime())) return null;
+			return fmtDateTime(parsed.getTime());
+		}
 		/** 时长（毫秒）→ `2h 15m` / `43m` / `—`。 */
 		function fmtDuration(milliseconds) {
 			if (milliseconds === null || milliseconds <= 0) return "—";
@@ -243,6 +237,264 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (minutes < 60) return `${minutes} 分钟前`;
 			if (minutes < 1440) return `${Math.round(minutes / 60)} 小时前`;
 			return `${Math.round(minutes / 1440)} 天前`;
+		}
+		//#endregion
+		//#region src/client/currency.ts
+		/**
+		* 显示币种与汇率折算：全插件金额渲染的唯一收口点。
+		*
+		* 服务端的成本按价目文档的原币种算（内置官方价目有 CNY 与 USD，聚合价目是 USD），逐币种小计并列在
+		* `costsByCurrency` 里。`cost` 是不同币种的直接相加，只当兜底。这里负责把每个币种的金额按当前汇率
+		* 折算成用户选的显示币种：能折算才折算（文本带 `≈` 前缀），缺汇率或币种不认识时保持原币种渲染，
+		* 绝不猜一个汇率出来。
+		*
+		* 状态放在模块级 store 里（订阅式）：金额渲染点分布在十几个组件里，逐层透传 props 会把每张表的签名
+		* 都污染一遍；`useCurrencyDisplay` 订阅它，切币种时整页重渲染。
+		*/
+		const DISPLAY_CURRENCIES = ["CNY", "USD"];
+		/** 切换按钮的文案：符号 + ISO 代码，避免只认符号的用户认错币种。 */
+		const DISPLAY_CURRENCY_LABELS = {
+			CNY: "¥ RMB",
+			USD: "$ USD"
+		};
+		const FX_SOURCE_LABELS = {
+			upstream: "实时上游",
+			cache: "服务端缓存",
+			default: "默认值"
+		};
+		/**
+		* 显示币种不落盘、不跨会话记忆：折算必须配着汇率看（`≈` 与来源时间都在工具条上），
+		* 记住一个「USD」但没取到汇率会让别的 Tab 先显示一阵「没折算的混合币种」，反而更难懂。
+		* 每次进页面从缺省 CNY 开始，切币种时再取汇率。
+		*/
+		let state = {
+			display: "CNY",
+			fx: null
+		};
+		const listeners = /* @__PURE__ */ new Set();
+		function currencyDisplayStateOf() {
+			return state;
+		}
+		function subscribeCurrencyDisplay(listener) {
+			listeners.add(listener);
+			return () => {
+				listeners.delete(listener);
+			};
+		}
+		function emit() {
+			for (const listener of [...listeners]) listener();
+		}
+		function setDisplayCurrency(display) {
+			if (state.display === display) return;
+			state = {
+				...state,
+				display
+			};
+			emit();
+		}
+		/** 写入汇率；服务端读不到时传 null（不要保留上一次的旧值冒充新值）。 */
+		function setFxRate(fx) {
+			state = {
+				...state,
+				fx
+			};
+			emit();
+		}
+		/** 订阅显示币种与汇率：切币种 / 汇率更新后组件重渲染。 */
+		function useCurrencyDisplay() {
+			const [current, setCurrent] = (0, react.useState)(currencyDisplayStateOf);
+			(0, react.useEffect)(() => subscribeCurrencyDisplay(() => setCurrent(currencyDisplayStateOf())), []);
+			return current;
+		}
+		/** 币种代码归一：只认 CNY / USD 两个折算方向；其余返回 null（不猜汇率）。 */
+		function normalizeCurrency(currency) {
+			if (typeof currency !== "string") return null;
+			const upper = currency.trim().toUpperCase();
+			return upper === "CNY" || upper === "USD" ? upper : null;
+		}
+		/** 币种符号；未知 / 缺失的币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
+		function currencySymbolOf(currency) {
+			const normalized = normalizeCurrency(currency);
+			if (normalized === "CNY") return "¥";
+			if (normalized === "USD") return "$";
+			return typeof currency === "string" && currency !== "" ? currency + " " : "";
+		}
+		/** 显示币种的符号。 */
+		function displaySymbolOf(display = state.display) {
+			return currencySymbolOf(display);
+		}
+		/** 从 from 折算到 to 的倍率；方向不匹配或缺汇率时返回 null。 */
+		function pairRateOf(from, to) {
+			const fx = state.fx;
+			if (fx === null || !Number.isFinite(fx.rate) || fx.rate <= 0) return null;
+			const base = normalizeCurrency(fx.base);
+			const quote = normalizeCurrency(fx.quote);
+			if (base === null || quote === null) return null;
+			if (from === base && to === quote) return fx.rate;
+			if (from === quote && to === base) return 1 / fx.rate;
+			return null;
+		}
+		/**
+		* 金额文本：**全插件金额渲染的统一入口**，币种符号 + 两位小数。
+		* 按当前显示币种折算：原币种 == 显示币种时与旧行为完全一致（`¥1.00`），发生折算时前缀 `≈`。
+		* 两位小数精度不随折算改变（服务端给的 4 位是计算精度，不是展示精度）。
+		*/
+		function moneyTextOf(currency, amount) {
+			const value = Number.isFinite(amount) ? amount : 0;
+			const display = state.display;
+			const from = normalizeCurrency(currency);
+			const rate = from === null || from === display ? null : pairRateOf(from, display);
+			if (rate === null) return currencySymbolOf(currency) + value.toFixed(2);
+			return "≈" + currencySymbolOf(display) + (value * rate).toFixed(2);
+		}
+		/** 单笔金额的展示视图：文本 + 是否折算 + 折算后的数值。 */
+		function moneyViewOf(currency, amount) {
+			const value = Number.isFinite(amount) ? amount : 0;
+			const display = state.display;
+			const from = normalizeCurrency(currency);
+			const rate = from === null || from === display ? null : pairRateOf(from, display);
+			return {
+				text: moneyTextOf(currency, amount),
+				converted: rate !== null,
+				mixed: false,
+				amount: rate === null ? value : value * rate,
+				currency: rate === null ? typeof currency === "string" ? currency : "" : display
+			};
+		}
+		/** 0 元占位文案（免费额度等）：跟着显示币种走，不带折算标记（0 折算还是 0）。 */
+		function zeroMoneyTextOf() {
+			return displaySymbolOf() + "0.00";
+		}
+		/**
+		* 单价数值文本：金额一律两位小数，但单价常小于 0.01（如缓存读 ¥0.0028），
+		* 四舍五入成 `0.00` 等于谎报「免费」，所以小值保留到 4 位有效小数。
+		*/
+		function rateValueTextOf(amount) {
+			const value = Number.isFinite(amount) ? amount : 0;
+			if (value === 0) return "0";
+			if (Math.abs(value) >= .01) return value.toFixed(2);
+			return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+		}
+		/** 该币种的金额在当前显示币种下是否会被折算（决定要不要显示 `≈` 与原始币种）。 */
+		function convertsCurrencyOf(currency) {
+			const from = normalizeCurrency(currency);
+			return from !== null && from !== state.display && pairRateOf(from, state.display) !== null;
+		}
+		/** 单价单元格：按显示币种折算（折算值带 `≈`），换算后仍用单价精度，不套金额的两位小数。 */
+		function rateTextOf(currency, amount) {
+			const display = state.display;
+			const from = normalizeCurrency(currency);
+			const rate = from === null || from === display ? null : pairRateOf(from, display);
+			const value = Number.isFinite(amount) ? amount : 0;
+			if (rate === null) return {
+				text: rateValueTextOf(value),
+				converted: false
+			};
+			return {
+				text: "≈" + rateValueTextOf(value * rate),
+				converted: true
+			};
+		}
+		/** 逐币种小计里真正参与展示的项：非有限值与 0 一律丢掉（0 折算后还是 0，只会污染文本）。 */
+		function positiveEntriesOf(row) {
+			const totals = row.costsByCurrency;
+			if (totals === null || typeof totals !== "object") return [];
+			const entries = [];
+			for (const [currency, amount] of Object.entries(totals)) {
+				if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) continue;
+				entries.push([currency, amount]);
+			}
+			const orderOf = (currency) => {
+				const normalized = normalizeCurrency(currency);
+				return normalized === "CNY" ? 0 : normalized === "USD" ? 1 : 2;
+			};
+			return entries.sort((first, second) => orderOf(first[0]) - orderOf(second[0]) || first[0].localeCompare(second[0]));
+		}
+		/**
+		* 一行金额的展示视图。
+		*
+		* 有 `costsByCurrency` 时**逐币种折算后再相加** —— 直接显示 `cost` 会把 CNY 与 USD 加在一起，
+		* 换个汇率重算还会得到不同的数，那样合计就是错的。拿不到这个字段（服务端未升级、旧缓存行）时
+		* 回落旧行为：按 CNY 渲染单值 `cost`，不做折算。多币种且缺汇率时并列显示，不跨币种相加。
+		*/
+		function rowMoneyViewOf(row) {
+			const entries = positiveEntriesOf(row);
+			if (entries.length === 0) {
+				const fallback = typeof row.cost === "number" && Number.isFinite(row.cost) ? row.cost : 0;
+				return {
+					text: currencySymbolOf("CNY") + fallback.toFixed(2),
+					converted: false,
+					mixed: false,
+					amount: fallback,
+					currency: "CNY"
+				};
+			}
+			const parts = entries.map(([currency, amount]) => ({
+				currency,
+				amount,
+				view: moneyViewOf(currency, amount)
+			}));
+			if (parts.filter((part) => !part.view.converted && normalizeCurrency(part.currency) !== state.display).length === 0) {
+				const total = parts.reduce((sum, part) => sum + part.view.amount, 0);
+				const converted = parts.some((part) => part.view.converted);
+				const text = moneyTextOf(state.display, total);
+				return {
+					text: converted ? "≈" + text : text,
+					converted,
+					mixed: parts.length > 1,
+					amount: total,
+					currency: state.display
+				};
+			}
+			if (parts.length === 1) return parts[0].view;
+			return {
+				text: parts.map((part) => part.view.text).join(" · "),
+				converted: false,
+				mixed: true,
+				amount: parts.reduce((sum, part) => sum + part.amount, 0),
+				currency: ""
+			};
+		}
+		/** 行金额文本（含折算标记）；汇总 / 合计一律走它，不要直接渲染 `cost`。 */
+		function moneyTotalsTextOf(row) {
+			return rowMoneyViewOf(row).text;
+		}
+		/** 同一行在展示币种下的可比数值（环比涨跌、排序用）。 */
+		function comparableMoneyAmountOf(row) {
+			return rowMoneyViewOf(row).amount;
+		}
+		/** 汇率说明：`1 USD = 7.10 CNY · 实时上游 · 08-14 10:22`；没取到时说明为什么。 */
+		function fxSummaryTextOf(fx) {
+			if (fx === null) return "还没取到汇率：跨币种金额按原币种显示";
+			const parts = ["1 " + fx.base + " = " + rateValueTextOf(fx.rate) + " " + fx.quote];
+			parts.push(FX_SOURCE_LABELS[fx.source] ?? fx.source);
+			const time = localTimeTextOf(fx.fetchedAt);
+			if (time !== null) parts.push(time);
+			if (fx.stale) parts.push("已过期");
+			return parts.join(" · ");
+		}
+		/** 把服务端 `/fx` 的响应归一化成内部结构；rate 非法时返回 null（宁可不算也不猜）。 */
+		function normalizeFxRate(raw) {
+			if (raw === null || typeof raw !== "object") return null;
+			const record = raw;
+			const rate = typeof record.rate === "number" ? record.rate : Number(record.rate);
+			if (!Number.isFinite(rate) || rate <= 0) return null;
+			const source = record.source === "upstream" || record.source === "cache" || record.source === "default" ? record.source : "default";
+			return {
+				base: typeof record.base === "string" && record.base !== "" ? record.base : "USD",
+				quote: typeof record.quote === "string" && record.quote !== "" ? record.quote : "CNY",
+				rate,
+				fetchedAt: typeof record.fetchedAt === "string" && record.fetchedAt !== "" ? record.fetchedAt : null,
+				source,
+				stale: record.stale === true,
+				upstream: typeof record.upstream === "string" && record.upstream !== "" ? record.upstream : null,
+				note: typeof record.note === "string" && record.note !== "" ? record.note : null
+			};
+		}
+		/** 服务端兜底汇率时的显式提示：`source: 'default'` 必须让人看出「这不是联网拿到的」。 */
+		function fxFallbackWarningOf(fx) {
+			if (fx === null || fx.source !== "default") return null;
+			return "用默认汇率 " + rateValueTextOf(fx.rate) + "，未能联网取实时值" + (fx.note === null ? "" : "（" + fx.note + "）");
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
@@ -388,6 +640,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/channels.ts
+		/** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
 		const CHANNEL_COLORS = [
 			"#5b8cff",
 			"#9a7bff",
@@ -410,41 +663,48 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (provider === null) return null;
 			return channels.find((channel) => channel.provider === provider) ?? null;
 		}
-		/** 成本单元格：按计费模式给出文案，无法判定时回落金额或 —。 */
-		function costCellText(channel, cost) {
-			if (channel === null) return cost > 0 ? {
-				text: "¥" + cost.toFixed(2),
-				dim: false
+		/**
+		* 成本单元格：按计费模式给出文案，无法判定时回落行金额或 —。
+		* 金额一律走 `costsByCurrency` 逐币种折算后相加；缺这个字段时由 currency.ts 回落旧的单值口径。
+		*/
+		function costCellOf(channel, row) {
+			const view = rowMoneyViewOf(row);
+			const money = view.amount > 0 ? {
+				text: view.text,
+				dim: false,
+				amount: true,
+				converted: view.converted,
+				mixed: view.mixed
 			} : {
 				text: "—",
-				dim: true
+				dim: true,
+				amount: false,
+				converted: false,
+				mixed: false
 			};
+			if (channel === null) return money;
 			if (channel.costMode === "sub") return {
 				text: "订阅内",
-				dim: true
+				dim: true,
+				amount: false,
+				converted: false,
+				mixed: false
 			};
 			if (channel.costMode === "free") return {
-				text: "¥0.00",
-				dim: true
+				text: zeroMoneyTextOf(),
+				dim: true,
+				amount: false,
+				converted: false,
+				mixed: false
 			};
 			if (channel.costMode === "none") return {
 				text: "无计费",
-				dim: true
+				dim: true,
+				amount: false,
+				converted: false,
+				mixed: false
 			};
-			return cost > 0 ? {
-				text: "¥" + cost.toFixed(2),
-				dim: false
-			} : {
-				text: "—",
-				dim: true
-			};
-		}
-		/**
-		* 单元格是否该挂来源角标：只有真的显示了金额（`¥…`）时才挂，
-		* `订阅内` / `免费` / `无计费` / `—` 都是占位文案，挂角标只是噪音。
-		*/
-		function showsAmount(cell) {
-			return cell.text.startsWith("¥");
+			return money;
 		}
 		/** 状态点的颜色（走宿主告警/成功令牌）。 */
 		function statusColorOf(status) {
@@ -705,18 +965,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/pricing.ts
-		/**
-		* 客户端计费规则视图模型：响应类型、文案、表单校验与 YAML 文本生成。
-		*
-		* 规则的唯一事实来源是用户 YAML 文件（路径见 `/pricing` 的 `files.user.path`）：客户端只读 `/pricing`、
-		* 只经 `POST /pricing/rules` 整批提交，**不自己写文件**（服务端写盘时会按 provider|model 继承旧条目的
-		* unit / offPeak / note，客户端拼 YAML 反而会把这三项丢掉）。
-		*
-		* 面板表单只编辑 通道 / 模型 / 币种 / 四档单价；unit（计价单位）、offPeak（错峰窗口）、note（备注）
-		* 只由用户在 YAML 里维护。这里另外负责生成给人 / agent 看的 YAML 文本（规则模板、单条片段）
-		* 与「让 DSH 帮我配」的提示词 —— 生成物必须是服务端受限 YAML 子集能读回的写法。
-		* 定价算法在服务端（src/server/pricing.ts），界面不重复实现。
-		*/
 		const AGGREGATE_LOADED_LABELS = {
 			local: "本地刷新文件",
 			shipped: "随包快照",
@@ -753,14 +1001,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return null;
 			}
 		}
-		/** 时间戳 → 本地 `YYYY-MM-DD HH:mm`；解析不出来返回 null（ISO 之外的写法一律不猜）。 */
-		function localTimeTextOf(timestamp) {
-			if (typeof timestamp !== "string" || timestamp.trim() === "") return null;
-			const parsed = new Date(timestamp);
-			if (Number.isNaN(parsed.getTime())) return null;
-			const pad = (value) => String(value).padStart(2, "0");
-			return String(parsed.getFullYear()) + "-" + pad(parsed.getMonth() + 1) + "-" + pad(parsed.getDate()) + " " + pad(parsed.getHours()) + ":" + pad(parsed.getMinutes());
-		}
 		/** 上游 commit 的短写法；太短或缺失时返回 null（完整值挂在装载信息的 tooltip 上）。 */
 		function shortCommitOf(commit) {
 			if (typeof commit !== "string" || commit.trim().length < 7) return null;
@@ -768,7 +1008,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		const COST_SOURCE_LABELS = {
 			official: "官方",
-			rule: "自定",
 			catalog: "官方价",
 			aggregate: "聚合",
 			estimate: "估算",
@@ -777,43 +1016,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
 		const COST_SOURCE_HINTS = {
 			official: "官方：台账记录的厂商账单金额",
-			rule: "自定：按你维护的计费规则算出",
-			catalog: "官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）",
-			aggregate: "聚合：LiteLLM 聚合价目（美元、第三方维护），可在面板点『刷新价目』更新",
+			catalog: "官方价：按插件内置的厂商官方价目算出（自动生效，界面上可查来源）",
+			aggregate: "聚合：LiteLLM 聚合价目（美元、第三方维护），点「刷新价目」可更新",
 			estimate: "估算：按台账反推的均价推算",
-			none: "没有价格依据（未配置规则，台账也无成本数据）"
+			none: "没有价格依据（三层价目都没命中，台账也无成本数据）"
 		};
 		/** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
 		function costSourceHintOf(source, partial) {
 			const hint = COST_SOURCE_HINTS[source ?? "none"] ?? "成本来源未识别：" + String(source ?? "");
 			return partial === true ? hint + "；缓存写入价未收录，按未命中价计" : hint;
-		}
-		const UNIT_LABELS = {
-			perMillionTokens: "每百万 tokens",
-			perThousandTokens: "每千 tokens",
-			perCall: "每次调用"
-		};
-		const CURRENCY_OPTIONS = ["CNY", "USD"];
-		const RULES_ORIGIN_TEXT = {
-			file: "规则来自你的 YAML 文件",
-			legacy: "规则还是旧设置服务里的历史值，还没落盘成 YAML —— 在面板上保存一次就会写进文件",
-			none: "还没有用户规则：成本按内置官方价目、聚合价目与台账均价算"
-		};
-		/** 表单外的三个字段只能在 YAML 里维护，界面上必须有一句明示，否则用户以为保存会把它们清掉。 */
-		const FORM_EXTRAS_HINT = "错峰价、计价单位、备注由 YAML 维护；在这里保存不会清掉它们。";
-		/** 表单缺省单位：列表里只有「非缺省」才提示单位设置，避免每行都挂一句。 */
-		const DEFAULT_UNIT = "perMillionTokens";
-		/** 币种符号；未知币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
-		function currencySymbolOf(currency) {
-			if (currency === "CNY") return "¥";
-			if (currency === "USD") return "$";
-			return currency + " ";
-		}
-		/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
-		const AMOUNT_DIGITS = 2;
-		/** 金额文本：币种符号 + 两位小数（多处展示共用，避免精度不一致）。 */
-		function moneyTextOf(currency, amount) {
-			return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS);
 		}
 		/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
 		function fetchedDaysAgo(fetchedAt, now = /* @__PURE__ */ new Date()) {
@@ -831,335 +1042,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const newest = Math.min(...days);
 			return newest > 90 ? newest : null;
 		}
-		function ruleKeyOf(rule) {
-			return rule.provider + "|" + rule.model;
-		}
-		function ruleLabelOf(rule) {
-			const model = rule.model === "*" ? "全部模型" : rule.model;
-			return (rule.provider === "*" ? "任意通道" : rule.provider) + " · " + model;
-		}
-		/** 错峰窗口文案：`09:00–12:00、14:00–18:00`；带 `days` 的窗口补一个「（工作日）」之类的后缀。 */
-		function offPeakWindowsText(rule) {
-			if (rule.offPeak === null || rule.offPeak.windows.length === 0) return "";
-			return rule.offPeak.windows.map((window) => {
-				const base = window.from + "–" + window.to;
-				const suffix = dayScopeSuffixOf(window.days);
-				return suffix === "" ? base : base + "（" + suffix + "）";
-			}).join("、");
-		}
-		const DAY_SCOPE_LABELS = {
-			every: "每天",
-			weekday: "仅工作日",
-			weekend: "仅周末"
-		};
-		/** 已保存的 `days` → 展示取值；非法值一律当「每天」（与服务端容错口径一致）。 */
-		function dayScopeOf(days) {
-			const normalized = normalizeDays(days);
-			if (normalized === void 0) return "every";
-			const key = normalized.join(",");
-			if (key === "1,2,3,4,5") return "weekday";
-			if (key === "6,7") return "weekend";
-			return "every";
-		}
-		/** `days` 的简短说明；缺省或非三名组合返回空串（表示「每天」）。 */
-		function dayScopeSuffixOf(days) {
-			const scope = dayScopeOf(days);
-			return scope === "every" ? "" : DAY_SCOPE_LABELS[scope];
-		}
-		/**
-		* `days` 归一：只接受 1–7 的整数、去重排序；非法值返回 undefined = 每天适用。
-		* 与服务端同一口径：非法值不整段作废，避免金额突然变高。
-		*/
-		function normalizeDays(raw) {
-			if (!Array.isArray(raw)) return void 0;
-			const days = /* @__PURE__ */ new Set();
-			for (const entry of raw) {
-				if (typeof entry !== "number" || !Number.isInteger(entry) || entry < 1 || entry > 7) continue;
-				days.add(entry);
-			}
-			if (days.size === 0) return void 0;
-			return [...days].sort((first, second) => first - second);
-		}
-		/**
-		* 列表里的「只在 YAML 里维护」提示：表单只改 通道 / 模型 / 币种 / 四档单价，
-		* 但已有规则的错峰与单位仍然生效 —— 必须显式标出来，否则用户会以为这些数据丢了。
-		*/
-		function ruleExtrasTextOf(rule) {
-			const extras = [];
-			if (rule.offPeak !== null) extras.push("含错峰窗口 " + offPeakWindowsText(rule));
-			if (rule.unit !== "perMillionTokens") extras.push("含单位设置：" + UNIT_LABELS[rule.unit]);
-			return extras.length === 0 ? "" : extras.join(" · ") + " —— 只在 YAML 里编辑";
-		}
-		/** 模型 id 归一：去掉 `vendor/` 前缀并转小写（与服务端内置价目的保守匹配同一口径）。 */
-		function normalizeModelId(model) {
-			const trimmed = model.trim();
-			const slash = trimmed.lastIndexOf("/");
-			return (slash >= 0 ? trimmed.slice(slash + 1) : trimmed).toLowerCase();
-		}
-		/**
-		* 内置价目匹配（顺序与服务端一致）：
-		* 精确 → 忽略大小写 → 去 `vendor/` 前缀 → 该通道通配；不做模糊匹配。
-		*/
-		function catalogRuleFor(catalogRules, provider, model) {
-			const wantedProvider = normalizeModelId(provider);
-			const wantedModel = normalizeModelId(model);
-			const tiers = [
-				(rule) => rule.provider === provider && rule.model === model,
-				(rule) => normalizeModelId(rule.provider) === wantedProvider && normalizeModelId(rule.model) === wantedModel,
-				(rule) => normalizeModelId(rule.provider) === wantedProvider && rule.model === "*"
-			];
-			for (const matches of tiers) {
-				const hit = catalogRules.find(matches);
-				if (hit !== void 0) return hit;
-			}
-			return null;
-		}
-		/** 与服务端 matchPricingRule 同序的粗判：精确 → 通道通配 → 模型通配 → 全通配。 */
-		function matchesAnyRule(rules, provider, model) {
-			return [
-				(rule) => rule.provider === provider && rule.model === model,
-				(rule) => rule.provider === provider && rule.model === "*",
-				(rule) => rule.provider === "*" && rule.model === model,
-				(rule) => rule.provider === "*" && rule.model === "*"
-			].some((matches) => rules.some(matches));
-		}
-		/**
-		* 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目 − 聚合价目。
-		* 逐模型判定优先用 `/models` 的 `costSource`（就是成本单元格上那个角标，口径一致），
-		* 角标缺失（旧响应）时退回本地规则匹配，避免整块不显示。
-		*/
-		function unpricedModelsOf(rows, rules, catalogRules) {
-			const used = (rows ?? []).filter((row) => row.tokens > 0);
-			if (used.length === 0) return [];
-			const uncovered = used.filter((row) => {
-				if (row.costSource === "rule" || row.costSource === "official" || row.costSource === "catalog" || row.costSource === "aggregate") return false;
-				return row.costSource === "estimate" || row.costSource === "none" || !matchesAnyRule(rules, row.provider, row.model) && catalogRuleFor(catalogRules, row.provider, row.model) === null;
-			});
-			const total = uncovered.reduce((sum, row) => sum + row.tokens, 0);
-			if (total <= 0) return [];
-			return uncovered.map((row) => ({
-				provider: row.provider,
-				model: row.model,
-				tokens: row.tokens,
-				share: row.tokens / total,
-				estimated: row.costSource === "estimate"
-			})).sort((first, second) => second.tokens - first.tokens);
-		}
-		/** 单价全为 0 的规则会把成本算成免费，保存前必须拦住。 */
-		function ruleProblemOf(rule) {
-			const values = [
-				rule.input,
-				rule.cacheRead,
-				rule.cacheWrite,
-				rule.output
-			];
-			if (values.every((value) => value === 0)) return "四档单价全为 0 会算成免费，至少填一个";
-			if (values.some((value) => !Number.isFinite(value) || value < 0)) return "单价必须是不小于 0 的数字";
-			if (rule.provider.trim() === "") return "通道 id 不能为空（要匹配任意通道请填 *）";
-			if (rule.model.trim() === "") return "模型 id 不能为空（要匹配该通道全部模型请填 *）";
-			return null;
-		}
-		/** 新增规则的初始值：全 0 单价会算成免费，因此先挡在保存之前（见 `ruleProblemOf`）。 */
-		function blankRule(currency) {
-			return {
-				provider: "*",
-				model: "*",
-				unit: DEFAULT_UNIT,
-				currency,
-				input: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-				output: 0,
-				offPeak: null,
-				note: ""
-			};
-		}
-		/**
-		* 提交给 `POST /pricing/rules` 的那 7 个字段。
-		* 不带 unit / offPeak / note：服务端写盘时按 provider|model 从文件旧值继承，客户端传了反而可能覆盖掉。
-		*/
-		function submittableRuleOf(rule) {
-			return {
-				provider: rule.provider.trim(),
-				model: rule.model.trim(),
-				currency: rule.currency,
-				input: rule.input,
-				cacheRead: rule.cacheRead,
-				cacheWrite: rule.cacheWrite,
-				output: rule.output
-			};
-		}
-		/** YAML 标量：字符串一律单引号（裸 `*` 会被当成别名报错），内部单引号翻倍转义。 */
-		function yamlText(value) {
-			return "'" + value.replace(/'/g, "''") + "'";
-		}
-		/** 数字不加引号；非有限值按 0 兜底（表单已经拦过，这里只保证不生成非法文本）。 */
-		function yamlNumberText(value) {
-			return Number.isFinite(value) && value >= 0 ? String(value) : "0";
-		}
-		function padOf(indent) {
-			return " ".repeat(Math.max(0, indent));
-		}
-		/** 一条规则的块映射行（不含 `- ` 前缀）；`indent` 是第一个键的缩进。 */
-		function ruleFieldLines(rule, indent) {
-			const pad = padOf(indent);
-			const lines = [
-				pad + "provider: " + yamlText(rule.provider),
-				pad + "model: " + yamlText(rule.model),
-				pad + "unit: " + yamlText(rule.unit),
-				pad + "currency: " + yamlText(rule.currency),
-				pad + "input: " + yamlNumberText(rule.input),
-				pad + "cacheRead: " + yamlNumberText(rule.cacheRead),
-				pad + "cacheWrite: " + yamlNumberText(rule.cacheWrite),
-				pad + "output: " + yamlNumberText(rule.output)
-			];
-			if (rule.note.trim() !== "") lines.push(pad + "note: " + yamlText(rule.note));
-			if (rule.offPeak !== null && rule.offPeak.windows.length > 0) {
-				lines.push(pad + "offPeak:");
-				lines.push(pad + "  windows:");
-				for (const window of rule.offPeak.windows) {
-					lines.push(pad + "    - from: " + yamlText(window.from));
-					lines.push(pad + "      to: " + yamlText(window.to));
-					const days = normalizeDays(window.days);
-					if (days !== void 0) lines.push(pad + "      days: [" + days.join(", ") + "]");
-				}
-				lines.push(pad + "  input: " + yamlNumberText(rule.offPeak.input));
-				lines.push(pad + "  cacheRead: " + yamlNumberText(rule.offPeak.cacheRead));
-				lines.push(pad + "  cacheWrite: " + yamlNumberText(rule.offPeak.cacheWrite));
-				lines.push(pad + "  output: " + yamlNumberText(rule.offPeak.output));
-			}
-			return lines;
-		}
-		/** 规则作为 `rules:` 下的一项：`- provider: …`，后续键与首键内容对齐（服务端按 2 空格层级解析）。 */
-		function ruleBlockLines(rule, indent) {
-			const [first, ...rest] = ruleFieldLines(rule, indent + 2);
-			return [padOf(indent) + "- " + first.trimStart(), ...rest];
-		}
-		/** 把若干行整段注释掉（注释行会被解析器丢弃，因此不会影响文档结构）。 */
-		function commentOut(lines) {
-			return lines.map((line) => line.trim() === "" ? "#" : "# " + line);
-		}
-		/** 下载用的文件名里不能带空格与路径分隔符：通道 / 模型 id（如 openrouter 的 `vendor/model`）要压平。 */
-		function fileSafeOf(text) {
-			return text.trim().replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "rule";
-		}
-		/** 模板 / 片段的公共注释头：讲清文件的作用与能用的写法，避免用户写出解析器不认的语法。 */
-		function headerComments(extra) {
-			return [
-				"# dsh-key-usage 计费规则（YAML 是唯一事实来源）",
-				"# 作用：这份文本用于手改或交给 agent 填价，改完保存到面板上显示的「用户规则文件」路径即可。",
-				"# 允许的写法：2 空格缩进的块映射、`- ` 块序列、单行 `key: value`、短数组 `[1, 2]`；",
-				"#            不要用 tab、花括号 `{}`、锚点 `&` / 别名 `*`、块标量 `|` / `>`、`---`。",
-				"# 四档单价顺序：输入 / 缓存读 / 缓存写 / 输出；单位缺省是每百万 tokens（unit: perMillionTokens）。",
-				"# 错峰窗口（面板表单不提供，只能在 YAML 里改）写法：",
-				"#   offPeak:",
-				"#     windows:",
-				"#       - from: '00:30'",
-				"#         to: '08:30'",
-				"#     input: 0.5",
-				"#     cacheRead: 0.05",
-				"#     cacheWrite: 0.5",
-				"#     output: 1",
-				...extra
-			];
-		}
-		/**
-		* 「下载规则模板」：注释头 + 用户近期用到的模型 ∩ 内置官方价目（价格预填）+ 没有价格依据的待填条目。
-		*
-		* 待填条目整段注释掉：写 0 会把这批用量算成免费（比「没有依据」更糟），写成 null 会被解析器判为缺字段，
-		* 所以注释占位、填好单价后删掉行首的 `# ` 才是安全路径。
-		*/
-		function buildRulesTemplateYaml(catalog, usedModels, userRules, uncovered, currency) {
-			const catalogRules = catalog?.rules ?? [];
-			const prefilled = [];
-			const seen = /* @__PURE__ */ new Set();
-			for (const used of usedModels) {
-				if (matchesAnyRule(userRules, used.provider, used.model)) continue;
-				const hit = catalogRuleFor(catalogRules, used.provider, used.model);
-				if (hit === null) continue;
-				const key = ruleKeyOf(hit);
-				if (seen.has(key)) continue;
-				seen.add(key);
-				prefilled.push(hit);
-			}
-			const body = ["version: 1", "currency: " + yamlText(currency)];
-			if (prefilled.length === 0) body.push("rules: []");
-			else {
-				body.push("rules:");
-				for (const rule of prefilled) body.push(...ruleBlockLines(rule, 2));
-			}
-			const pending = [];
-			if (uncovered.length > 0) {
-				pending.push("", "# ---- 以下模型还没有价格依据（近 30 天用到，但规则、内置官方价目与聚合价目都没命中）----");
-				pending.push("# 填好四档单价后，把每条开头的「# 」删掉即可；不要用 0 占位 —— 0 会把这批用量算成免费。");
-				for (const model of uncovered) {
-					pending.push("#");
-					pending.push("# " + model.provider + " | " + model.model + " —— 近 30 天 " + fmtTokens(model.tokens) + " tokens" + (model.estimated ? "（当前按台账均价估算）" : "（当前无价格依据）"));
-					pending.push(...commentOut(ruleBlockLines({
-						...blankRule(currency),
-						provider: model.provider,
-						model: model.model
-					}, 2)));
-				}
-			}
-			return {
-				text: [
-					...headerComments(["# 注意：这是整份文档。已有规则文件时不要直接覆盖，只把需要的条目粘进 rules 下（或先备份原文件）。"]),
-					"",
-					...body,
-					...pending,
-					""
-				].join("\n"),
-				prefilledCount: prefilled.length,
-				pendingCount: uncovered.length
-			};
-		}
-		/**
-		* 「单条片段」：一条规则的 YAML，缩进按 `rules:` 下的位置排好，可直接粘进用户文件。
-		* `placeholder = true` 表示这是一条还没有价格的模型（四档单价先按 0 占位，必须填完再粘）。
-		*
-		* 注意这是**片段**不是完整文档：服务端的解析器不接受「文档第一行带缩进」，
-		* 所以片段必须粘到已有文件的 `rules:` 下面，不能单独当整份规则文件用。
-		*/
-		function buildRuleSnippetYaml(rule, placeholder = false) {
-			return [
-				...placeholder ? [
-					"# 单条规则片段（该模型还没有价格依据）：把四档单价换成厂商官方价后再粘到 rules 下。",
-					"# 现在四档都是 0，直接粘进去会把这批用量算成免费。",
-					commonSnippetNotice()
-				] : ["# 单条规则片段：unit / offPeak / note 由 YAML 维护，面板保存不会改动它们。", commonSnippetNotice()],
-				...ruleBlockLines(rule, 2),
-				""
-			].join("\n");
-		}
-		/** 片段的用法说明：它不是完整文档，必须粘进 rules 下（解析器不接受首行缩进的文档）。 */
-		function commonSnippetNotice() {
-			return "# 这是片段、不是完整文档：粘到规则文件的 rules: 下面即可（缩进已按 2 空格排好）；若文件里还是 rules: []，先换成 rules: 再粘。";
-		}
-		/**
-		* 「让 DSH 帮我配」的提示词：带上目标文件绝对路径与缺口模型清单，
-		* 并明确要求核对厂商官方定价页、不要编造价格、改完刷新页面即生效。
-		*/
-		function buildAgentPrompt(input) {
-			const lines = [
-				"请帮我配置 dsh-key-usage 插件（DSH 侧边栏「使用情况」→「余额与配额」）的计费规则。",
-				"",
-				"目标文件（唯一事实来源，请直接改它）：",
-				"  " + (input.filePath ?? "(面板还没读到路径，请先确认插件服务端已重启)"),
-				"",
-				"改完刷新 DSH 页面即生效（不需要重启宿主）。面板上的「保存规则」写的也是这个文件，",
-				"所以不要另建规则文件，也不要改插件目录里的内置官方价目。",
-				"当前状态：用户规则 " + String(input.rulesCount) + " 条，内置官方价目 " + String(input.catalogEntries) + " 条。"
-			];
-			lines.push("", "现在缺价格依据的模型（近 30 天用量，按 tokens 降序，共 " + String(input.uncovered.length) + " 个）：");
-			if (input.uncovered.length === 0) lines.push("  （没有缺口：你用到的模型都已有规则或命中内置价目。可以直接结束，或复核现有价格是否过期。）");
-			else for (const model of input.uncovered) lines.push("  - " + model.provider + " | " + model.model + " —— " + fmtTokens(model.tokens) + " tokens（占缺口 " + (model.share * 100).toFixed(1) + "%）" + (model.estimated ? "｜当前按台账均价估算" : "｜当前无价格依据"));
-			lines.push("", "请按这些要求做：", "1. 逐个去厂商**官方定价页**核对四档单价（输入 / 缓存读 / 缓存写 / 输出），并在回复里给出出处链接；", "   查不到官方价的模型就明确说「查不到」，保持原样，**不要凭记忆或推测编造价格**，", "   也不要用 0 占位 —— 0 会把这批用量算成免费。", "2. 币种按官方页面原币种写（CNY / USD）；本插件不换算、不合计，金额按币种分行显示。", "3. 计价单位缺省是每百万 tokens（unit: perMillionTokens）；按次计费的通道写 perCall。", "4. 文件格式：顶层只有 version / currency / rules 三个键；rules 用 `- provider: ...` 的块序列，", "   每个字段一行、2 空格缩进、字符串加引号；不要用 tab、花括号、锚点或 `---`。", "   已存在条目的 unit / offPeak / note 不要动（错峰窗口与备注只在 YAML 里维护）。", "5. 改完告诉我：新增 / 修改了哪几条、价格出处，以及仍然查不到价格的模型。", "");
-			return lines.join("\n");
-		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/pricing.module.css.mjs
-		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_filterRow{flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 6px;display:flex}.aymcxa_filterLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-right:2px;font-size:11px}.aymcxa_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:2px 10px;font-size:11px;display:inline-flex}.aymcxa_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_chip b{font-variant-numeric:tabular-nums;font-weight:600}.aymcxa_chipOn{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fileLine{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;gap:4px 18px;margin:8px 0;font-size:10.5px;display:flex}.aymcxa_pathText{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:10.5px}.aymcxa_issueBlock{color:var(--dsw-alias-state-warning-primary,#e0a13c);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-state-warning-primary,#e0a13c);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_issueHead{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_issueNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_issueList{margin:6px 0 0;padding-left:18px}.aymcxa_issueWhere{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-right:6px}.aymcxa_promptBlock{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:8px 0 10px;padding:10px 14px}.aymcxa_promptHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.7}.aymcxa_promptActions{flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;display:flex}.aymcxa_promptText{background:var(--dsw-alias-bg-layer-3,#232329);max-height:260px;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:pre-wrap;word-break:break-word;border-radius:8px;margin:0;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:1.7;overflow:auto}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_ruleExtra{margin-top:2px;font-size:10px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceAggregate{color:var(--dsw-alias-label-tertiary,#67676f);border-style:dashed}.aymcxa_sourcePartial{color:var(--dsw-alias-label-secondary,#9a9aa2);border-bottom:1px dotted}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_aggregateBlock{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:11.5px;line-height:1.75}.aymcxa_aggregateHead{flex-wrap:wrap;align-items:center;gap:6px 12px;display:flex}.aymcxa_aggregateTitle{flex:auto;min-width:0}.aymcxa_aggregateMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_aggregateMeta b{color:var(--dsw-alias-label-secondary,#9a9aa2);font-weight:600}.aymcxa_aggregateStatus{margin-top:4px;font-size:11px}.aymcxa_aggregateStatusOk{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_aggregateStatusBad{color:var(--dsw-alias-state-danger-primary,#e05a5a)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
+		const css$6 = ".aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceAggregate{color:var(--dsw-alias-label-tertiary,#67676f);border-style:dashed}.aymcxa_sourcePartial{color:var(--dsw-alias-label-secondary,#9a9aa2);border-bottom:1px dotted}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);border-color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_fileLine{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;gap:4px 18px;margin:6px 0;font-size:10.5px;display:flex}.aymcxa_pathText{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:10.5px}.aymcxa_issueBlock{color:var(--dsw-alias-state-warning-primary,#e0a13c);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-state-warning-primary,#e0a13c);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_issueHead{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_issueNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_issueList{margin:6px 0 0;padding-left:18px}.aymcxa_issueWhere{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-right:6px}.aymcxa_aggregateBlock{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.75}.aymcxa_aggregateHead{flex-wrap:wrap;align-items:center;gap:6px 12px;display:flex}.aymcxa_aggregateTitle{flex:auto;min-width:0}.aymcxa_aggregateMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_aggregateMeta b{color:var(--dsw-alias-label-secondary,#9a9aa2);font-weight:600}.aymcxa_aggregateStatus{margin-top:4px;font-size:11px}.aymcxa_aggregateStatusOk{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_aggregateStatusBad{color:var(--dsw-alias-state-danger-primary,#e05a5a)}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_explanationList code{font-family:ui-monospace,Consolas,monospace;font-size:11px}";
 		const tagId$6 = "dsh-key-usage/pricing.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1174,7 +1059,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$6
 		});
 		var pricing_module_css_default = {
-			"actionBtn": "aymcxa_actionBtn",
 			"aggregateBlock": "aymcxa_aggregateBlock",
 			"aggregateHead": "aymcxa_aggregateHead",
 			"aggregateMeta": "aymcxa_aggregateMeta",
@@ -1184,72 +1068,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"aggregateTitle": "aymcxa_aggregateTitle",
 			"catalogNote": "aymcxa_catalogNote",
 			"catalogStale": "aymcxa_catalogStale",
-			"chip": "aymcxa_chip",
-			"chipOn": "aymcxa_chipOn",
-			"drawer": "aymcxa_drawer",
-			"editing": "aymcxa_editing",
-			"editor": "aymcxa_editor",
-			"editorActions": "aymcxa_editorActions",
-			"editorError": "aymcxa_editorError",
-			"editorGrid": "aymcxa_editorGrid",
-			"editorHint": "aymcxa_editorHint",
-			"empty": "aymcxa_empty",
-			"error": "aymcxa_error",
 			"explanation": "aymcxa_explanation",
 			"explanationList": "aymcxa_explanationList",
 			"explanationTitle": "aymcxa_explanationTitle",
-			"field": "aymcxa_field",
 			"fileLine": "aymcxa_fileLine",
-			"filterLabel": "aymcxa_filterLabel",
-			"filterRow": "aymcxa_filterRow",
-			"infoBtn": "aymcxa_infoBtn",
-			"infoBtnActive": "aymcxa_infoBtnActive",
 			"issueBlock": "aymcxa_issueBlock",
 			"issueHead": "aymcxa_issueHead",
 			"issueList": "aymcxa_issueList",
 			"issueNote": "aymcxa_issueNote",
 			"issueWhere": "aymcxa_issueWhere",
 			"linkBtn": "aymcxa_linkBtn",
-			"offPeakChip": "aymcxa_offPeakChip",
-			"panel": "aymcxa_panel",
-			"panelHint": "aymcxa_panelHint",
 			"pathText": "aymcxa_pathText",
-			"primary": "aymcxa_primary",
-			"promptActions": "aymcxa_promptActions",
-			"promptBlock": "aymcxa_promptBlock",
-			"promptHead": "aymcxa_promptHead",
-			"promptText": "aymcxa_promptText",
-			"ruleExtra": "aymcxa_ruleExtra",
-			"ruleName": "aymcxa_ruleName",
-			"ruleNote": "aymcxa_ruleNote",
-			"ruleTable": "aymcxa_ruleTable",
-			"saving": "aymcxa_saving",
-			"savingsList": "aymcxa_savingsList",
-			"sectionBlock": "aymcxa_sectionBlock",
 			"sourceAggregate": "aymcxa_sourceAggregate",
 			"sourceCatalog": "aymcxa_sourceCatalog",
 			"sourceChip": "aymcxa_sourceChip",
 			"sourceEstimate": "aymcxa_sourceEstimate",
 			"sourceOfficial": "aymcxa_sourceOfficial",
-			"sourcePartial": "aymcxa_sourcePartial",
-			"sourceRule": "aymcxa_sourceRule",
-			"statItem": "aymcxa_statItem",
-			"statName": "aymcxa_statName",
-			"statNote": "aymcxa_statNote",
-			"statNum": "aymcxa_statNum",
-			"statStrip": "aymcxa_statStrip",
-			"subLabel": "aymcxa_subLabel",
-			"summaryActions": "aymcxa_summaryActions",
-			"summaryBasis": "aymcxa_summaryBasis",
-			"summaryName": "aymcxa_summaryName",
-			"summarySaving": "aymcxa_summarySaving",
-			"summaryStrip": "aymcxa_summaryStrip",
-			"summaryValue": "aymcxa_summaryValue",
-			"toolbar": "aymcxa_toolbar",
-			"toolbarSpacer": "aymcxa_toolbarSpacer",
-			"warning": "aymcxa_warning",
-			"worthList": "aymcxa_worthList",
-			"worthMeta": "aymcxa_worthMeta"
+			"sourcePartial": "aymcxa_sourcePartial"
 		};
 		//#endregion
 		//#region src/client/components/CostSourceChip.tsx
@@ -1268,7 +1103,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		function sourceClass(source) {
 			if (source === "official") return pricing_module_css_default.sourceOfficial;
-			if (source === "rule") return pricing_module_css_default.sourceRule;
 			if (source === "catalog") return pricing_module_css_default.sourceCatalog;
 			if (source === "aggregate") return pricing_module_css_default.sourceAggregate;
 			return pricing_module_css_default.sourceEstimate;
@@ -1296,7 +1130,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						const row = summary?.channels.find((item) => item.provider === channel.provider) ?? null;
 						const todayTokens = row === null ? 0 : row.today.tokens;
 						const monthTokens = row === null ? 0 : row.month.tokens;
-						const costCell = costCellText(channel, row === null ? 0 : row.month.cost);
+						const costCell = costCellOf(channel, row?.month ?? {});
 						const disabled = channel.status === "off";
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
 							className: disabled ? overview_module_css_default.disabledRow : overview_module_css_default.clickable,
@@ -1328,7 +1162,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: costCell.text
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 									source: row?.month.costSource,
 									partial: row?.month.partial
 								})] }) }),
@@ -1419,7 +1253,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const UTF8_BOM = "﻿";
 		const CSV_MIME = "text/csv;charset=utf-8";
 		const JSON_MIME = "application/json;charset=utf-8";
-		const YAML_MIME = "text/yaml;charset=utf-8";
 		/** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
 		function toCsv(rows, columns) {
 			const lines = [columns.map((column) => csvCell(column.label)).join(",")];
@@ -1704,7 +1537,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 该期是否有任何用量：全 0 视为「无数据」，据此显示「上期无数据」而不是 0 与 −100%。 */
 		function hasAnyData(totals) {
-			return totals !== null && (totals.calls > 0 || displayTokensOf(totals) > 0 || totals.cost > 0);
+			return totals !== null && (totals.calls > 0 || displayTokensOf(totals) > 0 || comparableMoneyAmountOf(totals) > 0);
 		}
 		/** 环比百分比；上期为 0 时不给百分比（Infinity / NaN 不进界面）。 */
 		function percentChangeOf(current, previous, warnOnUp) {
@@ -1732,12 +1565,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 		}
 		/**
-		* 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellText` 的占位文案；
-		* 其余情况一律给金额（含 ¥0.00），否则「本期降到 0」会被当成不可比而丢掉 −100%。
+		* 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellOf` 的占位文案；
+		* 其余情况一律给金额（含 0），否则「本期降到 0」会被当成不可比而丢掉 −100%。
+		* 金额按显示币种折算（逐币种小计相加），两期用的是同一套汇率，环比才有意义。
 		*/
-		function costTextOf(channel, cost) {
+		function costTextOf(channel, row) {
 			if (channel !== null && channel.costMode !== "perToken" && channel.costMode !== "unknown") {
-				const cell = costCellText(channel, cost);
+				const cell = costCellOf(channel, row ?? {});
 				return {
 					text: cell.text,
 					dim: cell.dim,
@@ -1745,7 +1579,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				};
 			}
 			return {
-				text: fmtCost(cost),
+				text: rowMoneyViewOf(row ?? {}).text,
 				dim: false,
 				amount: true
 			};
@@ -1840,11 +1674,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const previousTokens = previousTotals === null ? 0 : displayTokensOf(previousTotals);
 			const currentHitRate = currentTotals === null ? null : hitRateOf$2(currentTotals);
 			const previousHitRate = previousTotals === null ? null : hitRateOf$2(previousTotals);
-			const currentCost = currentTotals?.cost ?? 0;
-			const previousCost = previousTotals?.cost ?? 0;
+			const currentCost = currentTotals === null ? 0 : comparableMoneyAmountOf(currentTotals);
+			const previousCost = previousTotals === null ? 0 : comparableMoneyAmountOf(previousTotals);
 			const singleChannel = channelFilter === "ALL" ? null : channelOf(props.channels, channelFilter);
-			const currentCostText = costTextOf(singleChannel, currentCost);
-			const previousCostText = costTextOf(singleChannel, previousCost);
+			const currentCostText = costTextOf(singleChannel, currentTotals);
+			const previousCostText = costTextOf(singleChannel, previousTotals);
 			const costComparable = currentCostText.amount && previousCostText.amount;
 			const rows = [
 				{
@@ -2234,7 +2068,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cost",
-				label: "成本(元)",
+				label: "成本(原币种合计)",
 				value: (row) => row.cost
 			}
 		];
@@ -2246,6 +2080,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function hitRateOf(cacheReadTokens, inputTokens, outputTokens) {
 			const total = inputTokens + outputTokens + cacheReadTokens;
 			return total > 0 ? (cacheReadTokens / total * 100).toFixed(1) + "%" : "—";
+		}
+		/** 每日成本文本：合计按逐币种小计折算后相加（缺字段时回落旧的单值口径）。 */
+		function dayMoneyOf(row) {
+			const view = rowMoneyViewOf(row);
+			return view.amount > 0 ? view.text : "—";
 		}
 		function daysBetween$1(from, to) {
 			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
@@ -2283,7 +2122,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 范围内「有用量」的天数：日均 Tokens 的分母（拿日历天数去除会把空闲日算成用量偏低）。 */
 			const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length;
 			const singleChannel = channelFilter === "ALL" ? null : channelOf(channels, channelFilter);
-			const costCell = costCellText(singleChannel, safeTotals.cost);
+			const costCell = costCellOf(singleChannel, safeTotals);
 			const singleDay = bounds.from === bounds.to;
 			const rangeDays = Math.min(daysBetween$1(bounds.from, bounds.to), MAX_AXIS_DAYS);
 			/** 导出当前范围与通道筛选后的每日明细（按日期升序，不跟随表格排序）。 */
@@ -2373,7 +2212,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							amount: fmtTokens(day.cacheReadTokens),
 							rate: hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipDivider, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "成本" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: day.cost > 0 ? fmtCost(day.cost) : "—" })] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipDivider, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "成本" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: dayMoneyOf(day) })] }),
 						fromSession && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: "来源：会话事件（该日台账无记录，不含官方成本）" }),
 						topModels.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							label: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
@@ -2467,7 +2306,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 								source: safeTotals.costSource,
 								partial: safeTotals.partial
 							})] }),
@@ -2698,7 +2537,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cost",
-				label: "成本(元)",
+				label: "成本(原币种合计)",
 				value: (row) => row.cost
 			},
 			{
@@ -2841,7 +2680,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
 						const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 						const channel = channelOf(props.channels, row.provider);
-						const costCell = costCellText(channel, row.cost ?? 0);
+						const costCell = costCellOf(channel, row);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: lists_module_css_default.listTitle,
@@ -2883,7 +2722,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 								source: row.costSource,
 								partial: row.partial
 							})] }) }),
@@ -2902,7 +2741,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
 					children: [
-						"模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按台账模型均价估算",
+						"模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
 						props.data.priced ? "" : "（台账无成本数据，暂不可估）",
 						"；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）"
 					]
@@ -2945,7 +2784,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cost",
-				label: "成本(元)",
+				label: "成本(原币种合计)",
 				value: (row) => row.cost
 			},
 			{
@@ -3101,7 +2940,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 						const dominant = row.dominantProvider;
 						const channel = channelOf(props.channels, dominant);
-						const costCell = costCellText(channel, row.cost ?? 0);
+						const costCell = costCellOf(channel, row);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: lists_module_css_default.listTitle,
@@ -3136,7 +2975,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode === "sub" || channel?.costMode === "free" || channel?.costMode === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 								source: row.costSource,
 								partial: row.partial
 							})] }) }),
@@ -3155,7 +2994,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
 					children: [
-						"成本按台账模型中位均价估算",
+						"成本按三层价目自动估算",
 						props.data.priced ? "" : "（台账无成本数据，暂不可估）",
 						"；命中率 = 缓存读 /（输入 + 输出 + 缓存读）"
 					]
@@ -3171,1145 +3010,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return parts[parts.length - 1] === "" ? path : parts[parts.length - 1];
 		}
 		//#endregion
-		//#region src/client/components/PricingRulesPanel.tsx
-		/**
-		* 计费规则面板：并入「余额与配额」页下半部分（不新增 Tab）。
-		*
-		* 层级：默认只显示一行摘要（依据 / 已省 / 口径 + 「配置规则」），细节全部收进抽屉。
-		*
-		* 事实来源是用户的 `pricing-rules.yml`：面板保存走 `POST /pricing/rules` 整批提交（服务端按
-		* provider|model 继承旧条目的 unit / offPeak / note），保存后由页面重取 `/pricing` 与用量。
-		* 表单只编辑 通道 / 模型 / 币种 / 四档单价 五个字段；unit / offPeak / note 只在 YAML 里维护，
-		* 界面上必须明示这一点（见 FORM_EXTRAS_HINT），否则用户会以为保存把它们清掉了。
-		* 规则列表上方的通道过滤只影响展示 —— 保存永远提交全部规则（包括被过滤掉的那些）。
-		*/
-		/** 解析问题默认只列几条：一屏列不完的清单没人读，展开再看全部。 */
-		const ISSUE_LIMIT = 5;
-		/** 缺口模型列表默认列几条（按 tokens 倒序），其余折叠。 */
-		const MODEL_LIST_LIMIT = 8;
-		/** 复制到剪贴板；拿不到剪贴板权限时返回 false，由调用方提示改用「下载」。 */
-		async function copyText(text) {
-			try {
-				if (navigator.clipboard === void 0) return false;
-				await navigator.clipboard.writeText(text);
-				return true;
-			} catch {
-				return false;
-			}
-		}
-		function PricingRulesPanel(props) {
-			const { pricing, channels } = props;
-			const instanceId = (0, react.useId)();
-			const drawerId = instanceId + "-drawer";
-			const providersListId = instanceId + "-providers";
-			const modelsListId = instanceId + "-models";
-			const [expanded, setExpanded] = (0, react.useState)(false);
-			const [draft, setDraft] = (0, react.useState)(null);
-			const [editingKey, setEditingKey] = (0, react.useState)(null);
-			const [editorError, setEditorError] = (0, react.useState)(null);
-			const [saveError, setSaveError] = (0, react.useState)(null);
-			const [notice, setNotice] = (0, react.useState)(null);
-			const [saving, setSaving] = (0, react.useState)(false);
-			const [showAllSavings, setShowAllSavings] = (0, react.useState)(false);
-			const [showExplanation, setShowExplanation] = (0, react.useState)(false);
-			const [showAllIssues, setShowAllIssues] = (0, react.useState)(false);
-			const [showAllModels, setShowAllModels] = (0, react.useState)(false);
-			const [showPrompt, setShowPrompt] = (0, react.useState)(false);
-			const [refreshingPrices, setRefreshingPrices] = (0, react.useState)(false);
-			const [refreshElapsedSeconds, setRefreshElapsedSeconds] = (0, react.useState)(0);
-			const [refreshStatus, setRefreshStatus] = (0, react.useState)(null);
-			/** null = 不过滤（显示全部通道）；数组 = 只显示这些通道的规则。 */
-			const [providerFilter, setProviderFilter] = (0, react.useState)(null);
-			/** 默认过滤只设一次初值，之后完全交给用户点的芯片（否则用户取消过滤会被再次覆盖）。 */
-			const [filterInitialized, setFilterInitialized] = (0, react.useState)(false);
-			const rules = pricing?.rules ?? [];
-			const catalog = pricing?.catalog ?? null;
-			const files = pricing?.files;
-			const issues = pricing?.issues ?? [];
-			const currency = pricing?.currency ?? "CNY";
-			const aggregate = pricing?.aggregate ?? null;
-			const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources);
-			const providerOptions = (0, react.useMemo)(() => channels.map((channel) => channel.provider), [channels]);
-			const modelOptions = (0, react.useMemo)(() => {
-				const ids = /* @__PURE__ */ new Set();
-				for (const channel of channels) for (const model of channel.models) ids.add(model.id);
-				for (const row of props.models?.rows ?? []) ids.add(row.model);
-				return [...ids];
-			}, [channels, props.models]);
-			/** 「你的通道」= cordis.yml 里配置过的 provider；内置价目的来源按它折叠无关项。 */
-			const usedProviders = (0, react.useMemo)(() => new Set(channels.map((channel) => channel.provider)), [channels]);
-			const catalogRules = catalog?.rules ?? [];
-			const relatedCatalogCount = catalogRules.filter((rule) => rule.provider === "*" || usedProviders.has(rule.provider)).length;
-			const visibleSources = (catalog?.sources ?? []).filter((entry) => entry.providers.some((provider) => usedProviders.has(provider)));
-			/** 过滤只影响展示：成本照旧按完整规则与内置价目算，保存也提交全部规则。 */
-			const visibleRules = providerFilter === null ? rules : rules.filter((rule) => providerFilter.includes(rule.provider));
-			const hiddenRulesCount = rules.length - visibleRules.length;
-			const uncovered = (0, react.useMemo)(() => unpricedModelsOf(props.models?.rows ?? [], rules, catalogRules), [
-				props.models,
-				rules,
-				catalogRules
-			]);
-			const shownUncovered = showAllModels ? uncovered : uncovered.slice(0, MODEL_LIST_LIMIT);
-			const providerChips = (0, react.useMemo)(() => chipEntriesOf(rules, channels), [rules, channels]);
-			const channelLabelOf = (provider) => channels.find((channel) => channel.provider === provider)?.displayName ?? provider;
-			/**
-			* 默认只显示「你的通道」：未配置通道的规则（通道被删掉或改过名）要主动点「显示全部」才看得到。
-			* `*` 通配规则对任何通道都生效，因此始终算在默认可见里；channels 是异步到的，所以到齐后才设初值。
-			*/
-			(0, react.useEffect)(() => {
-				if (filterInitialized || providerChips.length === 0) return;
-				setFilterInitialized(true);
-				const initial = providerChips.filter((chip) => chip.provider === "*" || usedProviders.has(chip.provider)).map((chip) => chip.provider);
-				if (initial.length < providerChips.length) setProviderFilter(initial);
-			}, [
-				filterInitialized,
-				providerChips,
-				usedProviders
-			]);
-			const maybeRefreshNotice = (message) => {
-				setNotice(message);
-				setSaveError(null);
-			};
-			(0, react.useEffect)(() => {
-				if (!refreshingPrices) return;
-				const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1e3);
-				return () => clearInterval(timer);
-			}, [refreshingPrices]);
-			/**
-			* 「刷新价目」：全插件唯一会联网的用户动作（服务端去上游拉 JSON 并写到本机）。
-			* 成功 / 失败都留在面板上（`aria-live` 播报），成功后再走一次 `onSaved` 让页面重取
-			* `/pricing` 与用量 —— 价目换了一份，成本口径整体都变了。
-			*/
-			const refreshPrices = async () => {
-				if (refreshingPrices) return;
-				setRefreshingPrices(true);
-				setRefreshElapsedSeconds(0);
-				setRefreshStatus(null);
-				const outcome = await refreshModelPrices();
-				setRefreshingPrices(false);
-				if (outcome === null) {
-					setRefreshStatus({
-						tone: "bad",
-						text: "刷新失败：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? "没拿到服务端响应")
-					});
-					return;
-				}
-				if (!outcome.ok) {
-					setRefreshStatus({
-						tone: "bad",
-						text: "刷新失败：" + outcome.error
-					});
-					return;
-				}
-				setRefreshStatus({
-					tone: "ok",
-					text: modelPriceRefreshTextOf(outcome)
-				});
-				props.onSaved();
-			};
-			/**
-			* 唯一的写盘入口：整批提交。
-			* 传进来的 `nextRules` 必须是**全部**规则（不是过滤后的子集），删除靠「不在列表里」表达。
-			*/
-			const submit = async (nextRules, doneText) => {
-				if (saving) return;
-				setSaving(true);
-				setSaveError(null);
-				const result = await savePricingRules(nextRules.map(submittableRuleOf));
-				setSaving(false);
-				if (result === null) {
-					setSaveError(failureReasonOf("/dsh-key-usage/pricing/rules") ?? "保存请求失败：没拿到服务端响应");
-					return;
-				}
-				if (!result.ok) {
-					setSaveError(result.error);
-					return;
-				}
-				const issueCount = (result.issues ?? []).length;
-				setNotice(doneText + "：已写入 " + result.path + "（" + String(result.entries) + " 条）" + (issueCount > 0 ? "；文件里还有 " + String(issueCount) + " 处解析问题，见下方列表" : ""));
-				setDraft(null);
-				setEditingKey(null);
-				setEditorError(null);
-				props.onSaved();
-			};
-			const startNew = () => {
-				setDraft(blankRule(currency));
-				setEditingKey(null);
-				setEditorError(null);
-			};
-			const startEdit = (rule) => {
-				setDraft(structuredClone(rule));
-				setEditingKey(ruleKeyOf(rule));
-				setEditorError(null);
-			};
-			const commitDraft = async () => {
-				if (draft === null) return;
-				const problem = ruleProblemOf(draft);
-				if (problem !== null) {
-					setEditorError(problem);
-					return;
-				}
-				const nextRules = [...rules];
-				const editedIndex = editingKey === null ? -1 : nextRules.findIndex((rule) => ruleKeyOf(rule) === editingKey);
-				const duplicateIndex = nextRules.findIndex((rule) => ruleKeyOf(rule) === ruleKeyOf(draft));
-				if (editedIndex >= 0) {
-					nextRules[editedIndex] = draft;
-					if (duplicateIndex >= 0 && duplicateIndex !== editedIndex) nextRules.splice(duplicateIndex, 1);
-				} else if (duplicateIndex >= 0) nextRules[duplicateIndex] = draft;
-				else nextRules.push(draft);
-				await submit(nextRules, editingKey === null ? "规则已新增" : "规则已保存");
-			};
-			const removeRule = async (rule) => {
-				await submit(rules.filter((candidate) => candidate !== rule), "规则已删除");
-			};
-			const clearRules = async () => {
-				if (!window.confirm("清空后规则条目会从 YAML 文件里删除，成本回到内置官方价目与台账均价。确定清空吗？")) return;
-				await submit([], "已清空规则");
-			};
-			/** 「下载规则模板」：内置价目 ∩ 你实际用到的模型（价格预填）+ 缺价格依据的模型（注释占位待填）。 */
-			const downloadTemplate = () => {
-				const usedModels = (props.models?.rows ?? []).filter((row) => row.tokens > 0).map((row) => ({
-					provider: row.provider,
-					model: row.model
-				}));
-				const template = buildRulesTemplateYaml(catalog, usedModels, rules, uncovered, currency);
-				downloadFile(exportFileName("pricing-template", "yml"), template.text, YAML_MIME);
-				maybeRefreshNotice("模板已下载：按内置价目预填 " + String(template.prefilledCount) + " 条（只含你用到的模型）" + (template.pendingCount > 0 ? "，另有 " + String(template.pendingCount) + " 个缺价格依据的模型以注释占位 —— 填好后删掉行首的「# 」" : ""));
-			};
-			const snippetOf = (rule, placeholder) => buildRuleSnippetYaml(rule, placeholder);
-			const ruleForModel = (model) => ({
-				...blankRule(currency),
-				provider: model.provider,
-				model: model.model
-			});
-			const downloadSnippet = (rule, placeholder, label) => {
-				downloadFile(exportFileName("pricing-rule-" + fileSafeOf(rule.provider + "-" + rule.model), "yml"), snippetOf(rule, placeholder), YAML_MIME);
-				maybeRefreshNotice("已下载片段：" + label + "（粘到规则文件的 rules: 下面即可）");
-			};
-			const copySnippet = async (rule, placeholder, label) => {
-				const copied = await copyText(snippetOf(rule, placeholder));
-				maybeRefreshNotice(copied ? "已复制片段：" + label : "复制失败：浏览器没有把剪贴板权限给这个页面，请改用「下载片段」");
-			};
-			const promptText = buildAgentPrompt({
-				filePath: files?.user.path ?? null,
-				currency,
-				rulesCount: rules.length,
-				catalogEntries: catalog?.entries ?? 0,
-				uncovered
-			});
-			const copyPrompt = async () => {
-				const copied = await copyText(promptText);
-				maybeRefreshNotice(copied ? "提示词已复制：粘给 DSH 即可（里面带着目标文件路径与 " + String(uncovered.length) + " 个缺口模型）" : "复制失败：浏览器没有把剪贴板权限给这个页面，请改用「下载提示词」");
-			};
-			const coverage = pricing?.coverage ?? null;
-			const savingsEntries = Object.entries(coverage?.savingsByCurrency ?? {}).filter(([, amount]) => amount > 0);
-			const savingsDetail = coverage?.savingsDetail ?? [];
-			const visibleSavings = showAllSavings ? savingsDetail : savingsDetail.slice(0, 3);
-			const ruleCostEntries = Object.entries(coverage?.ruleCostByCurrency ?? {}).filter(([, amount]) => amount > 0);
-			const shownIssues = showAllIssues ? issues : issues.slice(0, ISSUE_LIMIT);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.panel,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SummaryStrip, {
-						coverage,
-						rulesCount: rules.length,
-						loading: pricing === null,
-						savingsEntries,
-						expanded,
-						onToggle: () => setExpanded((previous) => !previous),
-						drawerId,
-						showExplanation,
-						onToggleExplanation: () => setShowExplanation((previous) => !previous)
-					}),
-					showExplanation && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ExplanationBlock, {}),
-					expanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.drawer,
-						id: drawerId,
-						children: [
-							pricing !== null && pricing.rulesOrigin !== "file" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.warning,
-								children: RULES_ORIGIN_TEXT[pricing.rulesOrigin]
-							}),
-							pricing !== null && !pricing.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.warning,
-								children: "服务端拒绝写盘（只接受本机回环请求）：规则暂时只能在 YAML 文件里手改，改完刷新页面即生效。"
-							}),
-							saveError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.error,
-								children: ["保存失败：", saveError]
-							}),
-							notice !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.panelHint,
-								children: notice
-							}),
-							files !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.fileLine,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-									"用户规则 ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
-										className: pricing_module_css_default.pathText,
-										children: files.user.path
-									}),
-									files.user.exists ? "（" + String(files.user.entries) + " 条）" : "（还没有这个文件，面板保存后会创建）"
-								] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-									"内置价目 ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
-										className: pricing_module_css_default.pathText,
-										children: files.catalog.path
-									}),
-									files.catalog.exists ? "（" + String(files.catalog.entries) + " 条）" : "（读不到，成本会缺一层依据）"
-								] })]
-							}),
-							issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.issueBlock,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: pricing_module_css_default.issueHead,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处 YAML 解析问题"] }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: pricing_module_css_default.issueNote,
-											children: "—— 这些问题所在的条目已被跳过，成本按内置价目 / 台账均价算"
-										}),
-										issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											className: pricing_module_css_default.linkBtn,
-											"aria-expanded": showAllIssues,
-											onClick: () => setShowAllIssues((previous) => !previous),
-											children: showAllIssues ? "收起" : "展开全部（" + String(issues.length) + " 条）"
-										})
-									]
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-									className: pricing_module_css_default.issueList,
-									children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: pricing_module_css_default.issueWhere,
-										children: [issue.file === "user" ? "用户规则" : "内置价目", issue.line === null ? "" : " 第 " + String(issue.line) + " 行"]
-									}), issue.message] }, issue.file + "|" + String(issue.line) + "|" + String(index)))
-								})]
-							}),
-							ruleCostEntries.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.statStrip,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: pricing_module_css_default.statItem,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-											className: pricing_module_css_default.statName,
-											children: "按当前规则试算（近 30 天，仅参照）"
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-											className: pricing_module_css_default.statNum,
-											children: ruleCostEntries.map(([ruleCurrency, amount]) => moneyTextOf(ruleCurrency, amount)).join(" / ")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-											className: pricing_module_css_default.statNote,
-											children: "不是账单：实际成本按「官方 > 规则 > 官方价 > 均价」逐格取值"
-										})
-									]
-								})
-							}),
-							catalog !== null && catalog.entries > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.catalogNote + (catalogStale === null ? "" : " " + pricing_module_css_default.catalogStale),
-								children: [
-									"已内置 ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
-									" 条厂商官方价目，",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自动生效，不需要你维护" }),
-									"（你的规则优先于它）",
-									catalogRules.length > 0 && relatedCatalogCount < catalogRules.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-										"，其中 ",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(relatedCatalogCount) }),
-										" 条属于你的通道"
-									] }),
-									"。来源：",
-									visibleSources.map((entry, index) => {
-										const daysAgo = fetchedDaysAgo(entry.fetchedAt);
-										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											index > 0 && "；",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-												className: pricing_module_css_default.linkBtn,
-												href: entry.source,
-												target: "_blank",
-												rel: "noreferrer",
-												children: entry.providers.join(" / ")
-											}),
-											"（",
-											entry.count,
-											" 条，",
-											entry.fetchedAt,
-											" 抓取",
-											daysAgo === null ? "" : "，距今 " + String(daysAgo) + " 天",
-											"）"
-										] }, entry.source);
-									}),
-									visibleSources.length < catalog.sources.length && "　其余来源属于未配置的通道，已折叠。",
-									catalogStale !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: ["　", /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [
-										"价目最新一次抓取距今 ",
-										String(catalogStale),
-										" 天，建议按官方文档复核价目。"
-									] })] })
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(AggregateSourceBlock, {
-								aggregate,
-								loading: pricing === null,
-								refreshing: refreshingPrices,
-								elapsedSeconds: refreshElapsedSeconds,
-								status: refreshStatus,
-								onRefresh: () => void refreshPrices()
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.toolbar,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.actionBtn,
-										disabled: pricing === null,
-										title: props.models == null ? "还没读到按模型用量：模板里只会给字段说明与空 rules" : "按内置价目预填你实际用到的模型，并把缺价格依据的模型注释占位",
-										onClick: downloadTemplate,
-										children: "下载规则模板"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
-										disabled: saving,
-										onClick: startNew,
-										children: "＋ 新增规则"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.actionBtn,
-										"aria-expanded": showPrompt,
-										title: "生成一段可以直接交给 DSH 的提示词：带上这个文件的路径与缺价格依据的模型",
-										onClick: () => setShowPrompt((previous) => !previous),
-										children: "让 DSH 帮我配"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: pricing_module_css_default.toolbarSpacer }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										disabled: rules.length === 0 || saving,
-										onClick: () => void clearRules(),
-										children: "清空规则"
-									})
-								]
-							}),
-							showPrompt && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.promptBlock,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-										className: pricing_module_css_default.promptHead,
-										children: "把这段提示词交给 DSH（也可以复制给别的 agent）：它会按下面这个路径直接改 YAML， 去厂商官方定价页核对价格 —— 改完刷新本页面即生效。"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: pricing_module_css_default.promptActions,
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-												className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
-												onClick: () => void copyPrompt(),
-												children: "复制提示词"
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-												className: pricing_module_css_default.actionBtn,
-												onClick: () => {
-													downloadFile(exportFileName("pricing-agent-prompt", "txt"), promptText, "text/plain;charset=utf-8");
-													maybeRefreshNotice("提示词已下载（.txt）");
-												},
-												children: "下载提示词"
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: pricing_module_css_default.panelHint,
-												children: [
-													"缺口模型 ",
-													String(uncovered.length),
-													" 个",
-													files === void 0 ? "" : "；目标文件 " + files.user.path
-												]
-											})
-										]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
-										className: pricing_module_css_default.promptText,
-										children: promptText
-									})
-								]
-							}),
-							rules.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.filterRow,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: pricing_module_css_default.filterLabel,
-										children: "按通道过滤"
-									}),
-									providerChips.map((chip) => {
-										const active = providerFilter === null || providerFilter.includes(chip.provider);
-										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-											className: pricing_module_css_default.chip + (active ? " " + pricing_module_css_default.chipOn : ""),
-											"aria-pressed": active,
-											title: "只看 " + chip.provider + " 的规则（" + String(chip.count) + " 条）",
-											onClick: () => {
-												const current = providerFilter ?? providerChips.map((entry) => entry.provider);
-												const next = current.includes(chip.provider) ? current.filter((provider) => provider !== chip.provider) : [...current, chip.provider];
-												setProviderFilter(next.length === providerChips.length ? null : next);
-											},
-											children: [chip.provider === "*" ? "任意通道（*）" : channelLabelOf(chip.provider), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(chip.count) })]
-										}, chip.provider);
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										disabled: providerFilter === null,
-										onClick: () => setProviderFilter(null),
-										children: "显示全部"
-									})
-								]
-							}),
-							providerFilter !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.panelHint,
-								children: [
-									"过滤只影响这里的显示；保存仍会提交全部 ",
-									String(rules.length),
-									" 条规则 （被过滤掉的 ",
-									String(hiddenRulesCount),
-									" 条不会被删掉）。"
-								]
-							}),
-							rules.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.empty,
-								children: "还没有规则。点「＋ 新增规则」手填，或先「下载规则模板」按内置价目起步。"
-							}) : visibleRules.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: pricing_module_css_default.empty,
-								children: "当前过滤条件下没有规则，点「显示全部」重置（这些规则不会被删除）。"
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-								className: pricing_module_css_default.ruleTable,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "币种" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "备注 / 附加项（YAML 维护）" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "操作" })
-								] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: visibleRules.map((rule) => {
-									const extras = ruleExtrasTextOf(rule);
-									const index = rules.indexOf(rule);
-									const offPeakNow = pricing !== null && index >= 0 && pricing.offPeakNow[index] === true;
-									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-										className: editingKey === ruleKeyOf(rule) ? pricing_module_css_default.editing : "",
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: pricing_module_css_default.ruleName,
-												children: rule.provider
-											}) }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: pricing_module_css_default.ruleName,
-												children: rule.model
-											}) }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.input }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheRead }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.cacheWrite }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.output }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rule.currency }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
-												className: pricing_module_css_default.ruleNote,
-												children: [rule.note === "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: shared_module_css_default.dim,
-													children: "—"
-												}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													title: rule.note,
-													children: rule.note
-												}), extras !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-													className: pricing_module_css_default.ruleExtra,
-													title: rule.offPeak === null ? void 0 : offPeakTooltipOf(rule),
-													children: [extras, offPeakNow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: pricing_module_css_default.offPeakChip,
-														children: "错峰中"
-													})]
-												})]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-													className: pricing_module_css_default.linkBtn,
-													onClick: () => startEdit(rule),
-													children: "编辑"
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-													className: pricing_module_css_default.linkBtn,
-													title: "复制这一条规则的 YAML（含 unit / offPeak / note）",
-													onClick: () => void copySnippet(rule, false, ruleLabelOf(rule)),
-													children: "复制片段"
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-													className: pricing_module_css_default.linkBtn,
-													disabled: saving,
-													onClick: () => void removeRule(rule),
-													children: "删除"
-												})
-											] })
-										]
-									}, ruleKeyOf(rule));
-								}) })]
-							}),
-							hiddenRulesCount > 0 && visibleRules.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.panelHint,
-								children: [
-									"另有 ",
-									String(hiddenRulesCount),
-									" 条规则被过滤掉（只影响显示，保存时照旧提交）。"
-								]
-							}),
-							draft !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RuleEditor, {
-								draft,
-								onChange: setDraft,
-								onCancel: () => {
-									setDraft(null);
-									setEditorError(null);
-									setEditingKey(null);
-								},
-								onSave: () => void commitDraft(),
-								error: editorError,
-								saving,
-								keyChanged: editingKey !== null && ruleKeyOf(draft) !== editingKey,
-								providerOptions,
-								modelOptions,
-								providersListId,
-								modelsListId
-							}, editingKey ?? "__new__"),
-							uncovered.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.sectionBlock,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: pricing_module_css_default.subLabel,
-										children: [
-											"没有价格依据的模型（",
-											String(uncovered.length),
-											" 个）"
-										]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-										className: pricing_module_css_default.panelHint,
-										children: "近 30 天用到了、但规则、内置官方价目与聚合价目都没命中：这些用量的成本现在按台账均价估算或显示 —。 可以下载 / 复制单条片段填好价格后粘进规则文件，或点「让 DSH 帮我配」把清单交给 DSH。"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-										className: pricing_module_css_default.worthList,
-										children: shownUncovered.map((model) => {
-											const label = model.provider + " · " + model.model;
-											return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: pricing_module_css_default.ruleName,
-													children: model.model
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-													className: shared_module_css_default.dim,
-													children: [" · ", model.provider]
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-													className: pricing_module_css_default.worthMeta,
-													children: [
-														fmtTokens(model.tokens),
-														" tokens（占缺口 ",
-														percentText(model.share),
-														"）",
-														model.estimated ? " · 现为估算" : " · 无价格依据"
-													]
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-													className: pricing_module_css_default.linkBtn,
-													onClick: () => downloadSnippet(ruleForModel(model), true, label),
-													children: "下载片段"
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-													className: pricing_module_css_default.linkBtn,
-													onClick: () => void copySnippet(ruleForModel(model), true, label),
-													children: "复制片段"
-												})
-											] }, model.provider + "|" + model.model);
-										})
-									}),
-									uncovered.length > MODEL_LIST_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										onClick: () => setShowAllModels((previous) => !previous),
-										children: showAllModels ? "收起" : "展开全部（" + String(uncovered.length) + " 个）"
-									})
-								]
-							}),
-							savingsDetail.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.sectionBlock,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: pricing_module_css_default.subLabel,
-										children: ["缓存命中省钱明细", coverage === null ? "" : "（" + coverage.from + " 起）"]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-										className: pricing_module_css_default.savingsList,
-										children: visibleSavings.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: pricing_module_css_default.ruleName,
-												children: entry.model
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: shared_module_css_default.dim,
-												children: [" · ", entry.provider]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: pricing_module_css_default.worthMeta,
-												children: [
-													"命中缓存 ",
-													fmtTokens(entry.cacheReadTokens),
-													" tokens"
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: pricing_module_css_default.saving,
-												children: ["省 ", moneyTextOf(entry.currency, entry.amount)]
-											})
-										] }, entry.provider + "|" + entry.model))
-									}),
-									savingsDetail.length > 3 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: pricing_module_css_default.linkBtn,
-										onClick: () => setShowAllSavings((previous) => !previous),
-										children: showAllSavings ? "收起" : "展开全部（" + String(savingsDetail.length) + " 条）"
-									})
-								]
-							})
-						]
-					})
-				]
-			});
-		}
-		/**
-		* 聚合价目（LiteLLM）的来源署名 + 「刷新价目」。
-		*
-		* 这一块是插件里唯一会联网的地方，因此必须同时说清三件事：数据是谁的（第三方、MIT、USD）、
-		* 现在装载的是哪一份（随包快照 / 本地刷新文件 / 读不到）、以及「只在你点刷新时才会访问上游」。
-		* 刷新回执与失败原因都放在 `aria-live` 区域里播报，不能只靠颜色或按钮文案。
-		*/
-		function AggregateSourceBlock(props) {
-			const { aggregate } = props;
-			const issues = (Array.isArray(aggregate?.issues) ? aggregate.issues : []).filter((issue) => issue !== null && typeof issue === "object");
-			const shownIssues = issues.slice(0, ISSUE_LIMIT);
-			const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt);
-			const pathText = typeof aggregate?.path === "string" && aggregate.path !== "" ? aggregate.path : null;
-			const commitFull = typeof aggregate?.upstreamCommit === "string" && aggregate.upstreamCommit.trim() !== "" ? aggregate.upstreamCommit.trim() : null;
-			const commitShort = commitFull === null ? null : shortCommitOf(commitFull);
-			const licenseText = typeof aggregate?.license === "string" && aggregate.license.trim() !== "" ? aggregate.license : "MIT";
-			const entryText = aggregate === null || !Number.isFinite(aggregate.entries) ? null : "条目 " + String(aggregate.entries);
-			const modelText = aggregate === null || !Number.isFinite(aggregate.models) ? null : "模型 " + String(aggregate.models);
-			const metaTitle = [pathText === null ? null : "当前装载的文件：" + pathText, commitFull === null ? null : "upstream commit：" + commitFull].filter((part) => part !== null).join("\n");
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.aggregateBlock,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.aggregateHead,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: pricing_module_css_default.aggregateTitle,
-							children: [
-								"价目数据来源：",
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-									className: pricing_module_css_default.linkBtn,
-									href: LITELLM_REPO_URL,
-									target: "_blank",
-									rel: "noreferrer",
-									children: "LiteLLM"
-								}),
-								"（",
-								licenseText,
-								"，第三方聚合价目，美元计价；优先级低于内置官方价目与你的规则）"
-							]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn,
-							disabled: props.refreshing,
-							"aria-busy": props.refreshing,
-							title: "从 LiteLLM 上游拉取最新价目并写到本机：这是插件里唯一会联网的操作",
-							onClick: props.onRefresh,
-							children: props.refreshing ? "刷新中…" + (props.elapsedSeconds > 0 ? "（已 " + String(props.elapsedSeconds) + " 秒）" : "") : "刷新价目"
-						})]
-					}),
-					aggregate === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.aggregateMeta,
-						children: props.loading ? "正在读取服务端价目信息…" : "服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。"
-					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.aggregateMeta,
-						title: metaTitle === "" ? void 0 : metaTitle,
-						children: [
-							"当前装载：",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: aggregateLoadedLabelOf(aggregate.loaded) }),
-							entryText !== null && "　" + entryText,
-							modelText !== null && "　" + modelText,
-							fetchedAtText !== null && "　文件时间 " + fetchedAtText,
-							commitShort !== null && "　upstream " + commitShort
-						]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.aggregateMeta,
-						children: [
-							"平时不联网：",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "只有你点「刷新价目」时" }),
-							"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。"
-						]
-					})] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.aggregateStatus + (props.status === null ? "" : " " + (props.status.tone === "ok" ? pricing_module_css_default.aggregateStatusOk : pricing_module_css_default.aggregateStatusBad)),
-						role: "status",
-						"aria-live": "polite",
-						children: props.status === null ? "" : props.status.text
-					}),
-					issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.issueBlock,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.issueHead,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处聚合价目装载问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: pricing_module_css_default.issueNote,
-									children: "—— 只影响聚合价目这一层的条目，成本照旧按规则 / 内置官方价目 / 台账均价算"
-								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-								className: pricing_module_css_default.issueList,
-								children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: pricing_module_css_default.issueWhere,
-									children: issue.kind
-								}), issue.message] }, issue.kind + "|" + String(index)))
-							}),
-							issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.issueNote,
-								children: [
-									"还有 ",
-									String(issues.length - ISSUE_LIMIT),
-									" 条同类问题已折叠。"
-								]
-							})
-						]
-					})
-				]
-			});
-		}
-		/**
-		* 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
-		* 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」——
-		* 模型数在上一行的装载信息里（随 `/pricing` 重取后刷新）。缺字段时逐段省略，不显示 undefined。
-		*/
-		function modelPriceRefreshTextOf(result) {
-			const parts = [];
-			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + " 条价目");
-			const megabytes = megabytesTextOf(result.bytes);
-			if (megabytes !== null) parts.push(megabytes);
-			const host = hostOf(result.url);
-			if (host !== null) parts.push("来源 " + host);
-			const time = localTimeTextOf(result.fetchedAt);
-			if (time !== null) parts.push(time);
-			return "已更新：" + (parts.length === 0 ? "服务端没返回明细，已按新价目重算" : parts.join(" · "));
-		}
-		/** 过滤芯片：按通道分组计数；配置过的通道排前面，`*` 通配规则永远排最后。 */
-		function chipEntriesOf(rules, channels) {
-			const counts = /* @__PURE__ */ new Map();
-			for (const rule of rules) counts.set(rule.provider, (counts.get(rule.provider) ?? 0) + 1);
-			const known = channels.map((channel) => channel.provider).filter((provider) => counts.has(provider));
-			const rest = [...counts.keys()].filter((provider) => provider !== "*" && !known.includes(provider)).sort((first, second) => first.localeCompare(second));
-			return [
-				...known,
-				...rest,
-				...counts.has("*") ? ["*"] : []
-			].map((provider) => ({
-				provider,
-				count: counts.get(provider) ?? 0
-			}));
-		}
-		/**
-		* 摘要行：默认收起的全部内容就这一行。
-		* 「依据」用 /pricing 的 coverage 数模型个数，让用户一眼看出哪些模型可信、哪些只是估算。
-		*/
-		function SummaryStrip(props) {
-			const { coverage } = props;
-			const days = coverage === null ? null : daysBetween(coverage.from, coverage.to);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.summaryStrip,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.summaryBasis,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.summaryName,
-							children: "这一格钱的依据"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.summaryValue,
-							children: coverage === null ? props.loading ? "正在读取规则与覆盖度…" : "还没读到服务端覆盖度 —— 稍后自动重试" : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-								"官方账单 ",
-								days === null ? "—" : String(days),
-								" 天 · 你的规则 ",
-								String(coverage.ruleModels),
-								" 个模型 · 内置官方价 ",
-								String(coverage.catalogModels ?? 0),
-								" 个模型 · 聚合价目 ",
-								String(coverage.aggregateModels ?? 0),
-								" 个模型",
-								coverage.partialModels !== void 0 && coverage.partialModels > 0 && "（其中部分 " + String(coverage.partialModels) + " 个）",
-								" · 台账均价估算 ",
-								String(coverage.averagedModels),
-								" 个模型",
-								coverage.unpricedModels > 0 && " · 无依据 " + String(coverage.unpricedModels) + " 个"
-							] })
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.summarySaving,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.summaryName,
-							children: "缓存命中已省"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.summaryValue + (props.savingsEntries.length > 0 ? " " + pricing_module_css_default.saving : ""),
-							children: props.savingsEntries.length === 0 ? "—" : props.savingsEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(" / ")
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.summaryActions,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.infoBtn + (props.showExplanation ? " " + pricing_module_css_default.infoBtnActive : ""),
-							title: "来源角标、单位、错峰与多币种口径",
-							"aria-label": "查看成本口径说明",
-							"aria-expanded": props.showExplanation,
-							onClick: props.onToggleExplanation,
-							children: "ⓘ"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
-							"aria-expanded": props.expanded,
-							"aria-controls": props.drawerId,
-							onClick: props.onToggle,
-							children: props.expanded ? "收起规则 ◂" : "配置规则 ▸"
-						})]
-					})
-				]
-			});
-		}
-		/** 成本口径说明：默认不占正文，点 ⓘ 才出现。只讲「这一格钱是怎么来的」，数据来源类口径在页面页脚。 */
-		function ExplanationBlock() {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.explanation,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: pricing_module_css_default.explanationTitle,
-					children: "成本口径"
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
-					className: pricing_module_css_default.explanationList,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方" }), "：台账记录的厂商账单金额，是既成事实，不会被规则覆盖。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自定" }), "：按你填的规则算出，匹配顺序 精确 → 通道通配 → 模型通配 → 全通配。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
-							"：按插件",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "内置的厂商官方价目" }),
-							"算出（自动生效，不需要你维护）；你的规则优先于它。匹配只做精确 / 忽略大小写 / 去 ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "vendor/" }),
-							" 前缀，不做模糊匹配。"
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
-							"：按随包内置的 ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "LiteLLM 聚合价目" }),
-							"算出（第三方维护、美元计价）；点「刷新价目」可从上游更新，失败不影响已装载的那一份。优先级低于内置官方价目与你的规则 —— 它是比内置官方价目更弱的一层真价格，再往下才是台账均价推算。条目缺缓存写入价时标「部分」：那一格按未命中价计。"
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }), "：按台账反推的均价推算，仅供参照，不是账单。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：没有价格依据（规则、内置价目、聚合价目都没命中，台账也没有成本数据）。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"单位与按次计费：在 YAML 里写 —— ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perMillionTokens" }),
-							"（每百万，缺省）/ ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perThousandTokens" }),
-							"（每千）/ ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perCall" }),
-							"（每次调用，只用「输入」档当每次调用价）。"
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"错峰：也在 YAML 里写。窗口按",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地时间" }),
-							"判断，起止相同表示全天，",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "from" }),
-							" 大于 ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "to" }),
-							" 表示跨午夜；每个窗口可按",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "每天 / 仅工作日 / 仅周末" }),
-							"限定生效的星期（不写即每天）。跨天范围拿不到小时分布，按标准价算。"
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "多币种不换算、不合计：规则与内置价目各按文档原币种算（DeepSeek 取中文文档的 CNY，Kimi 为 CNY，OpenRouter / Z.ai 为 USD），金额按币种分行显示。" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"文件写法：点「",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "下载规则模板" }),
-							"」拿一份带注释说明与错峰写法示例的 YAML；面板保存写的是同一个文件。"
-						] })
-					]
-				})]
-			});
-		}
-		/** 单价输入框：用文本态承接输入，避免「0.」在数字态里被吃掉后小数点打不进去。 */
-		function RateField(props) {
-			const [text, setText] = (0, react.useState)(String(props.value));
-			(0, react.useEffect)(() => {
-				setText(String(props.value));
-			}, [props.value]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.field,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: props.label }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-					type: "text",
-					inputMode: "decimal",
-					value: text,
-					onChange: (event) => {
-						setText(event.target.value);
-						const next = Number(event.target.value);
-						props.onChange(Number.isFinite(next) && next >= 0 ? next : 0);
-					},
-					onBlur: () => setText(String(props.value))
-				})]
-			});
-		}
-		function percentText(share) {
-			return (share * 100).toFixed(1) + "%";
-		}
-		/** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
-		function daysBetween(from, to) {
-			const start = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			const end = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
-			if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
-			return Math.round((end - start) / 864e5) + 1;
-		}
-		/** 错峰说明进 tooltip：规则表因此不被一整列文字撑开。 */
-		function offPeakTooltipOf(rule) {
-			const windows = offPeakWindowsText(rule);
-			if (rule.offPeak === null) return windows;
-			const peak = "标准价 " + String(rule.input) + " / " + String(rule.cacheRead) + " / " + String(rule.cacheWrite) + " / " + String(rule.output);
-			const offPeak = "错峰价 " + String(rule.offPeak.input) + " / " + String(rule.offPeak.cacheRead) + " / " + String(rule.offPeak.cacheWrite) + " / " + String(rule.offPeak.output);
-			return "错峰时段（本地时间，跨午夜用 from > to 表示；括号内是生效的星期）：" + windows + "\n" + peak + "\n" + offPeak + "\n四档顺序：输入 / 缓存读 / 缓存写 / 输出";
-		}
-		/**
-		* 单条规则的编辑器：只暴露 通道 / 模型 / 币种 / 四档单价。
-		* unit / offPeak / note 不在这里渲染（只在 YAML 里维护），保存也不提交它们 —— 服务端按
-		* provider|model 从文件旧值继承，所以表单变窄不会让用户数据丢。
-		*/
-		function RuleEditor(props) {
-			const { draft, onChange } = props;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.editor,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorGrid,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.field,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "通道 id（* = 任意通道）" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										list: props.providersListId,
-										value: draft.provider,
-										onChange: (event) => onChange({
-											...draft,
-											provider: event.target.value
-										})
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("datalist", {
-										id: props.providersListId,
-										children: props.providerOptions.map((provider) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", { value: provider }, provider))
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.field,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "模型 id（* = 该通道全部）" }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										list: props.modelsListId,
-										value: draft.model,
-										onChange: (event) => onChange({
-											...draft,
-											model: event.target.value
-										})
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("datalist", {
-										id: props.modelsListId,
-										children: props.modelOptions.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", { value: model }, model))
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.field,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: "币种" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-									value: draft.currency,
-									onChange: (event) => onChange({
-										...draft,
-										currency: event.target.value
-									}),
-									children: CURRENCY_OPTIONS.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: currency,
-										children: currency
-									}, currency))
-								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
-								label: "输入（未命中缓存）",
-								value: draft.input,
-								onChange: (value) => onChange({
-									...draft,
-									input: value
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
-								label: "缓存读（命中）",
-								value: draft.cacheRead,
-								onChange: (value) => onChange({
-									...draft,
-									cacheRead: value
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
-								label: "缓存写",
-								value: draft.cacheWrite,
-								onChange: (value) => onChange({
-									...draft,
-									cacheWrite: value
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateField, {
-								label: "输出",
-								value: draft.output,
-								onChange: (value) => onChange({
-									...draft,
-									output: value
-								})
-							})
-						]
-					}),
-					props.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.editorError,
-						children: props.error
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorHint,
-						children: [
-							"正在编辑：",
-							ruleLabelOf(draft),
-							" · 单位 ",
-							UNIT_LABELS[draft.unit],
-							draft.offPeak === null ? "" : " · 含错峰窗口 " + offPeakWindowsText(draft),
-							draft.note === "" ? "" : " · 备注 " + draft.note
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.editorHint,
-						children: FORM_EXTRAS_HINT
-					}),
-					props.keyChanged && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: pricing_module_css_default.editorHint,
-						children: "改通道或模型等于换一条规则：原条目的错峰价 / 单位 / 备注不会跟过来，需要在 YAML 里补。"
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: pricing_module_css_default.editorActions,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn + " " + pricing_module_css_default.primary,
-							disabled: props.saving,
-							onClick: props.onSave,
-							children: props.saving ? "保存中…" : "保存规则"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							className: pricing_module_css_default.actionBtn,
-							disabled: props.saving,
-							onClick: props.onCancel,
-							children: "取消"
-						})]
-					})
-				]
-			});
-		}
-		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
-		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:16px 18px}.ohwLxW_quotaHead{flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;display:flex}.ohwLxW_quotaTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.ohwLxW_quotaEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);border-radius:999px;padding:1px 7px;font-size:10px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:16px;font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.ohwLxW_windowValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:12px;font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:10px;font-size:10.5px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-top:10px;font-size:10.5px}";
+		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;font-size:10.5px}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10px}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);border-radius:999px;padding:1px 7px;font-size:10px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:16px;font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.ohwLxW_windowValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:12px;font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:10px;font-size:10.5px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-top:10px;font-size:10.5px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-accent-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:10.5px}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:11px}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);margin:6px 0;font-size:11.5px;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:10.5px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px;font-size:10.5px;font-weight:500}.ohwLxW_rateTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px;font-size:11.5px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:11px}.ohwLxW_rateNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;text-align:left;max-width:320px;font-size:10.5px}.ohwLxW_rateSourceNone{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.ohwLxW_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10px}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);padding:6px 0;font-size:11.5px}";
 		const tagId$1 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4328,15 +3030,41 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balanceStrip": "ohwLxW_balanceStrip",
 			"bsLabel": "ohwLxW_bsLabel",
 			"bsValue": "ohwLxW_bsValue",
+			"countLine": "ohwLxW_countLine",
+			"currencyBtnOn": "ohwLxW_currencyBtnOn",
+			"expandArrow": "ohwLxW_expandArrow",
+			"fxText": "ohwLxW_fxText",
+			"fxWarn": "ohwLxW_fxWarn",
+			"infoBtn": "ohwLxW_infoBtn",
+			"infoBtnActive": "ohwLxW_infoBtnActive",
 			"liveChip": "ohwLxW_liveChip",
+			"offPeakChip": "ohwLxW_offPeakChip",
+			"pricingInfo": "ohwLxW_pricingInfo",
+			"pricingInfoBody": "ohwLxW_pricingInfoBody",
+			"pricingInfoToggle": "ohwLxW_pricingInfoToggle",
 			"quotaCard": "ohwLxW_quotaCard",
-			"quotaEnv": "ohwLxW_quotaEnv",
-			"quotaHead": "ohwLxW_quotaHead",
 			"quotaList": "ohwLxW_quotaList",
 			"quotaProvider": "ohwLxW_quotaProvider",
 			"quotaTitle": "ohwLxW_quotaTitle",
+			"quotaToggle": "ohwLxW_quotaToggle",
+			"rateConverted": "ohwLxW_rateConverted",
+			"rateCount": "ohwLxW_rateCount",
+			"rateDrawer": "ohwLxW_rateDrawer",
+			"rateEmpty": "ohwLxW_rateEmpty",
+			"rateHead": "ohwLxW_rateHead",
+			"rateModel": "ohwLxW_rateModel",
+			"rateNote": "ohwLxW_rateNote",
+			"rateScroll": "ohwLxW_rateScroll",
+			"rateSourceNone": "ohwLxW_rateSourceNone",
+			"rateTable": "ohwLxW_rateTable",
 			"snapshotHint": "ohwLxW_snapshotHint",
 			"snapshotStale": "ohwLxW_snapshotStale",
+			"staleLine": "ohwLxW_staleLine",
+			"toolbar": "ohwLxW_toolbar",
+			"toolbarBtn": "ohwLxW_toolbarBtn",
+			"toolbarBtnPrimary": "ohwLxW_toolbarBtnPrimary",
+			"toolbarLabel": "ohwLxW_toolbarLabel",
+			"toolbarSpacer": "ohwLxW_toolbarSpacer",
 			"windowBar": "ohwLxW_windowBar",
 			"windowHead": "ohwLxW_windowHead",
 			"windowItem": "ohwLxW_windowItem",
@@ -4347,6 +3075,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		};
 		//#endregion
 		//#region src/client/tabs/QuotaTab.tsx
+		/**
+		* 余额与配额：按通道展示官方余额快照与订阅窗口（原样数据，不换算不建议）。
+		*
+		* 每张通道卡片是可展开控件：展开后是该通道近 30 天用到的模型单价表（来自 `/rates`），
+		* 让人一眼看出「这个通道这些模型的单价是多少、来源是哪一层」。价格全部由服务端决定，
+		* 界面不提供任何价格表单；金额按工具条里选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
+		*/
 		/** 余额字段展示顺序（原型顺序）；未收录字段按原键名追加在后。 */
 		const BALANCE_ORDER = [
 			"totalBalance",
@@ -4375,6 +3110,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			month: "本月窗口",
 			day: "当日窗口"
 		};
+		/** 解析问题默认只列几条：一屏列不完的清单没人读。 */
+		const ISSUE_LIMIT = 5;
+		/** 单价表的计价单位：内置官方价目与聚合价目都是每百万 tokens（服务端 `/rates` 也按这个口径折算）。 */
+		const RATE_UNIT_TEXT = "每百万 tokens";
+		/** 单价来源在表格里的说法；`none` 在这里写「无依据」，不用角标的 `—`（那一列不能空着）。 */
+		const RATE_SOURCE_LABELS = {
+			official: "官方",
+			catalog: "官方价",
+			aggregate: "聚合",
+			estimate: "估算",
+			none: "无依据"
+		};
 		function resetTextOf(value) {
 			if (typeof value !== "string" || value === "") return "重置时间 —";
 			const time = new Date(value);
@@ -4382,21 +3129,225 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return "重置于 " + fmtDateTime(time.getTime());
 		}
 		function QuotaTab(props) {
-			const snapshotOf = (provider) => props.quotas.find((item) => item.provider === provider) ?? null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: quota_module_css_default.quotaList,
-				children: [
-					props.channels.map((channel) => {
-						const snapshot = snapshotOf(channel.provider);
+			const instanceId = (0, react.useId)();
+			const pricingInfoId = instanceId + "-pricing-info";
+			const display = useCurrencyDisplay();
+			const [rates, setRates] = (0, react.useState)(null);
+			const [ratesLoading, setRatesLoading] = (0, react.useState)(true);
+			const [fxLoading, setFxLoading] = (0, react.useState)(false);
+			const [fxError, setFxError] = (0, react.useState)(null);
+			const [showExplanation, setShowExplanation] = (0, react.useState)(false);
+			const [showPricingInfo, setShowPricingInfo] = (0, react.useState)(false);
+			const [expandedProviders, setExpandedProviders] = (0, react.useState)({});
+			const [refreshingPrices, setRefreshingPrices] = (0, react.useState)(false);
+			const [refreshElapsedSeconds, setRefreshElapsedSeconds] = (0, react.useState)(0);
+			const [refreshStatus, setRefreshStatus] = (0, react.useState)(null);
+			/**
+			* 取一次汇率：服务端 12 小时内走缓存，所以打开页面与切币种时都可以直接调 —— 真正打上游的只有
+			* 用户点「刷新汇率」（`force`）那一下。失败时保留已有的汇率，只把原因挂在工具条上。
+			*/
+			const fetchFx = (0, react.useCallback)(async (force) => {
+				setFxLoading(true);
+				const result = await loadFxRate(force);
+				setFxLoading(false);
+				if (result === null) {
+					setFxError(failureReasonOf("/dsh-key-usage/fx") ?? "没拿到服务端响应");
+					return;
+				}
+				setFxError(null);
+				const normalized = normalizeFxRate(result);
+				if (normalized === null) setFxError("服务端返回的汇率无法解析");
+				setFxRate(normalized);
+			}, []);
+			(0, react.useEffect)(() => {
+				fetchFx(false);
+			}, [fetchFx]);
+			(0, react.useEffect)(() => {
+				let cancelled = false;
+				setRatesLoading(true);
+				loadRates(30, 20).then((result) => {
+					if (cancelled) return;
+					setRates(result);
+					setRatesLoading(false);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [props.reloadToken]);
+			(0, react.useEffect)(() => {
+				if (!refreshingPrices) return;
+				const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1e3);
+				return () => clearInterval(timer);
+			}, [refreshingPrices]);
+			/**
+			* 切显示币种：只改展示口径，不重新请求任何用量数据（服务端金额按原币种给，折算在客户端做）。
+			* 汇率缺失或已过期时补取一次（服务端有 12 小时缓存，不会每次打上游）。
+			*/
+			const switchCurrency = (next) => {
+				if (next === display.display) return;
+				setDisplayCurrency(next);
+				if (display.fx === null || display.fx.stale) fetchFx(false);
+			};
+			/**
+			* 「刷新价目」：全插件唯一会访问上游拉价目的用户动作（服务端去上游拉 JSON 并写到本机）。
+			* 成功 / 失败都留在界面上（`aria-live` 播报），成功后再让页面重取 `/pricing` 与用量 —— 价目换了一份，
+			* 成本口径整体都变了。
+			*/
+			const refreshPrices = async () => {
+				if (refreshingPrices) return;
+				setRefreshingPrices(true);
+				setRefreshElapsedSeconds(0);
+				setRefreshStatus(null);
+				const outcome = await refreshModelPrices();
+				setRefreshingPrices(false);
+				if (outcome === null) {
+					setRefreshStatus({
+						tone: "bad",
+						text: "刷新失败：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? "没拿到服务端响应")
+					});
+					return;
+				}
+				if (!outcome.ok) {
+					setRefreshStatus({
+						tone: "bad",
+						text: "刷新失败：" + outcome.error
+					});
+					return;
+				}
+				setRefreshStatus({
+					tone: "ok",
+					text: modelPriceRefreshTextOf(outcome)
+				});
+				props.onPricingReload();
+			};
+			const pricing = props.pricing;
+			const aggregate = pricing?.aggregate ?? null;
+			const catalog = pricing?.catalog ?? null;
+			const issues = Array.isArray(pricing?.issues) ? pricing.issues : [];
+			const catalogStale = catalog === null ? null : catalogStaleDays(Array.isArray(catalog.sources) ? catalog.sources : []);
+			const rateChannels = Array.isArray(rates?.channels) ? rates.channels : [];
+			const rateRowsOf = (provider) => {
+				const entry = rateChannels.find((item) => item.provider === provider);
+				return entry === void 0 || !Array.isArray(entry.models) ? [] : entry.models;
+			};
+			const fxText = display.fx === null ? fxError === null ? fxSummaryTextOf(null) : "汇率不可用：" + fxError : fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx);
+			const fxTone = display.fx === null || display.fx.source === "default" ? quota_module_css_default.fxWarn : quota_module_css_default.fxText;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: quota_module_css_default.toolbar,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: quota_module_css_default.toolbarLabel,
+							children: "显示币种"
+						}),
+						DISPLAY_CURRENCIES.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: quota_module_css_default.toolbarBtn + (display.display === currency ? " " + quota_module_css_default.currencyBtnOn : ""),
+							"aria-pressed": display.display === currency,
+							title: "所有金额按 " + (currency === "CNY" ? "人民币" : "美元") + "折算显示",
+							onClick: () => switchCurrency(currency),
+							children: DISPLAY_CURRENCY_LABELS[currency]
+						}, currency)),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: quota_module_css_default.toolbarBtn,
+							disabled: fxLoading,
+							"aria-busy": fxLoading,
+							title: "重新取一次汇率（服务端 12 小时内走缓存）",
+							onClick: () => void fetchFx(true),
+							children: fxLoading ? "取汇率…" : "刷新汇率"
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: quota_module_css_default.toolbarSpacer }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: quota_module_css_default.toolbarBtn + " " + quota_module_css_default.toolbarBtnPrimary,
+							disabled: refreshingPrices,
+							"aria-busy": refreshingPrices,
+							title: "从 LiteLLM 上游拉取最新聚合价目并写到本机：这是插件里唯一会联网拉价目的操作",
+							onClick: () => void refreshPrices(),
+							children: refreshingPrices ? "刷新中…" + (refreshElapsedSeconds > 0 ? "（已 " + String(refreshElapsedSeconds) + " 秒）" : "") : "刷新价目"
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: quota_module_css_default.infoBtn + (showExplanation ? " " + quota_module_css_default.infoBtnActive : ""),
+							"aria-label": "查看成本口径说明",
+							"aria-expanded": showExplanation,
+							title: "来源角标、单价单位、错峰与多币种折算口径",
+							onClick: () => setShowExplanation((previous) => !previous),
+							children: "ⓘ"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: fxTone,
+					title: display.fx?.note ?? void 0,
+					children: fxText
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: quota_module_css_default.pricingInfo,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: quota_module_css_default.pricingInfoToggle,
+						"aria-expanded": showPricingInfo,
+						"aria-controls": pricingInfoId,
+						onClick: () => setShowPricingInfo((previous) => !previous),
+						children: [
+							showPricingInfo ? "▾" : "▸",
+							" 价目数据来源与文件（内置厂商官方价目",
+							catalog !== null && Number.isFinite(catalog.entries) ? " " + String(catalog.entries) + " 条" : "",
+							" · LiteLLM 聚合价目）"
+						]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						id: pricingInfoId,
+						className: quota_module_css_default.pricingInfoBody,
+						hidden: !showPricingInfo,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PricingInfoBlock, {
+							pricing,
+							aggregate,
+							issues,
+							catalogStale
+						})
+					})]
+				}),
+				catalogStale !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: quota_module_css_default.staleLine,
+					children: [
+						"价目最新一次抓取距今 ",
+						String(catalogStale),
+						" 天，建议按官方文档复核价目（价目是静态数据，厂商调价后要人工更新）。"
+					]
+				}),
+				showExplanation && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ExplanationBlock, {}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: pricing_module_css_default.aggregateStatus + (refreshStatus === null ? "" : " " + (refreshStatus.tone === "ok" ? pricing_module_css_default.aggregateStatusOk : pricing_module_css_default.aggregateStatusBad)),
+					role: "status",
+					"aria-live": "polite",
+					children: refreshStatus === null ? "" : refreshStatus.text
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: quota_module_css_default.quotaList,
+					children: [props.channels.map((channel, index) => {
+						const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null;
 						const balance = snapshot?.balance ?? null;
 						const plan = snapshot?.plan ?? null;
 						const isLive = snapshot?.source === "live";
 						const windows = plan !== null && Array.isArray(plan.windows) ? plan.windows : null;
+						const rateRows = rateRowsOf(channel.provider);
+						const isOpen = expandedProviders[channel.provider] === true;
+						const drawerId = instanceId + "-rates-" + String(index);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: quota_module_css_default.quotaCard,
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: quota_module_css_default.quotaHead,
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: quota_module_css_default.quotaToggle,
+									"aria-expanded": isOpen,
+									"aria-controls": drawerId,
+									title: isOpen ? "收起单价表" : "展开看这条通道近 30 天用到的模型单价",
+									onClick: () => setExpandedProviders((previous) => ({
+										...previous,
+										[channel.provider]: previous[channel.provider] !== true
+									})),
 									children: [
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: shared_module_css_default.statusDot,
@@ -4410,6 +3361,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											className: quota_module_css_default.liveChip,
 											children: "实时"
 										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: quota_module_css_default.rateCount,
+											children: rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))
+										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: quota_module_css_default.quotaProvider,
 											children: [
@@ -4417,6 +3372,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												" · ",
 												channel.costLabel
 											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: quota_module_css_default.expandArrow,
+											"aria-hidden": "true",
+											children: isOpen ? "▼" : "▶"
 										})
 									]
 								}),
@@ -4486,22 +3446,375 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										"）",
 										snapshot.updatedAt === null ? "，且暂无可用快照 —— 点右上角「刷新」重试" : "，显示快照 · 快照时间 " + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? "，已 " + staleDaysOf(snapshot.updatedAt) + " 天未更新" : "")
 									]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									id: drawerId,
+									className: quota_module_css_default.rateDrawer,
+									children: isOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateTable, {
+										rows: rateRows,
+										loading: ratesLoading,
+										failureText: rates === null ? failureReasonOf("/dsh-key-usage/rates") ?? "没拿到服务端响应" : null,
+										display: display.display,
+										convertedHint: display.fx === null ? null : fxSummaryTextOf(display.fx),
+										range: rates !== null && typeof rates.from === "string" && typeof rates.to === "string" ? {
+											from: rates.from,
+											to: rates.to
+										} : null
+									})
 								})
 							]
 						}, channel.provider);
-					}),
-					props.channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					}), props.channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.empty,
 						children: "未读取到通道配置"
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PricingRulesPanel, {
-						pricing: props.pricing,
-						channels: props.channels,
-						models: props.models,
-						onSaved: props.onPricingReload
-					})
-				]
+					})]
+				})
+			] });
+		}
+		/**
+		* 通道卡片头部的单价摘要：收起状态也要能看出「有多少个模型、来源压在哪一层」。
+		*/
+		function rateCountTextOf(rows, loading, failed, failureText) {
+			if (rows.length > 0) {
+				const counts = /* @__PURE__ */ new Map();
+				for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1);
+				const mix = [...counts.entries()].map(([source, count]) => (RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
+				return String(rows.length) + " 个模型单价 · " + mix;
+			}
+			if (loading) return "读取单价…";
+			if (failed) return failureText === null ? "单价表不可用" : "单价表不可用：" + failureText;
+			return "近 30 天无用量";
+		}
+		/**
+		* 单价表：模型 · 四档单价 · 来源 · 近 30 天 tokens。
+		* `rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。
+		*/
+		function RateTable(props) {
+			if (props.rows.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: quota_module_css_default.rateEmpty,
+				children: props.loading ? "正在读取单价…" : props.failureText !== null ? "单价表不可用：" + props.failureText : "近 30 天没有这条通道的模型用量，列不出单价。"
 			});
+			const converted = props.rows.some((row) => convertsCurrencyOf(row.currency));
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: quota_module_css_default.rateHead,
+				children: [
+					"单价（",
+					RATE_UNIT_TEXT,
+					"）· 显示币种 ",
+					DISPLAY_CURRENCY_LABELS[props.display],
+					converted && props.convertedHint !== null ? "（≈ 为折算值：" + props.convertedHint + "）" : "",
+					props.range === null ? "" : " · 统计区间 " + props.range.from + " ~ " + props.range.to
+				]
+			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: quota_module_css_default.rateScroll,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+					className: quota_module_css_default.rateTable,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "来源" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天 tokens" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "说明" })
+					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: props.rows.map((row) => {
+						const rates = row.rates;
+						const hasRates = rates !== null && typeof rates === "object";
+						const rowConverted = convertsCurrencyOf(row.currency);
+						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: quota_module_css_default.rateModel,
+									children: row.model
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: quota_module_css_default.rateConverted,
+									children: [
+										"币种 ",
+										typeof row.currency === "string" && row.currency !== "" ? row.currency : "—",
+										rowConverted ? " → " + props.display : ""
+									]
+								}),
+								row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: quota_module_css_default.offPeakChip,
+									children: "错峰中"
+								})
+							] }),
+							hasRates ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.input) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheRead) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheWrite) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.output) })
+							] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+								className: quota_module_css_default.rateEmpty,
+								colSpan: 4,
+								children: row.note !== null && row.note !== "" ? row.note : noRateTextOf(row.source)
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: quota_module_css_default.rateSourceNone,
+								title: costSourceHintOf("none", row.partial),
+								children: "无依据"
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								source: row.source,
+								partial: row.partial
+							}) }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(typeof row.tokens === "number" && Number.isFinite(row.tokens) ? row.tokens : 0) }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+								className: quota_module_css_default.rateNote,
+								children: row.note !== null && row.note !== "" ? row.note : "—"
+							})
+						] }, row.model);
+					}) })]
+				})
+			})] });
+		}
+		/** 单价单元格：按显示币种折算（`≈` 表示折算值），小值保留 4 位小数避免显示成 0.00。 */
+		function rateCellText(currency, value) {
+			return rateTextOf(currency, typeof value === "number" && Number.isFinite(value) ? value : 0).text;
+		}
+		/** `rates` 为 null 时的整段说明：按来源讲清为什么没有四档单价。 */
+		function noRateTextOf(source) {
+			return COST_SOURCE_HINTS[source] ?? "没有四档单价";
+		}
+		/** 价目信息块：内置官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
+		function PricingInfoBlock(props) {
+			const { pricing, aggregate } = props;
+			const catalog = pricing?.catalog ?? null;
+			const sources = Array.isArray(catalog?.sources) ? catalog.sources : [];
+			const issues = props.issues ?? [];
+			const shownIssues = issues.slice(0, ISSUE_LIMIT);
+			const coverage = pricing?.coverage ?? null;
+			const files = pricing?.files ?? null;
+			const coverageText = coverageTextOf(coverage);
+			const aggregateIssues = (Array.isArray(aggregate?.issues) ? aggregate.issues : []).filter((issue) => issue !== null && typeof issue === "object");
+			const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt);
+			const pathText = typeof aggregate?.path === "string" && aggregate.path !== "" ? aggregate.path : null;
+			const commitFull = typeof aggregate?.upstreamCommit === "string" && aggregate.upstreamCommit.trim() !== "" ? aggregate.upstreamCommit.trim() : null;
+			const commitShort = commitFull === null ? null : shortCommitOf(commitFull);
+			const licenseText = typeof aggregate?.license === "string" && aggregate.license.trim() !== "" ? aggregate.license : "MIT";
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				coverageText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: quota_module_css_default.countLine,
+					children: coverageText
+				}),
+				catalog !== null && Number.isFinite(catalog.entries) && catalog.entries > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: pricing_module_css_default.catalogNote + (props.catalogStale === null ? "" : " " + pricing_module_css_default.catalogStale),
+					children: [
+						"已内置 ",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
+						" 条厂商官方价目，",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自动生效，不需要你维护" }),
+						"。来源：",
+						sources.length === 0 ? "服务端没返回来源明细" : sources.map((entry, index) => {
+							const daysAgo = fetchedDaysAgo(entry.fetchedAt);
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+								index > 0 && "；",
+								typeof entry.source === "string" && entry.source !== "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+									className: pricing_module_css_default.linkBtn,
+									href: entry.source,
+									target: "_blank",
+									rel: "noreferrer",
+									children: (entry.providers ?? []).join(" / ")
+								}) : (entry.providers ?? []).join(" / "),
+								"（",
+								String(entry.count),
+								" 条，",
+								entry.fetchedAt,
+								" 抓取",
+								daysAgo === null ? "" : "，距今 " + String(daysAgo) + " 天",
+								"）"
+							] }, entry.source);
+						})
+					]
+				}),
+				files !== null && files.catalog !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: pricing_module_css_default.fileLine,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+						"内置价目文件 ",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+							className: pricing_module_css_default.pathText,
+							children: files.catalog.path
+						}),
+						files.catalog.exists ? "（" + String(files.catalog.entries) + " 条）" : "（读不到，成本会少一层依据）"
+					] })
+				}),
+				issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: pricing_module_css_default.issueBlock,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: pricing_module_css_default.issueHead,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处价目解析问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: pricing_module_css_default.issueNote,
+								children: "—— 这些问题所在的条目已被跳过，成本按其余层与台账算"
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+							className: pricing_module_css_default.issueList,
+							children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: pricing_module_css_default.issueWhere,
+								children: ["内置价目", issue.line === null ? "" : " 第 " + String(issue.line) + " 行"]
+							}), issue.message] }, String(issue.file) + "|" + String(issue.line) + "|" + String(index)))
+						}),
+						issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: pricing_module_css_default.issueNote,
+							children: [
+								"还有 ",
+								String(issues.length - ISSUE_LIMIT),
+								" 条同类问题已折叠。"
+							]
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: pricing_module_css_default.aggregateBlock,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: pricing_module_css_default.aggregateHead,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: pricing_module_css_default.aggregateTitle,
+								children: [
+									"聚合价目来源：",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+										className: pricing_module_css_default.linkBtn,
+										href: LITELLM_REPO_URL,
+										target: "_blank",
+										rel: "noreferrer",
+										children: "LiteLLM"
+									}),
+									"（",
+									licenseText,
+									"，第三方聚合价目，美元计价；优先级低于内置官方价目）"
+								]
+							})
+						}),
+						aggregate === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: pricing_module_css_default.aggregateMeta,
+							children: pricing === null ? "正在读取服务端价目信息…" : "服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。"
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: pricing_module_css_default.aggregateMeta,
+							children: [
+								"当前装载：",
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: aggregateLoadedLabelOf(aggregate.loaded) }),
+								Number.isFinite(aggregate.entries) ? "　条目 " + String(aggregate.entries) : "",
+								Number.isFinite(aggregate.models) ? "　模型 " + String(aggregate.models) : "",
+								fetchedAtText === null ? "" : "　文件时间 " + fetchedAtText,
+								commitShort === null ? "" : "　upstream " + commitShort
+							]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: pricing_module_css_default.aggregateMeta,
+							children: [
+								"平时不联网：",
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "只有你点「刷新价目」时" }),
+								"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。",
+								pathText === null ? "" : "　当前文件：" + pathText
+							]
+						})] }),
+						aggregateIssues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: pricing_module_css_default.issueBlock,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.issueHead,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(aggregateIssues.length), " 处聚合价目装载问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: pricing_module_css_default.issueNote,
+									children: "—— 只影响聚合价目这一层的条目"
+								})]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+								className: pricing_module_css_default.issueList,
+								children: aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: pricing_module_css_default.issueWhere,
+									children: issue.kind
+								}), issue.message] }, issue.kind + "|" + String(index)))
+							})]
+						})
+					]
+				})
+			] });
+		}
+		/**
+		* 覆盖度一行：官方账单覆盖多少天 + 三层价目各命中多少个模型 + 台账兜底与无依据的模型数。
+		* 字段全是可选的（服务端换口径时不至于渲染出 undefined），一个数字都没有就整段省略。
+		*/
+		function coverageTextOf(coverage) {
+			if (coverage === null) return null;
+			const days = coverage.from === void 0 || coverage.to === void 0 ? null : daysBetween(coverage.from, coverage.to);
+			const parts = [];
+			if (days !== null) parts.push("官方账单 " + String(days) + " 天");
+			const counts = [
+				["官方价", coverage.catalogModels],
+				["聚合", coverage.aggregateModels],
+				["估算", coverage.averagedModels],
+				["无依据", coverage.unpricedModels]
+			];
+			for (const [label, value] of counts) if (typeof value === "number" && Number.isFinite(value)) parts.push(label + " " + String(value) + " 个模型");
+			if (typeof coverage.partialModels === "number" && coverage.partialModels > 0) parts.push("其中部分 " + String(coverage.partialModels) + " 个");
+			if (parts.length === 0) return null;
+			return "近 30 天这一格钱的依据：" + parts.join(" · ") + "（三层价目自动生效，不需要你填价格）";
+		}
+		/** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
+		function daysBetween(from, to) {
+			const start = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
+			const end = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
+			if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
+			return Math.round((end - start) / 864e5) + 1;
+		}
+		/** 成本口径说明：默认不占正文，点 ⓘ 才出现。只讲「这一格钱是怎么来的」。 */
+		function ExplanationBlock() {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: pricing_module_css_default.explanation,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: pricing_module_css_default.explanationTitle,
+					children: "成本口径（三层价目自动生效，不需要你填任何价格）"
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
+					className: pricing_module_css_default.explanationList,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方" }), "：台账记录的厂商账单金额，是既成事实，不会被价目覆盖。"] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
+							"：按插件",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "内置的厂商官方价目" }),
+							"算出（随包发布、自动生效）；匹配只做精确 / 忽略大小写 / 去 ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "vendor/" }),
+							" 前缀，不做模糊匹配。展开通道卡片可以看到逐模型单价与来源。"
+						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
+							"：按 ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "LiteLLM 聚合价目" }),
+							"算出（第三方维护、美元计价）；点「刷新价目」才联网更新，失败不影响已装载的那一份。条目缺缓存写入价时标「部分」：那一档按未命中价计。"
+						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }), "：三层价目都没命中时，按台账反推的均价推算，仅供参照，不是账单。"] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：连台账均价都没有，这一格没有价格依据。"] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "取值顺序：官方账单 > 内置官方价目 > 聚合价目 > 台账均价，每一格按这个顺序取第一个可用的来源。" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							"单价按每百万 tokens 记；错峰由服务端按",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "本地时间" }),
+							"判定，处于错峰时段时单价表里标「错峰中」。"
+						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							"多币种与折算：价目各按文档原币种记录（CNY / USD），显示时按当前汇率",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "逐币种折算后相加" }),
+							"，折算值前缀 ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "≈" }),
+							"；原币种与显示币种相同时不加标记。汇率来源与时间见工具条。"
+						] })
+					]
+				})]
+			});
+		}
+		/**
+		* 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
+		* 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」。
+		*/
+		function modelPriceRefreshTextOf(result) {
+			const parts = [];
+			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + " 条价目");
+			const megabytes = megabytesTextOf(result.bytes);
+			if (megabytes !== null) parts.push(megabytes);
+			const host = hostOf(result.url);
+			if (host !== null) parts.push("来源 " + host);
+			const time = localTimeTextOf(result.fetchedAt);
+			if (time !== null) parts.push(time);
+			return "已更新：" + (parts.length === 0 ? "服务端没返回明细，已按新价目重算" : parts.join(" · "));
 		}
 		/** 实时结果的相对时间文案。 */
 		function freshTextOf(fetchedAt) {
@@ -4644,7 +3957,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function SessionDetailBody(props) {
 			const session = props.session;
 			const channel = channelOf(props.channels, session.provider);
-			const costCell = costCellText(channel, session.cost ?? 0);
+			const costCell = costCellOf(channel, session);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.detailGrid,
@@ -4730,11 +4043,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: costCell.dim ? shared_module_css_default.dim : void 0,
 									children: costCell.text
 								}),
-								showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 									source: session.costSource,
 									partial: session.partial
 								}),
-								showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.detailCostHint,
 									children: costSourceHintOf(session.costSource, session.partial)
 								})
@@ -4742,7 +4055,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						!props.priced && session.cost === null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.statExtra,
-							children: "台账里没有成本数据，也没有命中计费规则，暂时只能显示「—」"
+							children: "台账里没有成本数据，三层价目也都没命中，暂时只能显示「—」"
 						})
 					]
 				}),
@@ -4775,7 +4088,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: session.models.map((model) => {
-							const modelCostCell = costCellText(channelOf(props.channels, model.provider), model.cost ?? 0);
+							const modelCostCell = costCellOf(channelOf(props.channels, model.provider), model);
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: lists_module_css_default.listMain,
@@ -4802,7 +4115,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									model.sharePercent,
 									"%"
 								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: model.cost === null || !showsAmount(modelCostCell) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: model.cost === null || !modelCostCell.amount ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: modelCostCell.text
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [modelCostCell.text, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
@@ -4949,7 +4262,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cost",
-				label: "成本(元)",
+				label: "成本(原币种合计)",
 				value: (row) => row.cost
 			},
 			{
@@ -5252,7 +4565,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
-					children: ["会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按台账模型均价估算", props.data.priced ? "" : "（台账无成本数据，暂不可估）"]
+					children: ["会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算", props.data.priced ? "" : "（台账无成本数据，暂不可估）"]
 				}),
 				detailId !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionDetailDrawer, {
 					sessionId: detailId,
@@ -5264,7 +4577,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		function sessionRowOf(row, options) {
 			const channel = channelOf(options.channels, row.provider);
-			const costCell = costCellText(channel, row.cost ?? 0);
+			const costCell = costCellOf(channel, row);
 			const isOpen = options.expandedIds[row.id] === true;
 			const workspace = row.workspace;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
@@ -5345,7 +4658,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: row.cost === null || channel === null || channel.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: shared_module_css_default.dim,
 							children: costCell.text
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 							source: row.costSource,
 							partial: row.partial
 						})] })
@@ -5412,7 +4725,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: modelCost === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: "—"
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [fmtCost(modelCost), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [moneyTotalsTextOf(model), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 									source: model.costSource,
 									partial: model.partial,
 									compact: true
@@ -5431,7 +4744,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: costSourceHintOf(source, row.partial) }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 					label: "金额",
-					amount: row.cost === null ? "—" : fmtCost(row.cost),
+					amount: row.cost === null ? "—" : moneyTotalsTextOf(row),
 					rate: COST_SOURCE_LABELS[source]
 				})
 			] });
@@ -5491,11 +4804,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [available, setAvailable] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(false);
 			/**
-			* 计费规则版本号：规则写进 YAML 后成本要整体重算，所有按成本展示的数据都得重取。
-			* 规则只从面板保存（POST /pricing/rules）这一个入口变，所以用一个自增计数当失效信号即可。
+			* 价目版本号：价目换了一份（点「刷新价目」）成本要整体重算，所有按成本展示的数据都得重取。
+			* 价目只从「刷新价目」这一个入口变，所以用一个自增计数当失效信号即可。
 			*/
 			const [pricingRevision, setPricingRevision] = (0, react.useState)(0);
 			const tooltip = useTooltip();
+			/** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
+			const currency = useCurrencyDisplay();
 			const reload = (0, react.useCallback)(async (includeSessionData, forceQuota = false) => {
 				setLoading(true);
 				const quotaResult = await loadQuota(forceQuota);
@@ -5535,7 +4850,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			(0, react.useEffect)(() => {
 				if (activeTab === "sessions" && sessions === null) loadSessions().then(setSessions);
 				if (activeTab === "projects" && projects === null) loadProjects().then(setProjects);
-				if ((activeTab === "models" || activeTab === "quota") && models === null) loadModels().then(setModels);
+				if (activeTab === "models" && models === null) loadModels().then(setModels);
 			}, [
 				activeTab,
 				sessions,
@@ -5683,7 +4998,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						channels,
 						quotas,
 						pricing,
-						models,
+						reloadToken: pricingRevision,
 						onPricingReload: () => setPricingRevision((previous) => previous + 1)
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -5701,21 +5016,32 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。" }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-									"成本来源与优先级见「余额与配额」页计费面板的 ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "成本口径" }),
-									"（ⓘ）：角标分 ",
+									"成本三层自动生效，",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "不需要你填任何价格" }),
+									"：厂商账单（台账）> 内置厂商官方价目 > LiteLLM 聚合价目 > 台账反推均价兜底； 角标分 ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方" }),
-									" / ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自定" }),
 									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
 									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
 									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }),
-									"， 没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。 「聚合」是随包内置的 LiteLLM 聚合价目（第三方、美元），只有点面板上的「刷新价目」才会联网更新，平时完全离线。"
+									"，没有价格依据时显示 —。 逐模型单价与来源在「余额与配额」页",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "展开通道卡片" }),
+									"查看，「聚合」只有点「刷新价目」才会联网更新，平时完全离线。"
 								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。" })
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+									"金额按当前显示币种折算（工具条可切 ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "¥ RMB" }),
+									" / ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "$ USD" }),
+									"）：换算是把逐币种小计各自折成显示币种后再相加， 折算值前缀 ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "≈" }),
+									"；当前 ",
+									currency.fx === null ? "还没取到汇率，跨币种金额按原币种显示" : fxSummaryTextOf(currency.fx),
+									"。"
+								] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "余额与订阅窗口实时查询官方接口（失败回落本机快照），按官方原值 + 币种原样展示（余额不折算、不给建议）；成本金额按上面的显示币种折算。" })
 							]
 						})]
 					}),
@@ -5765,8 +5091,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* - `sidebar.panellist`：宿主自持整行（标签 / hover / active），插件只提供图标，`id` 是面板标识；
 		* - `main`：同一标识放在 `key` 上，宿主在主内容区按它渲染整页 —— 因此不是弹窗、也不占设置页。
 		*
-		* 计费规则以用户 YAML 文件为唯一事实来源：客户端只经 `/pricing` 读、经 `POST /pricing/rules` 写，
-		* 宿主的设置服务链路（配置表单 + 插件页配置卡片）已随该方案整条退役。
+		* 计费不需要用户配置：价格由服务端的三层价目（内置官方价目 / LiteLLM 聚合价目 / 台账反推均价）自动决定，
+		* 客户端只经 `/pricing`、`/rates`、`/fx` 读；宿主的设置服务链路（配置表单 + 插件页配置卡片）已整条退役。
 		*/
 		const NS = "dsh-key-usage";
 		/** 侧边栏条目与 main 页面共用的面板标识（宿主 MainPanelId 域，命名空间化避免撞车）。 */

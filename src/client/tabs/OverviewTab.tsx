@@ -1,6 +1,6 @@
 /** 总览：Key 清单表（原型列结构）+ 年度热力图。 */
 import type { ReactNode } from 'react'
-import { costCellText, showsAmount, statusColorOf } from '../channels.ts'
+import { costCellOf, statusColorOf } from '../channels.ts'
 import { fmtCalls, fmtTokens } from '../format.ts'
 import type { Channel, HeatmapDay, QuotaProvider, SummaryResponse } from '../types.ts'
 import type { TooltipApi } from '../tooltip.tsx'
@@ -32,8 +32,7 @@ export function OverviewTab(props: {
             const row = summary?.channels.find((item) => item.provider === channel.provider) ?? null
             const todayTokens = row === null ? 0 : row.today.tokens
             const monthTokens = row === null ? 0 : row.month.tokens
-            const monthCost = row === null ? 0 : row.month.cost
-            const costCell = costCellText(channel, monthCost)
+            const costCell = costCellOf(channel, row?.month ?? {})
             const disabled = channel.status === 'off'
             return (
               <tr
@@ -51,7 +50,7 @@ export function OverviewTab(props: {
                 <td>{todayTokens > 0 ? fmtTokens(todayTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
-                <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row?.month.costSource} partial={row?.month.partial} />}</>}</td>
+                <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{costCell.amount && <CostSourceChip source={row?.month.costSource} partial={row?.month.partial} />}</>}</td>
                 <td>{disabled ? null : <span className={overviewStyles.rowLink}>明细 →</span>}</td>
               </tr>
             )

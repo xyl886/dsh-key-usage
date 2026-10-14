@@ -4,7 +4,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react'
 import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts'
-import { channelOf, costCellText, displayNameOf, showsAmount } from '../channels.ts'
+import { channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
 import { costSourceHintOf } from '../pricing.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
@@ -85,7 +85,7 @@ export function SessionDetailDrawer(props: {
 function SessionDetailBody(props: { session: SessionDetail; channels: Channel[]; priced: boolean }): ReactNode {
   const session = props.session
   const channel = channelOf(props.channels, session.provider)
-  const costCell = costCellText(channel, session.cost ?? 0)
+  const costCell = costCellOf(channel, session)
   return (
     <div>
       <div className={listStyles.detailGrid}>
@@ -115,12 +115,12 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
         <div className={listStyles.detailBlockTitle}>成本</div>
         <div className={listStyles.detailCost}>
           <span className={costCell.dim ? styles.dim : undefined}>{costCell.text}</span>
-          {showsAmount(costCell) && <CostSourceChip source={session.costSource} partial={session.partial} />}
+          {costCell.amount && <CostSourceChip source={session.costSource} partial={session.partial} />}
           {/* 「订阅内 / 无计费 / —」不是金额，这时再解释来源只会误导 */}
-          {showsAmount(costCell) && <span className={listStyles.detailCostHint}>{costSourceHintOf(session.costSource, session.partial)}</span>}
+          {costCell.amount && <span className={listStyles.detailCostHint}>{costSourceHintOf(session.costSource, session.partial)}</span>}
         </div>
-        {/* 有计费规则时 `priced` 仍可能是 false（它指「台账里有可反推的均价」），所以只在真的没金额时说明 */}
-        {!props.priced && session.cost === null && <div className={styles.statExtra}>台账里没有成本数据，也没有命中计费规则，暂时只能显示「—」</div>}
+        {/* `priced` 指「台账里有可反推的均价」，所以只在真的没金额时说明 */}
+        {!props.priced && session.cost === null && <div className={styles.statExtra}>台账里没有成本数据，三层价目也都没命中，暂时只能显示「—」</div>}
       </div>
 
       <div className={listStyles.detailBlock}>
@@ -141,7 +141,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
               </thead>
               <tbody>
                 {session.models.map((model) => {
-                  const modelCostCell = costCellText(channelOf(props.channels, model.provider), model.cost ?? 0)
+                  const modelCostCell = costCellOf(channelOf(props.channels, model.provider), model)
                   return (
                     <tr key={model.provider + '|' + model.model}>
                       <td>
@@ -155,7 +155,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                         </span> {model.sharePercent}%
                       </td>
                       <td>
-                        {model.cost === null || !showsAmount(modelCostCell)
+                        {model.cost === null || !modelCostCell.amount
                           ? <span className={styles.dim}>{modelCostCell.text}</span>
                           : <>{modelCostCell.text}<CostSourceChip source={model.costSource} partial={model.partial} /></>}
                       </td>

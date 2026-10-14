@@ -1,19 +1,29 @@
-/* 余额与配额：通道卡片、余额条、订阅窗口。 */
+/* 余额与配额：工具条（显示币种 / 刷新汇率 / 刷新价目）、通道卡片、余额条、订阅窗口、可展开的单价表。 */
 .quotaList { display: flex; flex-direction: column; gap: 12px; }
-.quotaCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 16px 18px; }
-.quotaHead { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.quotaCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 12px 18px 16px; }
+
+/* 卡片头部是真按钮：整行可点、键盘可展开（aria-expanded / aria-controls 指到下面的单价抽屉） */
+.quotaToggle {
+  display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap;
+  background: none; border: 0; padding: 4px 0; margin: 0; font: inherit; text-align: left; cursor: pointer;
+  color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 8px;
+}
+.quotaToggle:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
+.quotaToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
 .quotaTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.quotaEnv { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 8px; }
 .quotaProvider { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-left: auto; }
+/* 折叠提示：收起时告诉用户「这里有 N 个模型的单价」 */
+.rateCount { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: nowrap; }
+.expandArrow { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10px; }
 /* 「实时」小标签：与快照来源区分开，避免用户以为还是 12 天前的旧数据 */
 .liveChip {
   border: 1px solid var(--dsw-alias-state-success-primary, #3fb950); color: var(--dsw-alias-state-success-primary, #3fb950);
   border-radius: 999px; padding: 1px 7px; font-size: 10px; line-height: 1.6;
 }
-.balanceStrip { display: flex; gap: 10px 44px; flex-wrap: wrap; align-items: baseline; }
+.balanceStrip { display: flex; gap: 10px 44px; flex-wrap: wrap; align-items: baseline; margin-top: 8px; }
 .balanceItem .bsLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 2px; }
 .balanceItem .bsValue { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.windowRow { display: flex; gap: 18px; flex-wrap: wrap; }
+.windowRow { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
 .windowItem { flex: 1; min-width: 150px; }
 .windowHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
 .windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; }
@@ -23,3 +33,78 @@
 .windowBar > i { display: block; height: 100%; border-radius: 4px; }
 .snapshotHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 10px; }
 .snapshotStale { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 10.5px; margin-top: 10px; }
+
+/* ===== 工具条：显示币种 / 汇率 / 刷新价目 / 成本口径 ===== */
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.toolbarLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.toolbarBtn {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  border-radius: 6px; padding: 4px 11px; font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.toolbarBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.toolbarBtn:disabled { opacity: .5; cursor: default; }
+.toolbarBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.toolbarBtnPrimary { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+/* 币种切换：选中态要一眼看出来（边框 + 主色 + 实底），不能只靠颜色深浅 */
+.currencyBtnOn {
+  border-color: var(--dsw-alias-state-accent-primary, #5b8cff);
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+  background: var(--dsw-alias-interactive-bg-active, rgba(91,140,255,.14));
+  font-weight: 600;
+}
+.toolbarSpacer { flex: 1; }
+.fxText { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
+.fxWarn { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 10.5px; }
+.infoBtn {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
+  color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+}
+.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
+.infoBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+
+/* 价目信息块：默认折叠，只留一行摘要 */
+.pricingInfo { margin-bottom: 12px; }
+.pricingInfoToggle {
+  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px;
+  cursor: pointer; padding: 2px 0;
+}
+.pricingInfoToggle:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.pricingInfoToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.pricingInfoBody {
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+  padding: 4px 14px 12px; margin-top: 6px;
+}
+.countLine { color: var(--dsw-alias-label-secondary, #9a9aa2); font-size: 11.5px; line-height: 1.8; margin: 6px 0; }
+.staleLine { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 11.5px; line-height: 1.7; margin: 6px 0; }
+
+/* ===== 展开区：单价表（窄屏横向滚动，不撑破卡片）===== */
+.rateDrawer:empty { display: none; }
+.rateDrawer { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); padding-top: 10px; }
+.rateScroll { overflow-x: auto; }
+.rateHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; line-height: 1.7; margin-bottom: 6px; }
+.rateTable { width: 100%; border-collapse: collapse; }
+.rateTable th {
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+  padding: 4px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+}
+.rateTable td {
+  text-align: right; padding: 6px 8px; font-size: 11.5px; font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+  white-space: nowrap;
+}
+.rateTable th:first-child, .rateTable td:first-child { text-align: left; }
+.rateTable td:first-child { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.rateModel { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+.rateNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: normal; max-width: 320px; text-align: left; }
+
+.rateSourceNone {
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
+  border: 1px dashed currentColor; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap;
+}
+.offPeakChip {
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
+  border: 1px solid var(--dsw-alias-state-success-primary, #3fb96f); color: var(--dsw-alias-state-success-primary, #3fb96f);
+}
+.rateConverted { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10px; }
+.rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; padding: 6px 0; }

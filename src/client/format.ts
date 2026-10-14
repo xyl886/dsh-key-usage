@@ -18,10 +18,6 @@ export function fmtTokens(count: number): string {
   return String(count)
 }
 
-export function fmtCost(amount: number): string {
-  return '¥' + amount.toFixed(2)
-}
-
 export function fmtCalls(count: number): string {
   return count.toLocaleString('en-US').replace(/,/g, ' ')
 }
@@ -45,6 +41,14 @@ export function fmtTime(timeMs: number | null): string {
   if (timeMs === null) return '—'
   const date = new Date(timeMs)
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+/** ISO 时间戳 → 本地 `YYYY-MM-DD HH:mm`；解析不出来返回 null（ISO 之外的写法一律不猜）。 */
+export function localTimeTextOf(timestamp: unknown): string | null {
+  if (typeof timestamp !== 'string' || timestamp.trim() === '') return null
+  const parsed = new Date(timestamp)
+  if (Number.isNaN(parsed.getTime())) return null
+  return fmtDateTime(parsed.getTime())
 }
 
 /** 时长（毫秒）→ `2h 15m` / `43m` / `—`。 */

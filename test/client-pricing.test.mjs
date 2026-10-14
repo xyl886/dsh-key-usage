@@ -1,17 +1,13 @@
 /**
- * 客户端计费规则视图模型测试：
- * - 表单只编辑五类字段：提交体**不含** unit / offPeak / note（`submittableRuleOf`），
- *   服务端按 `provider|model` 从文件旧值继承（`mergeRulesForWrite`）—— 保存不会清空用户数据；
- * - 列表的「含错峰窗口 / 含单位设置 —— 只在 YAML 里编辑」提示（`ruleExtrasTextOf`）；
- * - 模板 / 片段 / 提示词文本生成，且生成的 YAML 必须能被服务端受限解析器读回（往返校验）；
- * - 内置价目匹配口径（精确 → 忽略大小写 → 去 `vendor/` 前缀 → 该通道通配）。
+ * 客户端计费展示工具测试（服务端契约对齐）：
+ * - 成本来源角标的文案：`CostSource` 的每一档都要有中文标签与悬浮说明（漏一档界面会出现 undefined）；
+ * - `partial` 标记只补口径说明，不当成错误；
+ * - 聚合价装载信息与内置价目新鲜度的展示工具（MB / host / 短 commit / 抓取天数 / 过期阈值）。
  *
  * 用 Node 的类型擦除直接加载 `src/client/pricing.ts`（Node ≥ 22.18 默认开启）：该模块没有 import，是纯函数。
- * 运行：node test/client-pricing.test.mjs（依赖 lib/yaml-lite.js 与 lib/pricing-store.js，改 src 后要先 build）
+ * 运行：node test/client-pricing.test.mjs
  */
 import assert from 'node:assert/strict'
-import { mergeRulesForWrite } from '../lib/pricing-store.js'
-import { parseYamlLite, yamlField, yamlItems, yamlNumber, yamlText } from '../lib/yaml-lite.js'
 
 let clientPricing = null
 try {
@@ -27,232 +23,106 @@ try {
 
 if (clientPricing !== null) {
   const {
-    DEFAULT_UNIT, blankRule, buildAgentPrompt, buildRuleSnippetYaml, buildRulesTemplateYaml,
-    catalogRuleFor, ruleExtrasTextOf, ruleProblemOf, submittableRuleOf,
+    AGGREGATE_LOADED_LABELS,
+    CATALOG_STALE_DAYS,
+    COST_SOURCE_HINTS,
+    COST_SOURCE_LABELS,
+    LITELLM_REPO_URL,
+    PARTIAL_PRICE_HINT,
+    aggregateLoadedLabelOf,
+    catalogStaleDays,
+    costSourceHintOf,
+    fetchedDaysAgo,
+    hostOf,
+    megabytesTextOf,
+    shortCommitOf,
   } = clientPricing
 
-  /** 造一条规则：只写关心的字段。 */
-  const rule = (overrides) => ({
-    provider: 'p', model: 'm', unit: DEFAULT_UNIT, currency: 'CNY',
-    input: 1, cacheRead: 0, cacheWrite: 0, output: 2, offPeak: null, note: '', ...overrides,
-  })
-
-  const deepseekOffPeak = {
-    windows: [
-      { from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] },
-      { from: '12:00', to: '14:00', days: [1, 2, 3, 4, 5] },
-      { from: '18:00', to: '00:00', days: [1, 2, 3, 4, 5] },
-      { from: '00:00', to: '00:00', days: [6, 7] },
-    ],
-    input: 1, cacheRead: 0.02, cacheWrite: 1, output: 4,
-  }
-
-  // 与 /pricing 的 catalog 同形：sources 给来源，rules 给逐条数值
-  const catalog = {
-    entries: 3,
-    sources: [
-      { source: 'https://api-docs.deepseek.com/zh-cn/quick_start/pricing', fetchedAt: '2026-10-13', providers: ['deepseek-official'], count: 1 },
-      { source: 'https://docs.z.ai/guides/overview/pricing', fetchedAt: '2026-10-13', providers: ['zai'], count: 2 },
-    ],
-    rules: [
-      rule({ provider: 'deepseek-official', model: 'deepseek-flash', input: 2, cacheRead: 0.04, cacheWrite: 2, output: 8, offPeak: deepseekOffPeak }),
-      rule({ provider: 'zai', model: 'glm-5.3', currency: 'USD', input: 1.4, cacheRead: 0.26, cacheWrite: 0, output: 4.4 }),
-      rule({ provider: 'zai', model: 'glm-5.3-flash', currency: 'USD', input: 0.15, cacheRead: 0.03, cacheWrite: 0, output: 0.5 }),
-    ],
-  }
-
-  /** 解析整份模板文本：顶层必须是 map，且没有解析问题。 */
-  const parseDocument = (text) => {
-    const { root, issues } = parseYamlLite(text)
-    assert.deepEqual(issues, [], '生成的 YAML 不该有解析问题：' + JSON.stringify(issues))
-    assert.equal(root?.kind, 'map', '顶层应是映射')
-    return root
-  }
-
-  /** 取 `rules:` 下的规则项（每项是一个映射节点）。 */
-  const ruleNodesOf = (root) => {
-    const items = yamlItems(yamlField(root, 'rules'))
-    assert.notEqual(items, null, 'rules 应是列表')
-    return items.map((item) => item.value)
-  }
-
-  // ===== 1. 提交体只有七个字段：unit / offPeak / note 不提交（服务端从文件旧值继承） =====
+  // ===== 1. 成本来源：五档全覆盖，且与「你的规则」层一起退役 =====
   {
-    const submitted = submittableRuleOf(rule({
-      provider: ' deepseek-official ', model: 'deepseek-flash', unit: 'perThousandTokens',
-      offPeak: deepseekOffPeak, note: '来源：api-docs.deepseek.com',
-    }))
-    assert.deepEqual(Object.keys(submitted).sort(), ['cacheRead', 'cacheWrite', 'currency', 'input', 'model', 'output', 'provider'])
-    assert.equal(submitted.provider, 'deepseek-official', '通道 id 去空白')
-    assert.equal(submitted.unit, undefined, 'unit 不提交（只在 YAML 里维护）')
-    assert.equal(submitted.offPeak, undefined, 'offPeak 不提交')
-    assert.equal(submitted.note, undefined, 'note 不提交')
+    const sources = ['official', 'catalog', 'aggregate', 'estimate', 'none']
+    assert.deepEqual(Object.keys(COST_SOURCE_LABELS).sort(), [...sources].sort(), '标签表只认这五档')
+    assert.deepEqual(Object.keys(COST_SOURCE_HINTS).sort(), [...sources].sort(), '说明表与标签表同集合')
+    assert.equal(COST_SOURCE_LABELS.rule, undefined, '「自定」角标已随用户规则层移除')
+    const values = Object.values(COST_SOURCE_LABELS)
+    assert.equal(new Set(values).size, values.length, '标签不重复')
+    for (const source of sources) {
+      assert.equal(typeof COST_SOURCE_LABELS[source], 'string')
+      assert.ok(COST_SOURCE_LABELS[source] !== '', source + ' 的标签不能为空')
+      assert.ok(COST_SOURCE_HINTS[source].length > 4, source + ' 的说明要能看懂')
+    }
+    assert.ok(COST_SOURCE_HINTS.aggregate.includes('美元'), '聚合价要写明是美元价目')
   }
 
-  // ===== 2. 保存不清空：服务端合并时按 provider|model 继承旧的 unit / offPeak / note =====
+  // ===== 2. 角标悬浮说明：未知档位不拼 undefined，partial 只补口径 =====
   {
-    const previous = [rule({
-      provider: 'deepseek-official', model: 'deepseek-flash', unit: 'perThousandTokens',
-      input: 2, cacheRead: 0.04, cacheWrite: 2, output: 8,
-      offPeak: deepseekOffPeak, note: '来源：api-docs.deepseek.com（2026-10-13）',
-    })]
-    // 表单只改了 input，其余七字段照提交
-    const incoming = [{ ...submittableRuleOf(previous[0]), input: 3 }]
-    const merged = mergeRulesForWrite(previous, incoming)
-    assert.equal(merged.length, 1)
-    assert.equal(merged[0].input, 3, '改过的价格写下去')
-    assert.equal(merged[0].unit, 'perThousandTokens', '单位没被清掉')
-    assert.equal(merged[0].note, '来源：api-docs.deepseek.com（2026-10-13）', '备注没被清掉')
-    assert.equal(merged[0].offPeak.input, 1, '错峰价没被清掉')
-    assert.deepEqual(
-      merged[0].offPeak.windows.map((window) => window.days),
-      [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [6, 7]],
-      '错峰窗口与 days 没被清掉',
+    assert.equal(costSourceHintOf('catalog'), COST_SOURCE_HINTS.catalog)
+    assert.equal(costSourceHintOf(null), COST_SOURCE_HINTS.none, '服务端没给来源时按「无依据」展示')
+    assert.equal(costSourceHintOf(undefined), COST_SOURCE_HINTS.none)
+    assert.ok(costSourceHintOf('unknown-source').includes('unknown-source'), '未知档位要如实写出来，而不是 undefined')
+    assert.equal(
+      costSourceHintOf('aggregate', true),
+      COST_SOURCE_HINTS.aggregate + '；' + PARTIAL_PRICE_HINT,
+      'partial 只追加口径说明',
     )
-
-    // 新条目（文件里没有同键）按缺省补：unit 每百万、offPeak 空、note 空
-    // 注意合并语义是「以请求为准」：提交几条就写几条，面板每次提交的是全部规则
-    const added = mergeRulesForWrite(previous, [
-      { ...submittableRuleOf(previous[0]) },
-      { ...submittableRuleOf(rule({ provider: 'zai', model: 'glm-5.3' })) },
-    ])
-    assert.equal(added.length, 2, '提交几条写几条（整份替换语义）')
-    assert.equal(added[0].note, '来源：api-docs.deepseek.com（2026-10-13）', '同键旧条目仍然继承')
-    assert.equal(added[1].unit, DEFAULT_UNIT)
-    assert.equal(added[1].offPeak, null)
-    assert.equal(added[1].note, '')
+    assert.equal(costSourceHintOf('aggregate', false), COST_SOURCE_HINTS.aggregate)
+    assert.equal(costSourceHintOf('aggregate', null), COST_SOURCE_HINTS.aggregate)
   }
 
-  // ===== 3. 「只在 YAML 里编辑」提示：含错峰 / 非缺省单位才出现 =====
+  // ===== 3. 聚合价装载来源标签与仓库地址 =====
   {
-    assert.equal(ruleExtrasTextOf(rule({})), '', '默认规则不挂提示')
-    assert.equal(ruleExtrasTextOf(rule({ note: '只是备注' })), '', '备注本身显示在列表里，不再重复提示')
-
-    const withOffPeak = ruleExtrasTextOf(rule({ offPeak: deepseekOffPeak }))
-    assert.ok(withOffPeak.includes('含错峰窗口'), withOffPeak)
-    assert.ok(withOffPeak.includes('00:00–09:00'), '带上窗口时间：' + withOffPeak)
-    assert.ok(withOffPeak.includes('仅工作日') && withOffPeak.includes('仅周末'), '带上生效星期：' + withOffPeak)
-    assert.ok(withOffPeak.includes('只在 YAML 里编辑'), withOffPeak)
-
-    const withUnit = ruleExtrasTextOf(rule({ unit: 'perThousandTokens' }))
-    assert.ok(withUnit.includes('含单位设置') && withUnit.includes('每千 tokens'), withUnit)
-
-    const both = ruleExtrasTextOf(rule({ unit: 'perCall', offPeak: deepseekOffPeak }))
-    assert.ok(both.includes('含错峰窗口') && both.includes('含单位设置'), both)
+    assert.deepEqual(Object.keys(AGGREGATE_LOADED_LABELS).sort(), ['local', 'none', 'shipped'])
+    assert.equal(aggregateLoadedLabelOf('local'), AGGREGATE_LOADED_LABELS.local)
+    assert.equal(aggregateLoadedLabelOf('shipped'), AGGREGATE_LOADED_LABELS.shipped)
+    assert.equal(typeof aggregateLoadedLabelOf(null), 'string', '拿不到装载状态时也要给一句可读文案')
+    assert.equal(aggregateLoadedLabelOf(null), AGGREGATE_LOADED_LABELS.none, '缺字段按「未装载」')
+    assert.equal(aggregateLoadedLabelOf(undefined), AGGREGATE_LOADED_LABELS.none)
+    assert.equal(aggregateLoadedLabelOf(''), AGGREGATE_LOADED_LABELS.none)
+    assert.equal(aggregateLoadedLabelOf('whatever'), '未知（whatever）', '没见过的取值如实写出来')
+    assert.equal(LITELLM_REPO_URL, 'https://github.com/BerriAI/litellm')
   }
 
-  // ===== 4. 模板：内置价目 ∩ 用到的模型（价格预填），并带错峰写法与缺口占位 =====
+  // ===== 4. 体积 / 主机名 / commit 的展示工具：脏数据一律 null（界面整段省略） =====
   {
-    const used = [
-      { provider: 'deepseek-official', model: 'deepseek-flash' },
-      { provider: 'zai', model: 'glm-5.3' },
-      { provider: 'my-local', model: 'qwen3' },
-    ]
-    const uncovered = [{ provider: 'my-local', model: 'qwen3', tokens: 1234, share: 1, estimated: false }]
-    const template = buildRulesTemplateYaml(catalog, used, [], uncovered, 'CNY')
-    assert.equal(template.prefilledCount, 2, '两条命中内置价目')
-    assert.equal(template.pendingCount, 1, '一条没有价格依据')
-    assert.ok(template.text.includes('单位缺省是每百万 tokens'), '注释头写清单位')
-    assert.ok(template.text.includes('offPeak:'), '注释头给出错峰写法示例')
-    assert.ok(template.text.includes('不要用 0 占位'), '缺口占位说明不能写 0')
+    assert.equal(megabytesTextOf(0), '0.00 MB')
+    assert.equal(megabytesTextOf(2670000), '2.55 MB')
+    assert.equal(megabytesTextOf(-1), null)
+    assert.equal(megabytesTextOf('2 MB'), null)
+    assert.equal(megabytesTextOf(undefined), null)
+    assert.equal(megabytesTextOf(Number.NaN), null)
 
-    const root = parseDocument(template.text)
-    assert.equal(yamlNumber(yamlField(root, 'version')), 1)
-    assert.equal(yamlText(yamlField(root, 'currency')), 'CNY')
-    const nodes = ruleNodesOf(root)
-    assert.equal(nodes.length, 2, '只放预填的两条（缺口那条被注释掉）')
-    assert.equal(yamlText(yamlField(nodes[0], 'provider')), 'deepseek-official')
-    assert.equal(yamlText(yamlField(nodes[0], 'model')), 'deepseek-flash')
-    assert.equal(yamlNumber(yamlField(nodes[0], 'input')), 2, '价格 = 内置价目现值')
-    assert.equal(yamlNumber(yamlField(nodes[0], 'cacheRead')), 0.04)
-    assert.equal(yamlText(yamlField(nodes[0], 'unit')), 'perMillionTokens')
-    // 错峰段（含 days）必须原样生成，否则用户照抄会丢掉错峰价
-    const offPeak = yamlField(nodes[0], 'offPeak')
-    assert.notEqual(offPeak, null, '内置价目的错峰段要写进模板')
-    assert.equal(yamlNumber(yamlField(offPeak, 'input')), 1)
-    const windows = yamlItems(yamlField(offPeak, 'windows'))
-    assert.equal(windows.length, 4)
-    assert.equal(yamlText(yamlField(windows[3].value, 'from')), '00:00')
-    assert.equal(yamlText(yamlField(windows[3].value, 'to')), '00:00', '周末全天窗口')
-    assert.equal(yamlNumber(yamlField(nodes[1], 'input')), 1.4, '第二条是 GLM')
-    // 缺口条目整段注释：不能被解析成规则，也不能写 0 占位
-    const placeholderLine = template.text.split('\n').find((line) => line.includes("provider: 'my-local'"))
-    assert.ok(placeholderLine !== undefined, '缺口模型要出现在模板里（注释占位）')
-    assert.ok(placeholderLine.trimStart().startsWith('#'), '缺口条目必须是注释：' + placeholderLine)
+    assert.equal(hostOf('https://open.er-api.com/v6/latest/USD'), 'open.er-api.com')
+    assert.equal(hostOf('https://api.frankfurter.app/latest?from=USD&to=CNY'), 'api.frankfurter.app')
+    assert.equal(hostOf('not a url'), null)
+    assert.equal(hostOf(''), null)
+    assert.equal(hostOf(42), null)
+
+    assert.equal(shortCommitOf('30b8db325e85740eb86901d08597da845b206504'), '30b8db3')
+    assert.equal(shortCommitOf('  30b8db325e85740e  '), '30b8db3', '首尾空白先裁掉')
+    assert.equal(shortCommitOf('abc123'), null, '太短的值不当 commit 展示')
+    assert.equal(shortCommitOf(null), null)
   }
 
-  // ===== 5. 已经有用户规则的模型不进模板；全都没命中时 rules 写成行内 [] =====
+  // ===== 5. 内置价目新鲜度：按本地日历日算天数，未超阈值不给提醒 =====
   {
-    const withRule = buildRulesTemplateYaml(
-      catalog,
-      [{ provider: 'deepseek-official', model: 'deepseek-flash' }],
-      [rule({ provider: 'deepseek-official', model: 'deepseek-flash' })],
-      [],
-      'CNY',
+    const now = new Date(2026, 9, 14, 20, 30, 0)
+    assert.equal(fetchedDaysAgo('2026-10-14', now), 0, '同一天算 0 天')
+    assert.equal(fetchedDaysAgo('2026-10-01', now), 13)
+    assert.equal(fetchedDaysAgo('2026-12-31', now), 0, '未来日期不出现负数')
+    assert.equal(fetchedDaysAgo('2026/10/14', now), null, '只认 YYYY-MM-DD')
+    assert.equal(fetchedDaysAgo('', now), null)
+
+    assert.equal(catalogStaleDays([{ fetchedAt: '2026-10-14' }], now), null, '刚更新过不提醒')
+    assert.equal(catalogStaleDays([{ fetchedAt: '2026-07-16' }], now), null, '刚好 90 天不提醒（阈值是「超过」）')
+    assert.equal(catalogStaleDays([{ fetchedAt: '2026-07-15' }], now), 91, '超过 90 天给出天数')
+    assert.equal(
+      catalogStaleDays([{ fetchedAt: '2026-07-15' }, { fetchedAt: '2026-10-14' }], now),
+      null,
+      '多个来源取最新的一次判断',
     )
-    assert.equal(withRule.prefilledCount, 0, '已有规则的模型不算缺口')
-    const emptyRoot = parseDocument(withRule.text)
-    assert.deepEqual(yamlItems(yamlField(emptyRoot, 'rules')), [], '空 rules 必须能解析成空列表')
-  }
-
-  // ===== 6. 单条片段：缩进按 rules: 下的一层（片段本身不是整份文档，粘进去才解析） =====
-  {
-    const snippet = buildRuleSnippetYaml(rule({
-      provider: 'deepseek-official', model: 'deepseek-v4-pro', input: 9, cacheRead: 0.3, cacheWrite: 9, output: 27,
-      offPeak: deepseekOffPeak, note: '高峰价；缓存写沿用未命中价',
-    }))
-    // 片段单独解析会被判「第一行不应有缩进」—— 这是设计：它是粘到 rules: 下面的一段
-    assert.ok(parseYamlLite(snippet).issues.length > 0, '片段本身不是整份文档')
-    const body = snippet.split('\n').filter((line) => line.trim() !== '')
-    assert.ok(body[2].startsWith('  - provider:'), '第一条规则行按 2 空格缩进：' + body[2])
-    for (const line of body.slice(2)) assert.ok(line.startsWith('  '), '规则行统一 2 空格缩进：' + line)
-
-    // 粘到 rules: 下面之后必须能解析成一条完整规则（含错峰与备注）
-    const merged = ['version: 1', "currency: 'CNY'", 'rules:', ...body].join('\n')
-    const { root, issues } = parseYamlLite(merged)
-    assert.deepEqual(issues, [], '粘进 rules 下不该有解析问题：' + JSON.stringify(issues))
-    const nodes = ruleNodesOf(root)
-    assert.equal(nodes.length, 1)
-    assert.equal(yamlText(yamlField(nodes[0], 'note')), '高峰价；缓存写沿用未命中价')
-    assert.equal(yamlItems(yamlField(yamlField(nodes[0], 'offPeak'), 'windows')).length, 4)
-    assert.equal(yamlNumber(yamlField(nodes[0], 'input')), 9)
-
-    const placeholder = buildRuleSnippetYaml(blankRule('CNY'), true)
-    assert.ok(placeholder.includes('会把这批用量算成免费'), '占位片段必须警告四档为 0 的后果')
-    assert.equal(parseYamlLite(['rules:', ...placeholder.split('\n').filter((line) => line.trim() !== '')].join('\n')).issues.length, 0)
-  }
-
-  // ===== 7. 表单校验：四档全 0 / 通道或模型为空都要拦住 =====
-  {
-    assert.ok(ruleProblemOf(rule({ input: 0, cacheRead: 0, cacheWrite: 0, output: 0 })).includes('算成免费'))
-    assert.ok(ruleProblemOf(rule({ provider: '  ' })).includes('通道 id'))
-    assert.ok(ruleProblemOf(rule({ model: '' })).includes('模型 id'))
-    assert.equal(ruleProblemOf(rule({})), null)
-  }
-
-  // ===== 8. 提示词：带目标文件路径与缺口模型清单，并要求核对官方价、不编造 =====
-  {
-    const prompt = buildAgentPrompt({
-      filePath: 'C:\\Users\\me\\.dsh\\dsh-key-usage\\pricing-rules.yml',
-      currency: 'CNY',
-      rulesCount: 2,
-      catalogEntries: 18,
-      uncovered: [{ provider: 'my-local', model: 'qwen3', tokens: 1234, share: 1, estimated: true }],
-    })
-    assert.ok(prompt.includes('pricing-rules.yml'), '带目标文件绝对路径')
-    assert.ok(prompt.includes('my-local | qwen3'), '带缺口模型清单')
-    assert.ok(prompt.includes('官方定价页'), '要求核对官方价')
-    assert.ok(prompt.includes('不要凭记忆或推测编造价格'), '明确不许编造价格')
-  }
-
-  // ===== 9. 内置价目匹配口径（与服务端 catalogRuleFor 一致） =====
-  {
-    const rules = catalog.rules
-    assert.equal(catalogRuleFor(rules, 'deepseek-official', 'deepseek-flash').model, 'deepseek-flash')
-    assert.equal(catalogRuleFor(rules, 'deepseek-official', 'DeepSeek-Flash').model, 'deepseek-flash', '忽略大小写')
-    assert.equal(catalogRuleFor(rules, 'zai', 'glm-5.3').model, 'glm-5.3')
-    assert.equal(catalogRuleFor(rules, 'zai', 'zai/glm-5.3').model, 'glm-5.3', '去 vendor/ 前缀')
-    assert.equal(catalogRuleFor(rules, 'opencode-go', 'GLM-5.3-Flash'), null, '不做模糊匹配：通道不同就是没命中')
+    assert.equal(catalogStaleDays([], now), null, '没有来源就没有提醒')
+    assert.equal(catalogStaleDays([{ fetchedAt: '坏日期' }], now), null)
+    assert.equal(CATALOG_STALE_DAYS, 90)
   }
 
   console.log('client-pricing.test: 全部通过')

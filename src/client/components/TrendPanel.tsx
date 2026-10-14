@@ -6,8 +6,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadUsage } from '../api.ts'
-import { channelOf, costCellText } from '../channels.ts'
-import { fmtCalls, fmtCost, fmtTokens, isoDate } from '../format.ts'
+import { channelOf, costCellOf } from '../channels.ts'
+import { fmtCalls, fmtTokens, isoDate } from '../format.ts'
+import { comparableMoneyAmountOf, rowMoneyViewOf, type CostRowLike } from '../currency.ts'
 import { COST_SOURCE_LABELS } from '../pricing.ts'
 import type { Channel, DaySummary, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
@@ -63,7 +64,7 @@ function hitRateOf(totals: DaySummary): number | null {
 
 /** 该期是否有任何用量：全 0 视为「无数据」，据此显示「上期无数据」而不是 0 与 −100%。 */
 function hasAnyData(totals: DaySummary | null): boolean {
-  return totals !== null && (totals.calls > 0 || displayTokensOf(totals) > 0 || totals.cost > 0)
+  return totals !== null && (totals.calls > 0 || displayTokensOf(totals) > 0 || comparableMoneyAmountOf(totals) > 0)
 }
 
 /** 环比百分比；上期为 0 时不给百分比（Infinity / NaN 不进界面）。 */
@@ -90,15 +91,16 @@ function pointChangeOf(current: number, previous: number): ChangeView {
 }
 
 /**
- * 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellText` 的占位文案；
- * 其余情况一律给金额（含 ¥0.00），否则「本期降到 0」会被当成不可比而丢掉 −100%。
+ * 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellOf` 的占位文案；
+ * 其余情况一律给金额（含 0），否则「本期降到 0」会被当成不可比而丢掉 −100%。
+ * 金额按显示币种折算（逐币种小计相加），两期用的是同一套汇率，环比才有意义。
  */
-function costTextOf(channel: Channel | null, cost: number): { text: string; dim: boolean; amount: boolean } {
+function costTextOf(channel: Channel | null, row: CostRowLike | null): { text: string; dim: boolean; amount: boolean } {
   if (channel !== null && channel.costMode !== 'perToken' && channel.costMode !== 'unknown') {
-    const cell = costCellText(channel, cost)
+    const cell = costCellOf(channel, row ?? {})
     return { text: cell.text, dim: cell.dim, amount: false }
   }
-  return { text: fmtCost(cost), dim: false, amount: true }
+  return { text: rowMoneyViewOf(row ?? {}).text, dim: false, amount: true }
 }
 
 function changeNodeOf(change: ChangeView): ReactNode {
@@ -114,7 +116,7 @@ export function TrendPanel(props: {
   range: TrendRangeKey
   bounds: { from: string; to: string }
   channelFilter: string
-  /** 计费规则版本号：规则一改两期就不是同一套成本口径，靠它触发上期重取。 */
+  /** 价目版本号：价目换了一份两期就不是同一套成本口径，靠它触发上期重取。 */
   pricingRevision: number
 }): ReactNode {
   const { usage, bounds, channelFilter } = props
@@ -174,11 +176,11 @@ export function TrendPanel(props: {
   const previousTokens = previousTotals === null ? 0 : displayTokensOf(previousTotals)
   const currentHitRate = currentTotals === null ? null : hitRateOf(currentTotals)
   const previousHitRate = previousTotals === null ? null : hitRateOf(previousTotals)
-  const currentCost = currentTotals?.cost ?? 0
-  const previousCost = previousTotals?.cost ?? 0
+  const currentCost = currentTotals === null ? 0 : comparableMoneyAmountOf(currentTotals)
+  const previousCost = previousTotals === null ? 0 : comparableMoneyAmountOf(previousTotals)
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(props.channels, channelFilter)
-  const currentCostText = costTextOf(singleChannel, currentCost)
-  const previousCostText = costTextOf(singleChannel, previousCost)
+  const currentCostText = costTextOf(singleChannel, currentTotals)
+  const previousCostText = costTextOf(singleChannel, previousTotals)
   const costComparable = currentCostText.amount && previousCostText.amount
 
   const rows: TrendRow[] = [

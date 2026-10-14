@@ -2,13 +2,14 @@
 
 import type {
   Channel,
+  FxResponse,
   HeatmapDay,
   ModelsResponse,
   PricingRefreshResult,
   PricingResponse,
-  PricingSaveResult,
   ProjectsResponse,
   QuotaProvider,
+  RatesResponse,
   SessionDetailResponse,
   SessionsResponse,
   SummaryResponse,
@@ -32,17 +33,17 @@ function failureTextOf(status: number): string {
     : 'HTTP ' + String(status)
 }
 
-async function fetchJson<T>(path: string): Promise<T | null> {
+async function fetchJson<T>(path: string, failureKey: string = path): Promise<T | null> {
   try {
     const response = await fetch(path, { headers: { Accept: 'application/json' } })
     if (!response.ok) {
-      failureReasons.set(path, failureTextOf(response.status))
+      failureReasons.set(failureKey, failureTextOf(response.status))
       return null
     }
-    failureReasons.delete(path)
+    failureReasons.delete(failureKey)
     return await response.json() as T
   } catch (error) {
-    failureReasons.set(path, '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    failureReasons.set(failureKey, '请求失败：' + (error instanceof Error ? error.message : String(error)))
     return null
   }
 }
@@ -99,13 +100,30 @@ export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
 }
 
-/** 计费规则面板的服务端对照：内置价目（含逐条规则）、错峰状态、缺口覆盖度、两个 YAML 文件与解析问题。 */
+/** 价目信息（内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态）。 */
 export function loadPricing(): Promise<PricingResponse | null> {
   return fetchJson<PricingResponse>('/dsh-key-usage/pricing')
 }
 
-/** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
-export const PRICING_RULES_PATH = '/dsh-key-usage/pricing/rules'
+/** 单价表的请求路径：空态文案要按同一串查失败原因，所以路径由这里统一拼。 */
+export const RATES_PATH = '/dsh-key-usage/rates'
+
+/** 汇率的请求路径（`?refresh=1` 强制刷新；失败原因都记在这个基路径上）。 */
+export const FX_PATH = '/dsh-key-usage/fx'
+
+/** 近 N 天每个通道用到的模型单价表（展开通道卡片时展示的单价依据）。 */
+export function loadRates(days = 30, limit = 20): Promise<RatesResponse | null> {
+  const params = new URLSearchParams({ days: String(days), limit: String(limit) })
+  return fetchJson<RatesResponse>(RATES_PATH + '?' + params.toString(), RATES_PATH)
+}
+
+/**
+ * 取人民币对美元汇率：服务端 12 小时内走缓存，所以打开「余额与配额」与切币种时都可以直接调；
+ * `force = true` 是用户点「刷新汇率」时的强制刷新。失败返回 null（界面按「没取到汇率」降级显示）。
+ */
+export function loadFxRate(force = false): Promise<FxResponse | null> {
+  return fetchJson<FxResponse>(force ? FX_PATH + '?refresh=1' : FX_PATH, FX_PATH)
+}
 
 /** 刷新聚合价目的端点：同样按这个键取失败原因（404 = 服务端还是旧版本）。 */
 export const MODEL_PRICE_REFRESH_PATH = '/dsh-key-usage/pricing/refresh'
@@ -117,31 +135,6 @@ export const MODEL_PRICE_REFRESH_PATH = '/dsh-key-usage/pricing/refresh'
  * 超时仍要落成可读提示，否则用户面对一个不动的按钮只会以为界面卡死。
  */
 export const MODEL_PRICE_REFRESH_TIMEOUT_MS = 30000
-
-/**
- * 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
- *
- * 返回 null = 请求本身失败（原因记在 `failureReasonOf(PRICING_RULES_PATH)`）；
- * 返回 `{ok:false, error}` = 服务端拒绝了这次写入（中文原因可直接展示）。
- */
-export async function savePricingRules(rules: Array<Record<string, string | number>>): Promise<PricingSaveResult | null> {
-  try {
-    const response = await fetch(PRICING_RULES_PATH, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rules }),
-    })
-    if (!response.ok) {
-      failureReasons.set(PRICING_RULES_PATH, failureTextOf(response.status))
-      return null
-    }
-    failureReasons.delete(PRICING_RULES_PATH)
-    return await response.json() as PricingSaveResult
-  } catch (error) {
-    failureReasons.set(PRICING_RULES_PATH, '请求失败：' + (error instanceof Error ? error.message : String(error)))
-    return null
-  }
-}
 
 /**
  * 拉取上游最新聚合价目（全插件唯一会联网的用户动作，只能由「刷新价目」按钮触发）。

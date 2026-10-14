@@ -1,15 +1,15 @@
 /**
- * dsh-key-usage 服务端入口：挂载 HTTP 路由（只读聚合 + 规则写入），
- * 向客户端提供用量台账、通道配置、余额快照与会话用量的聚合数据。
+ * dsh-key-usage 服务端入口：挂载 HTTP 路由（只读聚合 + 价目刷新），
+ * 向客户端提供用量台账、通道配置、余额快照、会话用量、单价表与实时汇率。
  *
  * 数据来源：
  * - 台账 / 快照 / 通道配置：本地文件只读；
  * - 项目、会话、按小时：宿主 sessionPersistence 的只读 handle；
  * - 余额与订阅窗口：优先查各通道官方接口（凭据经宿主 credentials seam 解析，
  *   不落盘、不进日志、不返回给客户端），失败时回落到本地快照；
- * - 计费规则：插件自己原子写 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（见 pricing-store.ts）。
- *   宿主设置服务这条链路（schemastery `Config` / volatile 字段 / 客户端 configForms）已退役；
- *   旧版 entry config 只作只读回退，避免老用户规则丢失。
+ * - 价目：内置官方价目（随包 `pricing-catalog.yml`）与 LiteLLM 聚合价（随包 JSON 或本机刷新副本）
+ *   都是只读文件，用户规则层已移除；
+ * - 汇率（USD → CNY）：只在打开页面 / 切换币种 / 点刷新时请求，12 小时缓存。
  */
 import { mountKeyUsageRoutes } from './routes.js'
 import { createLiveQuotaService } from './live-quota.js'
@@ -32,7 +32,7 @@ interface CredentialsService {
   resolve(reference: string): Promise<{ value?: unknown } | null>
 }
 
-export function apply(ctx: HostContext, config: unknown): void {
+export function apply(ctx: HostContext): void {
   // 会话服务是可选依赖：用 get 惰性取，缺了也只是会话相关页面显示空态
   const sessionSource = createSessionSource({
     get: (serviceName) => (typeof ctx.get === 'function' ? ctx.get(serviceName) : undefined),
@@ -59,10 +59,6 @@ export function apply(ctx: HostContext, config: unknown): void {
       () => mountKeyUsageRoutes(host.webServer, sessionSource, liveQuota, {
         // workspaceRegistry 用来读官方归档集合（拿不到就回退本地 storages/workspace.json）
         get: (serviceName) => (typeof ctx.get === 'function' ? ctx.get(serviceName) : undefined),
-      }, {
-        // 旧版 entry config（apply 的 config.pricing）只作**只读回退**：老用户规则不丢；
-        // 新规则一律走 pricing-rules.yml，由 routes 侧的 POST /pricing/rules 原子写入
-        current: () => (config as { pricing?: unknown } | undefined)?.pricing,
       }),
       'dsh-key-usage: http routes',
     )

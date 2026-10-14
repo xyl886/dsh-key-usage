@@ -1,4 +1,5 @@
 /** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
+import { rowMoneyViewOf, zeroMoneyTextOf, type CostRowLike } from './currency.ts'
 import type { Channel, ChannelCostMode, ChannelStatus } from './types.ts'
 
 const CHANNEL_COLORS = ['#5b8cff', '#9a7bff', '#3fb96f', '#e0a13c', '#e05a5a', '#38bdc8']
@@ -28,21 +29,33 @@ export function channelOf(channels: Channel[], provider: string | null): Channel
   return channels.find((channel) => channel.provider === provider) ?? null
 }
 
-/** 成本单元格：按计费模式给出文案，无法判定时回落金额或 —。 */
-export function costCellText(channel: Channel | null, cost: number): { text: string; dim: boolean } {
-  if (channel === null) return cost > 0 ? { text: '¥' + cost.toFixed(2), dim: false } : { text: '—', dim: true }
-  if (channel.costMode === 'sub') return { text: '订阅内', dim: true }
-  if (channel.costMode === 'free') return { text: '¥0.00', dim: true }
-  if (channel.costMode === 'none') return { text: '无计费', dim: true }
-  return cost > 0 ? { text: '¥' + cost.toFixed(2), dim: false } : { text: '—', dim: true }
+/** 成本单元格：文案 + 是否该挂来源角标。金额本身按显示币种折算（见 currency.ts）。 */
+export interface CostCell {
+  text: string
+  dim: boolean
+  /** 真的显示了金额：`订阅内` / `免费` / `无计费` / `—` 都是占位文案，不挂角标。 */
+  amount: boolean
+  /** 金额经过汇率折算（文本带 `≈`）。 */
+  converted: boolean
+  /** 多币种并列显示（缺汇率没法相加）：`text` 不是合计。 */
+  mixed: boolean
 }
 
 /**
- * 单元格是否该挂来源角标：只有真的显示了金额（`¥…`）时才挂，
- * `订阅内` / `免费` / `无计费` / `—` 都是占位文案，挂角标只是噪音。
+ * 成本单元格：按计费模式给出文案，无法判定时回落行金额或 —。
+ * 金额一律走 `costsByCurrency` 逐币种折算后相加；缺这个字段时由 currency.ts 回落旧的单值口径。
  */
-export function showsAmount(cell: { text: string }): boolean {
-  return cell.text.startsWith('¥')
+export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell {
+  const view = rowMoneyViewOf(row)
+  const hasAmount = view.amount > 0
+  const money: CostCell = hasAmount
+    ? { text: view.text, dim: false, amount: true, converted: view.converted, mixed: view.mixed }
+    : { text: '—', dim: true, amount: false, converted: false, mixed: false }
+  if (channel === null) return money
+  if (channel.costMode === 'sub') return { text: '订阅内', dim: true, amount: false, converted: false, mixed: false }
+  if (channel.costMode === 'free') return { text: zeroMoneyTextOf(), dim: true, amount: false, converted: false, mixed: false }
+  if (channel.costMode === 'none') return { text: '无计费', dim: true, amount: false, converted: false, mixed: false }
+  return money
 }
 
 /** 状态点的颜色（走宿主告警/成功令牌）。 */

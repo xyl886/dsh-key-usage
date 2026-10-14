@@ -1,11 +1,17 @@
-/** 客户端计费规则视图模型里的成本来源（与 src/client/pricing.ts 同一套取值）。 */
+/** 客户端价目视图模型里的成本来源（与 src/client/pricing.ts 同一套取值）。 */
 import type { CostSource } from './pricing.ts'
 
-/** 计费规则相关的响应类型定义在 pricing.ts（视图模型与响应同源），这里只做转出。 */
+/** 价目 / 成本来源相关的响应类型定义在 pricing.ts（视图模型与响应同源），这里只做转出。 */
 export type {
-  AggregateIssue, AggregateLoaded, CatalogSummary, CostSource, ModelPriceAggregate, PricingFileInfo,
-  PricingFiles, PricingIssue, PricingRefreshResult, PricingResponse, PricingRule, PricingSaveResult, RulesOrigin,
+  AggregateIssue, AggregateLoaded, CatalogSourceSummary, CatalogSummary, CostSource, ModelPriceAggregate,
+  PricingCoverage, PricingFileInfo, PricingFiles, PricingIssue, PricingRefreshResult, PricingResponse,
 } from './pricing.ts'
+
+/**
+ * 服务端并列给出的逐币种小计：跨币种合计只能按它**逐币种折算后相加**。
+ * `cost` 是不同币种的直接相加（历史口径），只作防御性兜底，不许当合计展示。
+ */
+export type CostsByCurrency = Record<string, number>
 
 /** 客户端使用的宿主上下文最小面（与 dsh-plugin / dsh-context 的 slots 契约一致）。 */
 export interface SlotRegistration {
@@ -73,7 +79,9 @@ export interface DaySummary {
   cacheWriteTokens: number
   reasoningTokens: number
   cost: number
-  /** 成本来源角标：官方账单 / 用户规则 / 内置官方价目 / 聚合价目 / 台账均价 / 无依据。 */
+  /** 逐币种小计：合计按它折算后相加（`cost` 是混币种直接相加，只作兜底）。 */
+  costsByCurrency?: CostsByCurrency
+  /** 成本来源角标：官方账单 / 内置官方价目 / 聚合价目 / 台账均价 / 无依据。 */
   costSource?: CostSource
   /** 该格的聚合价目条目缺一个缓存价（按未命中价代），角标旁标「部分」。 */
   partial?: boolean
@@ -138,6 +146,8 @@ export interface RangeSummaryRow {
   calls: number
   tokens: number
   cost: number
+  /** 逐币种小计（同上：合计只按它折算后相加）。 */
+  costsByCurrency?: CostsByCurrency
   /** 该通道该范围的成本来源角标。 */
   costSource?: CostSource
   /** 其中至少有一条聚合价目是 partial（缺一个缓存价）。 */
@@ -170,8 +180,10 @@ export interface UsageModelRow {
   providerLabel?: string
   /** 占该会话 tokens 的百分比（一位小数）：`/sessions` 行内展开与 `/session` 详情用。 */
   sharePercent?: number
-  /** 该模型这一格的估算金额与来源（规则 / 内置官方价目 / 聚合价目 / 台账均价）。 */
+  /** 该模型这一格的估算金额与来源（内置官方价目 / 聚合价目 / 台账均价）。 */
   cost?: number | null
+  /** 该模型这一格的逐币种小计。 */
+  costsByCurrency?: CostsByCurrency
   costSource?: CostSource
   /** 该模型的聚合价目条目缺一个缓存价（按未命中价代）。 */
   partial?: boolean
@@ -198,6 +210,8 @@ export interface SessionRow {
   models: UsageModelRow[]
   costMode: ChannelCostMode | null
   cost: number | null
+  /** 该行的逐币种小计（合计按它折算后相加）。 */
+  costsByCurrency?: CostsByCurrency
   /** 该行成本的来源角标。 */
   costSource?: CostSource
   /** 该行成本里至少有一条聚合价目是 partial。 */
@@ -246,6 +260,8 @@ export interface SessionDetail {
   /** 只要会话有结算样本就给 24 个槽；没有样本时为 null。 */
   hours: SessionDetailHour[] | null
   cost: number | null
+  /** 逐币种小计（合计按它折算后相加）。 */
+  costsByCurrency?: CostsByCurrency
   costSource: CostSource
   /** 会话成本里至少有一条聚合价目是 partial。 */
   partial?: boolean
@@ -271,6 +287,8 @@ export interface ProjectRow {
   dominantProvider: string | null
   models: UsageModelRow[]
   cost: number | null
+  /** 逐币种小计（合计按它折算后相加）。 */
+  costsByCurrency?: CostsByCurrency
   /** 该行成本的来源角标。 */
   costSource?: CostSource
   /** 该项目成本里至少有一条聚合价目是 partial。 */
@@ -300,8 +318,10 @@ export interface ModelAggregateRow {
   /** 展示口径 tokens：输入 + 输出 + 缓存读。 */
   tokens: number
   cacheHitRate: number | null
-  /** 估算成本（用户规则优先，没有规则时按台账均价），无成本数据时为 null。 */
+  /** 估算成本（内置官方价目 / 聚合价目 / 台账均价），无成本数据时为 null。 */
   cost: number | null
+  /** 逐币种小计（合计按它折算后相加）。 */
+  costsByCurrency?: CostsByCurrency
   costMode: ChannelCostMode | null
   sessionCount: number
   /** 用到该模型的最晚会话时间（会话事件只有会话级时间戳，是近似值）。 */
@@ -317,4 +337,54 @@ export interface ModelsResponse {
   rows: ModelAggregateRow[]
   coverage: SessionCoverage
   priced: boolean
+}
+
+/** `/rates` 一行：近 N 天用到的某个模型在这条通道上的单价依据。 */
+export interface ModelRateRow {
+  model: string
+  /** 近 N 天的展示口径 tokens。 */
+  tokens: number
+  calls: number
+  /** 单价来自哪一层：catalog = 内置官方价目；aggregate = LiteLLM 聚合价；estimate = 台账均价；none = 无依据。 */
+  source: CostSource
+  /** 价目的原币种；`source: 'none'` 时服务端给 null（不知道币种，不猜）。 */
+  currency: string | null
+  /** 聚合价目缺一个缓存价（按未命中价代）。 */
+  partial: boolean
+  /** 该模型此刻是否处于错峰时段（服务端按本地时间判定）。 */
+  offPeak: boolean
+  /** 四档单价（每百万 tokens）；`source: 'none'` 或只有均价时为 null。 */
+  rates: { input: number; cacheRead: number; cacheWrite: number; output: number } | null
+  /** 来源说明（口径、近似、未命中原因等）。 */
+  note: string | null
+}
+
+export interface ChannelRates {
+  provider: string
+  /** 通道显示名（服务端给，避免两侧各维护一份映射）。 */
+  label: string
+  /** 该通道所有模型币种一致时给出，混合（官方价 CNY + 聚合价 USD）时为 null —— 不猜。 */
+  currency: string | null
+  models: ModelRateRow[]
+}
+
+/** `/rates`：近 N 天每个通道用到的模型单价表。 */
+export interface RatesResponse {
+  from: string
+  to: string
+  channels: ChannelRates[]
+}
+
+/** `/fx`：人民币对美元汇率（服务端 12 小时内走缓存，`?refresh=1` 强制刷新）。 */
+export interface FxResponse {
+  ok?: boolean
+  base?: string
+  quote?: string
+  rate?: number
+  fetchedAt?: string
+  source?: 'upstream' | 'cache' | 'default'
+  stale?: boolean
+  upstream?: string | null
+  ttlHours?: number
+  note?: string | null
 }

@@ -3,8 +3,9 @@
  * 点行打开详情抽屉；行内可展开到模型构成；工作目录可点，跳到「项目用量」并只看该项目。
  */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellText, displayNameOf, showsAmount } from '../channels.ts'
-import { fmtCalls, fmtCost, fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
+import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../channels.ts'
+import { fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
+import { moneyTotalsTextOf } from '../currency.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
@@ -36,7 +37,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
   { key: 'calls', label: '调用', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(元)', value: (row) => row.cost },
+  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
   { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
   { key: 'archived', label: '已归档', value: (row) => row.archived ? '是' : '否' },
 ]
@@ -219,7 +220,7 @@ export function SessionsTab(props: {
       )}
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按台账模型均价估算
+        会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算
         {props.data.priced ? '' : '（台账无成本数据，暂不可估）'}
       </div>
 
@@ -247,7 +248,7 @@ interface RowOptions {
 
 function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
   const channel = channelOf(options.channels, row.provider)
-  const costCell = costCellText(channel, row.cost ?? 0)
+  const costCell = costCellOf(channel, row)
   const isOpen = options.expandedIds[row.id] === true
   const workspace = row.workspace
   return (
@@ -324,7 +325,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
         >
           {row.cost === null || channel === null || channel.costMode !== 'perToken'
             ? <span className={styles.dim}>{costCell.text}</span>
-            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}
+            : <>{costCell.text}{costCell.amount && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}
         </td>
       </tr>
       {isOpen && (
@@ -361,7 +362,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                         <span className={listStyles.composeNumber}>
                           {modelCost === null
                             ? <span className={styles.dim}>—</span>
-                            : <>{fmtCost(modelCost)}<CostSourceChip source={model.costSource} partial={model.partial} compact /></>}
+                            : <>{moneyTotalsTextOf(model)}<CostSourceChip source={model.costSource} partial={model.partial} compact /></>}
                         </span>
                       </div>
                     )
@@ -384,7 +385,7 @@ function costTipOf(row: SessionRow): ReactNode {
       <TipSub>{costSourceHintOf(source, row.partial)}</TipSub>
       <TipRow
         label="金额"
-        amount={row.cost === null ? '—' : fmtCost(row.cost)}
+        amount={row.cost === null ? '—' : moneyTotalsTextOf(row)}
         rate={COST_SOURCE_LABELS[source]}
       />
     </>

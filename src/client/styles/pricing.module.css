@@ -1,94 +1,13 @@
-/* 计费规则面板：规则表、编辑器、来源角标、覆盖度。颜色全部走宿主 --dsw-alias-* 令牌。 */
-.panel { margin-top: 26px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); padding-top: 16px; }
-.panelHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
-
-.statStrip { display: flex; gap: 10px 26px; flex-wrap: wrap; margin-bottom: 12px; }
-.statItem .statName { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 2px; }
-.statItem .statNum { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.statItem .statNum.saving { color: var(--dsw-alias-state-success-primary, #3fb96f); }
-
-.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-.actionBtn {
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
-  border-radius: 6px; padding: 4px 11px; font: inherit; font-size: 11.5px; cursor: pointer;
-}
-.actionBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
-.actionBtn:disabled { opacity: .5; cursor: default; }
-.actionBtn.primary { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
-.toolbarSpacer { flex: 1; }
-
-/* ===== 按通道过滤：只影响展示，保存仍然提交全部规则 ===== */
-.filterRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
-.filterLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-right: 2px; }
-.chip {
-  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
-  color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px; cursor: pointer;
-}
-.chip:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
-.chipOn { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
-.chip:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
-
-/* ===== YAML 文件位置与解析问题：手写规则之后唯一的自查入口 ===== */
-.fileLine {
-  display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 8px 0;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
-}
-.pathText { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; word-break: break-all; }
-.issueBlock {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
-  color: var(--dsw-alias-state-warning-primary, #e0a13c);
-  background: var(--dsw-alias-bg-layer-2, #1d1d22);
-  border: 1px solid var(--dsw-alias-state-warning-primary, #e0a13c);
-}
-.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
-.issueList { margin: 6px 0 0; padding-left: 18px; }
-.issueWhere { color: var(--dsw-alias-label-secondary, #9a9aa6); margin-right: 6px; }
-
-/* ===== 「让 DSH 帮我配」：提示词预览 + 复制 / 下载 ===== */
-.promptBlock { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px; padding: 10px 14px; margin: 8px 0 10px; }
-.promptHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; line-height: 1.7; }
-.promptActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-.promptText {
-  margin: 0; padding: 10px 12px; border-radius: 8px; max-height: 260px; overflow: auto;
-  background: var(--dsw-alias-bg-layer-3, #232329); color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.7;
-  white-space: pre-wrap; word-break: break-word;
-}
-
-.ruleTable { width: 100%; border-collapse: collapse; margin-top: 4px; }
-.ruleTable th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
-  padding: 5px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
-}
-.ruleTable td {
-  text-align: right; padding: 7px 8px; font-size: 11.5px; font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-secondary, #9a9aa6); border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  white-space: nowrap;
-}
-.ruleTable th:first-child, .ruleTable td:first-child,
-.ruleTable th:nth-child(2), .ruleTable td:nth-child(2) { text-align: left; }
-.ruleTable td:first-child { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.ruleTable tr.editing { background: var(--dsw-alias-interactive-bg-active, rgba(91,140,255,.14)); }
-.ruleName { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
-.ruleNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: normal; max-width: 260px; }
-/* 「含错峰 / 单位设置 —— 只在 YAML 里编辑」：提示附加字段仍然存在，不能让人以为数据丢了 */
-.ruleExtra { margin-top: 2px; font-size: 10px; }
-.linkBtn {
-  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px;
-  cursor: pointer; padding: 0 6px;
-}
-.linkBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
-
+/*
+ * 价目来源展示：来源角标、内置官方价目说明、聚合价目署名 / 刷新回执、解析问题、成本口径说明。
+ * 颜色全部走宿主 --dsw-alias-* 令牌，不硬编码明暗两套色。
+ */
 .sourceChip {
   display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
   border: 1px solid currentColor; margin-left: 5px; vertical-align: baseline; white-space: nowrap;
 }
 .sourceOfficial { color: var(--dsw-alias-label-tertiary, #67676f); }
-.sourceRule { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
-/* 内置官方价目：比「自定」弱、比「估算」强，用次级文本色而非对错语义色 */
+/* 内置官方价目：比「估算」强，用次级文本色而非对错语义色 */
 .sourceCatalog { color: var(--dsw-alias-label-secondary, #9a9aa2); }
 /* 聚合价目（LiteLLM，第三方、USD）：比内置官方价目再弱一档，虚线边框做区分，不用语义色 */
 .sourceAggregate {
@@ -102,21 +21,47 @@
 }
 .sourceEstimate { color: var(--dsw-alias-state-warning-primary, #e0a13c); }
 
+.linkBtn {
+  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px;
+  cursor: pointer; padding: 0 6px;
+}
+.linkBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.linkBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.linkBtn:disabled { opacity: .5; cursor: default; }
+
 /* 内置官方价目说明：只读信息，不需要用户操作 */
 .catalogNote {
-  margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.7;
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
 /* 价目抓取超过阈值：只换成警示色并加一句复核提示，数值一律不动（自动改价会静默算错钱） */
 .catalogStale {
-  color: var(--dsw-alias-state-warn-primary, #e0a13c);
-  border-color: var(--dsw-alias-state-warn-primary, #e0a13c);
+  color: var(--dsw-alias-state-warning-primary, #e0a13c);
+  border-color: var(--dsw-alias-state-warning-primary, #e0a13c);
 }
+
+/* 价目文件位置：改了价目文件之后唯一的自查入口 */
+.fileLine {
+  display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 6px 0;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+}
+.pathText { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; word-break: break-all; }
+
+.issueBlock {
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
+  color: var(--dsw-alias-state-warning-primary, #e0a13c);
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border: 1px solid var(--dsw-alias-state-warning-primary, #e0a13c);
+}
+.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.issueList { margin: 6px 0 0; padding-left: 18px; }
+.issueWhere { color: var(--dsw-alias-label-secondary, #9a9aa6); margin-right: 6px; }
 
 /* ===== 聚合价目（LiteLLM）来源与刷新：平时离线，只有点按钮才联网 ===== */
 .aggregateBlock {
-  margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.75;
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.75;
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
@@ -129,61 +74,7 @@
 .aggregateStatusOk { color: var(--dsw-alias-state-success-primary, #3fb96f); }
 .aggregateStatusBad { color: var(--dsw-alias-state-danger-primary, #e05a5a); }
 
-.offPeakChip {
-  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
-  border: 1px solid var(--dsw-alias-state-success-primary, #3fb96f); color: var(--dsw-alias-state-success-primary, #3fb96f);
-}
-
-.editor { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }.editorGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.field { display: flex; flex-direction: column; gap: 4px; }
-.field label { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
-.field input, .field select {
-  background: var(--dsw-alias-bg-layer-3, #232329); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  border-radius: 6px; color: var(--dsw-alias-label-primary, #e8e8ec); font: inherit; font-size: 11.5px; padding: 4px 7px; min-width: 0;
-}
-.field input:focus, .field select:focus { border-color: var(--dsw-alias-state-accent-primary, #5b8cff); }
-/* 输入框的焦点要有可见轮廓（原来只有边框变色，键盘用户很难定位） */
-.field input:focus-visible, .field select:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
-  outline-offset: 1px;
-}
-.linkBtn:focus-visible, .infoBtn:focus-visible, .actionBtn:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
-  outline-offset: 2px;
-}
-.subLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin: 12px 0 6px; }
-.editorError { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-size: 11.5px; margin-top: 10px; }
-.editorHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 8px; }
-.editorActions { display: flex; gap: 8px; margin-top: 12px; }
-
-.empty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; padding: 12px 0; }
-.warning { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 11.5px; margin: 6px 0; }
-.error { color: var(--dsw-alias-state-danger-primary, #e05a5a); font-size: 11.5px; margin: 6px 0; }
-.savingsList { margin: 6px 0 0; padding: 0; list-style: none; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.7; }
-
-/* ===== 摘要行：默认收起的全部内容，一行说清「钱凭什么 + 省了多少 + 怎么改」 ===== */
-.summaryStrip {
-  display: flex; align-items: center; gap: 12px 28px; flex-wrap: wrap;
-  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  border-radius: 12px; padding: 12px 16px;
-}
-.summaryBasis { flex: 1 1 320px; min-width: 0; }
-.summarySaving { flex: 0 0 auto; }
-.summaryActions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.summaryStrip .summaryName { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; margin-bottom: 3px; }
-.summaryStrip .summaryValue {
-  font-size: 12.5px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec);
-  font-variant-numeric: tabular-nums; line-height: 1.5;
-}
-.summaryStrip .summaryValue.saving { color: var(--dsw-alias-state-success-primary, #3fb96f); }
-.infoBtn {
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
-  color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
-  font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
-}
-.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
-
-/* 口径说明：点 ⓘ 才展开，不再占摘要正文 */
+/* 口径说明：点 ⓘ 才展开，不占正文 */
 .explanation {
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 10px; padding: 10px 14px; margin-top: 8px;
@@ -191,17 +82,4 @@
 .explanationTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
 .explanationList { margin: 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.75; }
 .explanationList b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
-
-/* ===== 抽屉：点「配置规则」才展开 ===== */
-.drawer {
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px;
-  padding: 12px 16px 14px; margin-top: 8px;
-}
-.sectionBlock { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); }
-.statItem .statNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 3px; }
-
-.worthList { margin: 6px 0 0; padding: 0; list-style: none; font-size: 11.5px; line-height: 1.9; }
-.worthList li, .savingsList li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.worthMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
-.savingsList .saving { color: var(--dsw-alias-state-success-primary, #3fb96f); font-weight: 600; margin-left: auto; }
-.linkBtn:disabled { opacity: .5; cursor: default; }
+.explanationList code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }

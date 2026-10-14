@@ -107,6 +107,29 @@ export function catalogEntryCount(): number {
   return catalogLoad().entries.length
 }
 
+/**
+ * 内置价目的**基准币种**：取第一条价目的 currency（文件里统一是 CNY），读不到条目时回落 'CNY'。
+ * 用途：`GET /pricing` 的 `currency` 字段，以及「台账反推均价」这类没有自带币种的金额。
+ */
+export function catalogCurrency(): string {
+  return catalogLoad().entries[0]?.currency ?? 'CNY'
+}
+
+/**
+ * 某个通道在内置价目里用到的**唯一**币种；通道没收录或收录了多种币种时返回 null（不猜）。
+ * 用途：台账只记金额不记币种，按该通道的官方价目币种推断它（DeepSeek/Kimi → CNY，Z.ai/OpenRouter → USD）。
+ */
+export function catalogProviderCurrency(provider: string): string | null {
+  const wanted = normalizeProviderId(provider)
+  if (wanted === '') return null
+  const currencies = new Set<string>()
+  for (const entry of catalogLoad().entries) {
+    if (normalizeProviderId(entry.provider) !== wanted) continue
+    currencies.add(entry.currency)
+  }
+  return currencies.size === 1 ? [...currencies][0] : null
+}
+
 export function catalogSources(): CatalogSourceSummary[] {
   const bySource = new Map<string, CatalogSourceSummary>()
   for (const entry of catalogLoad().entries) {

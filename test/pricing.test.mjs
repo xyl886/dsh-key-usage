@@ -1,35 +1,43 @@
 /**
- * 计费规则离线测试：优先级匹配、错峰判定（本地时间 / 跨午夜）、单位换算、
- * 缓存省钱公式与「规则 → 内置官方价目 → 台账均价」三层回落，
- * 以及内置价目从 TS 迁到 `pricing-catalog.yml` 后的**回归基线**（与 golden fixture 深度相等）。
- * 运行：node test/pricing.test.mjs（依赖 lib/pricing.js，改 src 后要先 tsc -p tsconfig.server.json）
+ * 计费口径离线测试：单位换算、错峰判定（本地时间 / 跨午夜 / 按星期）、错峰占比加权、
+ * 「内置官方价目 → LiteLLM 聚合价 → 台账反推均价 → 无依据」的逐行回落与覆盖度统计、
+ * 金额按币种拆分，以及内置价目从 TS 迁到 `pricing-catalog.yml` 后的**回归基线**
+ * （与 golden fixture 深度相等）。
+ *
+ * 用户规则层已整条移除：本文件不再有「自定规则」用例，
+ * 所有成本断言都走真实内置价目 / 聚合价，或直接调纯函数。
+ * 运行：node test/pricing.test.mjs（依赖 lib/pricing.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
+  SOURCE_RANK,
+  alignMoneyWithCost,
   clockMinutes,
-  costOfUsageRows,
+  costOfRowAtRates,
+  costsByCurrencyOf,
   displayTokensOf,
   isOffPeakAt,
-  isOffPeakNow,
   isoDayOf,
-  matchPricingRule,
-  mergePricingRules,
+  matchPricedRule,
   normalizeDays,
-  normalizePricing,
   offPeakTokenShare,
-  priceRowsByRules,
+  priceRowsOf,
   ratesAt,
   rowCostsOf,
-  ruleKeyOf,
+  settingsSectionOf,
   summarizeCoverage,
+  sumMoneyByCurrency,
   unwrapSettingValue,
+  weakestOf,
 } from '../lib/pricing.js'
 import {
+  catalogCurrency,
   catalogEntries,
   catalogEntryCount,
   catalogFileInfo,
   catalogIssues,
+  catalogProviderCurrency,
   catalogRuleFor,
   catalogRuleList,
   catalogSources,
@@ -47,17 +55,13 @@ function atLocal(hours, minutes = 0, day = 3) {
   return new Date(2026, 9, 12 + (day - 1), hours, minutes, 0)
 }
 
-/** 造一条规则，只写关心的字段。 */
+/** 造一条价目，只写关心的字段（用于直接调纯函数；真实价目走 pricing-catalog）。 */
 function rule(overrides) {
   return {
     provider: '*', model: '*', unit: 'perMillionTokens', currency: 'CNY',
     input: 0, cacheRead: 0, cacheWrite: 0, output: 0, offPeak: null, note: '',
     ...overrides,
   }
-}
-
-function config(rules, currency = 'CNY') {
-  return { version: 1, currency, rules }
 }
 
 /** 金额比较：单价是十进制小数，浮点误差不该让测试变脆。 */
@@ -68,7 +72,7 @@ function closeTo(actual, expected, message) {
   )
 }
 
-// ===== 1. 单位换算：按百万 / 按千 / 按次 =====
+// ===== 1. 单位换算：按百万 / 按千 / 按次（价目层只按每百万 tokens 记录，单位分支由纯函数守） =====
 {
   const row = {
     provider: 'p', model: 'm', calls: 3,
@@ -77,51 +81,42 @@ function closeTo(actual, expected, message) {
   const rates = { input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8 }
   const manual = 1_000_000 * 2 + 2_000_000 * 0.2 + 100_000 * 2 + 500_000 * 8
 
-  const perMillion = priceRowsByRules([row], config([rule({ provider: 'p', model: 'm', unit: 'perMillionTokens', ...rates })]))[0]
-  closeTo(perMillion.cost, manual / 1e6, '按百万 tokens：金额 = Σ(tokens × 单价) ÷ 1e6')
+  const perMillion = costOfRowAtRates(row, rule({ unit: 'perMillionTokens' }), rates)
+  closeTo(perMillion, manual / 1e6, '按百万 tokens：金额 = Σ(tokens × 单价) ÷ 1e6')
 
-  const perThousand = priceRowsByRules([row], config([rule({ provider: 'p', model: 'm', unit: 'perThousandTokens', ...rates })]))[0]
-  closeTo(perThousand.cost, manual / 1e3, '按千 tokens：同一批 tokens 金额是「按百万」的 1000 倍')
+  const perThousand = costOfRowAtRates(row, rule({ unit: 'perThousandTokens' }), rates)
+  closeTo(perThousand, manual / 1e3, '按千 tokens：同一批 tokens 金额是「按百万」的 1000 倍')
 
   // 按次计费只用「输入」档当每次调用价，token 数不参与
-  const perCall = priceRowsByRules([row], config([rule({ provider: 'p', model: 'm', unit: 'perCall', input: 0.5, cacheRead: 9, cacheWrite: 9, output: 9 })]))[0]
-  closeTo(perCall.cost, 1.5, '按次计费：calls × 输入档单价')
-  assert.equal(perCall.cacheSavings, 0, '按次计费没有缓存命中差价')
+  const perCall = costOfRowAtRates(row, rule({ unit: 'perCall' }), { input: 0.5, cacheRead: 9, cacheWrite: 9, output: 9 })
+  closeTo(perCall, 1.5, '按次计费：calls × 输入档单价')
 }
 
 // ===== 2. 缓存省钱 = cacheReadTokens ×（未命中价 − 命中价） =====
 {
   const row = { provider: 'p', model: 'm', calls: 1, cacheReadTokens: 2_000_000, inputTokens: 100_000, cacheWriteTokens: 0, outputTokens: 0 }
-  const hit = priceRowsByRules([row], config([rule({ provider: 'p', model: 'm', input: 2, cacheRead: 0.2 })]))[0]
-  closeTo(hit.cacheSavings, 3.6, '省下的钱 = 命中 tokens ×（未命中价 − 命中价）')
+  const perMillionRule = rule({ provider: 'p', model: 'm', input: 2, cacheRead: 0.2 })
+  const full = costOfRowAtRates(row, perMillionRule, { input: 2, cacheRead: 2, cacheWrite: 2, output: 2 })
+  const cached = costOfRowAtRates(row, perMillionRule, { input: 2, cacheRead: 0.2, cacheWrite: 2, output: 2 })
+  closeTo(full - cached, 3.6, '省下的钱 = 命中 tokens ×（未命中价 − 命中价）')
 
-  const thousand = priceRowsByRules([row], config([rule({ provider: 'p', model: 'm', unit: 'perThousandTokens', input: 2, cacheRead: 0.2 })]))[0]
-  closeTo(thousand.cacheSavings, 3600, '省钱公式同样按单位换算（按千是「按百万」的 1000 倍）')
+  const perThousandRule = rule({ provider: 'p', model: 'm', unit: 'perThousandTokens', input: 2, cacheRead: 0.2 })
+  const thousandFull = costOfRowAtRates(row, perThousandRule, { input: 2, cacheRead: 2, cacheWrite: 2, output: 2 })
+  const thousandCached = costOfRowAtRates(row, perThousandRule, { input: 2, cacheRead: 0.2, cacheWrite: 2, output: 2 })
+  closeTo(thousandFull - thousandCached, 3600, '省钱公式同样按单位换算（按千是「按百万」的 1000 倍）')
 
-  // 没有规则就没有省钱数字
-  assert.equal(priceRowsByRules([row], config([]))[0].cacheSavings, 0)
+  // 没有任何价目可命中 → 没有省钱数字
+  assert.equal(priceRowsOf([row])[0].cacheSavings, 0)
 }
 
-// ===== 3. 优先级：provider+model → provider+* → *+model → *+* =====
+// ===== 3. 成本来源强弱序：官方账单 > 内置价目 > 聚合价 > 均价 > 无 =====
 {
-  const exact = rule({ provider: 'p', model: 'm', input: 1 })
-  const providerWild = rule({ provider: 'p', model: '*', input: 2 })
-  const modelWild = rule({ provider: '*', model: 'm', input: 3 })
-  const allWild = rule({ provider: '*', model: '*', input: 4 })
-
-  // 故意把精确规则放在最后：档位优先于声明顺序
-  const all = [allWild, modelWild, providerWild, exact]
-  assert.equal(matchPricingRule(all, 'p', 'm').input, 1, '精确匹配优先于任何通配')
-  assert.equal(matchPricingRule([allWild, modelWild, providerWild], 'p', 'm').input, 2, '通道通配优先于模型通配')
-  assert.equal(matchPricingRule([allWild, modelWild], 'p', 'm').input, 3, '模型通配')
-  assert.equal(matchPricingRule([allWild], 'p', 'm').input, 4, '全通配兜底')
-  assert.equal(matchPricingRule([], 'p', 'm'), null, '没有规则时返回 null（界面显示 —）')
-  assert.equal(matchPricingRule([exact, providerWild], 'other', 'm'), null, '通道与模型都不匹配就不命中')
-
-  // 同一档内按声明顺序取第一条
-  const first = rule({ provider: 'p', model: '*', input: 10 })
-  const second = rule({ provider: 'p', model: '*', input: 20 })
-  assert.equal(matchPricingRule([first, second], 'p', 'x').input, 10, '同档内先声明的优先')
+  assert.deepEqual(SOURCE_RANK, { official: 0, catalog: 1, aggregate: 2, estimate: 3, none: 4 })
+  assert.equal(weakestOf('official', 'catalog'), 'catalog')
+  assert.equal(weakestOf('catalog', 'aggregate'), 'aggregate', '官方价目比聚合价可信')
+  assert.equal(weakestOf('aggregate', 'estimate'), 'estimate')
+  assert.equal(weakestOf('estimate', 'none'), 'none')
+  assert.equal(weakestOf('none', 'official'), 'none', '已经最弱就不会被「拉强」')
 }
 
 // ===== 4. 错峰判定（按本地时间） =====
@@ -136,7 +131,7 @@ function closeTo(actual, expected, message) {
   assert.equal(isOffPeakAt(daytime, atLocal(13)), false, '两段之间是峰时')
   assert.equal(isOffPeakAt(daytime, atLocal(15)), true, '第二个窗口')
   assert.equal(isOffPeakAt(daytime, atLocal(18)), false)
-  assert.equal(isOffPeakAt(rule({ provider: 'p', model: 'm' }), atLocal(10)), false, '没有错峰段的规则永远不是错峰')
+  assert.equal(isOffPeakAt(rule({ provider: 'p', model: 'm' }), atLocal(10)), false, '没有错峰段的价目永远不是错峰')
 
   const overnight = rule({ offPeak: { windows: [{ from: '22:00', to: '06:00' }], input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } })
   assert.equal(isOffPeakAt(overnight, atLocal(23)), true, '跨午夜：22:00 之后算错峰')
@@ -157,8 +152,6 @@ function closeTo(actual, expected, message) {
   // 无效窗口整段忽略，不会把整天判成错峰
   const broken = rule({ offPeak: { windows: [{ from: '25:00', to: '09:00' }], input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } })
   assert.equal(isOffPeakAt(broken, atLocal(3)), false, '非法窗口不生效')
-
-  assert.equal(isOffPeakNow(daytime, atLocal(10)), true, 'isOffPeakNow 只是把「现在」传进去')
 }
 
 // ===== 5. 时钟解析 =====
@@ -197,113 +190,119 @@ assert.equal(clockMinutes(900), null)
 
   assert.equal(offPeakTokenShare(ruleWithOffPeak, hours), 0.75, '错峰 3 个小时各 100、峰时 1 个小时 100 → 占比 0.75')
   assert.equal(offPeakTokenShare(ruleWithOffPeak, null), 0, '没有小时数据时占比 0（按标准价）')
+  assert.equal(offPeakTokenShare(rule({ offPeak: null }), hours), 0, '没有错峰段的价目占比恒为 0')
 
-  const row = { provider: 'p', model: 'm', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 }
-  const blended = priceRowsByRules([row], config([ruleWithOffPeak]), { hours })[0]
-  // 标准价 2、错峰价 1，占比 0.75 → 2×0.25 + 1×0.75 = 1.25
-  assert.ok(Math.abs(blended.cost - 1.25) < 1e-9, '按错峰占比加权的成本 = 1.25，实际 ' + blended.cost)
+  // 占比与两档价一起决定金额：标准价 2、错峰价 1、占比 0.75 → 2×0.25 + 1×0.75 = 1.25
+  const share = offPeakTokenShare(ruleWithOffPeak, hours)
+  const blended = costOfRowAtRates({ provider: 'p', model: 'm', calls: 1, inputTokens: 1_000_000 }, ruleWithOffPeak, { input: 2, cacheRead: 5, cacheWrite: 0, output: 0 }) * (1 - share)
+    + costOfRowAtRates({ provider: 'p', model: 'm', calls: 1, inputTokens: 1_000_000 }, ruleWithOffPeak, { input: 1, cacheRead: 5, cacheWrite: 0, output: 0 }) * share
+  closeTo(blended, 1.25, '按错峰占比加权的成本 = 1.25')
 
-  const allOffPeak = priceRowsByRules([row], config([ruleWithOffPeak]), { hours: hours.map((_, hour) => hourRow(hour === 9 ? 100 : 0)) })[0]
-  assert.equal(allOffPeak.cost, 1, '占比 1 时整体按错峰价')
+  // 真实内置价目（DeepSeek flash）：24 个槽里有 tokens 的槽会命中「周末全天」窗口
+  // —— 小时槽拿不到日期，带 days 的窗口按「每天适用」评估，这是有意近似（见 docs/01）
+  const flashRowOnly = [{ provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000 }]
+  const allOffPeakHours = Array.from({ length: 24 }, (_unused, hour) => ({
+    provider: 'deepseek-official', model: 'deepseek-flash', calls: 1,
+    inputTokens: hour < 9 ? 1_000_000 : 0,
+  }))
+  const offPeakOnly = priceRowsOf(flashRowOnly, { hours: allOffPeakHours })[0]
+  closeTo(offPeakOnly.cost, 1, '有小时槽时按错峰占比加权：tokens 全在错峰槽 → 整段按错峰价 ¥1')
+  assert.equal(offPeakOnly.offPeak, true, '全部落在错峰 → 打「错峰中」角标')
+  assert.equal(priceRowsOf(flashRowOnly, { hours: allOffPeakHours.map((slot) => ({ ...slot, inputTokens: 0 })) })[0].cost, 2, '没有 tokens 的槽不参与加权 → 按标准价')
 }
 
-// ===== 8. 三层回落：规则 → 内置价目 → 台账反推均价 → 无 =====
+// ===== 8. 两层回落：内置价目 → 台账反推均价 → 无 =====
 {
-  const only = rule({ provider: 'p', model: 'm', input: 2 })
   const rows = [
-    { provider: 'p', model: 'm', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
-    { provider: 'q', model: 'n', calls: 1, tokens: 1_000_000, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+    { provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+    { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, tokens: 1_000_000, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  // 用台账里一定不存在的通道，避免内置价目意外命中干扰「纯均价回落」的断言
-  const average = (row) => (row.provider === 'q' ? 5 : null)
+  // 用内置价目里一定不存在的通道，避免意外命中干扰「纯均价回落」的断言
+  const average = (row) => (row.provider === 'zzz-unknown' ? { cost: 5, currency: 'CNY' } : null)
 
-  const mixed = costOfUsageRows(rows, config([only]), average)
-  assert.equal(mixed.cost, 7, '规则 2 + 均价 5')
-  assert.equal(mixed.source, 'estimate', '只要有一行回落均价，整体就标「估算」')
-  assert.equal(mixed.ruleRows, 1)
+  const perRow = rowCostsOf(rows, average)
+  assert.deepEqual(perRow.map((entry) => entry.source), ['catalog', 'estimate'])
+  assert.deepEqual(perRow.map((entry) => entry.cost), [2, 5], '内置价目 2 元 + 均价 5 元')
+  assert.deepEqual(perRow.map((entry) => entry.currency), ['CNY', 'CNY'], '每格都带自己的币种')
 
-  const allRule = costOfUsageRows(rows, config([only, rule({ provider: 'q', model: 'n', input: 5 })]), average)
-  assert.equal(allRule.cost, 7)
-  assert.equal(allRule.source, 'rule', '全部命中规则时标「自定」')
+  const coverage = summarizeCoverage(rows, average)
+  assert.equal(coverage.catalogModels, 1)
+  assert.equal(coverage.averagedModels, 1)
+  assert.equal(coverage.unpricedModels, 0)
+  assert.deepEqual(coverage.costByCurrency, { CNY: 2 }, '只有命中价目的行进入价目口径金额')
 
-  const none = costOfUsageRows(rows, config([only]), () => null)
-  assert.equal(none.cost, 2, '均价拿不到的行直接不计入，不报错')
-  assert.equal(none.source, 'rule')
-
-  const nothing = costOfUsageRows([rows[1]], config([]), () => null)
-  assert.equal(nothing.cost, null, '既没规则也没均价 → 界面显示 —')
-  assert.equal(nothing.source, 'none')
-
-  const perRow = rowCostsOf(rows, config([only]), average)
-  assert.deepEqual(perRow.map((entry) => entry.source), ['rule', 'estimate'])
-  assert.deepEqual(perRow.map((entry) => entry.cost), [2, 5])
-
-  const missing = rowCostsOf([rows[1]], config([]), () => null)[0]
-  assert.equal(missing.source, 'none')
+  const missing = rowCostsOf([rows[1]], () => null)[0]
+  assert.equal(missing.source, 'none', '既没价目也没均价 → 界面显示 —')
   assert.equal(missing.cost, null)
+  assert.equal(missing.currency, null)
 }
 
-// ===== 9. 汇总口径：省钱按规则行统计、金额按币种分组 =====
+// ===== 9. 汇总口径：省钱按命中行统计、金额按币种分组 =====
 {
-  const cnyRule = rule({ provider: 'p', model: 'm', currency: 'CNY', input: 2, cacheRead: 0.2 })
-  const usdRule = rule({ provider: 'u', model: 'v', currency: 'USD', input: 1.4, cacheRead: 0.26 })
   const rows = [
-    { provider: 'p', model: 'm', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 1_000_000, cacheWriteTokens: 0, outputTokens: 0 },
-    { provider: 'u', model: 'v', calls: 1, inputTokens: 0, cacheReadTokens: 1_000_000, cacheWriteTokens: 0, outputTokens: 0 },
-    { provider: 'x', model: 'y', calls: 1, inputTokens: 1_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+    { provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 1_000_000, cacheWriteTokens: 0, outputTokens: 0 },
+    { provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 0, cacheReadTokens: 1_000_000, cacheWriteTokens: 0, outputTokens: 0 },
+    { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, inputTokens: 1_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  const coverage = summarizeCoverage(rows, config([cnyRule, usdRule]), (row) => (row.provider === 'x' ? 1 : null))
-  assert.equal(coverage.ruleModels, 2)
-  assert.equal(coverage.averagedModels, 1, 'x|y 由台账均价兜底')
+  const coverage = summarizeCoverage(rows, (row) => (row.provider === 'zzz-unknown' ? { cost: 1, currency: 'CNY' } : null))
+  assert.equal(coverage.catalogModels, 2, '两个模型命中内置官方价目')
+  assert.equal(coverage.aggregateModels, 0)
+  assert.equal(coverage.averagedModels, 1, 'zzz-model 由台账均价兜底')
   assert.equal(coverage.unpricedModels, 0)
   assert.deepEqual(Object.keys(coverage.costByCurrency).sort(), ['CNY', 'USD'], '跨币种分组，不合计')
-  assert.ok(Math.abs(coverage.costByCurrency.CNY - 2.2) < 1e-9, 'CNY：(未命中 1M×2 + 命中 1M×0.2) = 2.2')
-  assert.ok(Math.abs(coverage.savingsByCurrency.CNY - 1.8) < 1e-9, 'CNY 省：1M×(2−0.2)')
+  // DeepSeek：未命中 1M × ¥2 + 命中 1M × ¥0.04 = ¥2.04；Z.ai：命中 1M × $0.26
+  closeTo(coverage.costByCurrency.CNY, 2.04, 'CNY：未命中 1M×2 + 命中 1M×0.04')
+  closeTo(coverage.costByCurrency.USD, 0.26, 'USD：命中 1M×0.26')
+  closeTo(coverage.savingsByCurrency.CNY, 1.96, 'CNY 省：1M×(2−0.04)')
+  closeTo(coverage.savingsByCurrency.USD, 1.14, 'USD 省：1M×(1.4−0.26)')
   assert.equal(coverage.savingsDetail.length, 2)
-  assert.equal(coverage.savingsDetail[0].model, 'm')
+  assert.equal(coverage.savingsDetail[0].model, 'deepseek-flash', '按省钱金额降序')
+  assert.equal(coverage.savingsDetail[0].currency, 'CNY')
 
-  const unpriced = summarizeCoverage([rows[2]], config([]), () => null)
-  assert.equal(unpriced.unpricedModels, 1, '规则与均价都没有 → 无依据')
+  const unpriced = summarizeCoverage([rows[2]], () => null)
+  assert.equal(unpriced.unpricedModels, 1, '价目与均价都没有 → 无依据')
+  assert.deepEqual(unpriced.savingsDetail, [])
 }
 
-// ===== 10. 设置值的防御式解析 =====
+// ===== 10. 金额按币种拆分（折算的服务端支撑） =====
 {
-  assert.deepEqual(normalizePricing(undefined).rules, [], '拿不到值就是空规则')
-  assert.deepEqual(normalizePricing('oops').rules, [])
-  assert.deepEqual(normalizePricing({ rules: 'oops' }).rules, [])
+  const money = costsByCurrencyOf([
+    { cost: 1.5, currency: 'CNY' },
+    { cost: 0.2, currency: 'USD' },
+    { cost: 2, currency: 'CNY' },
+    { cost: null, currency: 'CNY' },
+    { cost: 9, currency: null },
+  ])
+  assert.deepEqual(money, { CNY: 3.5, USD: 0.2 }, '同币种相加（保留两位）、跨币种不合计；无金额 / 无币种的格子跳过')
+  assert.deepEqual(costsByCurrencyOf([]), {})
+  assert.deepEqual(costsByCurrencyOf([{ cost: 0, currency: 'CNY' }]), { CNY: 0 }, '0 元也是有依据的金额')
 
-  assert.equal(unwrapSettingValue({ get: () => 42 }), 42, 'volatile 引用要 unwrap 后再解析')
-  assert.equal(unwrapSettingValue(42), 42)
-  assert.deepEqual(normalizePricing({ get: () => ({ version: 1, currency: 'USD', rules: [] }) }).currency, 'USD')
+  const summed = sumMoneyByCurrency([{ CNY: 1 }, { USD: 2 }, { CNY: 3 }, {}])
+  assert.deepEqual(summed, { CNY: 4, USD: 2 })
 
-  const messy = normalizePricing({
-    version: 'x',
-    currency: 'USD',
-    rules: [
-      null,
-      'oops',
-      { provider: ' p ', model: '', unit: 'perCentury', currency: '', input: -5, cacheRead: 'x', cacheWrite: 1, output: 2 },
-      { provider: 'q', model: 'm', offPeak: { windows: [{ from: '09:00', to: '' }], input: 1 } },
-      { provider: 'r', model: 'm', offPeak: { windows: [{ from: '09:00', to: '12:00' }], input: 1, cacheRead: 0.1, cacheWrite: 1, output: 2 } },
-    ],
-  })
-  assert.equal(messy.version, 1, '版本号不合法回落 1')
-  assert.equal(messy.rules.length, 3, '非对象条目直接丢弃')
-  assert.equal(messy.rules[0].provider, 'p', 'provider 去空白')
-  assert.equal(messy.rules[0].model, '*', '空 model 回落通配')
-  assert.equal(messy.rules[0].unit, 'perMillionTokens', '未知单位回落按百万')
-  assert.equal(messy.rules[0].currency, 'USD', '规则币种缺省继承配置币种')
-  assert.equal(messy.rules[0].input, 0, '负数单价不接受（回落 0）')
-  assert.equal(messy.rules[0].cacheRead, 0, '非数字单价回落 0')
-  assert.equal(messy.rules[0].cacheWrite, 1)
-  assert.equal(messy.rules[1].offPeak, null, '窗口解析不全时整段错峰作废')
-  assert.equal(messy.rules[2].offPeak.windows.length, 1)
+  // 单币种时严格取父金额：两者本就是同一个和，这里只抹掉累加顺序带来的浮点尾差
+  const aligned = alignMoneyWithCost({ CNY: 0.1 + 0.2 }, 0.3)
+  assert.equal(aligned.CNY, 0.3, '单币种时拆分值与 cost 完全相同')
+  const mixed = alignMoneyWithCost({ CNY: 30, USD: 0.2 }, 30.2)
+  assert.deepEqual(mixed, { CNY: 30, USD: 0.2 }, '多币种不做任何对齐')
+  assert.deepEqual(alignMoneyWithCost({}, 0), {}, '没有金额时不凭空造一个币种')
+  assert.deepEqual(alignMoneyWithCost({ CNY: 5 }, null), { CNY: 5 })
 
-  const overflow = normalizePricing({ rules: Array.from({ length: 500 }, (_, index) => ({ provider: 'p' + String(index) })) })
-  assert.equal(overflow.rules.length, 200, '规则条数封顶，避免一次请求打满 CPU')
+  // 展示口径 tokens：输入 + 输出 + 缓存读（不含 cacheWrite）
+  assert.equal(displayTokensOf({ provider: 'p', model: 'm', tokens: 7, inputTokens: 100 }), 7, '有展示口径 tokens 时优先用它')
+  assert.equal(displayTokensOf({ provider: 'p', model: 'm', inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheWriteTokens: 4 }), 6, '否则用输入 + 输出 + 缓存读')
 }
 
-// ===== 11. 内置价目下发给界面（下载规则模板用）：结构与官方数值 =====
+// ===== 11. 旧版设置值的防御式读取（链路已退役，读法保留） =====
+{
+  assert.equal(unwrapSettingValue({ get: () => 42 }), 42, 'volatile 引用要 unwrap 后再读')
+  assert.equal(unwrapSettingValue(42), 42)
+  assert.deepEqual(settingsSectionOf({ pricing: { currency: 'USD' } }, 'pricing'), { currency: 'USD' }, '命名空间根对象里取那一段')
+  assert.equal(settingsSectionOf(42, 'pricing'), 42, '非对象原样返回')
+  assert.deepEqual(settingsSectionOf({ currency: 'CNY' }, 'pricing'), { currency: 'CNY' }, '没有命名空间键时用整份值')
+}
+
+// ===== 12. 内置价目下发给界面：结构与官方数值 =====
 {
   const rules = catalogRuleList()
   assert.equal(rules.length, catalogEntryCount(), '逐条规则与条数一致')
@@ -321,7 +320,7 @@ assert.equal(clockMinutes(900), null)
   assert.deepEqual(
     flash.offPeak.windows.map((window) => window.days),
     [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [6, 7]],
-    '每段窗口都限定星期（模板里的错峰示例就取这条）',
+    '每段窗口都限定星期',
   )
   assert.equal(flash.offPeak.windows[2].to, '00:00', '工作日最后一段跨午夜到 00:00')
 
@@ -334,24 +333,17 @@ assert.equal(clockMinutes(900), null)
   const glmFlash = rules.find((rule) => rule.model === 'glm-5.3-flash')
   assert.deepEqual([glmFlash.input, glmFlash.cacheRead, glmFlash.output], [0.15, 0.03, 0.50], 'GLM-5.3-Flash：$0.15 / $0.03 / $0.50')
 
-  // 下发形状必须能被 normalizePricing 原样接受（否则模板导入后会被静默改值）
-  const normalized = normalizePricing({ version: 1, currency: 'CNY', rules })
-  assert.equal(normalized.rules.length, rules.length, '全部通过归一化')
-  assert.deepEqual(normalized.rules[0], rules[0], '第一条数值不被改写（note 缺省为空串）')
+  // 基准币种与「按通道推断台账币种」：通道没收录就返回 null（不猜）
+  assert.equal(catalogCurrency(), 'CNY', '基准币种 = 第一条价目的币种')
+  assert.equal(catalogProviderCurrency('deepseek-official'), 'CNY')
+  assert.equal(catalogProviderCurrency('moonshotai'), 'CNY')
+  assert.equal(catalogProviderCurrency('zai'), 'USD')
+  assert.equal(catalogProviderCurrency('openrouter'), 'USD')
+  assert.equal(catalogProviderCurrency('opencode-go'), null, '没有收录该通道 → null')
+  assert.equal(catalogProviderCurrency(''), null)
 }
 
-// ===== 12. 规则合并与展示口径 =====
-{
-  const existing = [rule({ provider: 'a', model: 'b', input: 1 }), rule({ provider: 'c', model: 'd', input: 2 })]
-  const merged = mergePricingRules(existing, [rule({ provider: 'a', model: 'b', input: 9 }), rule({ provider: 'e', model: 'f', input: 3 })])
-  assert.deepEqual(merged.map(ruleKeyOf), ['a|b', 'c|d', 'e|f'], '同键覆盖、新键追加、顺序保留')
-  assert.equal(merged[0].input, 9)
-
-  assert.equal(displayTokensOf({ provider: 'p', model: 'm', tokens: 7, inputTokens: 100 }), 7, '有展示口径 tokens 时优先用它')
-  assert.equal(displayTokensOf({ provider: 'p', model: 'm', inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheWriteTokens: 4 }), 6, '否则用输入 + 输出 + 缓存读（不含 cacheWrite）')
-}
-
-// ===== 13. 内置官方价目自动生效：优先级 用户规则 > 内置 > 台账均价 =====
+// ===== 13. 内置官方价目自动生效：价目 > 台账均价 =====
 {
   // DeepSeek flash 高峰价：未命中 ¥2 / 命中 ¥0.04 / 输出 ¥8（CNY / 百万 tokens）
   const flashRow = {
@@ -359,99 +351,88 @@ assert.equal(clockMinutes(900), null)
     inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0,
   }
 
-  // 没有任何用户规则时，内置价目自动给出官方价，来源标 catalog
-  const byCatalog = costOfUsageRows([flashRow], config([]), () => null)
-  assert.equal(byCatalog.source, 'catalog', '未配规则时内置价目自动生效，标「官方价」')
+  const byCatalog = rowCostsOf([flashRow], () => null)[0]
+  assert.equal(byCatalog.source, 'catalog', '内置价目自动生效，标「官方价」')
   assert.equal(byCatalog.cost, 2, 'deepseek-flash 未命中 1M tokens = ¥2.00')
-
-  const catalogRow = rowCostsOf([flashRow], config([]), () => null)[0]
-  assert.equal(catalogRow.source, 'catalog')
-  assert.equal(catalogRow.rule.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价，不做汇率换算')
-  assert.equal(catalogRow.rule.provider, 'deepseek-official')
-
-  // 用户规则必须压过内置价目
-  const override = rule({ provider: 'deepseek-official', model: 'deepseek-flash', input: 99, currency: 'CNY' })
-  const byRule = rowCostsOf([flashRow], config([override]), () => null)[0]
-  assert.equal(byRule.source, 'rule', '用户规则优先于内置官方价目')
-  assert.equal(byRule.cost, 99)
-  assert.equal(byRule.rule.currency, 'CNY')
-
-  // 用户规则只覆盖通配时也优先（用户显式表达过的意图优先）
-  const wildcard = rule({ provider: 'deepseek-official', model: '*', input: 7 })
-  const byWildcard = rowCostsOf([flashRow], config([wildcard]), () => null)[0]
-  assert.equal(byWildcard.source, 'rule')
-  assert.equal(byWildcard.cost, 7)
+  assert.equal(byCatalog.rule.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价，不做汇率换算')
+  assert.equal(byCatalog.rule.provider, 'deepseek-official')
+  assert.equal(byCatalog.currency, 'CNY')
 
   // 内置价目 > 台账反推均价：命中内置时不去问均价
   let askedAverage = false
-  const priced = rowCostsOf([flashRow], config([]), () => { askedAverage = true; return 123 })[0]
+  const priced = rowCostsOf([flashRow], () => { askedAverage = true; return { cost: 123, currency: 'CNY' } })[0]
   assert.equal(priced.source, 'catalog')
   assert.equal(priced.cost, 2)
   assert.equal(askedAverage, false, '命中内置价目后不再回落台账均价')
 
   // 内置价目也不认识时，才轮到台账均价
   const unknown = { provider: 'nope', model: 'nothing', calls: 1, inputTokens: 1_000_000 }
-  const fallback = rowCostsOf([unknown], config([]), () => 42)[0]
+  const fallback = rowCostsOf([unknown], () => ({ cost: 42, currency: 'CNY' }))[0]
   assert.equal(fallback.source, 'estimate', '内置没命中才回落台账均价')
+  assert.equal(fallback.cost, 42)
 
-  // 三层同时在场：整批的最弱来源是 estimate（宁可标弱）
-  const both = costOfUsageRows([flashRow, unknown], config([]), (row) => (row.provider === 'nope' ? 42 : null))
-  assert.equal(both.source, 'estimate')
-  assert.equal(both.cost, 44)
-  assert.equal(both.ruleRows, 1, '内置价目命中的行也计入 priced 行数')
+  // 两层同时在场：逐层计数各算各的（宁可标弱，也不冒称精确）
+  const both = summarizeCoverage([flashRow, unknown], (row) => (row.provider === 'nope' ? { cost: 42, currency: 'CNY' } : null))
+  assert.equal(both.catalogModels, 1, '内置价目命中的模型数')
+  assert.equal(both.averagedModels, 1, '回落均价的模型数')
+  closeTo(both.costByCurrency.CNY, 2, '价目口径金额只算命中价目的行')
 
   // 缓存省钱按内置价目算：命中价比未命中价低的差价
   const cached = rowCostsOf(
     [{ ...flashRow, inputTokens: 0, cacheReadTokens: 1_000_000 }],
-    config([]),
     () => null,
   )[0]
   assert.equal(cached.source, 'catalog')
   closeTo(cached.cacheSavings, 2 - 0.04, '缓存省钱 = 命中 tokens ×（未命中价 − 命中价）')
+  assert.equal(cached.partial, false, '内置价目不存在「部分收录」')
 }
 
 // ===== 14. 模型 id 匹配保守：精确 → 忽略大小写 → 去 vendor/ 前缀；不做模糊匹配 =====
 {
   const row = (provider, model) => ({ provider, model, calls: 1, inputTokens: 1_000_000 })
 
-  assert.equal(rowCostsOf([row('deepseek-official', 'deepseek-flash')], config([]), () => null)[0].source, 'catalog', '精确匹配')
-  assert.equal(rowCostsOf([row('deepseek-official', 'DeepSeek-Flash')], config([]), () => null)[0].source, 'catalog', '忽略大小写')
-  assert.equal(rowCostsOf([row('DEEPSEEK-OFFICIAL', 'deepseek-flash')], config([]), () => null)[0].source, 'catalog', '通道也忽略大小写')
+  assert.equal(rowCostsOf([row('deepseek-official', 'deepseek-flash')], () => null)[0].source, 'catalog', '精确匹配')
+  assert.equal(rowCostsOf([row('deepseek-official', 'DeepSeek-Flash')], () => null)[0].source, 'catalog', '忽略大小写')
+  assert.equal(rowCostsOf([row('DEEPSEEK-OFFICIAL', 'deepseek-flash')], () => null)[0].source, 'catalog', '通道也忽略大小写')
   // 这是「台账 / 事件里的模型名带 vendor 前缀」的常见形态：通道 `deepseek` 不在内置价目的通道里，
   // 因此即便模型名去掉前缀能对上，也不该按别的通道的价格计费
-  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], config([]), () => null)[0].source, 'none', '去前缀后仍要通道也对得上才算命中（否则显示 —）')
-  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], config([]), () => 9)[0].source, 'estimate', '该行回落台账均价而不是内置价目')
+  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => null)[0].source, 'none', '去前缀后仍要通道也对得上才算命中（否则显示 —）')
+  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].source, 'estimate', '该行回落台账均价而不是内置价目')
   assert.equal(
-    rowCostsOf([row('openrouter', 'deepseek/deepseek-v4.1-flash')], config([]), () => null)[0].source,
+    rowCostsOf([row('openrouter', 'deepseek/deepseek-v4.1-flash')], () => null)[0].source,
     'catalog',
     '去 vendor/ 前缀 + 忽略大小写后可命中 OpenRouter 中转价',
   )
   assert.equal(
-    rowCostsOf([row('openrouter', 'DEEPSEEK/DeepSeek-V4.1-Flash')], config([]), () => null)[0].source,
+    rowCostsOf([row('openrouter', 'DEEPSEEK/DeepSeek-V4.1-Flash')], () => null)[0].source,
     'catalog',
     '前缀与大小写同时不同也能命中',
   )
 
   // 保守：不做模糊 / 近似匹配，宁可继续显示「估算」
   for (const nearMiss of ['deepseek-flash-2', 'deepseekflash', 'xdeepseek-flash', 'deepseek-v4-flash-exp']) {
-    const priced = rowCostsOf([row('deepseek-official', nearMiss)], config([]), () => 9)[0]
+    const priced = rowCostsOf([row('deepseek-official', nearMiss)], () => ({ cost: 9, currency: 'CNY' }))[0]
     assert.equal(priced.source, 'estimate', '不做模糊匹配：' + nearMiss + ' 应回落均价')
   }
   // 只做首尾空白裁剪（不算模糊匹配）
   assert.equal(
-    rowCostsOf([row('deepseek-official', '  deepseek-flash  ')], config([]), () => null)[0].source,
+    rowCostsOf([row('deepseek-official', '  deepseek-flash  ')], () => null)[0].source,
     'catalog',
     '首尾空白被裁剪后命中',
   )
   // 内置价目未收录的模型同样回落，不拿同类顶替
   assert.equal(
-    rowCostsOf([row('deepseek-official', 'deepseek-v5-unknown')], config([]), () => 9)[0].source,
+    rowCostsOf([row('deepseek-official', 'deepseek-v5-unknown')], () => ({ cost: 9, currency: 'CNY' }))[0].source,
     'estimate',
     '文档没收录的型号不用同类模型顶替',
   )
   // 未收录的通道也不会被通配兜底（只有文档给出通道统一价时才会写通配）
-  assert.equal(rowCostsOf([row('opencode-go', 'deepseek-flash')], config([]), () => 9)[0].source, 'estimate', '未覆盖通道回落均价')
-  assert.equal(rowCostsOf([row('sensenova', 'any-model')], config([]), () => null)[0].source, 'none', '免费额度通道无价目 → 显示 —')
+  assert.equal(rowCostsOf([row('opencode-go', 'deepseek-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].source, 'estimate', '未覆盖通道回落均价')
+  assert.equal(rowCostsOf([row('sensenova', 'any-model')], () => null)[0].source, 'none', '免费额度通道无价目 → 显示 —')
+
+  // matchPricedRule 是唯一的匹配入口：两层都查不到时返回 null
+  assert.equal(matchPricedRule('deepseek-official', 'deepseek-flash').source, 'catalog')
+  assert.equal(matchPricedRule('zzz-unknown', 'zzz-model'), null)
 }
 
 // ===== 15. 错峰窗口命中（含跨午夜、按星期限定）与币种不换算 =====
@@ -461,7 +442,6 @@ assert.equal(clockMinutes(900), null)
   assert.notEqual(flashRule.offPeak, null, 'deepseek-flash 带错峰价')
 
   // 内置错峰窗口按**本地时间**写，工作日三段 + 周末全天一段；判定点取周三（工作日）
-  // 有错峰窗口的规则在批量定价里按 hours 占比加权，因此逐点判定用 isOffPeakAt（面板的「错峰中」角标同源）
   const offPeakHit = (hours, minutes = 0, day = 3) => isOffPeakAt(flashRule, atLocal(hours, minutes, day))
 
   assert.equal(offPeakHit(2), true, '凌晨 02:00 落在错峰窗口')
@@ -487,7 +467,7 @@ assert.equal(clockMinutes(900), null)
   // 跨午夜窗口 + days：[18:00–00:00] 仅工作日 → 周五 23:00 命中、周六 23:00 不命中
   assert.equal(offPeakHit(23, 0, 5), true, '周五 23:00 命中工作日的跨午夜窗口')
   assert.equal(offPeakHit(23, 0, 6), true, '周六 23:00 由周末全天窗口覆盖（不是跨午夜窗口）')
-  // 用一条只给工作日跨午夜窗口的规则验证「不命中」
+  // 用一条只给工作日跨午夜窗口的价目验证「不命中」
   const weekdayOvernight = rule({
     offPeak: { windows: [{ from: '18:00', to: '00:00', days: [1, 2, 3, 4, 5] }], input: 1, cacheRead: 0, cacheWrite: 0, output: 4 },
   })
@@ -514,41 +494,13 @@ assert.equal(clockMinutes(900), null)
     'deepseek-flash 错峰价 = 高峰半价',
   )
 
-  // 给 24 小时槽时按占比加权。
-  // 注意：小时槽只有「一天里的第几小时」，没有日期，所以 offPeakTokenShare 按「每天适用」评估窗口
-  // —— DeepSeek 的周末全天窗口会让 24 个槽全部算错峰。因此这里用一条**只有工作日窗口**的规则
-  // 验证加权本身（用内置 flash 价 2 元 / 错峰 1 元）。
-  const weekdayShareRule = rule({
-    provider: 'deepseek-official', model: 'deepseek-flash', input: 2, cacheRead: 0.04, cacheWrite: 2, output: 8,
-    offPeak: {
-      windows: [{ from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] }],
-      input: 1, cacheRead: 0.02, cacheWrite: 1, output: 4,
-    },
-  })
+  // 真实内置价目在拿不到小时分布时按高峰价算（保守，不猜折扣）
   const flashRowOnly = [{ provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000 }]
-
-  const allOffPeakHours = Array.from({ length: 24 }, (_unused, hour) => ({
-    provider: 'deepseek-official', model: 'deepseek-flash', calls: 1,
-    inputTokens: hour < 9 ? 1_000_000 : 0,
-  }))
-  const offPeakOnly = priceRowsByRules(flashRowOnly, config([weekdayShareRule]), { hours: allOffPeakHours })[0]
-  closeTo(offPeakOnly.cost, 1, 'tokens 全在错峰小时槽 → 整段按错峰价')
-  assert.equal(offPeakOnly.offPeak, true, '全部落在错峰 → 打「错峰中」角标')
-
-  // 一半 tokens 落在高峰小时槽 → 加权后介于两者之间
-  const mixedHours = Array.from({ length: 24 }, (_unused, hour) => ({
-    provider: 'deepseek-official', model: 'deepseek-flash', calls: 1,
-    inputTokens: hour < 9 || (hour >= 12 && hour < 14) ? 1_000_000 : 0,
-  }))
-  const mixed = priceRowsByRules(flashRowOnly, config([weekdayShareRule]), { hours: mixedHours })[0]
-  assert.ok(mixed.cost > 1 && mixed.cost < 2, '部分错峰时按占比加权，介于错峰价与全价之间（实际 ' + String(mixed.cost) + '）')
-  assert.equal(mixed.offPeak, false, '只是部分错峰时不打「错峰中」角标')
-
-  // 内置 flash 价目在拿不到小时分布时按高峰价算（保守，不猜折扣）
-  const noHours = priceRowsByRules(flashRowOnly, config([]), { at: atLocal(3, 0, 6) })[0]
+  const noHours = priceRowsOf(flashRowOnly, { at: atLocal(3, 0, 6) })[0]
   closeTo(noHours.cost, 2, '拿不到 hours 时即使处在周六凌晨也按高峰价（有意保守）')
+  assert.equal(noHours.offPeak, false)
 
-  // 跨午夜窗口：用一条自定义规则验证 from > to 的判定
+  // 跨午夜窗口：用一条自定义价目验证 from > to 的判定
   const overnight = rule({
     provider: 'p', model: 'm', input: 10,
     offPeak: { windows: [{ from: '22:00', to: '06:00' }], input: 5, cacheRead: 0, cacheWrite: 0, output: 0 },
@@ -559,22 +511,22 @@ assert.equal(clockMinutes(900), null)
   assert.equal(isOffPeakAt(overnight, atLocal(6, 0, 3)), false, '跨午夜窗口：06:00 是终点（不含）')
   assert.equal(isOffPeakAt(overnight, atLocal(21, 59, 5)), false, '跨午夜窗口：21:59 不命中')
 
-  // 币种：内置价目按文档原样记，规则与内置不同币种时互不换算
+  // 币种：内置价目按文档原样记，不同通道的币种互不换算
   const flash = rowCostsOf(
     [{ provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000 }],
-    config([]),
     () => null,
   )[0]
   assert.equal(flash.rule.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价')
-  const kimi = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 }], config([]), () => null)[0]
+  const kimi = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 }], () => null)[0]
   assert.equal(kimi.rule.currency, 'CNY', 'Kimi 文档以 CNY 计价')
   assert.equal(kimi.cost, 20, 'Kimi K3 未命中 ¥20 / MTok')
   assert.equal(flash.cost, 2, 'DeepSeek flash ¥2.00 / MTok —— 两者不做任何汇率换算')
 
-  // z.ai 仍是 USD：跨币种不合计的口径不能被这轮改动破坏
-  const zai = rowCostsOf([{ provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 }], config([]), () => null)[0]
+  // z.ai 是 USD：跨币种不合计的口径不能被这轮改动破坏
+  const zai = rowCostsOf([{ provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 }], () => null)[0]
   assert.equal(zai.rule.currency, 'USD', 'Z.ai 文档只有 USD 价，保持不动')
   assert.equal(zai.cost, 1.4)
+  assert.equal(zai.currency, 'USD', '每格都带自己的币种')
 
   // 覆盖度按币种分组累加，跨币种不合计
   const coverage = summarizeCoverage(
@@ -583,19 +535,18 @@ assert.equal(clockMinutes(900), null)
       { provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 },
       { provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 },
     ],
-    config([]),
     () => null,
   )
   assert.deepEqual(coverage.costByCurrency, { CNY: 22, USD: 1.4 }, '金额按币种分组，不跨币种合计')
   assert.equal(coverage.catalogModels, 3, '三个模型都由内置价目覆盖')
-  assert.equal(coverage.ruleModels, 0, '没有用户规则命中')
   assert.equal(coverage.averagedModels, 0)
   assert.equal(coverage.unpricedModels, 0)
+  assert.equal(coverage.aggregateModels, 0)
 }
 
-// ===== 15b. `days` 语义：缺省 = 每天（与升级前完全一致）、三选一映射、非法值容错 =====
+// ===== 15b. `days` 语义：缺省 = 每天、三选一映射、非法值容错 =====
 {
-  // 缺省的规则（字段根本不存在）必须与升级前逐点一致
+  // 缺省的价目（字段根本不存在）必须与升级前逐点一致
   const legacy = rule({
     provider: 'p', model: 'm', input: 2,
     offPeak: { windows: [{ from: '00:00', to: '09:00' }, { from: '12:00', to: '14:00' }, { from: '18:00', to: '24:00' }], input: 1, cacheRead: 0, cacheWrite: 1, output: 4 },
@@ -611,7 +562,7 @@ assert.equal(clockMinutes(900), null)
     }
   }
 
-  // 显式 [1..7] 与缺省等价（引擎层面），但导出时缺省仍不写字段
+  // 显式 [1..7] 与缺省等价（引擎层面）
   const explicitAll = rule({ offPeak: { windows: [{ from: '09:00', to: '12:00', days: [1, 2, 3, 4, 5, 6, 7] }], input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } })
   for (let day = 1; day <= 7; day += 1) {
     assert.equal(isOffPeakAt(explicitAll, atLocal(10, 0, day)), true, '[1..7] 等于每天（星期 ' + String(day) + '）')
@@ -653,67 +604,43 @@ assert.equal(clockMinutes(900), null)
   assert.equal(normalizeDays([]), undefined, '空数组 → 缺省（每天）')
   assert.equal(normalizeDays(undefined), undefined, '缺省 → 每天')
   assert.equal(normalizeDays('1,2'), undefined, '非数组 → 每天')
-
-  // 归一化链路（normalizePricing）保留合法的 days、丢弃非法的
-  const normalized = normalizePricing({
-    rules: [
-      { provider: 'p', model: 'm', input: 1, offPeak: { windows: [{ from: '09:00', to: '12:00', days: [5, 1, 5] }], input: 1 } },
-      { provider: 'q', model: 'm', input: 1, offPeak: { windows: [{ from: '09:00', to: '12:00', days: [0, 99] }], input: 1 } },
-      { provider: 'r', model: 'm', input: 1, offPeak: { windows: [{ from: '09:00', to: '12:00' }], input: 1 } },
-    ],
-  })
-  assert.deepEqual(normalized.rules[0].offPeak.windows[0].days, [1, 5], '归一化保留合法 days（去重排序）')
-  assert.equal(normalized.rules[1].offPeak.windows[0].days, undefined, '非法 days 被归一成缺省（每天）')
-  assert.equal(normalized.rules[2].offPeak.windows[0].days, undefined, '原本没写的窗口不会凭空生出 days')
-  // 归一化后行为：非法 days 的规则等同于「每天」
-  assert.equal(isOffPeakAt(normalized.rules[1], atLocal(10, 0, 6)), true, '非法 days 归一后按每天生效')
-  assert.equal(isOffPeakAt(normalized.rules[0], atLocal(10, 0, 6)), false, '合法 days 归一后仍只在该星期生效')
 }
 
-// ===== 16. 没有内置价目可用时，行为与升级前完全一致 =====
+// ===== 16. 没有价目可命中时，行为与升级前完全一致 =====
 {
   // 只用内置价目**完全没收录**的通道 / 模型，验证老口径没被改动
   const rows = [
     { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  const average = () => 5
+  const average = () => ({ cost: 5, currency: 'CNY' })
 
-  // 老口径：没规则 → 均价；来源名仍是 estimate，不是 catalog
-  const byAverage = rowCostsOf(rows, config([]), average)[0]
+  const byAverage = rowCostsOf(rows, average)[0]
   assert.equal(byAverage.source, 'estimate')
   assert.equal(byAverage.cost, 5)
+  assert.equal(byAverage.currency, 'CNY', '回落均价的行带调用方给的台账币种')
   assert.equal(byAverage.rule, null, '均价回落的行不带价目对象')
+  assert.equal(byAverage.cacheSavings, 0)
 
-  const summary = costOfUsageRows(rows, config([]), average)
-  assert.equal(summary.source, 'estimate')
-  assert.equal(summary.ruleRows, 0)
+  const summary = summarizeCoverage(rows, average)
+  assert.equal(summary.averagedModels, 1)
+  assert.equal(summary.catalogModels, 0)
+  assert.equal(summary.aggregateModels, 0)
+  assert.deepEqual(summary.costByCurrency, {}, '均价没有单价表，不进价目口径的金额')
 
-  const noneSummary = costOfUsageRows(rows, config([]), () => null)
-  assert.equal(noneSummary.source, 'none', '无均价、无内置 → 仍是 none（界面显示 —）')
-  assert.equal(noneSummary.cost, null)
+  const noneSummary = summarizeCoverage(rows, () => null)
+  assert.equal(noneSummary.unpricedModels, 1, '无均价、无价目 → 无依据')
 
-  // 用户规则的行为不受内置价目影响
-  const userRule = rule({ provider: 'zzz-unknown', model: 'zzz-model', input: 3 })
-  const byRule = rowCostsOf(rows, config([userRule]), average)[0]
-  assert.equal(byRule.source, 'rule')
-  assert.equal(byRule.cost, 3)
+  const noneRow = rowCostsOf(rows, () => null)[0]
+  assert.equal(noneRow.cost, null, '既没价目也没均价 → 界面显示 —')
+  assert.equal(noneRow.source, 'none')
+  assert.equal(noneRow.currency, null)
 
-  const userSummary = costOfUsageRows(rows, config([userRule]), average)
-  assert.equal(userSummary.source, 'rule', '全部命中用户规则时仍是 rule，不会被降级')
-  assert.equal(userSummary.ruleRows, 1)
-
-  // 覆盖度计数：未收录的模型仍按「均价 / 无依据」归类
-  const coverage = summarizeCoverage(rows, config([]), average)
-  assert.equal(coverage.catalogModels, 0)
-  assert.equal(coverage.ruleModels, 0)
-  assert.equal(coverage.averagedModels, 1)
-  assert.equal(coverage.unpricedModels, 0)
-
-  // 空规则 + 空用量：与升级前一致
-  const empty = costOfUsageRows([], config([]), () => null)
-  assert.equal(empty.cost, null)
-  assert.equal(empty.source, 'none')
-  assert.equal(empty.cacheSavings, 0)
+  // 空用量：与升级前一致
+  const emptySummary = summarizeCoverage([], () => null)
+  assert.deepEqual(emptySummary.costByCurrency, {})
+  assert.deepEqual(emptySummary.savingsDetail, [])
+  assert.equal(emptySummary.unpricedModels, 0)
+  assert.equal(emptySummary.catalogModels, 0)
 }
 
 // ===== 17. 价目数据本身的自检：来源、抓取日期、单位、缺档不用同类顶替 =====
@@ -768,7 +695,7 @@ assert.equal(clockMinutes(900), null)
   // 未收录官方「缓存写入」档的条目必须真的留空，而不是被填成输入价
   const kimiK2 = entries.find((entry) => entry.provider === 'moonshotai' && entry.model === 'kimi-k2.7-code')
   assert.equal(kimiK2.cacheWrite, undefined, 'Kimi K2 系列文档没有缓存写入列 → 该档留空（不按输入价顶替）')
-  const kimiK2Rule = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k2.7-code', calls: 1, cacheWriteTokens: 1_000_000 }], config([]), () => null)[0]
+  const kimiK2Rule = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k2.7-code', calls: 1, cacheWriteTokens: 1_000_000 }], () => null)[0]
   assert.equal(kimiK2Rule.cost, 0, '留空的档位按 0 计，不会凭空产生费用')
 
   // 覆盖摘要：接口拿它渲染「已内置 N 条（来源见 …）」
@@ -883,7 +810,6 @@ assert.equal(clockMinutes(900), null)
   assert.equal(tabbed.issues.some((issue) => issue.message.includes('tab')), true)
 }
 
-
 // ===== 18. DeepSeek 内置价目：CNY、高峰价数值、错峰半价、四段窗口 =====
 {
   const expected = [
@@ -932,62 +858,10 @@ assert.equal(clockMinutes(900), null)
   assert.equal(hit(13, 0, 2), true, '周二 13:00 = 空闲（午间空档）')
   assert.equal(hit(19, 0, 4), true, '周四 19:00 = 空闲')
 
-  // 金额：v4-pro 高峰 1M 未命中 = ¥9，错峰小时槽 1M = ¥4.5
+  // 金额：v4-pro 高峰 1M 未命中 = ¥9；拿不到小时分布时按高峰价（保守）
   const proRow = { provider: 'deepseek-official', model: 'deepseek-v4-pro', calls: 1, inputTokens: 1_000_000 }
-  assert.equal(priceRowsByRules([proRow], config([]), { at: atLocal(10, 0, 1) })[0].cost, 9, '周一 10:00 按高峰价 ¥9')
-  // 注意：给 at 但规则有错峰窗口时走 hours 占比；拿不到 hours 就按标准价（保守）
-  assert.equal(priceRowsByRules([proRow], config([]), { at: atLocal(10, 0, 6) })[0].cost, 9, '拿不到小时分布时按高峰价算（有意保守）')
-}
-
-// ===== 19. 客户端导入 / 导出往返：days 字段不能丢 =====
-{
-  // 客户端模块是 .ts，测试不引入打包产物；这里只验证服务端归一化对「导出形状」的往返保真
-  const exported = {
-    version: 1,
-    currency: 'CNY',
-    rules: [
-      {
-        provider: 'deepseek-official', model: 'deepseek-v4-pro', unit: 'perMillionTokens', currency: 'CNY',
-        input: 9, cacheRead: 0.3, cacheWrite: 9, output: 27,
-        offPeak: {
-          windows: [
-            { from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] },
-            { from: '00:00', to: '00:00', days: [6, 7] },
-            { from: '22:00', to: '06:00' },
-          ],
-          input: 4.5, cacheRead: 0.15, cacheWrite: 4.5, output: 13.5,
-        },
-        note: '',
-      },
-    ],
-  }
-  const first = normalizePricing(exported)
-  const second = normalizePricing(JSON.parse(JSON.stringify(first)))
-  assert.deepEqual(second, first, '导入 → 导出 → 再导入后结构完全一致（days 不丢、不漂）')
-  assert.deepEqual(first.rules[0].offPeak.windows[0].days, [1, 2, 3, 4, 5], '工作日 days 保留')
-  assert.deepEqual(first.rules[0].offPeak.windows[1].days, [6, 7], '周末 days 保留')
-  assert.equal(first.rules[0].offPeak.windows[2].days, undefined, '没写 days 的窗口保持没写（不补成 [1..7]）')
-
-  // 行为也要往返一致
-  assert.equal(isOffPeakAt(second.rules[0], atLocal(10, 0, 1)), false, '往返后周一 10:00 仍是高峰')
-  assert.equal(isOffPeakAt(second.rules[0], atLocal(10, 0, 6)), true, '往返后周六 10:00 仍是空闲')
-  assert.equal(isOffPeakAt(second.rules[0], atLocal(23, 0, 3)), true, '往返后周三 23:00 命中无 days 的跨午夜窗口')
-
-  // 旧版导出的 JSON（窗口没有 days 字段）导入后行为不变
-  const legacyImport = normalizePricing({
-    version: 1,
-    currency: 'CNY',
-    rules: [{
-      provider: 'p', model: 'm', unit: 'perMillionTokens', currency: 'CNY',
-      input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8,
-      offPeak: { windows: [{ from: '00:00', to: '09:00' }], input: 1, cacheRead: 0.1, cacheWrite: 1, output: 4 },
-      note: '',
-    }],
-  })
-  for (let day = 1; day <= 7; day += 1) {
-    assert.equal(isOffPeakAt(legacyImport.rules[0], atLocal(3, 0, day)), true, '旧 JSON 导入后仍是每天生效（星期 ' + String(day) + '）')
-  }
-  assert.equal(legacyImport.rules[0].offPeak.windows[0].days, undefined, '不会给旧数据补 days 字段')
+  assert.equal(priceRowsOf([proRow], { at: atLocal(10, 0, 1) })[0].cost, 9, '周一 10:00 按高峰价 ¥9')
+  assert.equal(priceRowsOf([proRow], { at: atLocal(10, 0, 6) })[0].cost, 9, '拿不到小时分布时按高峰价算（有意保守）')
 }
 
 console.log('pricing.test: 全部通过')
