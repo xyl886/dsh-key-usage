@@ -89,6 +89,7 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
   - **本地 commit 可以自行做**（用于留可回退基线），但仍要选在**验证通过、没有并行写入者**的时点，不要把半成品提交进去。
   - **任何远端动作都必须先获得用户明确授权**：`git push`、`npm publish`、以及会触发远端工作流的操作（`gh workflow run`，包括 `publish.yml` 的 dry_run）。授权要具体到「推送 / 发版」这类指令，不能由「已验证 / 已验收」推断出来。
 - **版本号规则：1.0 之前一律走 `patch`**（0.1.x 一路走）—— 新功能也只升 patch，攒够一批再由用户决定是否跳 0.2.0 / 1.0.0。
+- **版本号只由用户的发布指令推动（2026-10-14 用户明确要求，之前被 agent 擅自连升三次）**：npm 上最新是 `0.1.5`，所以**待发布版本就是 `0.1.6`**；未发布期间无论做多少批改动，`package.json` 的 `version` 一律保持 `0.1.6`，**禁止自行升版**（0.1.7 / 0.1.8 这种"每批一升"的做法是错的）。只有用户明确说「发版 / 发布」时，才升一次版并走发布流程；`CHANGELOG.md` 把未发布的各批合并记在同一个版本号下。
 - 本机发布：`npm version patch --no-git-tag-version` → `npm publish`；发布前跑完 `verify` / `pack:dry`。
 - **CI 发布（长期做法）**：`.github/workflows/publish.yml` 手动触发，默认 `dry_run=true` 只校验打包；改成 false 才真正 `pnpm publish --provenance --no-git-checks`。**token 只放仓库 Secret `NPM_TOKEN`，本机不再放**。
 - 已发布的版本号**永久占用**（撤回了也不能复用），所以改版本号前先确认。
