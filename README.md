@@ -60,17 +60,12 @@
 
 ## 安装
 
-**Web 端**
-
 ```bash
-dsh plugin --profile web add dsh-key-usage
+dsh plugin --profile web add dsh-key-usage          # Web 端
+
+# 桌面端：应用内 Plugin Hub → 安装插件，填 dsh-key-usage（该 profile 由应用独占，CLI 不接受）
+# 装完都要「退出并重新打开 DSH」才生效
 ```
-
-**桌面端**
-
-在应用内 **Plugin Hub → 安装插件**，填 `dsh-key-usage`（`--profile desktop` 由 Electron 应用独占，CLI 会拒绝）。
-
-装完**退出并重新打开 DSH**：插件树在宿主启动时组合，服务端代码没有热重载。其他安装方式（从 GitHub 装 / 本地开发软链 / 卸载）见 [`docs/06-开发与构建.md`](./docs/06-开发与构建.md)。
 
 ## 数据、权限与联网
 
