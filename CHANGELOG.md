@@ -4,12 +4,21 @@
 
 > 0.1.0 ～ 0.1.2 是发布当日的快速迭代，此处只记要点；逐条改动见仓库提交历史。发布时间取自 npm registry。
 
-## [未发布]
+## [0.1.5] —— 2026-10-14
 
 ### 改进
 
 - `@deepseek-ai/schemastery` 改为 **optional peer**：pnpm 安装时不再尝试为它创建符号链接，**Windows 未开启开发者模式时不会再报 `ERR_PNPM_EPERM`**（改由宿主运行时解析提供）；
-- 客户端可访问性：可排序表头改为真正的按钮（可 Tab、可 Enter/Space 触发）并带 `aria-sort`；交互控件补 `:focus-visible` 焦点环；图标按钮补 `aria-label`；计费抽屉补 `aria-expanded`。
+- **页面外层内边距对齐宿主页面**：根容器补 `padding: 16px 20px 32px`（与「上下文洞察」同值），右侧栏或浮层打开时收窄为 `12px`；此前页面内容贴着容器边缘，与「插件」「上下文洞察」两页留白不一致；
+- **客户端可访问性**：可排序表头改为真正的按钮（可 Tab、可 Enter/Space 触发）并带 `aria-sort`；交互控件补 `:focus-visible` 焦点环；图标按钮补 `aria-label`；计费抽屉补 `aria-expanded` / `aria-controls` 且抽屉 id 逐实例唯一；热力图与柱状图补整图 `role="img"` 与替代文本。
+
+### 修复
+
+- 排序表头的箭头此前会被读屏念进按钮名（现加 `aria-hidden`）；当前排序列悬停时不再丢失主色；表头文字与箭头间距与改造前一致。
+
+### 文档
+
+- README 重写为「看图 → 安装 → 数据与权限 → 功能 → 成本 → 常见问题 → 开发」的顺序，去重并补齐内置价目覆盖表；新增 `docs/06-开发与构建.md` 与本文件。
 
 ## [0.1.4] —— 2026-10-13
 
@@ -68,7 +77,7 @@
 
 > `0.0.0-stage`（同日更早）是占位版本，仅用于验证发布流程，无实际功能。
 
-[未发布]: https://github.com/xyl886/dsh-key-usage/commits/main
+[0.1.5]: https://www.npmjs.com/package/dsh-key-usage/v/0.1.5
 [0.1.4]: https://www.npmjs.com/package/dsh-key-usage/v/0.1.4
 [0.1.3]: https://www.npmjs.com/package/dsh-key-usage/v/0.1.3
 [0.1.2]: https://www.npmjs.com/package/dsh-key-usage/v/0.1.2
