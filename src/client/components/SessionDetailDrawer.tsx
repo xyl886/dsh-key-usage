@@ -5,7 +5,7 @@ import { channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
 import { costSourceHintOf } from '../pricing.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
-import type { Channel, SessionDetail, SessionDetailResponse } from '../types.ts'
+import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 
@@ -14,6 +14,10 @@ export function SessionDetailDrawer(props: {
   /** 列表里那一行的标题，详情还没到时先顶上，避免抽屉标题空着 */
   fallbackTitle: string | null
   channels: Channel[]
+  /** 挂在这个主会话下的子代理会话（列表默认不显示它们，这里给入口逐个点开）。 */
+  subagents: SessionRow[]
+  /** 切到某个子会话的详情（弹窗内容随之替换）。 */
+  onOpenSession: (id: string) => void
   onClose: () => void
 }): ReactNode {
   const [data, setData] = useState<SessionDetailResponse | null>(null)
@@ -74,6 +78,26 @@ export function SessionDetailDrawer(props: {
           <SessionDetailBody session={session} channels={props.channels} priced={data.priced} />
         )}
         {data !== null && session === null && <div className={styles.empty}>该会话没有可展示的详情</div>}
+
+        {props.subagents.length > 0 && (
+          <div className={listStyles.subagentBlock}>
+            <div className={listStyles.subagentBlockTitle}>
+              子会话 {props.subagents.length} 个（子代理各自计入统计，不并入本会话）
+            </div>
+            {props.subagents.map((child) => (
+              <button
+                type="button"
+                key={child.id}
+                className={listStyles.subagentRow}
+                title="打开这个子会话的详情"
+                onClick={() => props.onOpenSession(child.id)}
+              >
+                <span className={listStyles.subagentRowTitle}>{child.title ?? '（无提问）· ' + shortIdOf(child.id)}</span>
+                <span className={listStyles.subagentRowMeta}>{fmtTokens(child.tokens)} · {fmtCalls(child.calls)} · {fmtDateTime(child.lastTime)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

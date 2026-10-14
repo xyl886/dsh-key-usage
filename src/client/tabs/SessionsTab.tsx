@@ -258,6 +258,9 @@ export function SessionsTab(props: {
           sessionId={detailId}
           fallbackTitle={detailRow?.title ?? null}
           channels={props.channels}
+          // 子会话在列表里默认隐藏，所以弹窗里给出逐个点开的入口（不并进本会话总量）
+          subagents={detailRow === null ? [] : rows.filter((row) => row.parentSessionId === detailRow.id)}
+          onOpenSession={setDetailId}
           onClose={() => setDetailId(null)}
         />
       )}
