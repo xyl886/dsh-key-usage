@@ -187,6 +187,13 @@ export interface UsageModelRow {
   tokens: number
   calls: number
   buckets: Record<string, number>
+  /** 通道显示名（会话详情的逐模型表用；列表行不带）。 */
+  providerLabel?: string
+  /** 占该会话 tokens 的百分比（一位小数）：`/sessions` 行内展开与 `/session` 详情用。 */
+  sharePercent?: number
+  /** 该模型这一格的估算金额与来源（规则 / 内置官方价目 / 台账均价）。 */
+  cost?: number | null
+  costSource?: CostSource
 }
 
 export interface SessionRow {
@@ -203,6 +210,10 @@ export interface SessionRow {
   tokens: number
   cacheHitRate: number | null
   days: number
+  /** 首次与最近不在同一天时跨过的天数（0 = 同一天或时间缺失）。 */
+  crossDays: number
+  /** 首条真实提问的片段（标题兜底之外，搜索也用它）。 */
+  prompt: string | null
   models: UsageModelRow[]
   costMode: ChannelCostMode | null
   cost: number | null
@@ -213,6 +224,52 @@ export interface SessionRow {
 export interface SessionsResponse {
   rows: SessionRow[]
   coverage: SessionCoverage
+  priced: boolean
+}
+
+/** 24 小时迷你图的一个小时槽：该小时（跨天会话按小时累加）的调用数与展示口径 tokens。 */
+export interface SessionDetailHour {
+  calls: number
+  tokens: number
+}
+
+export interface SessionDetailModel extends UsageModelRow {
+  providerLabel: string
+  sharePercent: number
+  cost: number | null
+  costSource: CostSource
+}
+
+export interface SessionDetail {
+  id: string
+  title: string | null
+  archived: boolean
+  workspace: string | null
+  provider: string | null
+  providerLabel: string | null
+  costMode: ChannelCostMode | null
+  firstTime: number | null
+  lastTime: number | null
+  durationMs: number
+  crossDays: number
+  days: number
+  calls: number
+  tokens: number
+  buckets: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }
+  cacheHitRate: number | null
+  /** 首条真实提问全文（超长时服务端已截断），没有则 null。 */
+  prompt: string | null
+  models: SessionDetailModel[]
+  /** 只要会话有结算样本就给 24 个槽；没有样本时为 null。 */
+  hours: SessionDetailHour[] | null
+  cost: number | null
+  costSource: CostSource
+}
+
+export interface SessionDetailResponse {
+  session: SessionDetail
+  /** partial = 会话存在但读不出来（只有头部字段）；unavailable = 宿主没提供会话服务。 */
+  coverage: { status: 'complete' | 'partial' | 'unavailable'; reason: string | null }
   priced: boolean
 }
 

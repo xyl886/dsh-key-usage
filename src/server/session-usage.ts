@@ -48,7 +48,7 @@ export interface SessionFold {
   samples: Map<string, UsageSample>
   firstTime: number | null
   lastTime: number | null
-  /** 首条用户提问的摘要（会话标题的兜底来源），没有则 null。 */
+  /** 首条**真实**用户提问（压平空白、超长截断），没有则 null；列表标题与搜索都取它。 */
   firstPrompt: string | null
 }
 
@@ -83,12 +83,33 @@ export interface SessionSummary {
   cacheHitRate: number | null
   firstTime: number | null
   lastTime: number | null
-  /** 首条用户提问摘要（标题兜底）。 */
+  /** 首条真实提问（标题兜底 + 搜索），没有则 null。 */
   firstPrompt: string | null
   /** 用量最大的模型归属键（列表里的通道列据此归一）。 */
   primaryModelKey: string | null
   days: SessionDaySummary[]
   models: ModelUsageRow[]
+}
+
+/**
+ * 首条提问保留的最大字数：详情要展示「全文」，但不能让一次超长粘贴把折叠结果与响应撑爆。
+ */
+export const MAX_PROMPT_CHARS = 4000
+
+/** 列表里的提问片段长度（标题兜底与搜索都用它）；正文全文只在 `/session` 详情里给。 */
+export const PROMPT_SNIPPET_CHARS = 200
+
+/** 列表标题的截断长度。 */
+export const PROMPT_TITLE_CHARS = 60
+
+/**
+ * 宿主注入的非人类文本：teammate 的系统提示、斜杠命令回显、本地命令输出都不是用户提问。
+ * 取标题时必须跳过它们继续往下找，否则列表一屏全是 `You are teammate "…"` 这种无辨识度的标题。
+ */
+const INJECTED_TEXT_PREFIXES = ['<system-reminder', '<system', '<command-', '<local-command']
+
+export function isInjectedPromptText(text: string): boolean {
+  return INJECTED_TEXT_PREFIXES.some((prefix) => text.startsWith(prefix))
 }
 
 export function zeroBuckets(): TokenBuckets {
@@ -222,12 +243,25 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
       }
       continue
     }
-    if (firstPrompt === null && type === 'user/message') firstPrompt = promptTextOf(event)
+    if (type === 'user/message' && firstPrompt === null) {
+      const text = promptTextOf(event)
+      // 只改「取文本」这一步：系统注入文本不算提问，跳过它继续找下一条人类消息（优先级链不变）
+      if (text !== null && !isInjectedPromptText(text)) firstPrompt = text
+    }
   }
   return { samples, firstTime, lastTime, firstPrompt }
 }
 
-/** 标题兜底：取用户消息里第一个非空文本块，压平空白并截断。 */
+/** 标题 / 搜索片段：压平空白并按需截断（详情要全文，列表只要一小段）。 */
+export function promptSnippetOf(text: string | null | undefined, maxChars: number = PROMPT_SNIPPET_CHARS): string | null {
+  // 缺字段的历史记录与外部注入的折叠结果都可能没有 firstPrompt，这里一并兜住
+  if (typeof text !== 'string' || text === '') return null
+  const flat = text.replace(/\s+/g, ' ').trim()
+  if (flat === '') return null
+  return flat.length > maxChars ? flat.slice(0, maxChars) + '…' : flat
+}
+
+/** 提问正文：取用户消息里第一个非空文本块，压平空白并压到上限（不做系统文本判定，由调用方决定）。 */
 function promptTextOf(event: SessionEvent): string | null {
   const data = event.data
   if (typeof data !== 'object' || data === null) return null
@@ -245,7 +279,7 @@ function promptTextOf(event: SessionEvent): string | null {
     if (typeof text !== 'string') continue
     const flat = text.replace(/\s+/g, ' ').trim()
     if (flat === '') continue
-    return flat.length > 60 ? flat.slice(0, 60) + '…' : flat
+    return flat.length > MAX_PROMPT_CHARS ? flat.slice(0, MAX_PROMPT_CHARS) + '…' : flat
   }
   return null
 }

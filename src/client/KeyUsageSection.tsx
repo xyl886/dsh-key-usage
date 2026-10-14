@@ -47,6 +47,8 @@ export function KeyUsageSection() {
   const [customFrom, setCustomFrom] = useState(() => shiftedIsoDate(-29))
   const [customTo, setCustomTo] = useState(() => isoDate(new Date()))
   const [channelFilter, setChannelFilter] = useState('ALL')
+  /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看那一个项目（不做全局路由） */
+  const [projectFilter, setProjectFilter] = useState<string | null>(null)
   const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({})
   const [detailSort, setDetailSort] = useState<DetailSortState>({ key: 'period', dir: 'desc' })
 
@@ -198,9 +200,23 @@ export function KeyUsageSection() {
           tooltip={tooltip}
         />
       )}
-      {activeTab === 'projects' && <ProjectsTab data={projects} channels={channels} />}
+      {activeTab === 'projects' && (
+        <ProjectsTab
+          data={projects}
+          channels={channels}
+          focusWorkspace={projectFilter}
+          onClearFocus={() => setProjectFilter(null)}
+        />
+      )}
       {activeTab === 'models' && <ModelsTab data={models} channels={channels} />}
-      {activeTab === 'sessions' && <SessionsTab data={sessions} channels={channels} />}
+      {activeTab === 'sessions' && (
+        <SessionsTab
+          data={sessions}
+          channels={channels}
+          tooltip={tooltip}
+          onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('projects') }}
+        />
+      )}
       {activeTab === 'quota' && (
         <QuotaTab
           channels={channels}
@@ -230,9 +246,8 @@ export function KeyUsageSection() {
             <b>告警只是提示，不阻断任何操作</b>。
           </li>
           <li>
-            成本优先级：<b>台账当天的官方成本</b> &gt; <b>你的计费规则</b> &gt; <b>台账反推均价</b> &gt; 无依据；
-            每个成本单元格旁的角标写明来源（<b>官方</b> / <b>自定</b> / <b>估算</b>，无依据显示 —）。
-            规则在「余额与配额」页下半部分维护，存在宿主设置服务里，改完立即重算。
+            成本来源与优先级见「余额与配额」页计费面板的 <b>成本口径</b>（ⓘ）：角标分 <b>官方</b> / <b>自定</b> / <b>官方价</b> / <b>估算</b>，
+            没有价格依据时显示 —；规则在面板下半部分维护，改完立即重算。
           </li>
           <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。</li>
         </ul>

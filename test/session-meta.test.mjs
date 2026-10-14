@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict'
 import { createArchiveSource, createTitleSource, normalizeSessionId, parseTitles } from '../lib/session-meta.js'
-import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
+import { foldSessionEvents, promptSnippetOf, summarizeSession, PROMPT_TITLE_CHARS } from '../lib/session-usage.js'
 import { projectRowsOf, sessionRowsOf } from '../lib/sessions.js'
 
 // ---------- 1) 标题解析 ----------
@@ -79,7 +79,9 @@ assert.equal(stringBlocks.firstPrompt, '裸字符串提示', '裸字符串块也
 const longPrompt = foldSessionEvents([
   { seq: 0, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '一'.repeat(120) }] } },
 ])
-assert.equal(longPrompt.firstPrompt.length, 61, '超长标题截断到 60 字 + 省略号')
+// 折叠保留正文（详情抽屉要全文），列表标题那一层才截断到 60 字 + 省略号
+assert.equal(longPrompt.firstPrompt.length, 120, '折叠结果保留提问正文全文')
+assert.equal(promptSnippetOf(longPrompt.firstPrompt, PROMPT_TITLE_CHARS).length, 61, '列表标题截断到 60 字 + 省略号')
 
 const noPrompt = foldSessionEvents([
   { seq: 0, time: morning, type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0 } } } },

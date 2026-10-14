@@ -8,6 +8,7 @@ import type {
   PricingResponse,
   ProjectsResponse,
   QuotaProvider,
+  SessionDetailResponse,
   SessionsResponse,
   SummaryResponse,
   UsageResponse,
@@ -72,6 +73,16 @@ export function loadSummary(): Promise<SummaryResponse | null> {
 
 export function loadSessions(limit = 300): Promise<SessionsResponse | null> {
   return fetchJson<SessionsResponse>('/dsh-key-usage/sessions?limit=' + String(limit))
+}
+
+/** 单会话详情的请求路径：界面要按同一串查失败原因，所以路径由这里统一拼。 */
+export function sessionDetailPath(id: string): string {
+  return '/dsh-key-usage/session?id=' + encodeURIComponent(id)
+}
+
+/** 单会话详情：服务端只折叠这一个会话（列表已折叠过时直接吃缓存）。 */
+export function loadSessionDetail(id: string): Promise<SessionDetailResponse | null> {
+  return fetchJson<SessionDetailResponse>(sessionDetailPath(id))
 }
 
 export function loadProjects(limit = 200): Promise<ProjectsResponse | null> {

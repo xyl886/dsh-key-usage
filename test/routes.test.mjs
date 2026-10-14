@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mountKeyUsageRoutes } from '../lib/routes.js'
+import { createSessionSource } from '../lib/sessions.js'
 import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-routes-'))
@@ -71,6 +72,36 @@ const sessionSource = {
     records: sessionRecords,
     coverage: { status: 'complete', totalSessions: 1, countedSessions: 1, skippedSessions: 0 },
   }),
+}
+
+/** 0.2 形态的假持久化服务：list / open('read') / read(0) / close；记录 open 次数，用来验证「只折一个会话」。 */
+function createFakePersistence(entries) {
+  const records = new Map(entries)
+  const stats = { opens: [], reads: [], closes: 0 }
+  return {
+    stats,
+    service: {
+      identity: Symbol('fixture'),
+      list: async () => [...records.values()].map((record) => ({
+        header: record.header,
+        revision: record.revision,
+        eventCount: record.events.length,
+      })),
+      open: async (id, access) => {
+        stats.opens.push([id, access])
+        const record = records.get(id)
+        if (record === undefined || record.failOpen === true) throw new Error('fixture open failure')
+        return {
+          inheritedEventCount: 0,
+          read: async (offset) => {
+            stats.reads.push([id, offset])
+            return { events: record.events.slice(offset) }
+          },
+          close: async () => { stats.closes += 1 },
+        }
+      },
+    },
+  }
 }
 
 const handlers = new Map()
@@ -276,6 +307,180 @@ assert.deepEqual(spanning.body.days.map((day) => day.date), ['2026-10-12', '2026
 assert.deepEqual(spanning.body.sessionDates, ['2026-10-20'], '只有台账缺的那天标为会话来源')
 assert.equal(spanning.body.days[1].cost, 0, '台账那两天不重算成本')
 assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带上了用量')
+
+// ===== 单会话详情端点 /session：只折一个会话、404 / 403 / 降级、标题过滤、模型构成截断 =====
+{
+  const injectedPrompt = '<system-reminder> You are teammate "kurlon".'
+  const realPrompt = '把会话用量这页加上详情抽屉'
+  const detailDay = new Date(2026, 9, 12, 9, 15, 0).getTime()
+  const detailNextDay = new Date(2026, 9, 13, 20, 5, 0).getTime()
+  const usageOf = (seq, time, turn, provider, model, usage) => ({
+    seq, time, type: 'assistant/chunk', data: { turn, step: 1, chunk: { type: 'usage', usage }, message: { source: { provider, model } } },
+  })
+  const detailEvents = [
+    { seq: 0, time: detailDay, type: 'user/message', data: { content: [{ type: 'text', text: injectedPrompt }] } },
+    { seq: 1, time: detailDay, type: 'user/message', data: { content: [{ type: 'text', text: realPrompt }] } },
+    usageOf(2, detailDay, 1, 'pi-ai/opencode-go', 'GLM-5.3-Flash', { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 0 }),
+    usageOf(3, detailNextDay, 2, 'pi-ai/opencode-go', 'GLM-5.3-Flash', { inputTokens: 2000, outputTokens: 200, cacheReadTokens: 8000 }),
+  ]
+  // 七个模型：验证 /sessions 行内展开的「前 5 个 + 其它」
+  const manyModelEvents = Array.from({ length: 7 }, (unused, index) => usageOf(
+    index, detailDay, index + 1, 'pi-ai/opencode-go', 'model-' + String(index),
+    { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 0 },
+  ))
+  const detailFixture = createFakePersistence([
+    ['session-detail', { header: { id: 'session-detail', cwd: 'D:\\EasyJob', updatedAt: detailNextDay }, revision: Symbol('r1'), events: detailEvents }],
+    ['session-titled', { header: { id: 'session-titled', title: '会话头标题', cwd: 'D:\\EasyJob', updatedAt: detailDay }, revision: Symbol('r1'), events: detailEvents }],
+    ['session-many', { header: { id: 'session-many', cwd: 'D:\\EasyJob', updatedAt: detailDay }, revision: Symbol('r1'), events: manyModelEvents }],
+    ['session-broken', { header: { id: 'session-broken', title: '读不出来的会话', cwd: 'D:\\work', updatedAt: detailDay }, revision: Symbol('r1'), events: detailEvents, failOpen: true }],
+  ])
+  const detailSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? detailFixture.service : undefined) })
+  // 投影缓存里的标题优先级链在详情里同样生效（宿主投影标题 > 会话头标题）
+  const projectionPath = join(home, 'storages', 'session_projcache.json')
+  const projection = JSON.parse(readFileSync(projectionPath, 'utf8'))
+  projection.tables.sessions['session-titled'] = { rows: { title: { val: '投影缓存里的标题' } } }
+  writeFileSync(projectionPath, JSON.stringify(projection), 'utf8')
+  const detailHandlers = new Map()
+  mountKeyUsageRoutes({ register: (route) => { detailHandlers.set(route.path, route.handler) } }, detailSource)
+  const detailCall = (path, remoteAddress) => callHandler(detailHandlers, path, remoteAddress)
+
+  // 权限与参数：与其它端点同类
+  assert.equal((await detailCall('/dsh-key-usage/session?id=session-detail', '10.0.0.7')).status, 403, '详情端点同样只允许回环')
+  assert.deepEqual((await detailCall('/dsh-key-usage/session?id=session-detail', '10.0.0.7')).body, { error: 'loopback only' })
+  const noId = await detailCall('/dsh-key-usage/session')
+  assert.equal(noId.status, 400, '缺 id 时给出可读的参数错误')
+  assert.ok(noId.body.error.includes('id'))
+
+  // 找不到：404 + 明确错误体（不是空 200）
+  const notFound = await detailCall('/dsh-key-usage/session?id=session-nope')
+  assert.equal(notFound.status, 404)
+  assert.equal(notFound.body.error, '会话不存在')
+  assert.equal(notFound.body.id, 'session-nope')
+  assert.ok(typeof notFound.body.reason === 'string' && notFound.body.reason !== '')
+  assert.equal(detailFixture.stats.opens.length, 0, '找不到时不读任何会话')
+
+  // 字段完整：抽屉要的每一项都在
+  const detail = await detailCall('/dsh-key-usage/session?id=session-detail')
+  assert.equal(detail.status, 200)
+  assert.equal(detailFixture.stats.opens.length, 1, '只折叠被点开的那一个会话（不重折全部）')
+  assert.equal(detail.body.coverage.status, 'complete')
+  assert.equal(detail.body.coverage.reason, null)
+  const session = detail.body.session
+  assert.equal(session.id, 'session-detail')
+  assert.equal(session.title, realPrompt, '标题跳过 system-reminder，取第一条真实提问')
+  assert.equal(session.prompt, realPrompt, '首条真实提问全文')
+  assert.equal(session.workspace, 'D:\\EasyJob')
+  assert.equal(session.provider, 'opencode-go', 'pi-ai 路由归一到通道')
+  assert.equal(session.providerLabel, 'opencode-go')
+  assert.equal(session.costMode, 'sub')
+  assert.equal(session.archived, false)
+  assert.equal(session.firstTime, detailDay)
+  assert.equal(session.lastTime, detailNextDay)
+  assert.equal(session.durationMs, detailNextDay - detailDay)
+  assert.equal(session.crossDays, 1, '跨天会话给出天数差')
+  assert.equal(session.days, 2)
+  assert.equal(session.calls, 2, '两个结算样本')
+  assert.equal(session.tokens, 11300, '1000 + 100 + 2000 + 200 + 8000')
+  assert.equal(session.buckets.inputTokens, 3000)
+  assert.equal(session.buckets.outputTokens, 300)
+  assert.equal(session.buckets.cacheReadTokens, 8000)
+  assert.equal(session.buckets.cacheWriteTokens, 0)
+  assert.equal(session.cacheHitRate, 70.8, '8000 / 11300')
+  assert.equal(session.hours.length, 24, '有样本就给 24 个小时槽')
+  assert.equal(session.hours[9].calls, 1)
+  assert.equal(session.hours[20].calls, 1)
+  assert.equal(session.hours[9].tokens, 1100)
+  assert.equal(session.hours[20].tokens, 10200)
+  assert.equal(session.models.length, 1)
+  assert.equal(session.models[0].providerLabel, 'opencode-go')
+  assert.equal(session.models[0].model, 'GLM-5.3-Flash')
+  assert.equal(session.models[0].sharePercent, 100)
+  assert.equal(session.models[0].cost, null, '台账成本为 0 且没有规则时不编造金额')
+  assert.equal(session.models[0].costSource, 'none')
+  assert.equal(session.cost, null)
+  assert.equal(session.costSource, 'none')
+  assert.equal(detail.body.priced, false)
+
+  // 再点一次同一个会话：吃缓存，零 I/O
+  await detailCall('/dsh-key-usage/session?id=session-detail')
+  assert.equal(detailFixture.stats.opens.length, 1, '重复打开详情不再读会话')
+
+  // 标题优先级链在详情里同样生效：宿主投影缓存的标题压过会话头标题
+  const titledDetail = await detailCall('/dsh-key-usage/session?id=session-titled')
+  assert.equal(titledDetail.body.session.title, '投影缓存里的标题')
+  assert.equal(titledDetail.body.session.prompt, realPrompt, '提问全文照常给出')
+
+  // 读不出来：200 + 降级说明 + 会话头字段（不是 500，也不是空响应）
+  const degraded = await detailCall('/dsh-key-usage/session?id=session-broken')
+  assert.equal(degraded.status, 200)
+  assert.equal(degraded.body.coverage.status, 'partial')
+  assert.ok(degraded.body.coverage.reason.includes('会话读取失败'))
+  assert.equal(degraded.body.session.title, '读不出来的会话', '降级时仍给会话头里的标题')
+  assert.equal(degraded.body.session.workspace, 'D:\\work')
+  assert.equal(degraded.body.session.calls, 0)
+  assert.equal(degraded.body.session.hours, null, '没有样本就不画小时图')
+  assert.equal(degraded.body.session.cost, null)
+
+  // 列表行：标题过滤 + 跨天 + 首条提问片段；模型构成只给前 5 个 + 其它
+  const listRows = await detailCall('/dsh-key-usage/sessions')
+  const titledRow = listRows.body.rows.find((row) => row.id === 'session-detail')
+  assert.equal(titledRow.title, realPrompt, '列表标题也跳过 system-reminder')
+  assert.equal(titledRow.prompt, realPrompt)
+  assert.equal(titledRow.crossDays, 1)
+  const manyRow = listRows.body.rows.find((row) => row.id === 'session-many')
+  assert.equal(manyRow.models.length, 6, '前 5 个模型 + 合并出来的「其它」')
+  assert.equal(manyRow.models[5].model, '其它')
+  assert.equal(manyRow.models[5].provider, '')
+  assert.equal(manyRow.models[5].tokens, 2200, '两个长尾模型合并')
+  assert.equal(manyRow.models[5].calls, 2)
+  assert.equal(manyRow.tokens, 7700, '合并只影响展示，行合计仍是全量')
+  assert.equal(manyRow.models[0].sharePercent, 14.3)
+
+  // 带规则：逐模型与合计都按规则算，来源角标为「自定」
+  const pricedDetailHandlers = new Map()
+  mountKeyUsageRoutes(
+    { register: (route) => { pricedDetailHandlers.set(route.path, route.handler) } },
+    detailSource,
+    undefined,
+    undefined,
+    {
+      current: () => ({
+        config: {
+          version: 1, currency: 'CNY',
+          rules: [{ provider: 'opencode-go', model: '*', unit: 'perThousandTokens', currency: 'CNY', input: 2, cacheRead: 0.2, cacheWrite: 2, output: 8, offPeak: null, note: '测试规则' }],
+        },
+        writable: true, revision: 1,
+      }),
+    },
+  )
+  const pricedDetail = await callHandler(pricedDetailHandlers, '/dsh-key-usage/session?id=session-many')
+  assert.equal(pricedDetail.body.session.models.length, 7, '详情给全部模型，不合并长尾')
+  assert.equal(pricedDetail.body.session.models[0].cost, 2.8, '(1000×2 + 100×8) / 1000')
+  assert.equal(pricedDetail.body.session.models[0].costSource, 'rule')
+  assert.equal(pricedDetail.body.session.cost, 19.6, '七个模型 × 2.8')
+  assert.equal(pricedDetail.body.session.costSource, 'rule')
+  const pricedRows = await callHandler(pricedDetailHandlers, '/dsh-key-usage/sessions')
+  const pricedManyRow = pricedRows.body.rows.find((row) => row.id === 'session-many')
+  assert.equal(pricedManyRow.cost, 19.6, '行合计按全量模型算，不受「其它」合并影响')
+  assert.equal(pricedManyRow.costSource, 'rule')
+  assert.equal(pricedManyRow.models[5].cost, 5.6, '合并行的成本是两个长尾模型之和')
+  assert.equal(pricedManyRow.models[5].costSource, 'rule')
+
+  // 数据源没有 detail 能力时（外部注入的旧实现）：404 而不是抛错
+  const noCapability = new Map()
+  mountKeyUsageRoutes({ register: (route) => { noCapability.set(route.path, route.handler) } }, { collect: sessionSource.collect })
+  const unsupported = await callHandler(noCapability, '/dsh-key-usage/session?id=session-detail')
+  assert.equal(unsupported.status, 404)
+  assert.equal(unsupported.body.error, '会话详情不可用')
+
+  // 宿主没有会话服务：200 + unavailable（与 /sessions 的降级口径一致）
+  const unavailableHandlers = new Map()
+  mountKeyUsageRoutes({ register: (route) => { unavailableHandlers.set(route.path, route.handler) } })
+  const unavailable = await callHandler(unavailableHandlers, '/dsh-key-usage/session?id=session-detail')
+  assert.equal(unavailable.status, 200)
+  assert.equal(unavailable.body.coverage.status, 'unavailable')
+  assert.equal(unavailable.body.session.calls, 0)
+}
 
 // ===== 计费规则：带规则再挂一份路由，验证四处成本按规则重算与来源角标 =====
 // 台账仍在（下面的 rmSync 才删），所以同一次请求里既有「官方」也有「自定」两种来源

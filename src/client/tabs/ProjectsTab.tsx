@@ -27,19 +27,27 @@ const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
   { key: 'lastTime', label: '最近活跃', value: (row) => fmtDateTime(row.lastTime) },
 ]
 
-export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Channel[] }): ReactNode {
+export function ProjectsTab(props: {
+  data: ProjectsResponse | null
+  channels: Channel[]
+  /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看这一个项目（null = 不过滤） */
+  focusWorkspace?: string | null
+  onClearFocus?: () => void
+}): ReactNode {
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
+  const focusWorkspace = props.focusWorkspace ?? null
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
       const matchesQuery = keyword === '' || row.workspace.toLowerCase().includes(keyword)
       const matchesChannel = channelFilter === 'ALL' || row.providers[channelFilter] !== undefined
-      return matchesQuery && matchesChannel
+      const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace
+      return matchesQuery && matchesChannel && matchesFocus
     })
     const sorters: Record<SortKey, (first: ProjectRow, second: ProjectRow) => number> = {
       recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
@@ -48,7 +56,7 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
       callsDesc: (first, second) => second.calls - first.calls,
     }
     return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, sortKey])
+  }, [rows, query, channelFilter, sortKey, focusWorkspace])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
   // 零 Token 的项目（多为调用失败）不展示，条数如实告知
@@ -85,6 +93,12 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
         </span>
       </div>
 
+      {focusWorkspace !== null && (
+        <div className={listStyles.focusChip}>
+          仅看项目：{focusWorkspace}
+          <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label="清除项目筛选">✕</button>
+        </div>
+      )}
       <table className={styles.table + ' ' + listStyles.projectTable}>
         <thead>
           <tr><th>项目</th><th>调用</th><th>Tokens</th><th>占比</th><th>成本</th><th>最近活跃</th></tr>
@@ -122,7 +136,9 @@ export function ProjectsTab(props: { data: ProjectsResponse | null; channels: Ch
               </tr>
             )
           })}
-          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的项目</td></tr>}
+          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>
+            {focusWorkspace === null ? '没有符合条件的项目' : '这个项目没有可展示的用量（可能只有失败的调用）'}
+          </td></tr>}
         </tbody>
       </table>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}

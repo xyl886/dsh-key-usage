@@ -565,11 +565,11 @@ function SummaryStrip(props: {
   )
 }
 
-/** 完整口径说明：默认不占正文，点 ⓘ 才出现。 */
+/** 成本口径说明：默认不占正文，点 ⓘ 才出现。只讲「这一格钱是怎么来的」，数据来源类口径在页面页脚。 */
 function ExplanationBlock(): ReactNode {
   return (
     <div className={pricingStyles.explanation}>
-      <div className={pricingStyles.explanationTitle}>口径说明</div>
+      <div className={pricingStyles.explanationTitle}>成本口径</div>
       <ul className={pricingStyles.explanationList}>
         <li><b>官方</b>：台账记录的厂商账单金额，是既成事实，不会被规则覆盖。</li>
         <li><b>自定</b>：按你填的规则算出，匹配顺序 精确 → 通道通配 → 模型通配 → 全通配。</li>
@@ -579,7 +579,6 @@ function ExplanationBlock(): ReactNode {
         <li>单位与按次计费：规则里显式声明「每百万 / 每千 tokens / 每次调用」；按次计费只用「输入」档当每次调用价。</li>
         <li>错峰：窗口按<b>本地时间</b>判断，起止相同表示全天，<code>from</code> 大于 <code>to</code> 表示跨午夜；每个窗口可按<b>每天 / 仅工作日 / 仅周末</b>限定生效的星期（不选即每天）。跨天范围拿不到小时分布，按标准价算。</li>
         <li>多币种不换算、不合计：规则与内置价目各按文档原币种算（DeepSeek 取中文文档的 CNY，Kimi 为 CNY，OpenRouter / Z.ai 为 USD），金额按币种分行显示。</li>
-        <li>规则存在宿主设置服务里（命名空间 <code>dsh-key-usage</code>），插件不写任何文件。</li>
       </ul>
     </div>
   )

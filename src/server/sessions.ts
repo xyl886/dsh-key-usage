@@ -8,9 +8,13 @@
 import {
   attributeModelKey,
   foldSessionEvents,
+  promptSnippetOf,
   summarizeSession,
+  PROMPT_SNIPPET_CHARS,
+  PROMPT_TITLE_CHARS,
   type SessionEvent,
   type SessionSummary,
+  type TokenBuckets,
 } from './session-usage.js'
 import { normalizeSessionId } from './session-meta.js'
 
@@ -86,6 +90,24 @@ interface CacheEntry {
   record: SessionUsageRecord
 }
 
+/** 单个会话的读取结果：要么折出记录，要么给出失败原因（绝不抛错）。 */
+type ReadOutcome = { record: SessionUsageRecord; closeFailed: boolean } | { failure: string }
+
+/**
+ * 单会话查询结果。
+ * - `ok`：折叠成功；`degraded`：会话存在但读不出来（只有头部字段）；
+ * - `not-found`：宿主会话列表里没有这个 id；`unavailable`：宿主没提供会话服务。
+ */
+export interface SessionLookup {
+  status: 'ok' | 'degraded' | 'not-found' | 'unavailable'
+  id: string
+  title: string | null
+  workspace: string | null
+  /** 降级 / 找不到的中文说明，直接展示给用户；正常时为 null。 */
+  reason: string | null
+  record: SessionUsageRecord | null
+}
+
 function firstString(...values: unknown[]): string | null {
   for (const value of values) {
     if (typeof value === 'string' && value.trim() !== '') return value
@@ -111,10 +133,58 @@ function sortKeyOf(header: Record<string, unknown>, fallback: number): number {
 /**
  * 建立会话数据源。`host` 只需提供 cordis 风格的 `get(name)`；
  * `sessionPersistence` 缺失时返回 unavailable，调用方据此显示空态。
+ *
+ * `detail(id)` 只读**一个**会话：先吃 `collect()` 留下的缓存，未命中才 `list()` 定位头部
+ * 并单独 `open/read/close`，因此详情请求不会重折全部会话。
  */
-export function createSessionSource(host: HostContextLike): { collect(): Promise<SessionCollection> } {
+export function createSessionSource(host: HostContextLike): {
+  collect(): Promise<SessionCollection>
+  detail(id: string): Promise<SessionLookup>
+} {
   const cache = new Map<string, CacheEntry>()
   let inFlight: Promise<SessionCollection> | null = null
+
+  /** 读一个会话并折叠；成功即写缓存，失败返回原因（不抛错），由调用方决定降级口径。 */
+  async function readRecord(persistence: PersistenceService, pending: PendingSession): Promise<ReadOutcome> {
+    let handle: SessionHandle | undefined
+    // 关闭失败也要计入 skipped，而 finally 里改不了已经 return 的值，所以结果先放在盒子里
+    const box: { value: ReadOutcome } = { value: { failure: '未读取' } }
+    try {
+      handle = await persistence.open?.(pending.id, 'read')
+      if (handle === undefined) return { failure: '宿主未提供 open("read") 读取接口' }
+      const { events } = await handle.read(0)
+      const inherited = typeof handle.inheritedEventCount === 'number' ? handle.inheritedEventCount : 0
+      if (!Number.isSafeInteger(inherited) || inherited < 0 || inherited > events.length) {
+        return { failure: '宿主返回的继承事件数不合法' }
+      }
+      // 继承前缀只用于建立模型归属，不计入本次用量；无继承时直接用原数组，省一次整段拷贝
+      const fold = inherited === 0
+        ? foldSessionEvents(events)
+        : foldSessionEvents([
+          ...events.slice(0, inherited).filter((event) => event.type === 'request/header'),
+          ...events.slice(inherited),
+        ])
+      const metadata = metadataOf(pending.header)
+      const record: SessionUsageRecord = {
+        id: pending.id,
+        title: metadata.title,
+        workspace: metadata.workspace,
+        summary: summarizeSession(fold),
+      }
+      cache.set(pending.id, { revision: pending.revision, eventCount: pending.eventCount, record })
+      box.value = { record, closeFailed: false }
+    } catch (error) {
+      cache.delete(pending.id)
+      box.value = { failure: error instanceof Error ? error.message : String(error) }
+    } finally {
+      if (handle !== undefined) {
+        try { await handle.close() } catch {
+          if (!('failure' in box.value)) box.value = { ...box.value, closeFailed: true }
+        }
+      }
+    }
+    return box.value
+  }
 
   async function loadModern(persistence: PersistenceService): Promise<SessionCollection> {
     const snapshots = await persistence.list()
@@ -142,38 +212,9 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
     }
 
     let skipped = 0
-    const readSession = async ({ id, header, revision, eventCount }: PendingSession): Promise<void> => {
-      let handle: SessionHandle | undefined
-      try {
-        handle = await persistence.open?.(id, 'read')
-        if (handle === undefined) { skipped += 1; return }
-        const { events } = await handle.read(0)
-        const inherited = typeof handle.inheritedEventCount === 'number' ? handle.inheritedEventCount : 0
-        if (!Number.isSafeInteger(inherited) || inherited < 0 || inherited > events.length) {
-          skipped += 1
-          return
-        }
-        // 继承前缀只用于建立模型归属，不计入本次用量；无继承时直接用原数组，省一次整段拷贝
-        const fold = inherited === 0
-          ? foldSessionEvents(events)
-          : foldSessionEvents([
-            ...events.slice(0, inherited).filter((event) => event.type === 'request/header'),
-            ...events.slice(inherited),
-          ])
-        const metadata = metadataOf(header)
-        cache.set(id, {
-          revision,
-          eventCount,
-          record: { id, title: metadata.title, workspace: metadata.workspace, summary: summarizeSession(fold) },
-        })
-      } catch {
-        cache.delete(id)
-        skipped += 1
-      } finally {
-        if (handle !== undefined) {
-          try { await handle.close() } catch { skipped += 1 }
-        }
-      }
+    const readSession = async (pending: PendingSession): Promise<void> => {
+      const outcome = await readRecord(persistence, pending)
+      if ('failure' in outcome || outcome.closeFailed) skipped += 1
     }
 
     await forEachWithLimit(shared, READ_CONCURRENCY, readSession)
@@ -243,7 +284,78 @@ export function createSessionSource(host: HostContextLike): { collect(): Promise
     return inFlight
   }
 
-  return { collect }
+  /** 缓存里按原 id / 归一 id 找一个会话（标题与归档集合都用归一 id 比对）。 */
+  function cachedEntryOf(id: string): CacheEntry | undefined {
+    const direct = cache.get(id)
+    if (direct !== undefined) return direct
+    const normalized = normalizeSessionId(id)
+    for (const entry of cache.values()) {
+      if (normalizeSessionId(entry.record.id) === normalized) return entry
+    }
+    return undefined
+  }
+
+  /**
+   * 单会话详情：只折叠这一个会话。
+   * 缓存命中（先看过列表）时零 I/O；未命中才 `list()` 定位头部 + 一次 `open/read/close`，
+   * 所以打开抽屉不会像 `/sessions` 那样重折全部会话。
+   */
+  async function detail(rawId: string): Promise<SessionLookup> {
+    const id = rawId.trim()
+    const persistence = host.get('sessionPersistence') as PersistenceService | undefined
+    if (persistence === undefined || typeof persistence.list !== 'function') {
+      return { status: 'unavailable', id, title: null, workspace: null, reason: '宿主未提供会话服务，无法读取该会话', record: null }
+    }
+    try {
+      // 整表折叠正在进行时先等它结束：宿主的解析 memo 只装 2 个会话，抢着 open 会把它挤掉
+      if (inFlight !== null) await inFlight
+      const cached = cachedEntryOf(id)
+      if (cached !== undefined) {
+        return { status: 'ok', id: cached.record.id, title: cached.record.title, workspace: cached.record.workspace, reason: null, record: cached.record }
+      }
+      const snapshot = (await persistence.list()).find((entry) => {
+        const headerId = firstString(entry.header.id)
+        return headerId !== null && (headerId === id || normalizeSessionId(headerId) === normalizeSessionId(id))
+      })
+      if (snapshot === undefined) {
+        return { status: 'not-found', id, title: null, workspace: null, reason: '宿主会话列表里没有这个 id（可能已被删除，或不在最近 200 个会话里）', record: null }
+      }
+      const sessionId = firstString(snapshot.header.id) ?? id
+      const metadata = metadataOf(snapshot.header)
+      if (typeof persistence.open !== 'function') {
+        if (typeof persistence.readFrom !== 'function') {
+          return { status: 'unavailable', id: sessionId, title: metadata.title, workspace: metadata.workspace, reason: '当前宿主只支持旧版会话接口，无法读取单个会话', record: null }
+        }
+        try {
+          const { events } = await persistence.readFrom(sessionId, 0)
+          const record: SessionUsageRecord = { id: sessionId, title: metadata.title, workspace: metadata.workspace, summary: summarizeSession(foldSessionEvents(events)) }
+          return { status: 'ok', id: sessionId, title: record.title, workspace: record.workspace, reason: null, record }
+        } catch (error) {
+          return { status: 'degraded', id: sessionId, title: metadata.title, workspace: metadata.workspace, reason: readFailureText(error), record: null }
+        }
+      }
+      const outcome = await readRecord(persistence, {
+        id: sessionId,
+        header: snapshot.header,
+        revision: snapshot.revision,
+        eventCount: typeof snapshot.eventCount === 'number' ? snapshot.eventCount : -1,
+      })
+      if ('failure' in outcome) {
+        return { status: 'degraded', id: sessionId, title: metadata.title, workspace: metadata.workspace, reason: readFailureText(outcome.failure), record: null }
+      }
+      return { status: 'ok', id: sessionId, title: outcome.record.title, workspace: outcome.record.workspace, reason: null, record: outcome.record }
+    } catch (error) {
+      return { status: 'unavailable', id, title: null, workspace: null, reason: readFailureText(error), record: null }
+    }
+  }
+
+  return { collect, detail }
+}
+
+/** 读取失败的中文说明：详情降级时直接展示给用户。 */
+function readFailureText(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return '会话读取失败（' + message + '），只列出能拿到的会话头字段'
 }
 
 /**
@@ -275,6 +387,15 @@ function coverageOf(totalSessions: number, countedSessions: number, skippedSessi
   }
 }
 
+/** 会话里的模型行：归属键已归一到通道 + 模型，分桶只用于计费与逐模型展示。 */
+export interface AttributedModel {
+  provider: string
+  model: string
+  tokens: number
+  calls: number
+  buckets: Record<string, number>
+}
+
 /** 会话记录 → 会话列表行（按最近活动倒序）。 */
 export interface SessionRow {
   id: string
@@ -289,7 +410,11 @@ export interface SessionRow {
   tokens: number
   cacheHitRate: number | null
   days: number
-  models: Array<{ provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }>
+  /** 首次与最近不在同一天时跨过的天数（0 = 同一天或时间缺失），行内标「跨 N 天」。 */
+  crossDays: number
+  /** 首条真实提问的片段（标题兜底之外，搜索也用它；正文全文只在详情里给）。 */
+  prompt: string | null
+  models: AttributedModel[]
 }
 
 /** 标题与归档的来源（缺省表示宿主没提供，界面自行回落）。 */
@@ -301,7 +426,7 @@ export interface SessionMetaOptions {
 function attributedModels(
   models: SessionSummary['models'],
   knownProviders: string[],
-): Array<{ provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }> {
+): AttributedModel[] {
   return models.map((model) => {
     const attribution = attributeModelKey(model.key, knownProviders)
     return {
@@ -324,8 +449,9 @@ export function sessionRowsOf(
   return records
     .map((record) => ({
       id: record.id,
-      // 标题优先级：宿主投影缓存的标题 → 会话头自带字段 → 首条用户提问 → 界面回落成短 id
-      title: titles.get(normalizeSessionId(record.id)) ?? record.title ?? record.summary.firstPrompt ?? null,
+      // 标题优先级：宿主投影缓存的标题 → 会话头自带字段 → 首条真实提问（截断）→ 界面回落成短 id。
+      // 「取文本」那一步（session-usage.ts）已跳过系统注入消息，这里不再过滤。
+      title: titles.get(normalizeSessionId(record.id)) ?? record.title ?? promptSnippetOf(record.summary.firstPrompt, PROMPT_TITLE_CHARS) ?? null,
       archived: archived.has(normalizeSessionId(record.id)),
       workspace: record.workspace,
       provider: record.summary.primaryModelKey === null ? null : attributeModelKey(record.summary.primaryModelKey, knownProviders).provider,
@@ -335,9 +461,126 @@ export function sessionRowsOf(
       tokens: record.summary.tokens,
       cacheHitRate: record.summary.cacheHitRate,
       days: record.summary.days.length,
+      crossDays: crossDaysOf(record.summary.firstTime, record.summary.lastTime),
+      prompt: promptSnippetOf(record.summary.firstPrompt, PROMPT_SNIPPET_CHARS),
       models: attributedModels(record.summary.models, knownProviders),
     }))
     .sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
+}
+
+/**
+ * 首次与最近跨越的天数（0 = 同一天或时间缺失）：按**本地日历日**相减，
+ * 因此夏令时切换那天也不会算成 0.96 天。行内「跨 N 天」用它。
+ */
+export function crossDaysOf(firstTime: number | null, lastTime: number | null): number {
+  if (firstTime === null || lastTime === null) return 0
+  const first = new Date(firstTime)
+  const last = new Date(lastTime)
+  const firstMidnight = new Date(first.getFullYear(), first.getMonth(), first.getDate()).getTime()
+  const lastMidnight = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime()
+  const difference = Math.round((lastMidnight - firstMidnight) / 86400000)
+  return difference > 0 ? difference : 0
+}
+
+/**
+ * 单会话详情：抽屉要的字段（时间与时长、四类 token、命中率、首条提问全文、
+ * 逐模型用量与占比、24 小时分布）。成本与通道标签依赖计费规则，由 routes 侧补齐。
+ */
+export interface SessionDetail {
+  id: string
+  title: string | null
+  archived: boolean
+  workspace: string | null
+  provider: string | null
+  firstTime: number | null
+  lastTime: number | null
+  durationMs: number
+  crossDays: number
+  days: number
+  calls: number
+  tokens: number
+  buckets: TokenBuckets
+  cacheHitRate: number | null
+  /** 首条真实提问全文（超长已在上游截断），没有则 null。 */
+  prompt: string | null
+  models: Array<AttributedModel & { sharePercent: number }>
+  /** 24 个小时槽（跨天会话按小时累加，是「一天里的哪个时段」的分布）；没有样本时为 null。 */
+  hours: Array<{ calls: number; tokens: number }> | null
+}
+
+/** 取不到用量时的空详情：标题 / 工作区 / 归档仍照常给出，抽屉只多一条降级说明。 */
+export function emptySessionDetail(
+  id: string,
+  title: string | null,
+  workspace: string | null,
+  archived: boolean,
+): SessionDetail {
+  return {
+    id,
+    title,
+    archived,
+    workspace,
+    provider: null,
+    firstTime: null,
+    lastTime: null,
+    durationMs: 0,
+    crossDays: 0,
+    days: 0,
+    calls: 0,
+    tokens: 0,
+    buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    cacheHitRate: null,
+    prompt: null,
+    models: [],
+    hours: null,
+  }
+}
+
+export function sessionDetailOf(
+  record: SessionUsageRecord,
+  knownProviders: string[],
+  meta: SessionMetaOptions = {},
+): SessionDetail {
+  const summary = record.summary
+  const total = summary.tokens
+  const models = attributedModels(summary.models, knownProviders).map((model) => ({
+    ...model,
+    sharePercent: total > 0 ? Math.round(model.tokens / total * 1000) / 10 : 0,
+  }))
+  const hours = Array.from({ length: 24 }, () => ({ calls: 0, tokens: 0 }))
+  let hourCalls = 0
+  for (const day of summary.days) {
+    for (let hour = 0; hour < 24; hour += 1) {
+      const slot = day.hours[hour]
+      if (slot === undefined) continue
+      hours[hour].calls += slot.calls
+      hours[hour].tokens += slot.buckets.inputTokens + slot.buckets.outputTokens + slot.buckets.cacheReadTokens
+      hourCalls += slot.calls
+    }
+  }
+  return {
+    id: record.id,
+    // 标题优先级与列表一致，避免抽屉里的标题和刚点的那行不一样
+    title: (meta.titles ?? new Map<string, string>()).get(normalizeSessionId(record.id))
+      ?? record.title
+      ?? promptSnippetOf(summary.firstPrompt, PROMPT_TITLE_CHARS)
+      ?? null,
+    archived: (meta.archived ?? new Set<string>()).has(normalizeSessionId(record.id)),
+    workspace: record.workspace,
+    provider: summary.primaryModelKey === null ? null : attributeModelKey(summary.primaryModelKey, knownProviders).provider,
+    firstTime: summary.firstTime,
+    lastTime: summary.lastTime,
+    durationMs: summary.firstTime === null || summary.lastTime === null ? 0 : Math.max(0, summary.lastTime - summary.firstTime),
+    crossDays: crossDaysOf(summary.firstTime, summary.lastTime),
+    days: summary.days.length,
+    calls: summary.calls,
+    tokens: total,
+    buckets: summary.buckets,
+    cacheHitRate: summary.cacheHitRate,
+    prompt: summary.firstPrompt,
+    models,
+    hours: hourCalls > 0 ? hours : null,
+  }
 }
 
 /** 模型维度聚合行（`provider + model`），供「按模型」视图使用。 */

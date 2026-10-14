@@ -4,7 +4,15 @@
  * 运行：node test/sessions.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createSessionSource, hoursOfDate, projectRowsOf, sessionRowsOf } from '../lib/sessions.js'
+import {
+  createSessionSource,
+  crossDaysOf,
+  hoursOfDate,
+  projectRowsOf,
+  sessionDetailOf,
+  sessionRowsOf,
+} from '../lib/sessions.js'
+import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
 
 const morning = new Date(2026, 9, 13, 9, 15, 0).getTime()
 const afternoon = new Date(2026, 9, 13, 15, 40, 0).getTime()
@@ -170,5 +178,96 @@ const partial = await partialSource.collect()
 assert.equal(partial.coverage.status, 'partial')
 assert.equal(partial.coverage.skippedSessions, 1)
 assert.deepEqual(partial.records.map((record) => record.id), ['ok-a', 'ok-b'], '并发下一个会话失败不影响其它会话')
+
+// 10. 单会话详情：只折叠这一个会话（缓存优先），找不到 / 读不出来都不抛错
+const nextDay = new Date(2026, 9, 14, 10, 0, 0).getTime()
+const detailFixture = createFakePersistence([
+  ['session-first', { header: { id: 'session-first', cwd: 'D:\\EasyJob', updatedAt: afternoon }, revision: Symbol('d1'), events: sessionLog }],
+  ['session-second', { header: { id: 'session-second', title: '第二个会话', cwd: 'D:\\work', updatedAt: morning }, revision: Symbol('d1'), events: [
+    ...sessionLog,
+    usageChunk(9, nextDay, 3, 1, { inputTokens: 100, outputTokens: 10, cacheReadTokens: 0 }),
+  ] }],
+  ['session-broken', { header: { id: 'session-broken', title: '读不出来的会话', cwd: 'D:\\work', updatedAt: morning }, revision: Symbol('d1'), events: sessionLog, failOpen: true }],
+])
+const detailSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? detailFixture.service : undefined) })
+
+// 列表还没取过就直接看详情：只 open 一个会话，不会顺手把三个都折了
+const firstDetail = await detailSource.detail('session-first')
+assert.equal(firstDetail.status, 'ok')
+assert.equal(detailFixture.stats.opens.length, 1, '详情只读一个会话，不重折全部')
+assert.equal(firstDetail.record.summary.tokens, 13800)
+
+// 第二次看同一个会话：吃缓存，零 I/O
+const againDetail = await detailSource.detail('session-first')
+assert.equal(againDetail.status, 'ok')
+assert.equal(detailFixture.stats.opens.length, 1, '缓存命中后不再 open')
+
+// id 归一：裸 uuid（大小写随意）也能查到 session-<uuid>，第二次同样吃缓存
+const bareId = await detailSource.detail('second')
+assert.equal(bareId.status, 'ok', '裸 uuid 归一到 session-<uuid>')
+assert.equal(bareId.id, 'session-second')
+assert.equal(detailFixture.stats.opens.length, 2, '未命中缓存时才读这一个会话')
+const upperCaseId = await detailSource.detail('SECOND')
+assert.equal(upperCaseId.status, 'ok', '大小写归一后命中缓存')
+assert.equal(detailFixture.stats.opens.length, 2)
+
+// 列表里没有这个 id → not-found（带说明，不抛错，也不读任何会话）
+const missingDetail = await detailSource.detail('session-nope')
+assert.equal(missingDetail.status, 'not-found')
+assert.ok(missingDetail.reason !== null && missingDetail.reason.includes('没有这个 id'))
+assert.equal(missingDetail.record, null)
+assert.equal(detailFixture.stats.opens.length, 2, '找不到时不读会话')
+
+// 会话读不出来 → degraded（头部字段照常给出 + 中文说明），不抛错
+const brokenDetail = await detailSource.detail('session-broken')
+assert.equal(brokenDetail.status, 'degraded')
+assert.equal(brokenDetail.title, '读不出来的会话', '降级时仍给出会话头字段')
+assert.equal(brokenDetail.workspace, 'D:\\work')
+assert.equal(brokenDetail.record, null)
+assert.ok(brokenDetail.reason.includes('会话读取失败'))
+
+// 宿主没有会话服务 → unavailable（而不是抛错）
+const noService = await createSessionSource({ get: () => undefined }).detail('session-x')
+assert.equal(noService.status, 'unavailable')
+assert.equal(noService.record, null)
+assert.ok(noService.reason !== null)
+
+// 11. 行级新增字段：首条提问片段 + 跨天
+const crossRecords = [
+  { id: 'session-cross', title: null, workspace: 'D:\\EasyJob', summary: summarizeSession(foldSessionEvents([
+    { seq: 0, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '<system-reminder> You are teammate "kurlon".' }] } },
+    { seq: 1, time: morning, type: 'user/message', data: { content: [{ type: 'text', text: '把会话详情抽屉做出来' }] } },
+    usageChunk(2, morning, 1, 1, { inputTokens: 100, outputTokens: 10, cacheReadTokens: 0 }),
+    usageChunk(3, nextDay, 2, 1, { inputTokens: 200, outputTokens: 20, cacheReadTokens: 0 }),
+  ])) },
+]
+const crossRows = sessionRowsOf(crossRecords, ['opencode-go'])
+assert.equal(crossRows[0].crossDays, 1, '首次与最近隔一天 → 跨 1 天')
+assert.equal(crossRows[0].prompt, '把会话详情抽屉做出来', '跳过系统注入文本后的首条真实提问')
+assert.equal(crossRows[0].title, '把会话详情抽屉做出来', '标题也回落到同一条真实提问')
+assert.equal(crossDaysOf(morning, afternoon), 0, '同一天不算跨天')
+assert.equal(crossDaysOf(null, afternoon), 0, '缺时间是 0（界面不标跨天）')
+
+// 12. 详情视图模型：时长、四类分桶、命中率、逐模型占比、24 小时分布
+const detail = sessionDetailOf(crossRecords[0], ['opencode-go'], {})
+assert.equal(detail.durationMs, nextDay - morning)
+assert.equal(detail.crossDays, 1)
+assert.equal(detail.days, 2)
+assert.equal(detail.tokens, 330, '100 + 10 + 200 + 20')
+assert.equal(detail.buckets.inputTokens, 300)
+assert.equal(detail.prompt, '把会话详情抽屉做出来')
+assert.equal(detail.cacheHitRate, 0, '没有缓存读 → 0%')
+assert.equal(detail.models.length, 1)
+assert.equal(detail.models[0].sharePercent, 100, '只有一个模型时占比 100%')
+assert.equal(detail.hours.length, 24, '有结算样本就给 24 个小时槽')
+assert.equal(detail.hours[9].calls, 1, '9 点一个样本')
+assert.equal(detail.hours[10].calls, 1, '次日 10 点一个样本（跨天按小时累加）')
+assert.equal(detail.hours[9].tokens + detail.hours[10].tokens, 330)
+
+// 没有结算样本的会话：不给小时分布（界面就不画迷你图）
+const emptyDetail = sessionDetailOf({ id: 'session-empty', title: null, workspace: null, summary: summarizeSession(foldSessionEvents([])) }, [], {})
+assert.equal(emptyDetail.hours, null)
+assert.deepEqual(emptyDetail.models, [])
+assert.equal(emptyDetail.durationMs, 0)
 
 console.log('sessions.test: 全部通过')

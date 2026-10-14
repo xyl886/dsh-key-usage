@@ -6,8 +6,12 @@ import assert from 'node:assert/strict'
 import {
   attributeModelKey,
   foldSessionEvents,
+  isInjectedPromptText,
   normalizeProvider,
+  promptSnippetOf,
   summarizeSession,
+  PROMPT_SNIPPET_CHARS,
+  PROMPT_TITLE_CHARS,
 } from '../lib/session-usage.js'
 
 // 固定本地时间，避免测试依赖机器时区
@@ -142,6 +146,50 @@ const promptFold = foldSessionEvents([
   { seq: 2, time: laterTime, type: 'user/message', data: { content: ['第三条不该被取'] } },
 ])
 assert.equal(promptFold.firstPrompt, '第二 条 提问', '取第一条有文本的提问并压平空白')
+
+// 标题质量：teammate / 斜杠命令这类**系统注入**文本不是人类提问，必须跳过它继续往下找
+const userMessage = (seq, text) => ({ seq, time: baseTime, type: 'user/message', data: { content: [{ type: 'text', text }] } })
+const injectedSamples = [
+  '<system-reminder> You are teammate "kurlon".',
+  '<system>系统提示</system>',
+  '<command-name>/clear</command-name>',
+  '<local-command-stdout>done</local-command-stdout>',
+]
+injectedSamples.forEach((injected, index) => {
+  const fold = foldSessionEvents([userMessage(0, injected), userMessage(1, '第 ' + String(index) + ' 条真实提问')])
+  assert.equal(fold.firstPrompt, '第 ' + String(index) + ' 条真实提问', '跳过注入文本：' + injected.slice(0, 24))
+})
+
+// 连续多条系统消息：继续往下找到第一条人类消息为止
+const consecutiveSystem = foldSessionEvents([
+  userMessage(0, '<system-reminder> You are teammate "kurlon".'),
+  userMessage(1, '<command-name>/compact</command-name>'),
+  userMessage(2, '<system>第二条系统消息</system>'),
+  userMessage(3, '真正的提问在这里'),
+])
+assert.equal(consecutiveSystem.firstPrompt, '真正的提问在这里', '连续系统消息会一直往下找')
+
+// 只有系统消息：没有提问可用（界面回落「（无提问）」+ 短 id，而不是空标题）
+const onlySystem = foldSessionEvents([
+  userMessage(0, '<system-reminder> You are teammate "kurlon".'),
+  userMessage(1, '<local-command-stdout>ok</local-command-stdout>'),
+])
+assert.equal(onlySystem.firstPrompt, null, '全是系统消息时没有提问')
+
+// 注入判定只看**开头**：正文里引用标签的正常提问不能被误杀
+const inlineTag = foldSessionEvents([userMessage(0, '为什么 <system-reminder> 会出现在标题里？')])
+assert.equal(inlineTag.firstPrompt, '为什么 <system-reminder> 会出现在标题里？', '只有开头的标签才算系统注入')
+assert.equal(isInjectedPromptText('<system-reminder>x'), true)
+assert.equal(isInjectedPromptText('普通提问'), false)
+
+// 正文与列表片段分离：折叠里保留全文（详情要），标题 / 搜索片段才截断
+const longText = '长'.repeat(300)
+const longFold = foldSessionEvents([userMessage(0, longText)])
+assert.equal(longFold.firstPrompt.length, 300, '折叠结果保留提问全文')
+assert.equal(promptSnippetOf(longFold.firstPrompt, PROMPT_TITLE_CHARS).length, 61, '标题截断到 60 字 + 省略号')
+assert.equal(promptSnippetOf(longFold.firstPrompt, PROMPT_SNIPPET_CHARS).length, PROMPT_SNIPPET_CHARS + 1, '搜索片段按 200 字截断')
+assert.equal(promptSnippetOf(null), null, '没有提问时片段为 null')
+assert.equal(promptSnippetOf('   '), null, '只有空白也算没有提问')
 
 // 场景五：继承前缀不计入（由数据源负责裁剪），此处只验证时间范围
 assert.equal(replacementSummary.firstTime, baseTime)

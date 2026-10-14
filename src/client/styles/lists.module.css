@@ -61,3 +61,109 @@
 .projectTable th:nth-child(4) { width: 13%; }
 .projectTable th:nth-child(5) { width: 12%; }
 .projectTable th:nth-child(6) { width: 15%; }
+
+/* ===== 会话用量：搜索范围提示、跨天小标、可点击工作目录 ===== */
+.searchHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: nowrap; }
+.crossDayTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); }
+/* 行内工作目录是按钮：点了切到「项目用量」并只看这个项目 */
+.linkBtn {
+  border: 0; background: none; padding: 0; font: inherit; font-size: 10.5px; text-align: left;
+  color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.linkBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); text-decoration: underline; }
+.linkBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+/* 跨 Tab 筛选的提示条：说明当前只看了哪个项目，可一键清掉 */
+.focusChip {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 3px 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 999px;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11px;
+}
+.focusClear { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.focusClear:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+
+/* 会话行内展开：箭头按钮与「每日细目」的展开按钮同款观感 */
+.sessionToggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0; flex-shrink: 0;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.sessionToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.sessionToggleArrow { display: inline-block; width: 11px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 9px; }
+/* 标题本身就是「打开详情」的按钮：可 Tab 聚焦，鼠标点整行也行 */
+.sessionTitleBtn {
+  flex: 1; min-width: 0; border: 0; background: none; padding: 0; font: inherit; font-weight: 600;
+  font-size: 12.5px; color: var(--dsw-alias-label-primary, #e8e8ec); cursor: pointer; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sessionTitleBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.composeCell { padding: 4px 10px 10px 30px !important; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.05)); text-align: left !important; }
+.composeRow {
+  display: grid; align-items: center; gap: 8px; padding: 2px 0; font-size: 11.5px;
+  grid-template-columns: minmax(120px, 1.4fr) minmax(60px, .7fr) minmax(90px, 1fr) minmax(70px, .8fr);
+}
+.composeHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
+.composeName { color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composeChannel { color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 6px; font-size: 10.5px; }
+.composeNumber { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+
+/* 分页：底部「加载更多」，不引入虚拟滚动 */
+.moreRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.moreBtn {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 999px; padding: 4px 14px;
+  font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.moreBtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.moreBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.moreText { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+
+/* ===== 会话详情抽屉：右侧浮层，遮罩用宿主遮罩令牌（明暗两套自带） ===== */
+.drawerMask {
+  position: fixed; inset: 0; z-index: 9000; display: flex; justify-content: flex-end;
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, .38));
+}
+.drawerPanel {
+  box-sizing: border-box; width: min(620px, 94vw); height: 100%; overflow-y: auto;
+  padding: 14px 18px 30px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border-left: 1px solid var(--dsw-alias-border-l1, #2c2c34); box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0,0,0,.35));
+}
+.drawerHead { display: flex; align-items: flex-start; gap: 10px; }
+.drawerTitle { flex: 1; min-width: 0; font-size: 15px; font-weight: 650; color: var(--dsw-alias-label-primary, #e8e8ec); overflow-wrap: anywhere; }
+.drawerClose {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  border-radius: 8px; width: 26px; height: 26px; font: inherit; font-size: 12px; line-height: 1; cursor: pointer; flex-shrink: 0;
+}
+.drawerClose:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
+.drawerClose:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.drawerId { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--dsw-alias-label-tertiary, #67676f); margin: 2px 0 12px; overflow-wrap: anywhere; }
+
+.detailGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 14px; }
+.detailItemWide { grid-column: 1 / -1; }
+.detailItemLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
+.detailItemValue { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.detailItemNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10px; }
+.detailStrip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px 12px;
+  margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+}
+.detailBlock { margin-top: 16px; }
+.detailBlockTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin-bottom: 6px; }
+.detailCost { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; }
+.detailCostHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+/* 首条提问全文：保留用户自己的换行，超长也能滚 */
+.promptText {
+  white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow-y: auto;
+  background: var(--dsw-alias-fill-l1, rgba(128,128,140,.06)); border-radius: 8px; padding: 8px 10px;
+  color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 12px; line-height: 1.6;
+}
+.sessionDetailModelTable { table-layout: fixed; }
+.sessionDetailModelTable th:nth-child(1) { width: 40%; }
+.sessionDetailModelTable th:nth-child(2) { width: 18%; }
+.sessionDetailModelTable th:nth-child(3) { width: 24%; }
+.sessionDetailModelTable th:nth-child(4) { width: 18%; }
+
+/* 24 小时迷你图：柱高按该会话的小时峰值归一 */
+.hourChart { display: flex; align-items: flex-end; gap: 2px; height: 84px; margin-top: 6px; }
+.hourBar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
+.hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-accent-primary, #5b8cff); border-radius: 2px 2px 0 0; }
+.hourBarTick { text-align: center; font-size: 9px; color: var(--dsw-alias-label-tertiary, #67676f); }
