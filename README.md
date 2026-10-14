@@ -29,11 +29,33 @@
 > 真实界面截图，**演示数据**（项目路径与部分金额已打码）。设计意图与早期原型见 [`docs/prototype/`](./docs/prototype/)（不代表当前界面）。
 
 <p align="center">
-  <img src="./docs/images/usage-overview.png" alt="总览：Key 清单（含余额 / 窗口与成本来源）与活跃热力图" width="410" />
-  <img src="./docs/images/usage-daily.png" alt="使用明细：六张统计卡、环比趋势、通道占比与每日细目" width="410" />
-  <img src="./docs/images/按模型.png" alt="按模型：按通道 + 模型聚合，成本带来源角标" width="270" />
-  <img src="./docs/images/项目总量.png" alt="项目用量：按工作目录聚合" width="270" />
-  <img src="./docs/images/usage-quota.png" alt="余额与配额：官方余额、订阅窗口与计费规则" width="270" />
+  <img src="./docs/images/usage-overview.png" alt="总览：Key 清单与活跃热力图" width="820" />
+  <br />
+  <sub><b>总览</b> · Key 清单（类型 / 今日与近 30 天用量 / 余额与窗口 / 成本来源）与近 9 个月活跃热力图</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/usage-daily.png" alt="使用明细：六张统计卡、环比趋势、通道占比与每日细目" width="820" />
+  <br />
+  <sub><b>使用明细</b> · 六张统计卡、环比趋势对比、通道占比、按天图表与可展开的每日细目</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/按模型.png" alt="按模型：按通道 + 模型聚合，成本带来源角标" width="820" />
+  <br />
+  <sub><b>按模型</b> · 按「通道 + 模型」聚合调用数与 Tokens，成本带 官方 / 自定 / 官方价 / 估算 角标</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/项目总量.png" alt="项目用量：按工作目录聚合" width="820" />
+  <br />
+  <sub><b>项目用量</b> · 按工作目录聚合调用数、Tokens、占比与最近活跃，底部标明被隐藏的零 Token 行</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/usage-quota.png" alt="余额与配额：官方余额、订阅窗口与计费规则" width="820" />
+  <br />
+  <sub><b>余额与配额</b> · 官方余额、订阅窗口占用与计费规则面板</sub>
 </p>
 
 ## 安装
