@@ -10,7 +10,7 @@
 [![node](https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square)](#兼容与运行要求)
 [![topic](https://img.shields.io/badge/topic-dsh--plugin-0e7490?style=flat-square)](https://github.com/topics/dsh-plugin)
 
-[界面预览](#界面预览) · [安装](#安装) · [数据与权限](#数据权限与联网) · [功能](#功能) · [成本与内置价目](#成本与内置价目) · [常见问题](#常见问题) · [开发](#开发)
+[界面预览](#界面预览) · [安装](#安装) · [数据与权限](#数据权限与联网) · [功能](#功能) · [成本与内置价目](#成本与内置价目) · [常见问题](#常见问题) · [更新记录](./CHANGELOG.md) · [开发](#开发)
 
 </div>
 
@@ -109,11 +109,11 @@ dsh plugin --profile desktop add dsh-key-usage
 
 - 今日 / 周 / 月 / 总计 / 自定义范围 + 按通道筛选，全页联动；
 - **六张统计卡**（调用次数、Tokens、缓存读、缓存命中率、日均 Tokens、成本）**+ 环比趋势对比**（与上一段等长范围比这四个指标，命中率按百分点计；`总计` 没有可比区间时会说明）；
-- **通道占比条**、**按天 / 按小时图表**（单日范围自动切 24 小时）、**每日细目**（每天一行，可展开到模型级）。
+- **通道占比条**、**按天 / 按小时图表**（单日范围自动切 24 小时）、**每日细目**（每天一行，表头可点击排序，可展开到模型级）。
 
 **项目用量 · 按模型 · 会话用量**
 
-- 分别按**工作目录**、**通道 + 模型**、**单个会话**聚合调用数 / Tokens / 占比 / 命中率 / 成本 / 最近活跃；都支持搜索、按通道筛选、按列排序；会话按日期分组，可切换显示已归档会话。
+- 分别按**工作目录**、**通道 + 模型**、**单个会话**聚合调用数 / Tokens / 占比 / 命中率 / 成本 / 最近活跃；都支持搜索、按通道筛选与排序切换；会话按日期分组，可切换显示已归档会话。
 
 **导出**
 
@@ -165,7 +165,9 @@ dsh plugin --profile desktop add dsh-key-usage
 <details>
 <summary><b>Windows 上 pnpm 安装报 EPERM（无法创建符号链接）</b></summary>
 
-未开启开发者模式时 Windows 不允许创建符号链接，而 pnpm 安装本插件需要链接宿主提供的 peer 依赖（`@deepseek-ai/cordis` / `@deepseek-ai/schemastery`）。DSH 自带的安装器不安装 peer 依赖，所以用 Plugin Hub 安装不受影响；必须用 pnpm 时请开启开发者模式或以管理员身份运行。计划在下一版把 `schemastery` 标为 optional peer 以彻底规避。
+未开启开发者模式时 Windows 不允许创建符号链接。本插件已把两个由宿主提供的 peer 依赖（`@deepseek-ai/cordis` / `@deepseek-ai/schemastery`）都标为 **optional**，pnpm 不会再为它们建链接，因此新版本不会触发这个错误。
+
+在更早的版本（≤ 0.1.4）上遇到此错误时：改用 **Plugin Hub** 安装（DSH 自带安装器不安装 peer 依赖），或开启开发者模式 / 以管理员身份运行。
 </details>
 
 <details>
@@ -241,7 +243,7 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [..
 
 ## 延伸文档
 
-[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [开发与构建](./docs/06-开发与构建.md) · [AGENTS.md](./AGENTS.md)
+[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./CHANGELOG.md) · [AGENTS.md](./AGENTS.md)
 
 ## 许可证
 

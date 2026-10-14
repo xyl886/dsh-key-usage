@@ -25,6 +25,7 @@
     "client/",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "docs/images/usage-overview.png",
     "docs/images/usage-daily.png",
@@ -63,6 +64,9 @@
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
