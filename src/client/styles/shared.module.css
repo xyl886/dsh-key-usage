@@ -49,9 +49,23 @@
 }
 .table th:first-child, .table td:first-child { text-align: left; padding-left: 0; }
 .table td:first-child { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.table th.sortable { cursor: pointer; user-select: none; }
-.table th.sortable:hover { color: var(--dsw-alias-label-secondary, #9a9aa6); }
-.table th.sortActive { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+/* 可排序表头本身是 <th scope="col" aria-sort>，真正可点的是里面的按钮，
+   这样键盘（Tab + Enter/Space）也能排序；这里只负责按钮外观与焦点环。 */
+.sortBtn {
+  display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0;
+  font: inherit; color: inherit; cursor: pointer; user-select: none;
+}
+.sortBtn:hover { color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.sortActiveBtn { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+
+/* 焦点必须可见：去掉 outline 又不给替代样式，键盘用户会彻底失去位置感 */
+.refreshBtn:focus-visible,
+.chip:focus-visible,
+.sortBtn:focus-visible,
+.tabBar button:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline-offset: 2px;
+}
 .sortArrow { font-size: 8px; margin-left: 3px; opacity: .8; }
 .table tr.clickable { cursor: pointer; }
 .table tr.clickable:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .07)); }

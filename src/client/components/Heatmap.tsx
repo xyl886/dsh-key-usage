@@ -42,6 +42,8 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
   const { days, channels, tooltip } = props
   const heatmapByDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   const thresholds = useMemo(() => levelThresholds(days), [days])
+  /** 供容器的 aria-label 用：读屏用户拿不到逐格悬停信息，至少给出规模概述。 */
+  const activeDays = days.filter((day) => day.totalTokens > 0).length
 
   const { columns, monthLabels } = useMemo(() => {
     const today = new Date()
@@ -90,7 +92,14 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
   }, [])
 
   return (
-    <div className={styles.heatmapCard}>
+    <div
+      className={styles.heatmapCard}
+      role="img"
+      aria-label={
+        '活跃热力图：近 9 个月，共 ' + String(activeDays) + ' 个活跃日；每格代表一天的 Tokens 总量，颜色越深用量越高。'
+        + '逐格明细请查看「使用明细」页的按天图表与每日细目。'
+      }
+    >
       <div className={styles.heatmapHead}>
         <span className={styles.heatmapTitle}>活跃热力图 · 近 9 个月 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
         <span className={shared.legend}>

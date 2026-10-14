@@ -71,7 +71,16 @@
   background: var(--dsw-alias-bg-layer-3, #232329); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   border-radius: 6px; color: var(--dsw-alias-label-primary, #e8e8ec); font: inherit; font-size: 11.5px; padding: 4px 7px; min-width: 0;
 }
-.field input:focus, .field select:focus { outline: none; border-color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.field input:focus, .field select:focus { border-color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+/* 输入框的焦点要有可见轮廓（原来只有边框变色，键盘用户很难定位） */
+.field input:focus-visible, .field select:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline-offset: 1px;
+}
+.linkBtn:focus-visible, .infoBtn:focus-visible, .actionBtn:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline-offset: 2px;
+}
 .fieldWide { grid-column: span 2; }
 .subLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin: 12px 0 6px; }
 .windowRow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }

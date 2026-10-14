@@ -112,12 +112,16 @@ export function DailyDetailTable(props: {
 
   const header = (key: string, label: string): ReactNode => {
     const isActive = sort.key === key
+    // 表头排序必须是按钮：鼠标可点是副产品，Tab + Enter/Space 才是可达性要求；aria-sort 让读屏知道当前升/降序
     return (
-      <th
-        className={isActive ? styles.sortActive : styles.sortable}
-        onClick={() => onSort(isActive ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })}
-      >
-        {label}<span className={styles.sortArrow}>{isActive ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      <th scope="col" aria-sort={isActive ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+        <button
+          type="button"
+          className={styles.sortBtn + (isActive ? ' ' + styles.sortActiveBtn : '')}
+          onClick={() => onSort(isActive ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })}
+        >
+          {label}<span className={styles.sortArrow}>{isActive ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+        </button>
       </th>
     )
   }

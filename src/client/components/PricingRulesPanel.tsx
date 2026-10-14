@@ -170,7 +170,7 @@ export function PricingRulesPanel(props: {
       {showExplanation && <ExplanationBlock />}
 
       {expanded && (
-        <div className={pricingStyles.drawer}>
+        <div className={pricingStyles.drawer} id="key-usage-pricing-drawer">
           {/* 状态提示只渲染一条（优先级见 StatusNotice），不与「写入被拒绝」叠加 */}
           <StatusNotice state={state} />
 
@@ -411,11 +411,18 @@ function SummaryStrip(props: {
         <button
           className={pricingStyles.infoBtn + (props.showExplanation ? ' ' + pricingStyles.infoBtnActive : '')}
           title="来源角标、单位、错峰与多币种口径"
+          aria-label="查看成本口径说明"
+          aria-expanded={props.showExplanation}
           onClick={props.onToggleExplanation}
         >
           ⓘ
         </button>
-        <button className={pricingStyles.actionBtn + ' ' + pricingStyles.primary} onClick={props.onToggle}>
+        <button
+          className={pricingStyles.actionBtn + ' ' + pricingStyles.primary}
+          aria-expanded={props.expanded}
+          aria-controls="key-usage-pricing-drawer"
+          onClick={props.onToggle}
+        >
           {props.expanded ? '收起规则 ◂' : '配置规则 ▸'}
         </button>
       </div>
