@@ -644,20 +644,16 @@ function daysBetween(from: string, to: string): number | null {
   return Math.round((end - start) / 86400000) + 1
 }
 
-/** 成本口径说明：点 ⓘ 才展开（只讲「这一格钱是怎么来的」）。 */
+/** 成本口径说明：点 ⓘ 才展开，只留结论口径（算法细节在 docs/01）。 */
 function ExplanationBlock(): ReactNode {
   return (
     <div className={pricingStyles.explanation}>
-      <div className={pricingStyles.explanationTitle}>成本口径（三层价目自动生效，不需要你填任何价格）</div>
+      <div className={pricingStyles.explanationTitle}>成本口径</div>
       <ul className={pricingStyles.explanationList}>
-        <li><b>官方</b>：台账记录的厂商账单金额，是既成事实，不会被价目覆盖。</li>
-        <li><b>官方价</b>：按插件<b>内置的厂商官方价目</b>算出（随包发布、自动生效）；匹配只做精确 / 忽略大小写 / 去 <code>vendor/</code> 前缀，不做模糊匹配。展开通道卡片可以看到逐模型单价与来源。</li>
-        <li><b>聚合</b>：按 <b>LiteLLM 聚合价目</b>算出（第三方维护、美元计价）；点「刷新价目」才联网更新，失败不影响已装载的那一份。条目缺缓存写入价时标「部分」：那一档按未命中价计。</li>
-        <li><b>估算</b>：三层价目都没命中时，按台账反推的均价推算，仅供参照，不是账单。</li>
-        <li><b>—</b>：暂无价格依据。</li>
-        <li>取值顺序：官方账单 &gt; 内置官方价目 &gt; 聚合价目 &gt; 台账均价，每一格按这个顺序取第一个可用的来源。</li>
-        <li>单价按每百万 tokens 记；错峰由服务端按<b>本地时间</b>判定，处于错峰时段时单价表里标「错峰中」。</li>
-        <li>多币种与折算：价目各按文档原币种记录（CNY / USD），显示时按当前汇率<b>逐币种折算后相加</b>，折算值前缀 <code>≈</code>；原币种与显示币种相同时不加标记。汇率来源与时间见工具条。</li>
+        <li>取值顺序：<b>官方账单</b> &gt; <b>官方价</b>（内置厂商价目，人民币）&gt; <b>聚合</b>（LiteLLM，美元）&gt; <b>估算</b>（台账反推均价），每格取第一个可用的。</li>
+        <li><b>官方</b>是台账里的厂商账单，不会被价目覆盖；<b>估算</b>仅供参照，不是账单。</li>
+        <li>单价按每百万 tokens；错峰按本地时间判定（命中时单价表标「错峰中」）；聚合价缺缓存写入价时标「部分」，那一档按未命中价计。</li>
+        <li>没有价格依据的格子显示 <b>—</b>；多币种按当前汇率折算后相加，折算值前缀 <code>≈</code>。</li>
       </ul>
     </div>
   )

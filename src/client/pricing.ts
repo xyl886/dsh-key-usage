@@ -64,6 +64,9 @@ export interface ModelPriceAggregate {
  */
 export const LITELLM_REPO_URL = ['https', '://github.com', '/BerriAI/litellm'].join('')
 
+/** 本插件仓库地址：与 LITELLM_REPO_URL 一样运行时拼出来 —— 构建产物里出现 `https://` 字面量会被 banner 校验当成机器路径拦下。 */
+export const PLUGIN_REPO_URL = ['https', '://github.com', '/xyl886/dsh-key-usage'].join('')
+
 /** 字节数 → MB 文本；拿不到合法数字时返回 null，由调用方整段省略（不显示 undefined）。 */
 export function megabytesTextOf(bytes: unknown): string | null {
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return null

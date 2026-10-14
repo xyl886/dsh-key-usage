@@ -301,6 +301,9 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                   {workspace}
                 </button>
               )}
+            {row.modelCount !== undefined && row.modelCount > 1 && (
+              <span className={listStyles.sessionMeta}>{row.modelCount} 个模型</span>
+            )}
           </div>
         </td>
         <td>{row.providerLabel ?? displayNameOf(options.channels, row.provider ?? '')}</td>

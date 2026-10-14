@@ -192,6 +192,8 @@ export interface SessionRow {
   workspace: string | null
   provider: string | null
   providerLabel: string | null
+  /** 该会话出现过的模型个数（列表只展示前几个）；服务端旧版本可能没有这个字段。 */
+  modelCount?: number
   firstTime: number | null
   lastTime: number | null
   calls: number

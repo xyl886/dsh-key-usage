@@ -63,6 +63,8 @@
 .projectTable th:nth-child(6) { width: 15%; }
 
 .crossDayTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); }
+/* 会话行副标题里的元信息（如「3 个模型」）：与「跨 N 天」同一种弱化样式 */
+.sessionMeta { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); }
 /* 行内工作目录是按钮：点了切到「项目用量」并只看这个项目 */
 .linkBtn {
   border: 0; background: none; padding: 0; font: inherit; font-size: 10.5px; text-align: left;

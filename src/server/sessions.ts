@@ -393,6 +393,8 @@ export interface SessionRow {
   archived: boolean
   workspace: string | null
   provider: string | null
+  /** 该会话出现过的模型个数（列表只展示前几个，计数要看这个）。 */
+  modelCount: number
   firstTime: number | null
   lastTime: number | null
   calls: number
@@ -444,6 +446,7 @@ export function sessionRowsOf(
       archived: archived.has(normalizeSessionId(record.id)),
       workspace: record.workspace,
       provider: record.summary.primaryModelKey === null ? null : attributeModelKey(record.summary.primaryModelKey, knownProviders).provider,
+      modelCount: record.summary.models.length,
       firstTime: record.summary.firstTime,
       lastTime: record.summary.lastTime,
       calls: record.summary.calls,

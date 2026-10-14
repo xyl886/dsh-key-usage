@@ -28,8 +28,9 @@ if (!code.startsWith(required)) {
   process.exit(1)
 }
 
-// 产物必须与机器路径无关，否则跨平台构建无法字节一致（CI 的产物同步闸会永远失败）
-const absolutePath = code.match(/[A-Za-z]:[\\/][^"'\s]*|\\\/home\\\/[^"'\s]*|\/home\/[^"'\s]*/)
+// 产物必须与机器路径无关，否则跨平台构建无法字节一致（CI 的产物同步闸会永远失败）。
+// 只认真正的机器路径：盘符后不能紧跟第二个斜杠、且前面不是字母（否则会把 https:// 里的 s:// 当成盘符）。
+const absolutePath = code.match(/(?<![A-Za-z:])(?:[A-Za-z]:[\\/](?![\\/])|\\\/home\\\/|\/home\/)[^"'\s]*/)
 if (absolutePath !== null) {
   console.error('client.js 里出现了绝对路径：' + absolutePath[0].slice(0, 120))
   process.exit(1)

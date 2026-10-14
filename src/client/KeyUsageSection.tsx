@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll } from './api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './currency.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
+import { PLUGIN_REPO_URL } from './pricing.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
@@ -194,6 +195,7 @@ export function KeyUsageSection() {
       <div className={styles.title}>
         <span>使用情况</span>
         <span className={styles.titleActions}>
+          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" title="在 GitHub 上查看插件源码与更新记录">GitHub</a>
           <button className={styles.refreshBtn} disabled={loading} onClick={refresh}>
             {loading ? '刷新中…' : '↻ 刷新'}
           </button>
@@ -269,27 +271,18 @@ export function KeyUsageSection() {
         <b>口径说明</b>
         <ul className={styles.footnoteList}>
           <li>
-            按天数据优先取宿主用量台账（含官方成本）；台账无记录的日期回退本地会话事件折叠，那些天没有官方成本
-            {summary !== null && summary.todaySource === 'session' ? '（当前有 ' + summary.sessionDates.length + ' 天由会话补位）' : ''}
-            。两套来源按天取舍、不相加。
-          </li>
-          <li>热力图按可见区间内活跃日的五分位分档（少 / 较少 / 中 / 较多 / 多，即 p20 / p40 / p60 / p80）。</li>
-          <li>项目用量、会话用量、按模型与单日「按小时」均来自会话事件，每个结算样本计一次调用（不计成本）。</li>
-          <li>已归档会话只是标记：用量照常计入，会话列表默认隐藏、可切换显示（显示时淡化并标注）。</li>
-          <li>命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）。</li>
-          <li>
-            成本三层自动生效，<b>不需要你填任何价格</b>：厂商账单（台账）&gt; 内置厂商官方价目 &gt; LiteLLM 聚合价目 &gt; 台账反推均价兜底；
-            角标分 <b>官方</b> / <b>官方价</b> / <b>聚合</b> / <b>估算</b>，没有价格依据时显示 —。
-            逐模型单价与来源在「余额与配额」页<b>展开通道卡片</b>查看，「聚合」只有点「刷新价目」才会联网更新，平时完全离线。
+            按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充
+            {summary !== null && summary.todaySource === 'session' ? '（当前有 ' + summary.sessionDates.length + ' 天）' : ''}
+            ，两套来源按天取舍、不相加；项目 / 会话 / 按模型 / 按小时全部来自会话事件，每个样本计一次调用。
           </li>
           <li>
-            金额按当前显示币种折算（工具条可切 <b>¥ RMB</b> / <b>$ USD</b>）：换算是把逐币种小计各自折成显示币种后再相加，
-            折算值前缀 <code>≈</code>；当前 {currency.fx === null ? '还没取到汇率，跨币种金额按原币种显示' : fxSummaryTextOf(currency.fx)}。
+            成本四层自动生效，<b>不需要你填任何价格</b>：官方账单 &gt; 官方价（内置厂商价目）&gt; 聚合（LiteLLM）&gt; 台账反推均价；
+            角标同此命名，没有依据时显示 —。金额按工具条选的币种折算（折算值带 <code>≈</code>），当前
+            {currency.fx === null ? '还没取到汇率，跨币种按原币种显示' : fxSummaryTextOf(currency.fx)}。
           </li>
-          <li>余额与订阅窗口实时查询官方接口（失败回落本机快照），按官方原值 + 币种原样展示（余额不折算、不给建议）；成本金额按上面的显示币种折算。</li>
           <li>
-            页面数据来自统一快照：本地段每 5 分钟重建一次；余额与订阅窗口只在你打开页面或点「刷新」时联网，
-            查不到的通道沿用上一份快照并标出数据时间与失败原因。
+            页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在你打开页面或点「刷新」时联网，
+            查不到就沿用上一份快照并标出数据时间与失败原因。
           </li>
         </ul>
       </div>
