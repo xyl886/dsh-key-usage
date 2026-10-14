@@ -61,11 +61,11 @@
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-key-usage          # Web 端
-
-# 桌面端：应用内 Plugin Hub → 安装插件，填 dsh-key-usage（该 profile 由应用独占，CLI 不接受）
-# 装完都要「退出并重新打开 DSH」才生效
+dsh plugin --profile web add dsh-key-usage
+dsh plugin --profile desktop add dsh-key-usage
 ```
+
+> 桌面端 profile 受应用保护，部分版本会拒绝该命令（本机实测报 `profile "desktop" is managed exclusively by the Electron application`），此时改用应用内 **设置 → 插件 → 添加插件**。装完都要**退出并重新打开 DSH** 才生效。
 
 ## 数据、权限与联网
 
