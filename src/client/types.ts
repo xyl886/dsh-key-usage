@@ -200,6 +200,8 @@ export interface SessionRow {
   origin?: string | null
   /** 挂在这个会话下的子代理会话数。 */
   subagentCount?: number
+  /** 这些子会话的 tokens 小计（只用于父行标注，不并入父会话总计）。 */
+  subagentTokens?: number
   firstTime: number | null
   lastTime: number | null
   calls: number

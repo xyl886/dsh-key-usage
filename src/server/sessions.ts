@@ -449,6 +449,8 @@ export interface SessionRow {
   origin: string | null
   /** 挂在这个会话下的子代理会话数（0 = 没有）。 */
   subagentCount: number
+  /** 这些子会话的展示口径 tokens 小计；只用于父行标注，**不并入**父会话的 tokens / 成本（避免重复计入）。 */
+  subagentTokens: number
   firstTime: number | null
   lastTime: number | null
   calls: number
@@ -493,10 +495,12 @@ export function sessionRowsOf(
   const archived = meta.archived ?? new Set<string>()
   // 子代理会话数：父会话行标「子会话 N」，子会话行自己标「子代理」；缺字段的老记录按「无父会话」处理
   const subagentCounts = new Map<string, number>()
+  const subagentTokens = new Map<string, number>()
   for (const record of records) {
     const parent = record.parentSessionId ?? null
     if (parent === null || parent === '') continue
     subagentCounts.set(parent, (subagentCounts.get(parent) ?? 0) + 1)
+    subagentTokens.set(parent, (subagentTokens.get(parent) ?? 0) + record.summary.tokens)
   }
   return records
     .map((record) => ({
@@ -511,6 +515,7 @@ export function sessionRowsOf(
       parentSessionId: record.parentSessionId ?? null,
       origin: record.origin ?? null,
       subagentCount: subagentCounts.get(record.id) ?? 0,
+      subagentTokens: subagentTokens.get(record.id) ?? 0,
       firstTime: record.summary.firstTime,
       lastTime: record.summary.lastTime,
       calls: record.summary.calls,

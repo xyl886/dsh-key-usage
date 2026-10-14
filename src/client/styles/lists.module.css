@@ -32,11 +32,23 @@
   margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
   color: var(--dsw-alias-label-tertiary, #67676f); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
 }
-/* 子代理会话的标记：与「已归档」同尺寸，用主色区分（它是来源，不是状态） */
+/* 子代理会话的标记：与「已归档」同尺寸，用主色区分（它是来源，不是状态）；可点 → 跳到父会话 */
 .subagentTag {
   margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
   color: var(--dsw-alias-state-accent-primary, #5b8cff); border: 1px solid var(--dsw-alias-state-accent-primary, #5b8cff);
 }
+.subagentTagBtn {
+  display: inline; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-family: inherit; font-size: 10px;
+  font-weight: 500; cursor: pointer; color: var(--dsw-alias-state-accent-primary, #5b8cff);
+  border: 1px solid var(--dsw-alias-state-accent-primary, #5b8cff); background: none;
+}
+.subagentTagBtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
+/* 父行上的「N 个子会话」：看起来是元信息，但可点（只看父会话 + 子会话） */
+.sessionMetaBtn {
+  margin-left: 6px; padding: 0; border: 0; background: none; font-family: inherit; font-size: inherit;
+  color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer;
+}
+.sessionMetaBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); text-decoration: underline; }
 
 /* 首列是长文本（会话标题 / 模型名 / 项目路径）的表格必须用固定布局：
    auto 布局下，首列里 nowrap 的标题会把该列的最小宽度顶到整段文本宽度，

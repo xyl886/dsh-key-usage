@@ -51,16 +51,21 @@ export function SessionsTab(props: {
   const [daysFilter, setDaysFilter] = useState('30')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>('hide')
+  /** 子代理会话默认隐藏（它们是子会话，单独成行会淹没主会话）；可切换显示或只看。 */
+  const [subagentFilter, setSubagentFilter] = useState<'hide' | 'all' | 'only'>('hide')
+  /** 只看某个会话及其子会话（点子会话上的「子代理」标签或父行上的「N 个子会话」时设置）。 */
+  const [parentFocus, setParentFocus] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({})
   const [detailId, setDetailId] = useState<string | null>(null)
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
   const archivedCount = rows.filter((row) => row.archived).length
+  const subagentCount = rows.filter((row) => row.origin === 'subagent').length
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   // 换了筛选 / 搜索 / 排序就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
-  useEffect(() => { setPageSize(PAGE_SIZE) }, [query, channelFilter, daysFilter, sortKey, archiveFilter])
+  useEffect(() => { setPageSize(PAGE_SIZE) }, [query, channelFilter, daysFilter, sortKey, archiveFilter, subagentFilter, parentFocus])
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -73,7 +78,11 @@ export function SessionsTab(props: {
       const matchesAge = maxAgeDays === 0 || row.lastTime === null
         || (nowMs - row.lastTime) <= maxAgeDays * 86400000
       const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'only' ? row.archived : !row.archived)
-      return matchesQuery && matchesChannel && matchesAge && matchesArchive
+      const isSubagent = row.origin === 'subagent'
+      const matchesSubagent = subagentFilter === 'all' || (subagentFilter === 'only' ? isSubagent : !isSubagent)
+      // 聚焦某个会话时只留它自己和它的子会话（从子会话标签或父行的小计按钮进来）
+      const matchesFocus = parentFocus === null || row.id === parentFocus || row.parentSessionId === parentFocus
+      return matchesQuery && matchesChannel && matchesAge && matchesArchive && matchesSubagent && matchesFocus
     })
     const sorters: Record<SortKey, (first: SessionRow, second: SessionRow) => number> = {
       recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
@@ -86,7 +95,7 @@ export function SessionsTab(props: {
       callsDesc: (first, second) => second.calls - first.calls,
     }
     return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs, archiveFilter])
+  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs, archiveFilter, subagentFilter, parentFocus])
 
   /** 只导当前筛选后的会话行（归档筛选、时间窗口、搜索都算数）；分页不影响导出。 */
   const exportRows = (format: 'csv' | 'json'): void => {
@@ -130,6 +139,10 @@ export function SessionsTab(props: {
     onToggleModels: (id: string) => setExpandedIds((previous) => ({ ...previous, [id]: previous[id] !== true })),
     onOpenDetail: (id: string) => setDetailId(id),
     onOpenProject: props.onOpenProject,
+    onFocusSession: (id: string) => {
+      setParentFocus(id)
+      setSubagentFilter('all')
+    },
   }
 
   return (
@@ -171,11 +184,32 @@ export function SessionsTab(props: {
           <option value="all">全部对话（显示已归档）</option>
           <option value="only">仅显示已归档</option>
         </select>
+        <select
+          className={listStyles.filterSelect}
+          value={subagentFilter}
+          onChange={(event) => setSubagentFilter(event.target.value as 'hide' | 'all' | 'only')}
+          title="子代理跑在自己的子会话里，单独成行会淹没主会话；子会话单独计入统计，不并进父会话"
+        >
+          <option value="hide">隐藏子会话</option>
+          <option value="all">显示子会话</option>
+          <option value="only">仅显示子会话</option>
+        </select>
         <span className={exportStyles.exportGroup}>
           <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
           <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
         </span>
       </div>
+      {parentFocus !== null && (
+        <div className={styles.statExtra}>
+          只看该会话及其子会话（含父会话行）·
+          <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>清除筛选</button>
+        </div>
+      )}
+      {subagentFilter !== 'only' && subagentCount > 0 && (
+        <div className={styles.statExtra}>
+          另有 {subagentCount} 个子代理会话{subagentFilter === 'hide' ? '未显示' : '（已显示）'}：子会话各自计入统计，不并入父会话
+        </div>
+      )}
       {archiveFilter === 'hide' && archivedCount > 0 && (
         <div className={styles.statExtra}>
           另有 {archivedCount} 个已归档会话未显示（归档只是标记，用量仍计入上方统计）
@@ -239,6 +273,8 @@ interface RowOptions {
   onToggleModels: (id: string) => void
   onOpenDetail: (id: string) => void
   onOpenProject: (workspace: string) => void
+  /** 聚焦到某个会话及其子会话（父行点「N 个子会话」、子行点「子代理」都用它）。 */
+  onFocusSession: (id: string) => void
 }
 
 function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
@@ -284,7 +320,19 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               {row.title ?? '（无提问）· ' + shortIdOf(row.id)}
             </button>
             {row.archived && <span className={listStyles.archivedTag}>已归档</span>}
-            {row.origin === 'subagent' && <span className={listStyles.subagentTag}>子代理</span>}
+            {row.origin === 'subagent' && (
+              <button
+                type="button"
+                className={listStyles.subagentTagBtn}
+                title="子代理跑的独立子会话；点这里只看它所属的父会话"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (row.parentSessionId !== null && row.parentSessionId !== undefined) options.onFocusSession(row.parentSessionId)
+                }}
+              >
+                子代理
+              </button>
+            )}
           </div>
           <div className={listStyles.listSub}>
             {workspace === null
@@ -306,7 +354,18 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               <span className={listStyles.sessionMeta}>{row.modelCount} 个模型</span>
             )}
             {row.subagentCount !== undefined && row.subagentCount > 0 && (
-              <span className={listStyles.sessionMeta}>{row.subagentCount} 个子会话</span>
+              <button
+                type="button"
+                className={listStyles.sessionMetaBtn}
+                title={'只看这个会话与它的 ' + String(row.subagentCount) + ' 个子会话（子会话 tokens 只是小计，不并入本行）'}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  options.onFocusSession(row.id)
+                }}
+              >
+                {row.subagentCount} 个子会话
+                {row.subagentTokens !== undefined && row.subagentTokens > 0 ? ' · ' + fmtTokens(row.subagentTokens) : ''}
+              </button>
             )}
           </div>
         </td>
