@@ -231,11 +231,17 @@ export function DetailTab(props: {
             ))}
           </div>
           {props.range === 'custom' && (
-            <>
-              <input type="date" className={detailStyles.rangeInput} value={props.customFrom} onChange={(event) => props.onCustomFrom(event.target.value)} />
-              <span className={styles.dim}>至</span>
-              <input type="date" className={detailStyles.rangeInput} value={props.customTo} onChange={(event) => props.onCustomTo(event.target.value)} />
-            </>
+            <span className={detailStyles.dateRange}>
+              <label className={detailStyles.dateField}>
+                <span className={detailStyles.dateLabel}>从</span>
+                <input type="date" className={detailStyles.rangeInput} value={props.customFrom} onChange={(event) => props.onCustomFrom(event.target.value)} />
+              </label>
+              <span className={styles.dim}>–</span>
+              <label className={detailStyles.dateField}>
+                <span className={detailStyles.dateLabel}>至</span>
+                <input type="date" className={detailStyles.rangeInput} value={props.customTo} onChange={(event) => props.onCustomTo(event.target.value)} />
+              </label>
+            </span>
           )}
         </div>
         <span className={exportStyles.exportGroup}>

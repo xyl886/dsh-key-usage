@@ -658,7 +658,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
   assert.equal(ratesOpencode.models[0].currency, null)
   assert.equal(ratesOpencode.models[0].partial, false)
   assert.equal(ratesOpencode.models[0].offPeak, false)
-  assert.ok(ratesOpencode.models[0].note.includes('没有任何价格依据'), ratesOpencode.models[0].note)
+  assert.ok(ratesOpencode.models[0].note.includes('暂无价格依据'), ratesOpencode.models[0].note)
   assert.equal(ratesOpencode.models[0].calls, 9, '台账两天的调用数之和')
 
   // limit / days 归一：非法值回落默认，越大越截断
@@ -842,7 +842,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.equal(unlistedRates.models[0].source, 'none')
   assert.equal(unlistedRates.models[0].currency, null)
   assert.equal(unlistedRates.models[0].rates, null)
-  assert.ok(unlistedRates.models[0].note.includes('没有任何价格依据'), unlistedRates.models[0].note)
+  assert.ok(unlistedRates.models[0].note.includes('暂无价格依据'), unlistedRates.models[0].note)
 
   // limit：每通道只留前 N 个模型
   const limitedRates = await pricedCall('/dsh-key-usage/rates?limit=1')

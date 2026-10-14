@@ -1001,7 +1001,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			catalog: "官方价：按插件内置的厂商官方价目算出（自动生效，界面上可查来源）",
 			aggregate: "聚合：LiteLLM 聚合价目（美元、第三方维护），点「刷新价目」可更新",
 			estimate: "估算：按台账反推的均价推算",
-			none: "没有价格依据（三层价目都没命中，台账也无成本数据）"
+			none: "暂无价格依据"
 		};
 		/** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
 		function costSourceHintOf(source, partial) {
@@ -1262,7 +1262,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
-		const css$5 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px;font-size:12px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}._91PKKq_rangeInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;background:0 0;border-radius:7px;padding:3px 8px;font-size:12px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}._91PKKq_rowToggle{font:inherit;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums;background:0 0;border:0;align-items:center;gap:6px;padding:0;font-size:12px;display:inline-flex}._91PKKq_rowToggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex}._91PKKq_barColumn:hover{filter:brightness(1.2)}._91PKKq_segCache{background:var(--dsw-alias-state-accent-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-accent-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1;font-size:9.5px}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0;font-size:10px}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);padding:5px 0;font-size:11.5px}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:11px;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:10px;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:9px;display:inline-block}";
+		const css$5 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px;font-size:12px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-accent-primary,#5b8cff);font-weight:600}._91PKKq_dateRange{border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#80808c0f);border-radius:9px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex}._91PKKq_dateField{align-items:center;gap:5px;display:inline-flex}._91PKKq_dateLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}._91PKKq_rangeInput{color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;font-variant-numeric:tabular-nums;cursor:text;background:0 0;border:0;padding:4px 2px;font-size:12px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeInput::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55}._91PKKq_rangeInput::-webkit-calendar-picker-indicator:hover{opacity:1}._91PKKq_rangeInput:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}._91PKKq_rowToggle{font:inherit;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums;background:0 0;border:0;align-items:center;gap:6px;padding:0;font-size:12px;display:inline-flex}._91PKKq_rowToggle:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_chartAxisWrap{gap:6px;display:flex}._91PKKq_chartPane{flex:1;min-width:0}._91PKKq_yAxis{text-align:right;min-width:40px;height:110px;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex-direction:column;justify-content:space-between;margin-top:8px;font-size:9.5px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex}._91PKKq_barColumn:hover{filter:brightness(1.2)}._91PKKq_segCache{background:var(--dsw-alias-state-accent-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-accent-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1;font-size:9.5px}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0;font-size:10px}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);padding:5px 0;font-size:11.5px}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:11px;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:10px;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:9px;display:inline-block}";
 		const tagId$5 = "dsh-key-usage/detail.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1282,7 +1282,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"barLabels": "_91PKKq_barLabels",
 			"bars": "_91PKKq_bars",
 			"barsDense": "_91PKKq_barsDense",
+			"chartAxisWrap": "_91PKKq_chartAxisWrap",
+			"chartPane": "_91PKKq_chartPane",
 			"chartTitle": "_91PKKq_chartTitle",
+			"dateField": "_91PKKq_dateField",
+			"dateLabel": "_91PKKq_dateLabel",
+			"dateRange": "_91PKKq_dateRange",
 			"rangeBar": "_91PKKq_rangeBar",
 			"rangeCaption": "_91PKKq_rangeCaption",
 			"rangeInput": "_91PKKq_rangeInput",
@@ -1300,7 +1305,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"subNumber": "_91PKKq_subNumber",
 			"subRow": "_91PKKq_subRow",
 			"subRowCell": "_91PKKq_subRowCell",
-			"toggleArrow": "_91PKKq_toggleArrow"
+			"toggleArrow": "_91PKKq_toggleArrow",
+			"yAxis": "_91PKKq_yAxis"
 		};
 		//#endregion
 		//#region src/client/components/ShareBar.tsx
@@ -1410,36 +1416,50 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const peak = Math.max(1, ...rows.map((row) => row.cacheReadTokens + row.inputTokens + row.outputTokens));
 			const heightOf = (value) => (peak > 0 ? Math.max(1, Math.round(value / peak * 100)) : 1) + "%";
 			const labelEvery = Math.max(1, Math.ceil(rows.length / 14));
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: rows.length > 20 ? detail_module_css_default.bars + " " + detail_module_css_default.barsDense : detail_module_css_default.bars,
-				role: "img",
-				"aria-label": props.ariaLabel,
-				children: rows.map((row) => {
-					const rowTotal = row.cacheReadTokens + row.inputTokens + row.outputTokens;
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: detail_module_css_default.barColumn,
-						onMouseMove: (event) => tooltip.show(event, row.tip),
-						onMouseLeave: tooltip.hide,
-						children: rowTotal > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: detail_module_css_default.segCache,
-								style: { height: heightOf(row.cacheReadTokens) }
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: detail_module_css_default.segIn,
-								style: { height: heightOf(row.inputTokens) }
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: detail_module_css_default.segOut,
-								style: { height: heightOf(row.outputTokens) }
-							})
-						] })
-					}, row.key);
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: detail_module_css_default.barLabels,
-				children: rows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: index % labelEvery === 0 || index === rows.length - 1 ? row.axisLabel : "" }, row.key))
-			})] });
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: detail_module_css_default.chartAxisWrap,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: detail_module_css_default.yAxis,
+					"aria-hidden": "true",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtTokens(peak) }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtTokens(Math.round(peak / 2)) }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "0" })
+					]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: detail_module_css_default.chartPane,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: rows.length > 20 ? detail_module_css_default.bars + " " + detail_module_css_default.barsDense : detail_module_css_default.bars,
+						role: "img",
+						"aria-label": props.ariaLabel,
+						children: rows.map((row) => {
+							const rowTotal = row.cacheReadTokens + row.inputTokens + row.outputTokens;
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: detail_module_css_default.barColumn,
+								onMouseMove: (event) => tooltip.show(event, row.tip),
+								onMouseLeave: tooltip.hide,
+								children: rowTotal > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.segCache,
+										style: { height: heightOf(row.cacheReadTokens) }
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.segIn,
+										style: { height: heightOf(row.inputTokens) }
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.segOut,
+										style: { height: heightOf(row.outputTokens) }
+									})
+								] })
+							}, row.key);
+						})
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: detail_module_css_default.barLabels,
+						children: rows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: index % labelEvery === 0 || index === rows.length - 1 ? row.axisLabel : "" }, row.key))
+					})]
+				})]
+			});
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/trend.module.css.mjs
@@ -2255,24 +2275,39 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								onClick: () => props.onRange(key),
 								children: label
 							}, key))
-						}), props.range === "custom" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-								type: "date",
-								className: detail_module_css_default.rangeInput,
-								value: props.customFrom,
-								onChange: (event) => props.onCustomFrom(event.target.value)
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: shared_module_css_default.dim,
-								children: "至"
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-								type: "date",
-								className: detail_module_css_default.rangeInput,
-								value: props.customTo,
-								onChange: (event) => props.onCustomTo(event.target.value)
-							})
-						] })]
+						}), props.range === "custom" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: detail_module_css_default.dateRange,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+									className: detail_module_css_default.dateField,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.dateLabel,
+										children: "从"
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+										type: "date",
+										className: detail_module_css_default.rangeInput,
+										value: props.customFrom,
+										onChange: (event) => props.onCustomFrom(event.target.value)
+									})]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: shared_module_css_default.dim,
+									children: "–"
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+									className: detail_module_css_default.dateField,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.dateLabel,
+										children: "至"
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+										type: "date",
+										className: detail_module_css_default.rangeInput,
+										value: props.customTo,
+										onChange: (event) => props.onCustomTo(event.target.value)
+									})]
+								})
+							]
+						})]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: export_module_css_default.exportGroup,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -3781,7 +3816,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							"算出（第三方维护、美元计价）；点「刷新价目」才联网更新，失败不影响已装载的那一份。条目缺缓存写入价时标「部分」：那一档按未命中价计。"
 						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }), "：三层价目都没命中时，按台账反推的均价推算，仅供参照，不是账单。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：连台账均价都没有，这一格没有价格依据。"] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：暂无价格依据。"] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "取值顺序：官方账单 > 内置官方价目 > 聚合价目 > 台账均价，每一格按这个顺序取第一个可用的来源。" }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
 							"单价按每百万 tokens 记；错峰由服务端按",

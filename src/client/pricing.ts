@@ -147,7 +147,7 @@ export const COST_SOURCE_HINTS: Record<CostSource, string> = {
   catalog: '官方价：按插件内置的厂商官方价目算出（自动生效，界面上可查来源）',
   aggregate: '聚合：LiteLLM 聚合价目（美元、第三方维护），点「刷新价目」可更新',
   estimate: '估算：按台账反推的均价推算',
-  none: '没有价格依据（三层价目都没命中，台账也无成本数据）',
+  none: '暂无价格依据',
 }
 
 /** 聚合价目的「部分」标记：缺缓存写入价、按未命中价代 —— 是口径说明不是错误。 */

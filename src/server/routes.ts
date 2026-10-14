@@ -349,8 +349,8 @@ function ratesNoteOf(hit: PricedRuleHit | null, average: AveragePrice | null): s
     const unitHint = hit.rule.unit === 'perMillionTokens' ? '' : '（计价单位：' + UNIT_LABELS[hit.rule.unit] + '）'
     return hit.rule.note + unitHint
   }
-  if (average !== null) return '没有单价依据：按台账反推均价估算（金额为台账币种）'
-  return '没有任何价格依据：内置价目与聚合价都没收录，台账里也没有该模型的成本'
+  if (average !== null) return '按台账反推均价估算'
+  return '暂无价格依据'
 }
 
 function minKey(first: string | undefined, second: string | undefined): string | undefined {

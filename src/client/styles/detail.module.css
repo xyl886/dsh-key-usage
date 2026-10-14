@@ -4,15 +4,27 @@
 .rangeTabs { display: inline-flex; gap: 2px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 9px; padding: 2px; }
 .rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: 12px; padding: 4px 13px; border-radius: 7px; cursor: pointer; }
 .rangeTabs button.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); color: var(--dsw-alias-state-accent-primary, #5b8cff); font-weight: 600; }
-.rangeInput {
-  background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); color: var(--dsw-alias-label-primary, #e8e8ec);
-  border-radius: 7px; padding: 3px 8px; font: inherit; font-size: 12px; color-scheme: light dark;
+/* 自定义范围：两个日期输入合成一组（框内左侧标签），避免两个裸 input 夹一个「至」的粗糙感 */
+.dateRange {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 140, .06));
 }
+.dateField { display: inline-flex; align-items: center; gap: 5px; }
+.dateLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.rangeInput {
+  background: transparent; border: 0; color: var(--dsw-alias-label-primary, #e8e8ec);
+  padding: 4px 2px; font: inherit; font-size: 12px; color-scheme: light dark;
+  font-variant-numeric: tabular-nums; cursor: text;
+}
+.rangeInput::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
+.rangeInput::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+.rangeInput:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
 /* 范围切换与日期输入都是键盘可达控件，焦点必须看得见（outline 不占布局，也跟随圆角） */
 .rangeTabs button:focus-visible,
 .rangeInput:focus-visible {
   outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
-  outline-offset: 2px;
+  outline-offset: 2px; border-radius: 6px;
 }
 .rangeCaption { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-left: auto; }
 /* 每日细目的展开按钮：外观与纯文本一致（箭头 + 日期），但可 Tab 聚焦、可 Enter/Space 触发展开 */
@@ -27,6 +39,14 @@
 .shareBar > i:hover { filter: brightness(1.15); }
 
 .chartTitle { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+/* 纵轴与柱区并排：纵轴高度必须与 .bars 一致（110px + 同样的 margin-top），刻度才对得上柱子 */
+.chartAxisWrap { display: flex; gap: 6px; }
+.chartPane { flex: 1; min-width: 0; }
+.yAxis {
+  display: flex; flex-direction: column; justify-content: space-between; height: 110px; margin-top: 8px;
+  min-width: 40px; text-align: right; font-size: 9.5px; color: var(--dsw-alias-label-tertiary, #67676f);
+  font-variant-numeric: tabular-nums;
+}
 .bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; margin-top: 8px; }
 .barsDense { gap: 2px; }
 .barColumn { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; height: 100%; cursor: default; }
