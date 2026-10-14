@@ -62,7 +62,6 @@
 .projectTable th:nth-child(5) { width: 12%; }
 .projectTable th:nth-child(6) { width: 15%; }
 
-/* ===== 会话用量：搜索范围提示、跨天小标、可点击工作目录 ===== */
 .searchHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; white-space: nowrap; }
 .crossDayTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); }
 /* 行内工作目录是按钮：点了切到「项目用量」并只看这个项目 */
@@ -117,7 +116,6 @@
 .moreBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
 .moreText { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
 
-/* ===== 会话详情抽屉：右侧浮层，遮罩用宿主遮罩令牌（明暗两套自带） ===== */
 .drawerMask {
   position: fixed; inset: 0; z-index: 9000; display: flex; justify-content: flex-end;
   background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, .38));

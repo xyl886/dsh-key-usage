@@ -7,18 +7,14 @@ export type {
   PricingCoverage, PricingFileInfo, PricingFiles, PricingIssue, PricingRefreshResult, PricingResponse,
 } from './pricing.ts'
 
-/**
- * 服务端并列给出的逐币种小计：跨币种合计只能按它**逐币种折算后相加**。
- * `cost` 是不同币种的直接相加（历史口径），只作防御性兜底，不许当合计展示。
- */
+/** 逐币种小计：跨币种合计只能按它折算后相加（`cost` 是混币种直接相加，只作兜底）。 */
 export type CostsByCurrency = Record<string, number>
 
 /** 客户端使用的宿主上下文最小面（与 dsh-plugin / dsh-context 的 slots 契约一致）。 */
 export interface SlotRegistration {
   name: string
-  /** 面板标识：`sidebar.panellist` / `conversation.view` 等用 `id`。 */
+  /** 面板标识：`sidebar.panellist` 等用 `id`，`main` 用 `key`（取值与 `id` 相同）。 */
   id?: string
-  /** 面板标识：`main` 用 `key`，取值与 `sidebar.panellist` 的 `id` 相同。 */
   key?: string
   order?: number
   /** 宿主渲染行标签时调用（`sidebar.panellist` 由宿主自持整行）。 */
@@ -59,7 +55,6 @@ export interface Channel {
   baseURL: string | null
   models: ChannelModel[]
   costMode: ChannelCostMode
-  /** 计费模式中文标签（服务端给出，避免两侧各维护一份映射）。 */
   costLabel: string
   status: ChannelStatus
   quotaPercent: number | null
@@ -318,7 +313,7 @@ export interface ModelAggregateRow {
   /** 展示口径 tokens：输入 + 输出 + 缓存读。 */
   tokens: number
   cacheHitRate: number | null
-  /** 估算成本（内置官方价目 / 聚合价目 / 台账均价），无成本数据时为 null。 */
+  /** 估算成本（三层价目），无成本数据时为 null。 */
   cost: number | null
   /** 逐币种小计（合计按它折算后相加）。 */
   costsByCurrency?: CostsByCurrency

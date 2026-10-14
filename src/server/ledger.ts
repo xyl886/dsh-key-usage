@@ -120,7 +120,7 @@ export function aggregateRange(
   return { totals: { date: '', ...totals }, days }
 }
 
-/** 年度热力图数据：起止范围内每天的总 tokens 与按模型拆分。 */
+/** 热力图序列：每天总 tokens + 按模型拆分。 */
 export function buildHeatmap(ledger: UsageLedger, fromDate: string, toDate: string): Array<{
   date: string
   totalTokens: number
@@ -151,7 +151,6 @@ export function buildHeatmap(ledger: UsageLedger, fromDate: string, toDate: stri
   return result
 }
 
-/** 单个通道在指定范围内的汇总（总览表「今日 / 近 30 天」列用）。 */
 export interface ProviderRangeSummary {
   provider: string
   calls: number
@@ -209,7 +208,7 @@ export function buildPriceTable(ledger: UsageLedger): Map<string, PriceEntry> {
   return table
 }
 
-/** 用均价表估算一组模型行的成本；没有任何可比价时返回 null（界面显示 —）。 */
+/** 用均价表估算成本；没有可比价时返回 null（界面显示 —）。 */
 export function estimateCost(
   models: Array<{ provider: string; model: string; tokens: number }>,
   priceTable: Map<string, PriceEntry>,

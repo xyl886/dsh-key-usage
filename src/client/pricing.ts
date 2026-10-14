@@ -1,19 +1,11 @@
 /**
- * 客户端价目视图模型：来源角标文案、来源说明与内置 / 聚合价目的装载状态。
- *
- * 价格本身全部由服务端决定（内置官方价目 → LiteLLM 聚合价目 → 台账反推均价三层自动生效），
- * **界面不维护任何价格、也不提供价格表单**：这里只负责把服务端给的来源、覆盖度、文件与解析问题
- * 翻译成给人看的文案。金额渲染见 `currency.ts`（显示币种与汇率折算的唯一收口点）。
+ * 价目视图模型：只把服务端给的三层价目来源、覆盖度与装载状态翻译成文案，**界面不维护任何价格**。
+ * 金额渲染见 `currency.ts`（显示币种与汇率折算的唯一收口点）。
  */
 
-/**
- * 成本来源角标：与服务端 `costSource` 字段一一对应。
- * `official` = 台账里的厂商账单；`catalog` = 内置厂商官方价目；`aggregate` = LiteLLM 聚合价目；
- * `estimate` = 台账反推均价；`none` = 没有价格依据。
- */
+/** 成本来源角标，与服务端 `costSource` 一一对应。 */
 export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
-/** 内置官方价目的一个来源（计费信息里展示「已内置 N 条，来源见 …」）。 */
 export interface CatalogSourceSummary {
   source: string
   fetchedAt: string
@@ -21,13 +13,13 @@ export interface CatalogSourceSummary {
   count: number
 }
 
-/** 内置官方价目：条数 + 各来源（含抓取日期）。逐条规则只在服务端用，界面不再需要。 */
+/** 内置官方价目：条数 + 各来源（含抓取日期）。 */
 export interface CatalogSummary {
   entries: number
   sources: CatalogSourceSummary[]
 }
 
-/** 聚合价目的装载来源：shipped = 随包快照；local = 本机刷新下来的文件；none = 两个都读不到。 */
+/** 聚合价目装载来源：local = 本机刷新文件；shipped = 随包快照；none = 都读不到。 */
 export type AggregateLoaded = 'local' | 'shipped' | 'none'
 
 export const AGGREGATE_LOADED_LABELS: Record<AggregateLoaded, string> = {
@@ -48,10 +40,7 @@ export interface AggregateIssue {
   message: string
 }
 
-/**
- * LiteLLM 聚合价目（第三方维护、美元计价）：随包内置一份快照，点「刷新价目」才联网更新到本机。
- * 优先级低于内置的厂商官方价目；服务端未升级时整块缺省，界面按「读不到」降级。
- */
+/** LiteLLM 聚合价目（第三方、美元）：随包快照 + 点「刷新价目」下载到本机的副本。 */
 export interface ModelPriceAggregate {
   loaded: AggregateLoaded
   path: string
@@ -70,10 +59,8 @@ export interface ModelPriceAggregate {
 }
 
 /**
- * LiteLLM 仓库地址。这里**不能**写带协议前缀的完整地址字面量：构建后处理
- * （scripts/normalize-client-banner.mjs）按「字母 + 冒号 + 斜杠」的形状扫全文件找「机器相关绝对路径」，
- * 协议前缀正好长成那个形状，会被误判成盘符路径而让 `npm run build:client` 直接失败。
- * 因此拆成三段拼；注意冒号必须在第二段里（`'https' + '//x'` 会少一个冒号）。
+ * LiteLLM 仓库地址。**不能**写成带协议前缀的完整字面量：构建后处理会把「字母 + 冒号 + 斜杠」误判成
+ * 盘符路径而让构建失败，所以拆段拼（冒号必须在第二段里）。
  */
 export const LITELLM_REPO_URL = ['https', '://github.com', '/BerriAI/litellm'].join('')
 
@@ -100,22 +87,16 @@ export function shortCommitOf(commit: unknown): string | null {
   return commit.trim().slice(0, 7)
 }
 
-/**
- * 覆盖度：三层价格各命中多少个模型 + 台账兜底 / 无依据的模型数。
- * 字段全部可选：服务端换了口径也不会让界面渲染出 `undefined`（缺失的整段省略）。
- */
+/** 覆盖度：三层价格各命中多少个模型 + 台账兜底 / 无依据的模型数（字段全可选，缺失整段省略）。 */
 export interface PricingCoverage {
   from?: string
   to?: string
-  /** 命中内置官方价目的模型数（自动生效，不需要用户维护）。 */
+  /** 命中内置官方价目的模型数。 */
   catalogModels?: number
   /** 命中 LiteLLM 聚合价目的模型数（第三方、USD）。 */
   aggregateModels?: number
-  /** 上面两层里标了 partial 的模型数（缺一个缓存价、按未命中价代）。 */
   partialModels?: number
-  /** 按台账反推均价兜底的模型数。 */
   averagedModels?: number
-  /** 三层都没命中的模型数。 */
   unpricedModels?: number
 }
 
@@ -139,14 +120,11 @@ export interface PricingIssue {
 }
 
 export interface PricingResponse {
-  /** 内置官方价目：条数 + 各来源（含抓取日期），无需用户维护即自动生效。 */
   catalog: CatalogSummary
   coverage: PricingCoverage
-  /** 内置价目文件的位置与状态；缺省按「未知」处理（服务端未升级时不至于整块报错）。 */
+  /** 缺省按「未知」处理：服务端未升级时不至于整块报错。 */
   files?: PricingFiles
-  /** 价目文件的解析问题，带行号；缺省为空数组。 */
   issues?: PricingIssue[]
-  /** LiteLLM 聚合价目（第三方、USD）：随包快照 + 本地刷新文件；服务端未升级时缺省。 */
   aggregate?: ModelPriceAggregate
 }
 
@@ -172,10 +150,7 @@ export const COST_SOURCE_HINTS: Record<CostSource, string> = {
   none: '没有价格依据（三层价目都没命中，台账也无成本数据）',
 }
 
-/**
- * 聚合价目的「部分」标记：该条目缺一个缓存价（缓存写入价未收录），用未命中价代。
- * 这是口径说明而不是错误，角标旁只写「· 部分」，展开说明放 tooltip。
- */
+/** 聚合价目的「部分」标记：缺缓存写入价、按未命中价代 —— 是口径说明不是错误。 */
 export const PARTIAL_PRICE_TEXT = ' · 部分'
 export const PARTIAL_PRICE_HINT = '缓存写入价未收录，按未命中价计'
 
@@ -186,7 +161,7 @@ export function costSourceHintOf(source: CostSource | null | undefined, partial?
   return partial === true ? hint + '；' + PARTIAL_PRICE_HINT : hint
 }
 
-/** 内置价目的更新提醒线：超过这些天就提示按官方文档复核（价目是静态数据，厂商调价后要人工改）。 */
+/** 内置价目超过这些天没抓取就提示按官方文档复核（厂商调价后只能人工改价目）。 */
 export const CATALOG_STALE_DAYS = 90
 
 /** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */

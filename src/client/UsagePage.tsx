@@ -1,8 +1,4 @@
-/**
- * 「使用情况」主区域页面（`main` slot，与 sidebar.panellist 的 id 同名配对）。
- * 点击侧边栏导航项后由宿主在主内容区内联渲染 —— 不是弹窗、不占设置页。
- * 滚动由本容器负责：宿主主内容区不会滚动，长表格必须靠自己滚。
- */
+/** 「使用情况」主区域页面（宿主内联渲染，不是弹窗）；宿主主内容区不滚动，滚动由本容器负责。 */
 import type { ReactNode } from 'react'
 import { KeyUsageSection } from './KeyUsageSection.tsx'
 import styles from './styles/page.module.css'

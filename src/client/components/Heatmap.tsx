@@ -1,8 +1,6 @@
 /**
- * 活跃热力图：最近约 9 个月的滚动窗口（含未来格占位）。
- * 强度分档取活跃日的五分位（p20 / p40 / p60 / p80），阈值随可见区间自动变化，
- * 具体数值并入页面底部的口径说明，不再单独占一行。
- * 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
+ * 活跃热力图：约 9 个月的滚动窗口，强度按活跃日五分位分档（阈值随可见区间变化）。
+ * 格子固定方形 + 横向滚动，保证三类格子（有数据 / 无数据 / 无用量）等大。
  */
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../channels.ts'
@@ -38,7 +36,7 @@ function levelOf(tokens: number, thresholds: number[]): number {
   return level
 }
 
-/** 五档由浅到深，末档用满色；灰色是「无用量」，与「无数据」的 ghost 区分。 */
+/** 五档由浅到深（首档为「无用量」的灰）。 */
 const LEVEL_COLORS = [
   'rgba(128,128,140,.22)',
   'rgba(91,140,255,.18)',

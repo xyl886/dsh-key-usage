@@ -1,4 +1,3 @@
-/** 总览：Key 清单表（原型列结构）+ 年度热力图。 */
 import type { ReactNode } from 'react'
 import { costCellOf, statusColorOf } from '../channels.ts'
 import { fmtCalls, fmtTokens } from '../format.ts'

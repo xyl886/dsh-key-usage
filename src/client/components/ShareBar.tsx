@@ -1,7 +1,4 @@
-/**
- * 占比条：全部通道→通道占比；单通道→模型占比。
- * 只有一条堆叠横条，名字与百分比走悬停 tip（不再列表展示）。
- */
+/** 占比条：全部通道看通道占比，单通道看模型占比（名字与百分比走悬停 tip）。 */
 import type { ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../channels.ts'
 import { fmtTokens } from '../format.ts'

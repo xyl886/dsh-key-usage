@@ -1,10 +1,6 @@
 /**
- * 导出工具：纯函数生成 CSV / JSON 文本 + 用 Blob 触发浏览器下载。
- * 零依赖、零服务端往返，导出的永远是**客户端当前筛选后**的数据。
- *
- * 两条口径约束：
- * - CSV 必须带 UTF-8 BOM：Excel 默认按本地代码页解码，没有 BOM 中文会变乱码；
- * - JSON 不能带 BOM：`JSON.parse` 遇到 BOM 会直接抛错。
+ * 导出工具：纯函数生成 CSV / JSON 文本 + Blob 触发下载，导出的是当前筛选后的数据。
+ * CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
  */
 import { isoDate } from './format.ts'
 

@@ -1,7 +1,4 @@
-/**
- * 会话详情抽屉：点会话行后从右侧滑出，数据来自 `/dsh-key-usage/session?id=…`。
- * 服务端只折叠这一个会话，所以打开很快；读不出来时它降级返回头部字段 + 说明，这里照常展示。
- */
+/** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts'
 import { channelOf, costCellOf, displayNameOf } from '../channels.ts'

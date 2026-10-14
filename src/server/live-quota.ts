@@ -1,9 +1,7 @@
 /**
- * 实时余额 / 订阅窗口查询。
- *
- * 只请求各通道的**官方**接口：凭据经宿主 `credentials` seam 解析（`resolve(apiKeyEnv)`），
- * 全程不落盘、不进日志、不返回给客户端；任何失败都由调用方回落到本地快照。
- * 结果按 provider 缓存（默认 60 秒），过期后重新拉取，避免每次刷新都打网络。
+ * 实时余额 / 订阅窗口查询：只请求各通道**官方**接口，6 秒超时、64 KiB 上限；
+ * 凭据经宿主 `credentials` seam 解析（不落盘、不进日志、不返前端），失败由调用方回落本地快照。
+ * 结果按 provider 缓存 60 秒。
  */
 import type { ChannelInfo } from './collect.js'
 
@@ -121,7 +119,6 @@ const OPENCODE_GO_SCHEME: Scheme = {
   },
 }
 
-/** 官方余额类接口：GET {origin}<path>，凭据同为 Bearer。 */
 function balanceScheme(
   path: string,
   parse: (body: Record<string, unknown>, requestUrl: string) => Record<string, unknown> | null,
@@ -253,12 +250,7 @@ async function queryOne(
   }
 }
 
-/**
- * 建立实时查询服务。
- * @param resolver - 凭据解析（宿主 credentials seam）
- * @param fetchImpl - 可注入的 fetch（测试用）
- * @param ttlMs - 缓存有效期
- */
+/** 建立实时查询服务（resolver = 宿主 credentials seam；fetchImpl / ttlMs 供测试注入）。 */
 export function createLiveQuotaService(
   resolver: CredentialResolver,
   fetchImpl: typeof fetch = fetch,

@@ -1,8 +1,4 @@
-/**
- * 「使用情况」设置页外壳：Tab 路由、范围 / 通道筛选状态与取数。
- * 台账类数据（通道 / 台账 / 热力图 / 汇总 / 快照）来自本地文件端点；
- * 项目与会话数据来自宿主会话事件折叠，切到对应 Tab 时才首次拉取。
- */
+/** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSummary, loadUsage } from './api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './currency.ts'
@@ -61,10 +57,7 @@ export function KeyUsageSection() {
   const [pricing, setPricing] = useState<PricingResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
-  /**
-   * 价目版本号：价目换了一份（点「刷新价目」）成本要整体重算，所有按成本展示的数据都得重取。
-   * 价目只从「刷新价目」这一个入口变，所以用一个自增计数当失效信号即可。
-   */
+  /** 价目版本号：点「刷新价目」后自增，用来让服务端重算成本并整体重取数据。 */
   const [pricingRevision, setPricingRevision] = useState(0)
   const tooltip = useTooltip()
   /** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */

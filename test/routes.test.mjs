@@ -1,7 +1,5 @@
 /**
- * 路由集成测试：把 DSH_HOME 指向临时夹具，直接调用各端点 handler 校验响应结构。
- * 覆盖：通道判定、范围聚合、单日小时、热力图、快照、总览汇总、会话、项目、按模型、
- * 价目装载（新契约：无用户规则层）、每通道单价表、按币种拆分金额、非回环 403。
+ * 路由集成测试：把 DSH_HOME 指向临时夹具，直接调用各端点 handler 校验响应结构（含 /rates、/fx、按币种拆分）。
  * 运行：node test/routes.test.mjs
  */
 import assert from 'node:assert/strict'
@@ -145,8 +143,7 @@ async function callEndpoint(path, remoteAddress = '127.0.0.1') {
 }
 
 /**
- * 递归校验「单币种时 costsByCurrency 只有一个键、值等于 cost」这条契约：
- * 响应里凡是同时带 cost 与 costsByCurrency 的对象都要满足，避免漏改某个端点。
+ * 递归校验「单币种时 costsByCurrency 只有一个键、值等于 cost」这条契约（漏改某个端点会被它挡住）。
  */
 function assertMoneyInvariant(value, path = '$') {
   if (Array.isArray(value)) {

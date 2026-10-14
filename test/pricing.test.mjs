@@ -1,11 +1,5 @@
 /**
- * 计费口径离线测试：单位换算、错峰判定（本地时间 / 跨午夜 / 按星期）、错峰占比加权、
- * 「内置官方价目 → LiteLLM 聚合价 → 台账反推均价 → 无依据」的逐行回落与覆盖度统计、
- * 金额按币种拆分，以及内置价目从 TS 迁到 `pricing-catalog.yml` 后的**回归基线**
- * （与 golden fixture 深度相等）。
- *
- * 用户规则层已整条移除：本文件不再有「自定规则」用例，
- * 所有成本断言都走真实内置价目 / 聚合价，或直接调纯函数。
+ * 计费口径离线测试：单位换算 / 错峰 / 回落层级 / 覆盖度 / 按币种拆分，以及内置价目的回归基线。
  * 运行：node test/pricing.test.mjs（依赖 lib/pricing.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'

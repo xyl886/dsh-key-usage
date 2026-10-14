@@ -19,11 +19,8 @@ export type ChannelCostMode = 'sub' | 'perToken' | 'free' | 'none' | 'unknown'
 export type ChannelStatus = 'ok' | 'warn' | 'danger' | 'off'
 
 export interface ChannelInfo {
-  /** provider id（cordis.yml llm-pi-ai providers 下的键） */
   provider: string
-  /** 界面显示名（displayName，缺省回落 provider id） */
   displayName: string
-  /** 凭据环境变量名（只显示名称，不读值） */
   apiKeyEnv: string | null
   baseURL: string | null
   models: ChannelModel[]
@@ -35,7 +32,6 @@ export interface ChannelInfo {
   quotaPercent: number | null
   /** 占用最高的窗口键（5h/week/month/day），无则 null */
   quotaWindowKey: string | null
-  /** 余额展示文本（原样取快照字段），无余额接口时 null */
   balanceText: string | null
   /** 快照更新时间（毫秒），无快照时 null */
   snapshotUpdatedAt: number | null
@@ -150,7 +146,6 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/** 剥掉 YAML 标量的成对引号（'GLM-5.3-Flash ' → GLM-5.3-Flash）。 */
 function unquoteYamlScalar(text: string): string {
   const trimmed = text.trim()
   if (trimmed.length >= 2 && ((trimmed.startsWith("'") && trimmed.endsWith("'")) || (trimmed.startsWith('"') && trimmed.endsWith('"')))) {
@@ -190,7 +185,6 @@ function unclassifiedChannel(): Pick<ChannelInfo, 'costMode' | 'status' | 'quota
   return { costMode: 'unknown', status: 'ok', quotaPercent: null, quotaWindowKey: null, balanceText: null, snapshotUpdatedAt: null }
 }
 
-/** 订阅窗口：取占用最高的一个窗口（含窗口键）。 */
 function peakWindowOf(plan: Record<string, unknown> | null): { percent: number; key: string } | null {
   if (plan === null || !Array.isArray(plan.windows)) return null
   let peak: { percent: number; key: string } | null = null
@@ -203,7 +197,7 @@ function peakWindowOf(plan: Record<string, unknown> | null): { percent: number; 
   return peak
 }
 
-/** 余额文本：优先总余额，其次余额，保留快照原样字符串。 */
+/** 余额文本：优先总余额，原样拼上币种。 */
 function balanceTextOf(balance: Record<string, unknown> | null): string | null {
   if (balance === null) return null
   const value = balance.totalBalance ?? balance.balance

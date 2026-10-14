@@ -1,15 +1,7 @@
 /**
- * dsh-key-usage 服务端入口：挂载 HTTP 路由（只读聚合 + 价目刷新），
- * 向客户端提供用量台账、通道配置、余额快照、会话用量、单价表与实时汇率。
- *
- * 数据来源：
- * - 台账 / 快照 / 通道配置：本地文件只读；
- * - 项目、会话、按小时：宿主 sessionPersistence 的只读 handle；
- * - 余额与订阅窗口：优先查各通道官方接口（凭据经宿主 credentials seam 解析，
- *   不落盘、不进日志、不返回给客户端），失败时回落到本地快照；
- * - 价目：内置官方价目（随包 `pricing-catalog.yml`）与 LiteLLM 聚合价（随包 JSON 或本机刷新副本）
- *   都是只读文件，用户规则层已移除；
- * - 汇率（USD → CNY）：只在打开页面 / 切换币种 / 点刷新时请求，12 小时缓存。
+ * dsh-key-usage 服务端入口：挂载 HTTP 路由。
+ * 数据源：本地只读文件（台账 / 快照 / 通道配置 / 价目）+ 宿主只读 handle（sessionPersistence）；
+ * 联网只有三处、都由用户动作触发：余额查询、价目刷新、汇率（详见 routes.ts）。
  */
 import { mountKeyUsageRoutes } from './routes.js'
 import { createLiveQuotaService } from './live-quota.js'
@@ -46,10 +38,10 @@ export function apply(ctx: HostContext): void {
           const hit = await credentials.resolve(reference)
           if (hit !== null && typeof hit.value === 'string' && hit.value.trim() !== '') return hit.value.trim()
         } catch {
-          // 继续尝试进程环境变量
+          // 拿不到就退到进程环境变量
         }
       }
-      // 兜底：宿主把凭据放在进程环境里时直接取（只读环境变量，不碰任何凭据文件）
+      // 兜底：只读进程环境变量，不碰任何凭据文件
       const fromEnv = process.env[reference]
       return typeof fromEnv === 'string' ? fromEnv.trim() : ''
     },

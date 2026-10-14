@@ -1,11 +1,7 @@
 /**
  * 内置官方价目：**唯一事实来源是随包发布的仓库根 `pricing-catalog.yml`**（本模块只读、不写、不联网）。
- *
- * 迁移自原来的 385 行 TS 静态数据，导出面保持不变（catalogRuleList / catalogEntryCount /
- * catalogSources / catalogRuleFor），调用方无需改动。新增 `catalogEntries()` 给回归基线测试用。
- *
- * 容错：文件缺失 / YAML 不支持写法 / 条目缺字段或数值非法，一律生成带行号的 issue 并跳过该条，
- * 绝不抛错、绝不影响其它端点，也绝不猜一个单价（猜错单价 = 算错金额）。
+ * 导出 catalogRuleList / catalogEntryCount / catalogSources / catalogRuleFor / catalogEntries。
+ * 容错：文件缺失 / 写法不支持 / 条目非法，都带行号报 issue 并跳过该条，绝不抛错、绝不猜单价。
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -86,23 +82,19 @@ function catalogLoad(): LoadedCatalog {
   return loaded
 }
 
-/** 全部内置价目（解析后，已跳过坏条目）。 */
 export function catalogEntries(): CatalogEntry[] {
   return catalogLoad().entries
 }
 
-/** 解析内置价目时发现的问题（面板提示用）。 */
 export function catalogIssues(): YamlIssue[] {
   return catalogLoad().issues
 }
 
-/** 内置价目文件的存在性与条数（面板展示用）。 */
 export function catalogFileInfo(): PricingFileInfo {
   const current = catalogLoad()
   return { path: current.path, exists: current.exists, entries: current.entries.length }
 }
 
-/** 价目条数（界面文案用）。 */
 export function catalogEntryCount(): number {
   return catalogLoad().entries.length
 }
@@ -147,10 +139,7 @@ export function catalogSources(): CatalogSourceSummary[] {
   return [...bySource.values()]
 }
 
-/**
- * 内置价目转成规则列表（去掉长 note）：界面用它拼「下载规则模板」—— 按用户实际用到的模型取交集后预填数值。
- * 来源与抓取日期由 `catalogSources()` 单独给出，因此 note 不下发，避免响应与模板里塞满文档。
- */
+/** 逐条价目（去掉长 note）：来源与抓取日期由 `catalogSources()` 单独给出。 */
 export function catalogRuleList(): PricingRule[] {
   return catalogLoad().entries.map((entry) => ({ ...toPricingRule(entry), note: '' }))
 }
@@ -167,7 +156,6 @@ export function normalizeModelId(model: string): string {
   return tail.toLowerCase()
 }
 
-/** 通道 id 归一：同样取末段（事件里的 provider 可能是路由名）。 */
 export function normalizeProviderId(provider: string): string {
   return normalizeModelId(provider)
 }

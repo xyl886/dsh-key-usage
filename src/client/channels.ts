@@ -41,10 +41,7 @@ export interface CostCell {
   mixed: boolean
 }
 
-/**
- * 成本单元格：按计费模式给出文案，无法判定时回落行金额或 —。
- * 金额一律走 `costsByCurrency` 逐币种折算后相加；缺这个字段时由 currency.ts 回落旧的单值口径。
- */
+/** 成本单元格：按计费模式给文案；金额走 `costsByCurrency` 逐币种折算，缺该字段时由 currency.ts 兜底。 */
 export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell {
   const view = rowMoneyViewOf(row)
   const hasAmount = view.amount > 0

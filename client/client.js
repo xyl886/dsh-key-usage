@@ -46,10 +46,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/api.ts
-		/**
-		* 最近一次请求失败的原因，按路径记住。
-		* 空态文案需要能指向「怎么做」——最常见的失败是新端点 404（服务端代码要重启宿主才生效）。
-		*/
+		/** 最近一次请求失败的原因，按路径记住（空态文案据此指向「要重启宿主」）。 */
 		const failureReasons = /* @__PURE__ */ new Map();
 		function failureReasonOf(path) {
 			return failureReasons.get(path) ?? null;
@@ -88,10 +85,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const result = await fetchJson("/dsh-key-usage/heatmap");
 			return result === null ? null : result.days;
 		}
-		/**
-		* 余额与订阅窗口：服务端实时优先、失败回落本机快照。
-		* @param fresh - 用户手动刷新时传 true，强制重新查一次官方接口
-		*/
+		/** 余额与订阅窗口：服务端实时优先、失败回落本机快照；`fresh` = 用户手动刷新时强制重查官方接口。 */
 		async function loadQuota(fresh = false) {
 			const result = await fetchJson("/dsh-key-usage/quota" + (fresh ? "?fresh=1" : ""));
 			return result === null ? null : result.providers;
@@ -106,7 +100,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function sessionDetailPath(id) {
 			return "/dsh-key-usage/session?id=" + encodeURIComponent(id);
 		}
-		/** 单会话详情：服务端只折叠这一个会话（列表已折叠过时直接吃缓存）。 */
 		function loadSessionDetail(id) {
 			return fetchJson(sessionDetailPath(id));
 		}
@@ -116,15 +109,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function loadModels(limit = 200) {
 			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
 		}
-		/** 价目信息（内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态）。 */
 		function loadPricing() {
 			return fetchJson("/dsh-key-usage/pricing");
 		}
-		/** 单价表的请求路径：空态文案要按同一串查失败原因，所以路径由这里统一拼。 */
 		const RATES_PATH = "/dsh-key-usage/rates";
-		/** 汇率的请求路径（`?refresh=1` 强制刷新；失败原因都记在这个基路径上）。 */
+		/** 汇率端点：`?refresh=1` 强制走上游。 */
 		const FX_PATH = "/dsh-key-usage/fx";
-		/** 近 N 天每个通道用到的模型单价表（展开通道卡片时展示的单价依据）。 */
 		function loadRates(days = 30, limit = 20) {
 			const params = new URLSearchParams({
 				days: String(days),
@@ -132,27 +122,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 			return fetchJson(RATES_PATH + "?" + params.toString(), RATES_PATH);
 		}
-		/**
-		* 取人民币对美元汇率：服务端 12 小时内走缓存，所以打开「余额与配额」与切币种时都可以直接调；
-		* `force = true` 是用户点「刷新汇率」时的强制刷新。失败返回 null（界面按「没取到汇率」降级显示）。
-		*/
+		/** 取 USD→CNY 汇率：服务端 12 小时内走缓存；`force` = 用户点「刷新汇率」时强制走上游，失败返回 null。 */
 		function loadFxRate(force = false) {
 			return fetchJson(force ? FX_PATH + "?refresh=1" : FX_PATH, FX_PATH);
 		}
-		/** 刷新聚合价目的端点：同样按这个键取失败原因（404 = 服务端还是旧版本）。 */
+		/** 刷新价目端点（404 = 服务端还是旧版本）。 */
 		const MODEL_PRICE_REFRESH_PATH = "/dsh-key-usage/pricing/refresh";
-		/**
-		* 刷新超时：上游 JSON 约 3 MB，客户端给 30 秒。
-		* **必须比服务端自己的 20 秒下载预算更长**：两边同为 20 秒时，客户端会在服务端正准备写盘的那一刻 abort，
-		* 于是界面报「超时」而文件其实已经写成功，用户看到的状态与磁盘不一致。
-		* 超时仍要落成可读提示，否则用户面对一个不动的按钮只会以为界面卡死。
-		*/
+		/** 刷新超时 30 秒：必须大于服务端 20 秒下载预算，否则会「文件已写成功、界面却报超时」。 */
 		const MODEL_PRICE_REFRESH_TIMEOUT_MS = 3e4;
 		/**
-		* 拉取上游最新聚合价目（全插件唯一会联网的用户动作，只能由「刷新价目」按钮触发）。
-		*
-		* 返回 null = 请求本身失败（原因记在 `failureReasonOf(MODEL_PRICE_REFRESH_PATH)`）；
-		* 返回 `{ok:false, error}` = 服务端拿到响应但刷新失败（中文原因可直接展示）。
+		* 拉取上游最新聚合价目：`null` = 请求失败，`{ok:false}` = 服务端拒绝（中文原因可直接展示）。
 		*/
 		async function refreshModelPrices() {
 			const controller = new AbortController();
@@ -241,15 +220,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/currency.ts
 		/**
-		* 显示币种与汇率折算：全插件金额渲染的唯一收口点。
-		*
-		* 服务端的成本按价目文档的原币种算（内置官方价目有 CNY 与 USD，聚合价目是 USD），逐币种小计并列在
-		* `costsByCurrency` 里。`cost` 是不同币种的直接相加，只当兜底。这里负责把每个币种的金额按当前汇率
-		* 折算成用户选的显示币种：能折算才折算（文本带 `≈` 前缀），缺汇率或币种不认识时保持原币种渲染，
-		* 绝不猜一个汇率出来。
-		*
-		* 状态放在模块级 store 里（订阅式）：金额渲染点分布在十几个组件里，逐层透传 props 会把每张表的签名
-		* 都污染一遍；`useCurrencyDisplay` 订阅它，切币种时整页重渲染。
+		* 显示币种与汇率折算：全插件金额渲染的唯一收口点（模块级订阅 store，切币种时整页重渲染）。
+		* 逐币种小计走 `costsByCurrency`（`cost` 是混币种相加，只当兜底）；能折算才折算（带 `≈`），绝不猜汇率；
+		* 显示币种不落盘 —— 记住一个还没取到汇率的 USD 只会让界面更难懂。
 		*/
 		const DISPLAY_CURRENCIES = ["CNY", "USD"];
 		/** 切换按钮的文案：符号 + ISO 代码，避免只认符号的用户认错币种。 */
@@ -262,11 +235,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			cache: "服务端缓存",
 			default: "默认值"
 		};
-		/**
-		* 显示币种不落盘、不跨会话记忆：折算必须配着汇率看（`≈` 与来源时间都在工具条上），
-		* 记住一个「USD」但没取到汇率会让别的 Tab 先显示一阵「没折算的混合币种」，反而更难懂。
-		* 每次进页面从缺省 CNY 开始，切币种时再取汇率。
-		*/
+		/** 显示币种与汇率都在这里；`fx: null` = 还没取到汇率（跨币种金额按原币种显示）。 */
 		let state = {
 			display: "CNY",
 			fx: null
@@ -306,7 +275,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			(0, react.useEffect)(() => subscribeCurrencyDisplay(() => setCurrent(currencyDisplayStateOf())), []);
 			return current;
 		}
-		/** 币种代码归一：只认 CNY / USD 两个折算方向；其余返回 null（不猜汇率）。 */
+		/** 币种代码归一：只认 CNY / USD（其余返回 null，不猜汇率）。 */
 		function normalizeCurrency(currency) {
 			if (typeof currency !== "string") return null;
 			const upper = currency.trim().toUpperCase();
@@ -334,11 +303,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (from === quote && to === base) return 1 / fx.rate;
 			return null;
 		}
-		/**
-		* 金额文本：**全插件金额渲染的统一入口**，币种符号 + 两位小数。
-		* 按当前显示币种折算：原币种 == 显示币种时与旧行为完全一致（`¥1.00`），发生折算时前缀 `≈`。
-		* 两位小数精度不随折算改变（服务端给的 4 位是计算精度，不是展示精度）。
-		*/
+		/** 金额文本（全插件唯一入口）：按显示币种折算，折算值带 `≈`；两位小数精度不随折算改变。 */
 		function moneyTextOf(currency, amount) {
 			const value = Number.isFinite(amount) ? amount : 0;
 			const display = state.display;
@@ -365,10 +330,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function zeroMoneyTextOf() {
 			return displaySymbolOf() + "0.00";
 		}
-		/**
-		* 单价数值文本：金额一律两位小数，但单价常小于 0.01（如缓存读 ¥0.0028），
-		* 四舍五入成 `0.00` 等于谎报「免费」，所以小值保留到 4 位有效小数。
-		*/
+		/** 单价数值文本：≥0.01 用两位小数，小值保留 4 位 —— 显示成 0.00 等于谎报「免费」。 */
 		function rateValueTextOf(amount) {
 			const value = Number.isFinite(amount) ? amount : 0;
 			if (value === 0) return "0";
@@ -395,7 +357,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				converted: true
 			};
 		}
-		/** 逐币种小计里真正参与展示的项：非有限值与 0 一律丢掉（0 折算后还是 0，只会污染文本）。 */
+		/** 逐币种小计里参与展示的项：0 与非有限值一律丢掉（0 只会污染文本）。 */
 		function positiveEntriesOf(row) {
 			const totals = row.costsByCurrency;
 			if (totals === null || typeof totals !== "object") return [];
@@ -411,11 +373,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return entries.sort((first, second) => orderOf(first[0]) - orderOf(second[0]) || first[0].localeCompare(second[0]));
 		}
 		/**
-		* 一行金额的展示视图。
-		*
-		* 有 `costsByCurrency` 时**逐币种折算后再相加** —— 直接显示 `cost` 会把 CNY 与 USD 加在一起，
-		* 换个汇率重算还会得到不同的数，那样合计就是错的。拿不到这个字段（服务端未升级、旧缓存行）时
-		* 回落旧行为：按 CNY 渲染单值 `cost`，不做折算。多币种且缺汇率时并列显示，不跨币种相加。
+		* 一行金额：有 `costsByCurrency` 就逐币种折算后相加（`cost` 会把 CNY 与 USD 加在一起）；
+		* 拿不到该字段时回落旧行为，多币种缺汇率时并列显示、不相加。
 		*/
 		function rowMoneyViewOf(row) {
 			const entries = positiveEntriesOf(row);
@@ -663,10 +622,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (provider === null) return null;
 			return channels.find((channel) => channel.provider === provider) ?? null;
 		}
-		/**
-		* 成本单元格：按计费模式给出文案，无法判定时回落行金额或 —。
-		* 金额一律走 `costsByCurrency` 逐币种折算后相加；缺这个字段时由 currency.ts 回落旧的单值口径。
-		*/
+		/** 成本单元格：按计费模式给文案；金额走 `costsByCurrency` 逐币种折算，缺该字段时由 currency.ts 兜底。 */
 		function costCellOf(channel, row) {
 			const view = rowMoneyViewOf(row);
 			const money = view.amount > 0 ? {
@@ -770,10 +726,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/Heatmap.tsx
 		/**
-		* 活跃热力图：最近约 9 个月的滚动窗口（含未来格占位）。
-		* 强度分档取活跃日的五分位（p20 / p40 / p60 / p80），阈值随可见区间自动变化，
-		* 具体数值并入页面底部的口径说明，不再单独占一行。
-		* 格子用固定方形尺寸 + 横向滚动，保证「有数据 / 无数据 / 无用量」三类格子完全等大。
+		* 活跃热力图：约 9 个月的滚动窗口，强度按活跃日五分位分档（阈值随可见区间变化）。
+		* 格子固定方形 + 横向滚动，保证三类格子（有数据 / 无数据 / 无用量）等大。
 		*/
 		const DAY_MS$1 = 864e5;
 		function levelThresholds(days) {
@@ -798,7 +752,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			for (const threshold of thresholds) if (tokens >= threshold) level += 1;
 			return level;
 		}
-		/** 五档由浅到深，末档用满色；灰色是「无用量」，与「无数据」的 ghost 区分。 */
+		/** 五档由浅到深（首档为「无用量」的灰）。 */
 		const LEVEL_COLORS = [
 			"rgba(128,128,140,.22)",
 			"rgba(91,140,255,.18)",
@@ -976,10 +930,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return loaded === void 0 || loaded === null || loaded === "" ? "未装载" : "未知（" + loaded + "）";
 		}
 		/**
-		* LiteLLM 仓库地址。这里**不能**写带协议前缀的完整地址字面量：构建后处理
-		* （scripts/normalize-client-banner.mjs）按「字母 + 冒号 + 斜杠」的形状扫全文件找「机器相关绝对路径」，
-		* 协议前缀正好长成那个形状，会被误判成盘符路径而让 `npm run build:client` 直接失败。
-		* 因此拆成三段拼；注意冒号必须在第二段里（`'https' + '//x'` 会少一个冒号）。
+		* LiteLLM 仓库地址。**不能**写成带协议前缀的完整字面量：构建后处理会把「字母 + 冒号 + 斜杠」误判成
+		* 盘符路径而让构建失败，所以拆段拼（冒号必须在第二段里）。
 		*/
 		const LITELLM_REPO_URL = [
 			"https",
@@ -1243,12 +1195,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/export.ts
 		/**
-		* 导出工具：纯函数生成 CSV / JSON 文本 + 用 Blob 触发浏览器下载。
-		* 零依赖、零服务端往返，导出的永远是**客户端当前筛选后**的数据。
-		*
-		* 两条口径约束：
-		* - CSV 必须带 UTF-8 BOM：Excel 默认按本地代码页解码，没有 BOM 中文会变乱码；
-		* - JSON 不能带 BOM：`JSON.parse` 遇到 BOM 会直接抛错。
+		* 导出工具：纯函数生成 CSV / JSON 文本 + Blob 触发下载，导出的是当前筛选后的数据。
+		* CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
 		*/
 		const UTF8_BOM = "﻿";
 		const CSV_MIME = "text/csv;charset=utf-8";
@@ -1496,9 +1444,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/TrendPanel.tsx
 		/**
-		* 环比对比：当前范围 vs 上一段等长范围。
-		* 纯客户端实现 —— 复用同一个 /usage 端点按上期范围再请求一次，服务端不感知「环比」。
-		* 涨跌只用中性色 + 上下箭头：用量涨不代表好、成本涨也不代表错，不引入红绿对错语义。
+		* 环比对比：纯客户端实现（复用 /usage 按上期范围再请求一次），涨跌只用中性色 + 箭头，不引入对错语义。
 		*/
 		const DAY_MS = 864e5;
 		const FLAT = {
@@ -1564,11 +1510,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				warn: false
 			};
 		}
-		/**
-		* 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellOf` 的占位文案；
-		* 其余情况一律给金额（含 0），否则「本期降到 0」会被当成不可比而丢掉 −100%。
-		* 金额按显示币种折算（逐币种小计相加），两期用的是同一套汇率，环比才有意义。
-		*/
+		/** 成本文案：订阅 / 免费 / 本地端点为占位文案；其余一律给金额（含 0，否则「降到 0」会丢掉 −100%）。 */
 		function costTextOf(channel, row) {
 			if (channel !== null && channel.costMode !== "perToken" && channel.costMode !== "unknown") {
 				const cell = costCellOf(channel, row ?? {});
@@ -1769,10 +1711,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/components/DailyDetailTable.tsx
-		/**
-		* 每日细目：以「天」为折叠单位，展开行用原型子表格展示模型维度
-		* （模型 + 调用 / 输入 / 输出 / 缓存读 / 命中率，不占主表列）。
-		*/
+		/** 每日细目：以「天」为折叠单位，展开行显示该天的模型维度。 */
 		/** 输入/输出为 0 时不再显示 `0`（全缓存命中或纯输出模型的 0 是噪音），改显示淡化的 `—`。 */
 		function tokenCellOf(value) {
 			return value === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -2754,7 +2693,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/tabs/ProjectsTab.tsx
-		/** 项目用量：按会话工作目录聚合（数据来自宿主会话事件折叠）。 */
+		/** 项目用量：按会话工作目录聚合。 */
 		/** 导出列：成本与命中率都给原始数值，方便在表格里继续算。 */
 		const EXPORT_COLUMNS$1 = [
 			{
@@ -3076,13 +3015,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/tabs/QuotaTab.tsx
 		/**
-		* 余额与配额：按通道展示官方余额快照与订阅窗口（原样数据，不换算不建议）。
-		*
-		* 每张通道卡片是可展开控件：展开后是该通道近 30 天用到的模型单价表（来自 `/rates`），
-		* 让人一眼看出「这个通道这些模型的单价是多少、来源是哪一层」。价格全部由服务端决定，
-		* 界面不提供任何价格表单；金额按工具条里选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
+		* 余额与配额：按通道展示官方余额快照与订阅窗口，卡片可展开看该通道近 30 天的模型单价表（`/rates`）。
+		* 界面不维护任何价格；金额按工具条选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
 		*/
-		/** 余额字段展示顺序（原型顺序）；未收录字段按原键名追加在后。 */
+		/** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
 		const BALANCE_ORDER = [
 			"totalBalance",
 			"topUpBalance",
@@ -3097,7 +3033,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			balance: "余额",
 			currency: "币种"
 		};
-		/** 订阅窗口固定展示顺序。 */
 		const WINDOW_ORDER = [
 			"5h",
 			"week",
@@ -3112,9 +3047,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		};
 		/** 解析问题默认只列几条：一屏列不完的清单没人读。 */
 		const ISSUE_LIMIT = 5;
-		/** 单价表的计价单位：内置官方价目与聚合价目都是每百万 tokens（服务端 `/rates` 也按这个口径折算）。 */
 		const RATE_UNIT_TEXT = "每百万 tokens";
-		/** 单价来源在表格里的说法；`none` 在这里写「无依据」，不用角标的 `—`（那一列不能空着）。 */
+		/** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 		const RATE_SOURCE_LABELS = {
 			official: "官方",
 			catalog: "官方价",
@@ -3142,10 +3076,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [refreshingPrices, setRefreshingPrices] = (0, react.useState)(false);
 			const [refreshElapsedSeconds, setRefreshElapsedSeconds] = (0, react.useState)(0);
 			const [refreshStatus, setRefreshStatus] = (0, react.useState)(null);
-			/**
-			* 取一次汇率：服务端 12 小时内走缓存，所以打开页面与切币种时都可以直接调 —— 真正打上游的只有
-			* 用户点「刷新汇率」（`force`）那一下。失败时保留已有的汇率，只把原因挂在工具条上。
-			*/
+			/** 取一次汇率：服务端 12 小时内走缓存，打上游的只有用户点「刷新汇率」那一下；失败时保留已有汇率。 */
 			const fetchFx = (0, react.useCallback)(async (force) => {
 				setFxLoading(true);
 				const result = await loadFxRate(force);
@@ -3179,20 +3110,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1e3);
 				return () => clearInterval(timer);
 			}, [refreshingPrices]);
-			/**
-			* 切显示币种：只改展示口径，不重新请求任何用量数据（服务端金额按原币种给，折算在客户端做）。
-			* 汇率缺失或已过期时补取一次（服务端有 12 小时缓存，不会每次打上游）。
-			*/
+			/** 切显示币种：只改展示口径，不重取用量；汇率缺失 / 过期才补取一次。 */
 			const switchCurrency = (next) => {
 				if (next === display.display) return;
 				setDisplayCurrency(next);
 				if (display.fx === null || display.fx.stale) fetchFx(false);
 			};
-			/**
-			* 「刷新价目」：全插件唯一会访问上游拉价目的用户动作（服务端去上游拉 JSON 并写到本机）。
-			* 成功 / 失败都留在界面上（`aria-live` 播报），成功后再让页面重取 `/pricing` 与用量 —— 价目换了一份，
-			* 成本口径整体都变了。
-			*/
+			/** 「刷新价目」：唯一会拉上游的动作；成功后再让页面重取 /pricing 与用量（成本口径整体变了）。 */
 			const refreshPrices = async () => {
 				if (refreshingPrices) return;
 				setRefreshingPrices(true);
@@ -3244,7 +3168,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							type: "button",
 							className: quota_module_css_default.toolbarBtn + (display.display === currency ? " " + quota_module_css_default.currencyBtnOn : ""),
 							"aria-pressed": display.display === currency,
-							title: "所有金额按 " + (currency === "CNY" ? "人民币" : "美元") + "折算显示",
 							onClick: () => switchCurrency(currency),
 							children: DISPLAY_CURRENCY_LABELS[currency]
 						}, currency)),
@@ -3253,7 +3176,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: quota_module_css_default.toolbarBtn,
 							disabled: fxLoading,
 							"aria-busy": fxLoading,
-							title: "重新取一次汇率（服务端 12 小时内走缓存）",
+							title: "汇率在服务端缓存 12 小时",
 							onClick: () => void fetchFx(true),
 							children: fxLoading ? "取汇率…" : "刷新汇率"
 						}),
@@ -3263,7 +3186,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: quota_module_css_default.toolbarBtn + " " + quota_module_css_default.toolbarBtnPrimary,
 							disabled: refreshingPrices,
 							"aria-busy": refreshingPrices,
-							title: "从 LiteLLM 上游拉取最新聚合价目并写到本机：这是插件里唯一会联网拉价目的操作",
 							onClick: () => void refreshPrices(),
 							children: refreshingPrices ? "刷新中…" + (refreshElapsedSeconds > 0 ? "（已 " + String(refreshElapsedSeconds) + " 秒）" : "") : "刷新价目"
 						}),
@@ -3272,7 +3194,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: quota_module_css_default.infoBtn + (showExplanation ? " " + quota_module_css_default.infoBtnActive : ""),
 							"aria-label": "查看成本口径说明",
 							"aria-expanded": showExplanation,
-							title: "来源角标、单价单位、错峰与多币种折算口径",
 							onClick: () => setShowExplanation((previous) => !previous),
 							children: "ⓘ"
 						})
@@ -3343,7 +3264,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: quota_module_css_default.quotaToggle,
 									"aria-expanded": isOpen,
 									"aria-controls": drawerId,
-									title: isOpen ? "收起单价表" : "展开看这条通道近 30 天用到的模型单价",
+									title: "近 30 天用到的模型单价",
 									onClick: () => setExpandedProviders((previous) => ({
 										...previous,
 										[channel.provider]: previous[channel.provider] !== true
@@ -3471,9 +3392,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})
 			] });
 		}
-		/**
-		* 通道卡片头部的单价摘要：收起状态也要能看出「有多少个模型、来源压在哪一层」。
-		*/
+		/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层。 */
 		function rateCountTextOf(rows, loading, failed, failureText) {
 			if (rows.length > 0) {
 				const counts = /* @__PURE__ */ new Map();
@@ -3485,10 +3404,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (failed) return failureText === null ? "单价表不可用" : "单价表不可用：" + failureText;
 			return "近 30 天无用量";
 		}
-		/**
-		* 单价表：模型 · 四档单价 · 来源 · 近 30 天 tokens。
-		* `rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。
-		*/
+		/** 单价表：`rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。 */
 		function RateTable(props) {
 			if (props.rows.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: quota_module_css_default.rateEmpty,
@@ -3577,7 +3493,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function noRateTextOf(source) {
 			return COST_SOURCE_HINTS[source] ?? "没有四档单价";
 		}
-		/** 价目信息块：内置官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
+		/** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
 		function PricingInfoBlock(props) {
 			const { pricing, aggregate } = props;
 			const catalog = pricing?.catalog ?? null;
@@ -3730,10 +3646,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})
 			] });
 		}
-		/**
-		* 覆盖度一行：官方账单覆盖多少天 + 三层价目各命中多少个模型 + 台账兜底与无依据的模型数。
-		* 字段全是可选的（服务端换口径时不至于渲染出 undefined），一个数字都没有就整段省略。
-		*/
+		/** 覆盖度一行：官方账单天数 + 三层价目各命中多少模型 + 台账兜底与无依据；一个数字都没有就整段省略。 */
 		function coverageTextOf(coverage) {
 			if (coverage === null) return null;
 			const days = coverage.from === void 0 || coverage.to === void 0 ? null : daysBetween(coverage.from, coverage.to);
@@ -3757,7 +3670,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
 			return Math.round((end - start) / 864e5) + 1;
 		}
-		/** 成本口径说明：默认不占正文，点 ⓘ 才出现。只讲「这一格钱是怎么来的」。 */
+		/** 成本口径说明：点 ⓘ 才展开（只讲「这一格钱是怎么来的」）。 */
 		function ExplanationBlock() {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: pricing_module_css_default.explanation,
@@ -3801,10 +3714,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})]
 			});
 		}
-		/**
-		* 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
-		* 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」。
-		*/
+		/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
 		function modelPriceRefreshTextOf(result) {
 			const parts = [];
 			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + " 条价目");
@@ -3816,7 +3726,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (time !== null) parts.push(time);
 			return "已更新：" + (parts.length === 0 ? "服务端没返回明细，已按新价目重算" : parts.join(" · "));
 		}
-		/** 实时结果的相对时间文案。 */
 		function freshTextOf(fetchedAt) {
 			if (fetchedAt === null) return "刚刚";
 			const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1e3));
@@ -3825,7 +3734,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (minutes < 60) return minutes + " 分钟前";
 			return Math.floor(minutes / 60) + " 小时前";
 		}
-		/** 实时查询失败原因的展示文案。 */
 		function errorTextOf(error) {
 			if (error === null) return "未启用实时查询";
 			if (error === "no-key") return "该通道未配置 API Key";
@@ -3871,10 +3779,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/components/SessionDetailDrawer.tsx
-		/**
-		* 会话详情抽屉：点会话行后从右侧滑出，数据来自 `/dsh-key-usage/session?id=…`。
-		* 服务端只折叠这一个会话，所以打开很快；读不出来时它降级返回头部字段 + 说明，这里照常展示。
-		*/
+		/** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 		function SessionDetailDrawer(props) {
 			const [data, setData] = (0, react.useState)(null);
 			const [failed, setFailed] = (0, react.useState)(false);
@@ -4197,10 +4102,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/tabs/SessionsTab.tsx
-		/**
-		* 会话用量：按会话列出 tokens / 命中率 / 时长，最近活跃时按日分组。
-		* 点行打开详情抽屉；行内可展开到模型构成；工作目录可点，跳到「项目用量」并只看该项目。
-		*/
+		/** 会话用量：按会话列出 tokens / 命中率 / 时长；点行开详情，行内可展开模型构成。 */
 		/** 首屏渲染 50 个：本机有 ~130 个会话，一次全渲染会明显卡顿；「加载更多」每次再加这么多。 */
 		const PAGE_SIZE = 50;
 		/** 导出列：标题可能带逗号或换行，由 toCsv 统一转义。 */
@@ -4766,11 +4668,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/KeyUsageSection.tsx
-		/**
-		* 「使用情况」设置页外壳：Tab 路由、范围 / 通道筛选状态与取数。
-		* 台账类数据（通道 / 台账 / 热力图 / 汇总 / 快照）来自本地文件端点；
-		* 项目与会话数据来自宿主会话事件折叠，切到对应 Tab 时才首次拉取。
-		*/
+		/** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 		const TABS = [
 			["overview", "总览"],
 			["detail", "使用明细"],
@@ -4803,10 +4701,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [pricing, setPricing] = (0, react.useState)(null);
 			const [available, setAvailable] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(false);
-			/**
-			* 价目版本号：价目换了一份（点「刷新价目」）成本要整体重算，所有按成本展示的数据都得重取。
-			* 价目只从「刷新价目」这一个入口变，所以用一个自增计数当失效信号即可。
-			*/
+			/** 价目版本号：点「刷新价目」后自增，用来让服务端重算成本并整体重取数据。 */
 			const [pricingRevision, setPricingRevision] = (0, react.useState)(0);
 			const tooltip = useTooltip();
 			/** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
@@ -5084,15 +4979,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/index.tsx
 		/**
-		* dsh-key-usage 客户端入口：注册「使用情况」侧边栏导航项 + 主区域页面。
-		* UI 逻辑在 UsagePage / KeyUsageSection 里；本文件只做 cordis apply 接线。
-		*
-		* slot 契约（对齐已装的 dsh-context「上下文洞察」写法）：
-		* - `sidebar.panellist`：宿主自持整行（标签 / hover / active），插件只提供图标，`id` 是面板标识；
-		* - `main`：同一标识放在 `key` 上，宿主在主内容区按它渲染整页 —— 因此不是弹窗、也不占设置页。
-		*
-		* 计费不需要用户配置：价格由服务端的三层价目（内置官方价目 / LiteLLM 聚合价目 / 台账反推均价）自动决定，
-		* 客户端只经 `/pricing`、`/rates`、`/fx` 读；宿主的设置服务链路（配置表单 + 插件页配置卡片）已整条退役。
+		* dsh-key-usage 客户端入口：注册「使用情况」侧边栏导航项 + 主区域页面，本文件只做 cordis apply 接线。
+		* slot 契约（对齐 dsh-context）：`sidebar.panellist` 宿主自持整行、只用 `id`；`main` 同一标识放 `key`。
+		* 价格由服务端三层价目自动决定，客户端只经 `/pricing`、`/rates`、`/fx` 读。
 		*/
 		const NS = "dsh-key-usage";
 		/** 侧边栏条目与 main 页面共用的面板标识（宿主 MainPanelId 域，命名空间化避免撞车）。 */

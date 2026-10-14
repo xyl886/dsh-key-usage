@@ -34,7 +34,7 @@
 .snapshotHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 10px; }
 .snapshotStale { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 10.5px; margin-top: 10px; }
 
-/* ===== 工具条：显示币种 / 汇率 / 刷新价目 / 成本口径 ===== */
+/* ===== 工具条 ===== */
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .toolbarLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
 .toolbarBtn {
@@ -78,7 +78,7 @@
 .countLine { color: var(--dsw-alias-label-secondary, #9a9aa2); font-size: 11.5px; line-height: 1.8; margin: 6px 0; }
 .staleLine { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: 11.5px; line-height: 1.7; margin: 6px 0; }
 
-/* ===== 展开区：单价表（窄屏横向滚动，不撑破卡片）===== */
+/* ===== 展开区：单价表（窄屏横向滚动）===== */
 .rateDrawer:empty { display: none; }
 .rateDrawer { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); padding-top: 10px; }
 .rateScroll { overflow-x: auto; }

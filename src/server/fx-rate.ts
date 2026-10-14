@@ -1,16 +1,9 @@
 /**
- * 实时汇率（USD → CNY）：服务端**第三个、也是最后一个**显式联网动作
- * （另外两个是「余额与订阅窗口」与「刷新价目」）。
- *
- * 触发时机只有一种：客户端在**打开页面 / 切换显示币种 / 点「刷新汇率」**时请求
- * `GET /dsh-key-usage/fx`（`?refresh=1` 表示强制上游）。**没有定时轮询、没有开机拉取**，
- * 也不在任何其它端点里隐式联网 —— 12 小时 TTL 以内的请求直接吃本机缓存文件，一次网络都不发。
- *
- * 上游顺序：open.er-api.com（取 `rates.CNY`）→ frankfurter.app（取 `rates.CNY`）；
- * 单次 6 秒超时、响应上限 64 KiB、非 200 一律算失败。成功即原子写
- * `$DSH_HOME/dsh-key-usage/fx-rate.json`（写目标按文件名 + 绝对路径双重校验，同目录 tmp + rename）。
- * 任何失败都降级：有缓存就回落缓存（`stale: true`），没有缓存就用默认 7.1 兜底，
- * 并把可读的中文原因写进 `note` —— 绝不抛错，接口恒为 `ok: true`。
+ * 实时汇率（USD → CNY）：三个显式联网动作之一，只在打开页面 / 切币种 / 点「刷新汇率」时请求；
+ * 12 小时 TTL 内直接吃本机缓存（不联网），没有轮询、没有开机拉取。
+ * 上游 open.er-api.com → frankfurter.app（取 `rates.CNY`）：6 秒超时、64 KiB 上限、非 200 算失败；
+ * 成功即原子写 `$DSH_HOME/dsh-key-usage/fx-rate.json`，失败静默回落缓存、再回落默认 7.1，
+ * 原因写进中文 `note` —— 绝不抛错，接口恒为 `ok: true`。
  */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -32,7 +25,6 @@ export const FX_CACHE_FILE = 'fx-rate.json'
 
 export type FxSource = 'upstream' | 'cache' | 'default'
 
-/** `GET /dsh-key-usage/fx` 的响应体。 */
 export interface FxRateView {
   ok: true
   base: typeof FX_BASE
@@ -115,7 +107,6 @@ export function readFxCache(path: string = fxRatePath()): { entry: FxCacheEntry 
   }
 }
 
-/** 写目标守卫：文件名 + 绝对路径都要对得上（Windows 路径大小写不敏感）。 */
 function writableTargetProblem(path: string): string | null {
   if (basename(path) !== FX_CACHE_FILE) {
     return '只允许写 ' + FX_CACHE_FILE + '（当前目标：' + path + '）'
@@ -126,7 +117,6 @@ function writableTargetProblem(path: string): string | null {
   return null
 }
 
-/** 原子写：同目录临时文件 + rename（避免读到半截 JSON）；写失败只返回原因，不抛错。 */
 export function writeFxCache(
   entry: FxCacheEntry,
   path: string = fxRatePath(),
@@ -144,7 +134,6 @@ export function writeFxCache(
   return { ok: true, path }
 }
 
-/** 缓存是否还在 TTL 内（`fetchedAt` 无法解析时视为过期）。 */
 function isFresh(fetchedAt: string, now: number, ttlHours: number = FX_TTL_HOURS): boolean {
   const fetched = Date.parse(fetchedAt)
   if (!Number.isFinite(fetched)) return false
@@ -159,7 +148,6 @@ function hostOf(url: string): string {
   }
 }
 
-/** 按上限读响应体：超过上限立刻中止连接并返回 null。 */
 async function readCappedText(response: Response, controller: AbortController): Promise<string | null> {
   const body = response.body as unknown as AsyncIterable<Uint8Array> | null
   const iterable = body !== null && typeof (body as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] === 'function'
@@ -217,22 +205,15 @@ async function fetchRate(url: string, fetchImpl: typeof fetch, timeoutMs: number
 }
 
 export interface FxResolveOptions {
-  /** true = 强制走上游（面板「刷新汇率」）；false / 缺省 = TTL 内直接用缓存，不联网。 */
+  /** true = 强制走上游（「刷新汇率」）；其余字段都是测试注入点（fetch / 缓存路径 / 当前时间 / 超时）。 */
   refresh?: boolean
-  /** 可注入的 fetch（测试用）。 */
   fetchImpl?: typeof fetch
-  /** 缓存文件路径（测试用，缺省为 `$DSH_HOME/dsh-key-usage/fx-rate.json`）。 */
   path?: string
-  /** 当前时间（毫秒，测试用，缺省 Date.now()）。 */
   now?: number
-  /** 单次上游超时（测试用，缺省 6 秒）。 */
   timeoutMs?: number
 }
 
-/**
- * 取汇率（唯一入口）：TTL 内吃缓存不联网；过期或强制刷新才拉上游，失败静默回落缓存，
- * 无缓存则用默认值兜底。返回体恒为 `ok: true`，失败原因在 `note` 里，绝不抛错。
- */
+/** 取汇率（唯一入口）：TTL 内吃缓存不联网，过期或强制才拉上游；失败恒为 `ok: true` + 中文 `note`。 */
 export async function resolveFxRate(options: FxResolveOptions = {}): Promise<FxRateView> {
   const path = options.path ?? fxRatePath()
   const now = options.now ?? Date.now()

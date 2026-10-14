@@ -59,7 +59,6 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
   }, [rows, query, channelFilter, sortKey])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
-  // 零 Token 的模型（多为调用失败）不展示，条数如实告知
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   /** 导出当前筛选与排序后的行（JSON 取整行，CSV 按固定列映射）。 */

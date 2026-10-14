@@ -1,8 +1,4 @@
-/**
- * 侧边栏导航图标（`sidebar.panellist`）。
- * 该 slot 由宿主自持整行（标签、hover/active 配色），插件只提供字形，
- * 因此用 currentColor 让宿主的行样式直接染上图标。
- */
+/** 侧边栏导航图标（`sidebar.panellist` 由宿主自持整行，用 currentColor 让宿主行样式染色）。 */
 import type { ReactNode } from 'react'
 
 export function UsageIcon({ size = 18 }: { size?: number }): ReactNode {

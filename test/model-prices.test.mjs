@@ -1,9 +1,6 @@
 /**
- * LiteLLM 聚合价目离线测试：随包快照装载与自检、别名 / 唯一匹配的确定性、缓存档四种形态与 partial、
- * 本地刷新文件优先与坏文件降级、刷新端点的下载校验与写入守卫。
- *
- * 全部离线：刷新用**注入的 fetch**（夹具 Response），不打任何真实网络请求。
- * 运行：node test/model-prices.test.mjs（依赖 lib/model-prices.js，改 src 后要先 tsc -p tsconfig.server.json）
+ * LiteLLM 聚合价目离线测试：装载 / 匹配确定性 / partial / 刷新校验与写入守卫；全部用注入的 fetch。
+ * 运行：node test/model-prices.test.mjs（依赖 lib/model-prices.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'

@@ -1,8 +1,7 @@
 /**
  * 台账 × 会话事件的按天合并。
  *
- * 背景：宿主用量台账 `usage-ledger.json` 已停更（本机停在 2026-09-30），
- * 而会话事件仍在更新。若只读台账，总览「今日」全空、热力图与明细缺掉最近十几天。
+ * 背景：宿主台账已停更（本机停在 2026-09-30）而会话事件仍在更新，只读台账会缺掉最近十几天。
  *
  * 合并规则：**按天取舍，不做相加** —— 同一天台账有数据就用台账（带真实成本），
  * 台账没有的日期用会话事件补（成本按 0 处理并标记来源），避免两套口径重复计数。
@@ -126,10 +125,6 @@ function synthesizeDay(date: string, rows: SessionDayRow[]): ChannelDailySummary
 
 /**
  * 合并台账与会话序列（按天取舍）。
- * @param ledgerDays - 台账范围聚合结果
- * @param sessionRows - 会话事件摊平行（可先按通道过滤）
- * @param from - 范围起始（含）
- * @param to - 范围结束（含）
  */
 export function mergeDailySeries(
   ledgerDays: ChannelDailySummary[],
@@ -191,7 +186,6 @@ export interface ProviderRangeSummary {
   cost: number
 }
 
-/** 按通道汇总合并序列（总览「今日 / 近 30 天」用）。 */
 export function summarizeMergedByProvider(days: ChannelDailySummary[], from: string, to: string): ProviderRangeSummary[] {
   const byProvider = new Map<string, ProviderRangeSummary>()
   for (const day of days) {

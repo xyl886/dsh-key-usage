@@ -1,4 +1,4 @@
-/** 堆叠柱状图：按天或按小时，含 x 轴标签（原型 .bars/.bar-labels）。 */
+/** 堆叠柱状图：按天或按小时，含 x 轴标签。 */
 import type { ReactNode } from 'react'
 import type { TooltipApi } from '../tooltip.tsx'
 import styles from '../styles/detail.module.css'

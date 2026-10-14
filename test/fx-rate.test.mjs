@@ -1,7 +1,5 @@
 /**
- * 实时汇率（USD → CNY）离线测试：注入 fetch 夹具，覆盖上游成功 / 主上游失败回落备上游 /
- * 超时 / 非 200 / 坏 JSON / 缺 rates.CNY / 超 64 KiB / 缓存命中（不联网）/ 缓存过期回落 /
- * 默认兜底 / `refresh=1` 强制 / 写盘守卫与写失败降级 / 回环端点。全程不发真实网络请求。
+ * 实时汇率离线测试：全部用注入的 fetch 夹具，不发真实网络请求。
  * 运行：node test/fx-rate.test.mjs（依赖 lib/fx-rate.js 与 lib/routes.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'

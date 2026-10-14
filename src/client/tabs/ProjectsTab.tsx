@@ -1,4 +1,4 @@
-/** 项目用量：按会话工作目录聚合（数据来自宿主会话事件折叠）。 */
+/** 项目用量：按会话工作目录聚合。 */
 import { useMemo, useState, type ReactNode } from 'react'
 import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtRelative, fmtTokens } from '../format.ts'
@@ -59,7 +59,6 @@ export function ProjectsTab(props: {
   }, [rows, query, channelFilter, sortKey, focusWorkspace])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
-  // 零 Token 的项目（多为调用失败）不展示，条数如实告知
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   /** 导出当前筛选与排序后的项目行（JSON 取整行，CSV 按固定列映射）。 */

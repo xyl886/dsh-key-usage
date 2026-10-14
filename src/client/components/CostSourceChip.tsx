@@ -1,9 +1,6 @@
 /**
- * 成本来源角标：官方（台账账单）/ 官方价（内置厂商官方价目）/ 聚合（LiteLLM 聚合价目）/ 估算（台账均价）
- * —— 避免把估算当成账单金额用。
- * 只在真的显示了金额时挂；`订阅内` / `免费` / `—` 这类占位文案不带角标。
- * `partial` = 该条聚合价目缺一个缓存价（按未命中价代）：只补一个次要文字色的「部分」标记与 tooltip，
- * 不是错误，不用告警色。
+ * 成本来源角标：官方 / 官方价 / 聚合 / 估算 —— 避免把估算当成账单金额用；只在真的显示了金额时挂。
+ * `partial`（聚合价目缺一个缓存价、按未命中价代）是口径说明不是错误，不用告警色。
  */
 import type { ReactNode } from 'react'
 import { COST_SOURCE_LABELS, PARTIAL_PRICE_TEXT, costSourceHintOf, type CostSource } from '../pricing.ts'

@@ -20,7 +20,6 @@ export interface YamlScalarNode {
   kind: 'scalar'
   line: number
   value: string | number | boolean | null
-  /** 原始文本（去掉注释与首尾空白），便于报错时回显。 */
   text: string
   /** 是否带引号：引号里的数字/布尔按字符串理解。 */
   quoted: boolean
@@ -28,7 +27,6 @@ export interface YamlScalarNode {
 
 export interface YamlField {
   key: string
-  /** 键所在行的行号。 */
   line: number
   value: YamlNode
 }
@@ -104,8 +102,6 @@ export function yamlKindLabel(node: YamlNode | null | undefined): string {
   if (node.kind === 'list') return '列表'
   return node.value === null ? '空值' : '标量'
 }
-
-/* ------------------------------------------------------------------ 以下为内部实现 ------------------------------------------------------------------ */
 
 const NUMBER_TEXT = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/
 

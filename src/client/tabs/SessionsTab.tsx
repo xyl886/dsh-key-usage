@@ -1,7 +1,4 @@
-/**
- * 会话用量：按会话列出 tokens / 命中率 / 时长，最近活跃时按日分组。
- * 点行打开详情抽屉；行内可展开到模型构成；工作目录可点，跳到「项目用量」并只看该项目。
- */
+/** 会话用量：按会话列出 tokens / 命中率 / 时长；点行开详情，行内可展开模型构成。 */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format.ts'
@@ -60,7 +57,6 @@ export function SessionsTab(props: {
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
   const archivedCount = rows.filter((row) => row.archived).length
-  // 零 Token 的会话（调用失败、没产生用量）不展示，条数如实告知
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   // 换了筛选 / 搜索 / 排序就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效

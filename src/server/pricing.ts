@@ -1,16 +1,7 @@
 /**
- * 计费口径：单价匹配、错峰判定、单位换算与费用 / 缓存省钱计算（纯函数，可离线单测）。
- *
- * 真价格只有两层，且都只读、不可编辑：内置官方价目（`pricing-catalog.yml`，随包发布）
- * 与 LiteLLM 聚合价（`data/litellm-model-prices.json` 或本机刷新副本，USD，见 model-prices.ts）。
- * 两层都没命中时由调用方回落「台账反推均价」。用户规则层已整条移除：不再读、不再写、
- * 不再出现在任何响应里（要改价就改随包价目，或让 agent 改它）。
- *
- * 成本优先级（routes 逐格取值）：台账当天**官方成本** > 内置官方价目（catalog）> 聚合价（aggregate）
- * > 台账反推均价（estimate）> 无（none，界面显示 —）。本模块负责中间两层与均价回落的判定。
- *
- * 币种：内置价目按文档原样记（CNY / USD），聚合价恒为 USD，**不做任何汇率换算**；
- * 需要跨币种展示时由客户端按用户选择的显示币种折算（服务端并列下发 `costsByCurrency`）。
+ * 计费口径（纯函数，可离线单测）：单价匹配 catalog → aggregate → 调用方回落台账反推均价，
+ * 以及错峰判定、单位换算与缓存省钱。
+ * 币种按价目原样记（CNY / USD），不做汇率换算；跨币种展示由客户端按 `costsByCurrency` 折算。
  */
 import { catalogRuleFor } from './pricing-catalog.js'
 import { aggregateRuleFor } from './model-prices.js'
@@ -20,13 +11,12 @@ export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 /** 成本来源：官方账单 / 内置官方价目 / 聚合价目 / 台账反推均价 / 无依据。 */
 export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
-/** 命中的价目来自哪一层；`catalog` = 内置官方价目，`aggregate` = LiteLLM 聚合价（USD）。 */
+/** 命中的价目层。 */
 export type PricingRuleSource = 'catalog' | 'aggregate'
 
 export interface OffPeakWindow {
-  /** 本地时间 `HH:MM`。 */
+  /** 本地时间 `HH:MM`（`to` < `from` 表示跨午夜，`24:00` 表示当天末尾）。 */
   from: string
-  /** 本地时间 `HH:MM`；小于 `from` 表示跨午夜，`24:00` 表示当天末尾。 */
   to: string
   /**
    * 该窗口只在哪些星期生效，ISO 编号 1=周一 … 7=周日；**缺省 = 每天都适用**。
@@ -55,7 +45,6 @@ export interface PricingRule extends PricingRates {
   unit: PricingUnit
   currency: string
   offPeak: OffPeakPricing | null
-  /** 价目来源链接与抓取日期，便于复核。 */
   note: string
 }
 
@@ -68,7 +57,7 @@ export interface PricingUsageRow {
   cacheReadTokens?: number
   cacheWriteTokens?: number
   calls?: number
-  /** 展示口径 tokens（输入 + 输出 + 缓存读），与界面口径一致。 */
+  /** 展示口径 tokens（输入 + 输出 + 缓存读）；给了就不再按分桶相加。 */
   tokens?: number
 }
 
@@ -94,7 +83,6 @@ const UNIT_FACTORS: Record<PricingUnit, number> = {
   perCall: 0,
 }
 
-/** 单位文字说明（界面与文档共用一份，避免两侧口径漂移）。 */
 export const UNIT_LABELS: Record<PricingUnit, string> = {
   perMillionTokens: '每百万 tokens',
   perThousandTokens: '每千 tokens',
@@ -194,7 +182,6 @@ export function matchPricedRule(provider: string, model: string): PricedRuleHit 
   return null
 }
 
-/** 一条命中的价目：规则本体 + 来自哪一层 + 是否为「部分收录」的聚合价。 */
 export interface PricedRuleHit {
   rule: PricingRule
   source: PricingRuleSource
@@ -315,7 +302,6 @@ export function priceRowsOf(
   })
 }
 
-/** 一格成本：金额 + 来源 + 命中的价目 + 这一格金额的币种。 */
 export interface RowCost {
   cost: number | null
   source: CostSource
@@ -415,11 +401,7 @@ export function alignMoneyWithCost(money: MoneyByCurrency, cost: number | null):
   return { [currencies[0]]: cost }
 }
 
-/**
- * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中内置官方价目 / 命中聚合价 /
- * 回落均价 / 无依据，并按**所有行**累加金额与缓存省钱（各按自己的币种分组，跨币种不换算不合计）。
- * `partialModels` = 命中的聚合价目里缺一档缓存价（按未命中价代）的模型数。
- */
+/** 覆盖度统计：按 `provider|model` 数出 catalog / aggregate / 均价 / 无依据，并按币种分组累加金额与缓存省钱。 */
 export function summarizeCoverage(
   rows: PricingUsageRow[],
   averagePrice: AveragePriceLookup = () => null,

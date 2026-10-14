@@ -1,9 +1,6 @@
 /**
- * 余额与配额：按通道展示官方余额快照与订阅窗口（原样数据，不换算不建议）。
- *
- * 每张通道卡片是可展开控件：展开后是该通道近 30 天用到的模型单价表（来自 `/rates`），
- * 让人一眼看出「这个通道这些模型的单价是多少、来源是哪一层」。价格全部由服务端决定，
- * 界面不提供任何价格表单；金额按工具条里选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
+ * 余额与配额：按通道展示官方余额快照与订阅窗口，卡片可展开看该通道近 30 天的模型单价表（`/rates`）。
+ * 界面不维护任何价格；金额按工具条选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
  */
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
 import {
@@ -26,22 +23,20 @@ import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
 import pricingStyles from '../styles/pricing.module.css'
 
-/** 余额字段展示顺序（原型顺序）；未收录字段按原键名追加在后。 */
+/** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
 const BALANCE_ORDER = ['totalBalance', 'topUpBalance', 'giftBalance', 'balance', 'currency']
 const BALANCE_LABELS: Record<string, string> = {
   totalBalance: '总余额', topUpBalance: '充值余额', giftBalance: '赠送余额', balance: '余额', currency: '币种',
 }
-/** 订阅窗口固定展示顺序。 */
 const WINDOW_ORDER = ['5h', 'week', 'month', 'day']
 const WINDOW_LABELS: Record<string, string> = { '5h': '5 小时窗口', week: '本周窗口', month: '本月窗口', day: '当日窗口' }
 
 /** 解析问题默认只列几条：一屏列不完的清单没人读。 */
 const ISSUE_LIMIT = 5
 
-/** 单价表的计价单位：内置官方价目与聚合价目都是每百万 tokens（服务端 `/rates` 也按这个口径折算）。 */
 const RATE_UNIT_TEXT = '每百万 tokens'
 
-/** 单价来源在表格里的说法；`none` 在这里写「无依据」，不用角标的 `—`（那一列不能空着）。 */
+/** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 const RATE_SOURCE_LABELS: Record<string, string> = {
   official: '官方',
   catalog: '官方价',
@@ -88,10 +83,7 @@ export function QuotaTab(props: {
   const [refreshElapsedSeconds, setRefreshElapsedSeconds] = useState(0)
   const [refreshStatus, setRefreshStatus] = useState<PriceRefreshStatus | null>(null)
 
-  /**
-   * 取一次汇率：服务端 12 小时内走缓存，所以打开页面与切币种时都可以直接调 —— 真正打上游的只有
-   * 用户点「刷新汇率」（`force`）那一下。失败时保留已有的汇率，只把原因挂在工具条上。
-   */
+  /** 取一次汇率：服务端 12 小时内走缓存，打上游的只有用户点「刷新汇率」那一下；失败时保留已有汇率。 */
   const fetchFx = useCallback(async (force: boolean): Promise<void> => {
     setFxLoading(true)
     const result = await loadFxRate(force)
@@ -101,7 +93,7 @@ export function QuotaTab(props: {
       return
     }
     setFxError(null)
-    // rate 不是合法数字时归一化会返回 null：这时宁可说「没取到汇率」，也不要拿上一次的值冒充
+    // 归一化返回 null 说明 rate 非法：宁可说「没取到汇率」，也不要拿上一次的值冒充
     const normalized = normalizeFxRate(result)
     if (normalized === null) setFxError('服务端返回的汇率无法解析')
     setFxRate(normalized)
@@ -129,21 +121,14 @@ export function QuotaTab(props: {
     return () => clearInterval(timer)
   }, [refreshingPrices])
 
-  /**
-   * 切显示币种：只改展示口径，不重新请求任何用量数据（服务端金额按原币种给，折算在客户端做）。
-   * 汇率缺失或已过期时补取一次（服务端有 12 小时缓存，不会每次打上游）。
-   */
+  /** 切显示币种：只改展示口径，不重取用量；汇率缺失 / 过期才补取一次。 */
   const switchCurrency = (next: DisplayCurrency): void => {
     if (next === display.display) return
     setDisplayCurrency(next)
     if (display.fx === null || display.fx.stale) void fetchFx(false)
   }
 
-  /**
-   * 「刷新价目」：全插件唯一会访问上游拉价目的用户动作（服务端去上游拉 JSON 并写到本机）。
-   * 成功 / 失败都留在界面上（`aria-live` 播报），成功后再让页面重取 `/pricing` 与用量 —— 价目换了一份，
-   * 成本口径整体都变了。
-   */
+  /** 「刷新价目」：唯一会拉上游的动作；成功后再让页面重取 /pricing 与用量（成本口径整体变了）。 */
   const refreshPrices = async (): Promise<void> => {
     if (refreshingPrices) return
     setRefreshingPrices(true)
@@ -192,7 +177,6 @@ export function QuotaTab(props: {
             type="button"
             className={quotaStyles.toolbarBtn + (display.display === currency ? ' ' + quotaStyles.currencyBtnOn : '')}
             aria-pressed={display.display === currency}
-            title={'所有金额按 ' + (currency === 'CNY' ? '人民币' : '美元') + '折算显示'}
             onClick={() => switchCurrency(currency)}
           >
             {DISPLAY_CURRENCY_LABELS[currency]}
@@ -203,7 +187,7 @@ export function QuotaTab(props: {
           className={quotaStyles.toolbarBtn}
           disabled={fxLoading}
           aria-busy={fxLoading}
-          title="重新取一次汇率（服务端 12 小时内走缓存）"
+          title="汇率在服务端缓存 12 小时"
           onClick={() => void fetchFx(true)}
         >
           {fxLoading ? '取汇率…' : '刷新汇率'}
@@ -214,7 +198,6 @@ export function QuotaTab(props: {
           className={quotaStyles.toolbarBtn + ' ' + quotaStyles.toolbarBtnPrimary}
           disabled={refreshingPrices}
           aria-busy={refreshingPrices}
-          title="从 LiteLLM 上游拉取最新聚合价目并写到本机：这是插件里唯一会联网拉价目的操作"
           onClick={() => void refreshPrices()}
         >
           {refreshingPrices
@@ -226,7 +209,6 @@ export function QuotaTab(props: {
           className={quotaStyles.infoBtn + (showExplanation ? ' ' + quotaStyles.infoBtnActive : '')}
           aria-label="查看成本口径说明"
           aria-expanded={showExplanation}
-          title="来源角标、单价单位、错峰与多币种折算口径"
           onClick={() => setShowExplanation((previous) => !previous)}
         >
           ⓘ
@@ -291,7 +273,7 @@ export function QuotaTab(props: {
                 className={quotaStyles.quotaToggle}
                 aria-expanded={isOpen}
                 aria-controls={drawerId}
-                title={isOpen ? '收起单价表' : '展开看这条通道近 30 天用到的模型单价'}
+                title="近 30 天用到的模型单价"
                 onClick={() => setExpandedProviders((previous) => ({ ...previous, [channel.provider]: previous[channel.provider] !== true }))}
               >
                 <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
@@ -376,9 +358,7 @@ export function QuotaTab(props: {
   )
 }
 
-/**
- * 通道卡片头部的单价摘要：收起状态也要能看出「有多少个模型、来源压在哪一层」。
- */
+/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层。 */
 function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean, failureText: string | null): string {
   if (rows.length > 0) {
     const counts = new Map<string, number>()
@@ -393,10 +373,7 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
   return '近 30 天无用量'
 }
 
-/**
- * 单价表：模型 · 四档单价 · 来源 · 近 30 天 tokens。
- * `rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。
- */
+/** 单价表：`rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。 */
 function RateTable(props: {
   rows: ModelRateRow[]
   loading: boolean
@@ -489,7 +466,7 @@ function noRateTextOf(source: CostSource): string {
   return COST_SOURCE_HINTS[source] ?? '没有四档单价'
 }
 
-/** 价目信息块：内置官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
+/** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
 function PricingInfoBlock(props: {
   pricing: PricingResponse | null
   aggregate: ModelPriceAggregate | null
@@ -627,10 +604,7 @@ function PricingInfoBlock(props: {
   )
 }
 
-/**
- * 覆盖度一行：官方账单覆盖多少天 + 三层价目各命中多少个模型 + 台账兜底与无依据的模型数。
- * 字段全是可选的（服务端换口径时不至于渲染出 undefined），一个数字都没有就整段省略。
- */
+/** 覆盖度一行：官方账单天数 + 三层价目各命中多少模型 + 台账兜底与无依据；一个数字都没有就整段省略。 */
 function coverageTextOf(coverage: PricingResponse['coverage'] | null): string | null {
   if (coverage === null) return null
   const days = coverage.from === undefined || coverage.to === undefined ? null : daysBetween(coverage.from, coverage.to)
@@ -660,7 +634,7 @@ function daysBetween(from: string, to: string): number | null {
   return Math.round((end - start) / 86400000) + 1
 }
 
-/** 成本口径说明：默认不占正文，点 ⓘ 才出现。只讲「这一格钱是怎么来的」。 */
+/** 成本口径说明：点 ⓘ 才展开（只讲「这一格钱是怎么来的」）。 */
 function ExplanationBlock(): ReactNode {
   return (
     <div className={pricingStyles.explanation}>
@@ -679,10 +653,7 @@ function ExplanationBlock(): ReactNode {
   )
 }
 
-/**
- * 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
- * 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」。
- */
+/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
 function modelPriceRefreshTextOf(result: Extract<PricingRefreshResult, { ok: true }>): string {
   const parts: string[] = []
   if (typeof result.entries === 'number' && Number.isFinite(result.entries)) {
@@ -697,7 +668,6 @@ function modelPriceRefreshTextOf(result: Extract<PricingRefreshResult, { ok: tru
   return '已更新：' + (parts.length === 0 ? '服务端没返回明细，已按新价目重算' : parts.join(' · '))
 }
 
-/** 实时结果的相对时间文案。 */
 function freshTextOf(fetchedAt: number | null): string {
   if (fetchedAt === null) return '刚刚'
   const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1000))
@@ -707,7 +677,6 @@ function freshTextOf(fetchedAt: number | null): string {
   return Math.floor(minutes / 60) + ' 小时前'
 }
 
-/** 实时查询失败原因的展示文案。 */
 function errorTextOf(error: string | null): string {
   if (error === null) return '未启用实时查询'
   if (error === 'no-key') return '该通道未配置 API Key'

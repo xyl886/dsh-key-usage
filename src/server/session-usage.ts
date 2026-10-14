@@ -9,8 +9,7 @@
  * - 模型归属取 `data.message.source`，缺失时回落最近一次 `request/header` 的 config；
  * - 判定不出模型的样本落到 `unknown/unknown`。
  *
- * 与参考实现的差异：这里不做跨批次增量状态，而是每次按整段事件重折（按 revision 缓存），
- * 因此不需要「减掉上一次样本」的补偿逻辑，重复上报直接覆盖，天然一致。
+ * 与参考实现的差异：不做跨批次增量状态，每次按整段事件重折（按 revision 缓存）。
  */
 
 export interface TokenBuckets {
@@ -60,7 +59,6 @@ export interface ModelUsageRow {
   buckets: TokenBuckets
 }
 
-/** 单个小时槽：该小时的结算样本数与 token 分桶（界面按小时堆叠用）。 */
 export interface HourBucket {
   calls: number
   buckets: TokenBuckets

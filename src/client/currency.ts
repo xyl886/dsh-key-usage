@@ -1,13 +1,7 @@
 /**
- * 显示币种与汇率折算：全插件金额渲染的唯一收口点。
- *
- * 服务端的成本按价目文档的原币种算（内置官方价目有 CNY 与 USD，聚合价目是 USD），逐币种小计并列在
- * `costsByCurrency` 里。`cost` 是不同币种的直接相加，只当兜底。这里负责把每个币种的金额按当前汇率
- * 折算成用户选的显示币种：能折算才折算（文本带 `≈` 前缀），缺汇率或币种不认识时保持原币种渲染，
- * 绝不猜一个汇率出来。
- *
- * 状态放在模块级 store 里（订阅式）：金额渲染点分布在十几个组件里，逐层透传 props 会把每张表的签名
- * 都污染一遍；`useCurrencyDisplay` 订阅它，切币种时整页重渲染。
+ * 显示币种与汇率折算：全插件金额渲染的唯一收口点（模块级订阅 store，切币种时整页重渲染）。
+ * 逐币种小计走 `costsByCurrency`（`cost` 是混币种相加，只当兜底）；能折算才折算（带 `≈`），绝不猜汇率；
+ * 显示币种不落盘 —— 记住一个还没取到汇率的 USD 只会让界面更难懂。
  */
 import { useEffect, useState } from 'react'
 import { localTimeTextOf } from './format.ts'
@@ -25,7 +19,7 @@ export const DISPLAY_CURRENCY_LABELS: Record<DisplayCurrency, string> = {
 /** 缺省显示人民币：内置官方价目以 CNY 为主，旧的界面口径也是 ¥。 */
 export const DEFAULT_DISPLAY_CURRENCY: DisplayCurrency = 'CNY'
 
-/** 汇率来自哪里：upstream = 刚联网取的；cache = 服务端 12 小时内的缓存；default = 没能联网时的兜底值。 */
+/** 汇率来源：upstream = 刚联网取的；cache = 服务端 12 小时内的缓存；default = 没能联网时的兜底值。 */
 export type FxSource = 'upstream' | 'cache' | 'default'
 
 export const FX_SOURCE_LABELS: Record<FxSource, string> = {
@@ -34,7 +28,6 @@ export const FX_SOURCE_LABELS: Record<FxSource, string> = {
   default: '默认值',
 }
 
-/** 归一化后的汇率信息：字段缺失一律走兜底，不让 `undefined` 进界面。 */
 export interface FxRate {
   base: string
   quote: string
@@ -50,15 +43,10 @@ export interface FxRate {
 
 export interface CurrencyDisplayState {
   display: DisplayCurrency
-  /** null = 还没取到汇率（跨币种金额按原币种显示）。 */
   fx: FxRate | null
 }
 
-/**
- * 显示币种不落盘、不跨会话记忆：折算必须配着汇率看（`≈` 与来源时间都在工具条上），
- * 记住一个「USD」但没取到汇率会让别的 Tab 先显示一阵「没折算的混合币种」，反而更难懂。
- * 每次进页面从缺省 CNY 开始，切币种时再取汇率。
- */
+/** 显示币种与汇率都在这里；`fx: null` = 还没取到汇率（跨币种金额按原币种显示）。 */
 let state: CurrencyDisplayState = { display: DEFAULT_DISPLAY_CURRENCY, fx: null }
 
 const listeners = new Set<() => void>()
@@ -95,7 +83,7 @@ export function useCurrencyDisplay(): CurrencyDisplayState {
   return current
 }
 
-/** 币种代码归一：只认 CNY / USD 两个折算方向；其余返回 null（不猜汇率）。 */
+/** 币种代码归一：只认 CNY / USD（其余返回 null，不猜汇率）。 */
 function normalizeCurrency(currency: unknown): DisplayCurrency | null {
   if (typeof currency !== 'string') return null
   const upper = currency.trim().toUpperCase()
@@ -128,23 +116,17 @@ function pairRateOf(from: DisplayCurrency, to: DisplayCurrency): number | null {
 }
 
 export interface MoneyView {
-  /** 展示文本：发生折算时带 `≈` 前缀，原始币种 == 显示币种时与旧行为完全一致。 */
+  /** 展示文本：发生折算时带 `≈` 前缀。 */
   text: string
-  /** 是否发生折算（原币种 ≠ 显示币种且拿到汇率）。 */
   converted: boolean
   /** 多币种并列显示（缺汇率没法相加）时为 true：文本里是 `¥1.00 · $2.00`，不是合计。 */
   mixed: boolean
-  /** 展示侧数值（折算后；无法折算时是原值）。 */
   amount: number
   /** 该数值的币种（混币种无法折算时为空串）。 */
   currency: string
 }
 
-/**
- * 金额文本：**全插件金额渲染的统一入口**，币种符号 + 两位小数。
- * 按当前显示币种折算：原币种 == 显示币种时与旧行为完全一致（`¥1.00`），发生折算时前缀 `≈`。
- * 两位小数精度不随折算改变（服务端给的 4 位是计算精度，不是展示精度）。
- */
+/** 金额文本（全插件唯一入口）：按显示币种折算，折算值带 `≈`；两位小数精度不随折算改变。 */
 export function moneyTextOf(currency: unknown, amount: number): string {
   const value = Number.isFinite(amount) ? amount : 0
   const display = state.display
@@ -174,10 +156,7 @@ export function zeroMoneyTextOf(): string {
   return displaySymbolOf() + '0.00'
 }
 
-/**
- * 单价数值文本：金额一律两位小数，但单价常小于 0.01（如缓存读 ¥0.0028），
- * 四舍五入成 `0.00` 等于谎报「免费」，所以小值保留到 4 位有效小数。
- */
+/** 单价数值文本：≥0.01 用两位小数，小值保留 4 位 —— 显示成 0.00 等于谎报「免费」。 */
 export function rateValueTextOf(amount: number): string {
   const value = Number.isFinite(amount) ? amount : 0
   if (value === 0) return '0'
@@ -207,7 +186,7 @@ export interface CostRowLike {
   costsByCurrency?: Record<string, number> | null
 }
 
-/** 逐币种小计里真正参与展示的项：非有限值与 0 一律丢掉（0 折算后还是 0，只会污染文本）。 */
+/** 逐币种小计里参与展示的项：0 与非有限值一律丢掉（0 只会污染文本）。 */
 function positiveEntriesOf(row: CostRowLike): Array<[string, number]> {
   const totals = row.costsByCurrency
   if (totals === null || typeof totals !== 'object') return []
@@ -224,11 +203,8 @@ function positiveEntriesOf(row: CostRowLike): Array<[string, number]> {
 }
 
 /**
- * 一行金额的展示视图。
- *
- * 有 `costsByCurrency` 时**逐币种折算后再相加** —— 直接显示 `cost` 会把 CNY 与 USD 加在一起，
- * 换个汇率重算还会得到不同的数，那样合计就是错的。拿不到这个字段（服务端未升级、旧缓存行）时
- * 回落旧行为：按 CNY 渲染单值 `cost`，不做折算。多币种且缺汇率时并列显示，不跨币种相加。
+ * 一行金额：有 `costsByCurrency` 就逐币种折算后相加（`cost` 会把 CNY 与 USD 加在一起）；
+ * 拿不到该字段时回落旧行为，多币种缺汇率时并列显示、不相加。
  */
 export function rowMoneyViewOf(row: CostRowLike): MoneyView {
   const entries = positiveEntriesOf(row)
@@ -280,13 +256,6 @@ export function fxSummaryTextOf(fx: FxRate | null): string {
   if (time !== null) parts.push(time)
   if (fx.stale) parts.push('已过期')
   return parts.join(' · ')
-}
-
-/** 折算口径的一句话说明（tooltip / 页脚用）；未折算时返回 null。 */
-export function fxConvertHintOf(): string | null {
-  const fx = state.fx
-  if (fx === null) return null
-  return '按 1 ' + fx.base + ' = ' + rateValueTextOf(fx.rate) + ' ' + fx.quote + ' 折算（' + fxSummaryTextOf(fx) + '）'
 }
 
 /** 把服务端 `/fx` 的响应归一化成内部结构；rate 非法时返回 null（宁可不算也不猜）。 */

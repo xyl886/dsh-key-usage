@@ -68,7 +68,6 @@ interface PersistenceService {
   readFrom?(id: string, fromSeq: number): Promise<{ events: SessionEvent[] }>
 }
 
-/** 待读取的会话：`revision`/`eventCount` 与 `list()` 快照一一对应，读完直接写进缓存。 */
 interface PendingSession {
   id: string
   header: Record<string, unknown>
@@ -90,7 +89,6 @@ interface CacheEntry {
   record: SessionUsageRecord
 }
 
-/** 单个会话的读取结果：要么折出记录，要么给出失败原因（绝不抛错）。 */
 type ReadOutcome = { record: SessionUsageRecord; closeFailed: boolean } | { failure: string }
 
 /**
@@ -131,11 +129,7 @@ function sortKeyOf(header: Record<string, unknown>, fallback: number): number {
 }
 
 /**
- * 建立会话数据源。`host` 只需提供 cordis 风格的 `get(name)`；
- * `sessionPersistence` 缺失时返回 unavailable，调用方据此显示空态。
- *
- * `detail(id)` 只读**一个**会话：先吃 `collect()` 留下的缓存，未命中才 `list()` 定位头部
- * 并单独 `open/read/close`，因此详情请求不会重折全部会话。
+ * 建立会话数据源（`host.get('sessionPersistence')` 缺失时降级为空态 + coverage 说明）。
  */
 export function createSessionSource(host: HostContextLike): {
   collect(): Promise<SessionCollection>
@@ -295,11 +289,7 @@ export function createSessionSource(host: HostContextLike): {
     return undefined
   }
 
-  /**
-   * 单会话详情：只折叠这一个会话。
-   * 缓存命中（先看过列表）时零 I/O；未命中才 `list()` 定位头部 + 一次 `open/read/close`，
-   * 所以打开抽屉不会像 `/sessions` 那样重折全部会话。
-   */
+  /** 单会话详情：缓存命中零 I/O，未命中才 list + open/read/close（不重折全部会话）。 */
   async function detail(rawId: string): Promise<SessionLookup> {
     const id = rawId.trim()
     const persistence = host.get('sessionPersistence') as PersistenceService | undefined
@@ -352,7 +342,6 @@ export function createSessionSource(host: HostContextLike): {
   return { collect, detail }
 }
 
-/** 读取失败的中文说明：详情降级时直接展示给用户。 */
 function readFailureText(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   return '会话读取失败（' + message + '），只列出能拿到的会话头字段'
@@ -482,10 +471,7 @@ export function crossDaysOf(firstTime: number | null, lastTime: number | null): 
   return difference > 0 ? difference : 0
 }
 
-/**
- * 单会话详情：抽屉要的字段（时间与时长、四类 token、命中率、首条提问全文、
- * 逐模型用量与占比、24 小时分布）。成本与通道标签依赖计费规则，由 routes 侧补齐。
- */
+/** 单会话详情：成本与通道标签依赖价目，由 routes 侧补齐。 */
 export interface SessionDetail {
   id: string
   title: string | null

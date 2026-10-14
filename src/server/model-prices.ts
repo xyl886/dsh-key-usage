@@ -1,10 +1,9 @@
 /**
- * LiteLLM 聚合价（第三方维护、**USD**）：随包快照 + 用户刷新后的本机副本，作为「内置官方价目」之下的
- * 一层成本依据（优先级：官方账单 > 用户规则 > 内置官方价目 CNY > 聚合价 USD > 台账反推均价）。
+ * LiteLLM 聚合价（第三方维护、**USD**）：随包快照 + 用户刷新后的本机副本，是「内置官方价目」之下的一层
+ * （优先级：官方账单 > 内置官方价目 > 聚合价 > 台账反推均价，见 pricing.ts）。
  *
  * - 装载优先级：`$DSH_HOME/dsh-key-usage/model-prices.json`（面板刷新写入）> 随包 `data/litellm-model-prices.json`；
- *   两个都读不到时整层失效（匹配一律不命中），调用方继续回落台账均价，**绝不抛错**；
- * - 读取结果按 mtime/size 缓存：换掉本地文件后最迟下一次匹配就能生效，不用重启宿主；
+ *   两个都读不到时整层失效（匹配一律不命中），调用方继续回落台账均价，**绝不抛错**；读取按 mtime/size 缓存；
  * - **只有** `refreshModelPrices()` 会联网，且只由面板「刷新价目」按钮触发的
  *   `POST /dsh-key-usage/pricing/refresh` 调用 —— 不开机拉取、不定时轮询、不在别的端点里隐式拉。
  *
@@ -17,11 +16,9 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PricingRule } from './pricing.js'
 
-/** 给人看的来源页（文档 / 数据浏览）。 */
+/** 来源页（给人看）；刷新时先 raw、不可达再回落 jsDelivr 镜像。 */
 export const AGGREGATE_SOURCE_URL = 'https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json'
-/** 刷新首选地址（上游 raw）。 */
 export const AGGREGATE_SNAPSHOT_URL = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json'
-/** 刷新备用镜像（raw 不可达时用）。 */
 export const AGGREGATE_MIRROR_URL = 'https://cdn.jsdelivr.net/gh/BerriAI/litellm@main/model_prices_and_context_window.json'
 export const AGGREGATE_LICENSE = 'MIT'
 /** 随包快照对应的上游提交（抓取当天 `gh api repos/BerriAI/litellm/commits/main --jq .sha`）。 */
@@ -53,10 +50,9 @@ export const AGGREGATE_PROVIDER_ALIASES: Record<string, string[]> = {
   volcengine: ['volcengine'],
 }
 
-/** 随包快照路径：`lib/model-prices.js` 的上一级就是包根。 */
 const SHIPPED_PATH = fileURLToPath(new URL('../data/litellm-model-prices.json', import.meta.url))
 
-/** 本机刷新文件的唯一可写目标（与用户规则文件同目录）。 */
+/** 本机刷新文件的唯一可写目标。 */
 export function aggregateLocalPath(): string {
   return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-key-usage', 'model-prices.json')
 }
@@ -72,11 +68,8 @@ export type AggregateLoaded = 'local' | 'shipped' | 'none'
 
 /** 一条可定价的上游条目（已折算成「每百万 tokens」）。 */
 interface AggregateEntry {
-  /** 上游原始键（`provider/model` 或裸模型名）。 */
   key: string
-  /** 匹配用的模型名：键按 `/` 切分后的最后一段，小写。 */
   name: string
-  /** 上游 `litellm_provider`（缺失时退到键的首段）。 */
   provider: string
   /** 键里 `/` 的段数：别名命中多条时优先段数最少的那条。 */
   segments: number
@@ -92,7 +85,7 @@ interface AggregateEntry {
 export type AggregateMatchSource = 'alias' | 'unique'
 
 export interface AggregateHit {
-  /** 折算成 USD / 每百万 tokens 的价目；直接当 `PricingRule` 参与成本计算。 */
+  /** 折算成 USD / 每百万 tokens，直接当 `PricingRule` 参与成本计算。 */
   rule: PricingRule
   partial: boolean
   source: AggregateMatchSource
@@ -110,7 +103,7 @@ export interface AggregateStatus {
   path: string
   shippedPath: string
   localPath: string
-  /** 可定价条目数（已排除 sample_spec、非 chat/completion、缺 input/output 的条目）。 */
+  /** 可定价条目数（口径见 buildEntries）。 */
   entries: number
   /** 去重后的模型名数。 */
   models: number
@@ -326,7 +319,6 @@ function fileStamp(path: string): string {
   }
 }
 
-/** 刷新写盘 / 测试换文件后主动失效（下一次匹配重新 stat + 解析）。 */
 export function invalidateAggregateCache(): void {
   snapshot = null
   snapshotStamp = ''

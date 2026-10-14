@@ -1,7 +1,5 @@
 /**
- * 环比对比：当前范围 vs 上一段等长范围。
- * 纯客户端实现 —— 复用同一个 /usage 端点按上期范围再请求一次，服务端不感知「环比」。
- * 涨跌只用中性色 + 上下箭头：用量涨不代表好、成本涨也不代表错，不引入红绿对错语义。
+ * 环比对比：纯客户端实现（复用 /usage 按上期范围再请求一次），涨跌只用中性色 + 箭头，不引入对错语义。
  */
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -90,11 +88,7 @@ function pointChangeOf(current: number, previous: number): ChangeView {
   }
 }
 
-/**
- * 成本文案：订阅 / 免费 / 本地端点没有可比金额，沿用 `costCellOf` 的占位文案；
- * 其余情况一律给金额（含 0），否则「本期降到 0」会被当成不可比而丢掉 −100%。
- * 金额按显示币种折算（逐币种小计相加），两期用的是同一套汇率，环比才有意义。
- */
+/** 成本文案：订阅 / 免费 / 本地端点为占位文案；其余一律给金额（含 0，否则「降到 0」会丢掉 −100%）。 */
 function costTextOf(channel: Channel | null, row: CostRowLike | null): { text: string; dim: boolean; amount: boolean } {
   if (channel !== null && channel.costMode !== 'perToken' && channel.costMode !== 'unknown') {
     const cell = costCellOf(channel, row ?? {})

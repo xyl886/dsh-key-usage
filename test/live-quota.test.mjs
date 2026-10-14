@@ -151,11 +151,8 @@ const idleResult = await idleService.refreshIfStale([channelOf('sensenova', 'SEN
 assert.equal(idleResult.size, 0)
 assert.equal(idleService.cached().size, 0)
 
-// ---------------------------------------------------------------------------
-// fixture 表驱动：test/fixtures/providers/<provider>/<case>.json
-// 每个 fixture 用假 fetch 注入 httpStatus + body，走 queryOne → scheme.parse 的真实归一化路径。
-// fixture 可选字段 baseURL 表示该 case 需要通道自定义 baseURL（Z.AI 国内站 / 海外站币种不同）。
-// ---------------------------------------------------------------------------
+// fixture 表驱动：test/fixtures/providers/<provider>/<case>.json —— 用假 fetch 注入 httpStatus + body，
+// 走 queryOne → scheme.parse 的真实归一化路径；可选 baseURL 表示该 case 需要通道自定义 baseURL。
 const FIXTURE_ROOT = fileURLToPath(new URL('./fixtures/providers/', import.meta.url))
 const PROVIDERS = [
   { schemeId: 'opencode-go', apiKeyEnv: 'OPENCODE_GO_API_KEY', defaultUrl: 'https://opencode.ai/zen/go/v1/usage', source: '社区' },

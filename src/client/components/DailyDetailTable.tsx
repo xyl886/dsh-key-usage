@@ -1,7 +1,4 @@
-/**
- * 每日细目：以「天」为折叠单位，展开行用原型子表格展示模型维度
- * （模型 + 调用 / 输入 / 输出 / 缓存读 / 命中率，不占主表列）。
- */
+/** 每日细目：以「天」为折叠单位，展开行显示该天的模型维度。 */
 import { Fragment, type ReactNode } from 'react'
 import { displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtTokens } from '../format.ts'
