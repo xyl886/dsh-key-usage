@@ -1,2 +1,5 @@
 # 统一按 LF 存储：源码在 Windows / macOS / Linux 上保持一致，避免换行符造成无意义 diff
 * text=auto eol=lf
+
+# 价目数据是上游原样快照（data/README.md 记的 sha256 必须对得上）：按二进制处理，不做任何换行转换
+data/litellm-model-prices.json -text

@@ -131,7 +131,7 @@ export function ProjectsTab(props: {
                 </td>
                 <td>{row.cost === null || channel?.costMode === 'sub' || channel?.costMode === 'free' || channel?.costMode === 'none'
                   ? <span className={styles.dim}>{costCell.text}</span>
-                  : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} />}</>}</td>
+                  : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}</td>
                 <td>{fmtRelative(row.lastTime, nowMs)}</td>
               </tr>
             )

@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts'
 import { channelOf, costCellText, displayNameOf, showsAmount } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
-import { COST_SOURCE_HINTS } from '../pricing.ts'
+import { costSourceHintOf } from '../pricing.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
 import type { Channel, SessionDetail, SessionDetailResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
@@ -115,9 +115,9 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
         <div className={listStyles.detailBlockTitle}>成本</div>
         <div className={listStyles.detailCost}>
           <span className={costCell.dim ? styles.dim : undefined}>{costCell.text}</span>
-          {showsAmount(costCell) && <CostSourceChip source={session.costSource} />}
+          {showsAmount(costCell) && <CostSourceChip source={session.costSource} partial={session.partial} />}
           {/* 「订阅内 / 无计费 / —」不是金额，这时再解释来源只会误导 */}
-          {showsAmount(costCell) && <span className={listStyles.detailCostHint}>{COST_SOURCE_HINTS[session.costSource]}</span>}
+          {showsAmount(costCell) && <span className={listStyles.detailCostHint}>{costSourceHintOf(session.costSource, session.partial)}</span>}
         </div>
         {/* 有计费规则时 `priced` 仍可能是 false（它指「台账里有可反推的均价」），所以只在真的没金额时说明 */}
         {!props.priced && session.cost === null && <div className={styles.statExtra}>台账里没有成本数据，也没有命中计费规则，暂时只能显示「—」</div>}
@@ -157,7 +157,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                       <td>
                         {model.cost === null || !showsAmount(modelCostCell)
                           ? <span className={styles.dim}>{modelCostCell.text}</span>
-                          : <>{modelCostCell.text}<CostSourceChip source={model.costSource} /></>}
+                          : <>{modelCostCell.text}<CostSourceChip source={model.costSource} partial={model.partial} /></>}
                       </td>
                     </tr>
                   )

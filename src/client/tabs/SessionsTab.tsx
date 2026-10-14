@@ -9,7 +9,7 @@ import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type 
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
-import { COST_SOURCE_HINTS, COST_SOURCE_LABELS } from '../pricing.ts'
+import { COST_SOURCE_LABELS, costSourceHintOf } from '../pricing.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import type { Channel, SessionRow, SessionsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
@@ -324,7 +324,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
         >
           {row.cost === null || channel === null || channel.costMode !== 'perToken'
             ? <span className={styles.dim}>{costCell.text}</span>
-            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} />}</>}
+            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}
         </td>
       </tr>
       {isOpen && (
@@ -361,7 +361,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                         <span className={listStyles.composeNumber}>
                           {modelCost === null
                             ? <span className={styles.dim}>—</span>
-                            : <>{fmtCost(modelCost)}<CostSourceChip source={model.costSource} compact /></>}
+                            : <>{fmtCost(modelCost)}<CostSourceChip source={model.costSource} partial={model.partial} compact /></>}
                         </span>
                       </div>
                     )
@@ -381,7 +381,7 @@ function costTipOf(row: SessionRow): ReactNode {
   return (
     <>
       <TipTitle>会话成本</TipTitle>
-      <TipSub>{COST_SOURCE_HINTS[source]}</TipSub>
+      <TipSub>{costSourceHintOf(source, row.partial)}</TipSub>
       <TipRow
         label="金额"
         amount={row.cost === null ? '—' : fmtCost(row.cost)}

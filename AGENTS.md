@@ -18,11 +18,12 @@
 
 ## 硬约束
 
-- **默认零外网**：只有「余额与配额」允许请求各通道**官方**接口（`src/server/live-quota.ts`），且必须 6 秒超时、64 KiB 上限、失败回落本机快照；其它任何位置都不许加外部请求，客户端不许加 CDN 字体或图标库。
+- **默认零外网（两个显式例外，都要用户主动触发）**：`src/server/live-quota.ts` 允许请求各通道**官方**余额/窗口接口（打开「余额与配额」时，6 秒超时、64 KiB 上限、失败回落本机快照）；`src/server/model-prices.ts` 的 `refreshModelPrices()` 允许请求 LiteLLM 上游（**只**由 `POST /dsh-key-usage/pricing/refresh` 触发，也就是用户点面板「刷新价目」那一下：先 raw 再 jsDelivr 镜像、服务端 20 秒预算、12 MiB 上限、校验后原子写）。**除这两处外的任何位置都不许加外部请求**：不许开机拉取、不许定时轮询、不许在别的端点里隐式联网，客户端不许加 CDN 字体或图标库。客户端那边的刷新超时（`src/client/api.ts: MODEL_PRICE_REFRESH_TIMEOUT_MS = 30000`）**必须大于服务端 20 秒预算**，否则会出现「文件已写成功、界面报超时」。
+- **价目是五层，谁也不许猜价格**：`官方账单 > 你的规则（pricing-rules.yml）> 内置官方价目（pricing-catalog.yml，CNY）> LiteLLM 聚合价（data/litellm-model-prices.json 或本机刷新副本，USD）> 台账反推均价`。聚合价装载优先级是 `$DSH_HOME/dsh-key-usage/model-prices.json` > 随包快照；两份都读不到时**整层失效**、继续回落台账均价，**绝不抛错**，本地文件坏了降级到随包快照并报 issue。匹配按通道别名表，别名命中多条时取「键 `/` 段数最少 → 键名字典序」，别名不命中时只有模型名全库唯一才用，否则**跳过并记 `match-ambiguous`**；上游只收录一档缓存价时，缺的那档按**未命中价**代并标 `partial`（界面「· 部分」），两档都缺按「不支持缓存计价」处理（不标 partial）。**USD 原样并列，不做汇率换算** —— 跨币种「不合计」目前只是口径原则，`/usage`、`/summary`、`/sessions` 等处的合计仍是按行直接相加，修法（按币种分列小计）见 `docs/05` §3。
 - **不碰凭据文件**：不读 `.credentials.yaml`、不读 opencode 的 `auth.json`；查余额只许走宿主 `credentials` seam（`resolve(apiKeyEnv)`）或进程环境变量，Key 不落盘、不进日志、不返回给客户端。界面里**不展示** `apiKeyEnv`（只允许服务端内部判定用），禁止出现密钥值、Authorization、cookie。
-- **只写 `$DSH_HOME/dsh-key-usage/` 这个目录**（目录里只有两个文件）：`quota-snapshots.json`（余额/窗口快照，实时查询成功即原子写入）与 `pricing-rules.yml`（用户计费规则，面板保存或 agent 直接改，写目标按文件名 + 绝对路径双重校验，同目录临时文件 + rename 原子写）。**不要**写宿主的 `provider-snapshots.json`、不要改 profile 的 `cordis.yml` / `cordis.patch.yml`、不要写其它任何数据文件；快照写失败必须静默（它只是回落加速），规则写失败必须回 `{ok:false,error}` 并让面板显示原因。
+- **只写 `$DSH_HOME/dsh-key-usage/` 这个目录**（目录里只有三个文件）：`quota-snapshots.json`（余额/窗口快照，实时查询成功即原子写入）、`pricing-rules.yml`（用户计费规则，面板保存或 agent 直接改）、`model-prices.json`（点「刷新价目」下载的聚合价目副本）。三者都是写目标按文件名 + 绝对路径双重校验、同目录临时文件 + rename 原子写。**不要**写宿主的 `provider-snapshots.json`、不要改 profile 的 `cordis.yml` / `cordis.patch.yml`、不要写其它任何数据文件；快照写失败必须静默（它只是回落加速），规则写失败与刷新写失败必须回 `{ok:false,error}` 并让面板显示原因，**刷新失败时不许覆盖已有的 `model-prices.json`**。
 - **计费规则的两层 YAML 不要混**：内置官方价目是**随包发布的只读文件** `pricing-catalog.yml`（改价 = 改它，并同步 `test/fixtures/pricing-catalog.golden.json`）；用户覆盖只在 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`。解析统一走 `src/server/yaml-lite.ts` 的**受限子集**：不支持的写法必须带行号报 issue 并跳过该条，**绝不静默按 0 算**（0 = 免费，比「无依据」更糟）。
-- **仅回环**：新增端点必须复用 `requireLoopback`，非回环一律 403。
+- **仅回环**：新增端点必须复用 `requireLoopback`，非回环一律 403。当前共 **12 个端点 = 10 个只读 `GET` + 2 个写 `POST`**（`POST /dsh-key-usage/pricing/rules`、`POST /dsh-key-usage/pricing/refresh`），两个写端点都只接受 `POST` 且同样只接受回环请求。
 - **会话数据只走官方 read handle**：`sessionPersistence.open(id, "read") → read(0) → close`。**不要**自行解压 `~/.dsh/sessions/**/session.v4.jsonl.zstd`（多帧 zstd，Node 内置 zlib 逐帧解不出来），也不要读写/修复历史日志。服务缺失或读失败一律降级为 `coverage.status = "unavailable" | "partial"`，不许抛错、不许影响台账类端点。
 - **两套数据源不许混算**：台账（天 × 通道 × 模型）负责总览 / 使用明细 / 热力图；会话事件负责项目 / 会话 / 单日按小时。界面必须标注来源，页脚口径说明要同步更新。
 - **产物契约不能破**：客户端入口固定 `src/client/index.tsx` → 产物 `client/client.js`，必须是单文件 CJS + `window.__ModuleLoader__.load({ id, factory })` 头（`scripts/normalize-client-banner.mjs` 会校验）。不要改 entry、产物名或加载方式。
@@ -50,19 +51,19 @@ $node = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node
 & $node node_modules/tsdown/dist/run.mjs && & $node scripts/normalize-client-banner.mjs   # 改了 src/client：重新产出 client/client.js
 & $node node_modules/typescript/bin/tsc -p tsconfig.server.json                            # 改了 src/server：重新产出 lib/
 & $node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit                          # 客户端 + 服务端类型检查
-& $node --check lib/index.js   # 同理逐个 check：lib/{index,ledger,collect,routes,sessions,session-usage,session-meta,quota-snapshots,merge,live-quota,pricing,pricing-catalog,yaml-lite,pricing-store}.js
+& $node --check lib/index.js   # 同理逐个 check：lib/{index,ledger,collect,routes,sessions,session-usage,session-meta,quota-snapshots,merge,live-quota,pricing,pricing-catalog,yaml-lite,pricing-store,model-prices}.js
 & $node test/ledger.test.mjs ; & $node test/collect.test.mjs ; & $node test/channels.test.mjs
 & $node test/session-usage.test.mjs ; & $node test/session-meta.test.mjs ; & $node test/sessions.test.mjs
 & $node test/merge.test.mjs ; & $node test/live-quota.test.mjs ; & $node test/pricing.test.mjs
 & $node test/client-pricing.test.mjs ; & $node test/yaml-lite.test.mjs ; & $node test/pricing-store.test.mjs
-& $node test/routes.test.mjs   # 共 13 个离线测试，与 package.json 的 test 脚本一致
+& $node test/model-prices.test.mjs ; & $node test/routes.test.mjs   # 共 14 个离线测试，与 package.json 的 test 脚本一致
 ```
 
 > ⚠️ 测试 import 的是 **`lib/*.js`**：只跑 `--noEmit` 不会更新产物，改了 `src/server/**` 必须先执行 `tsconfig.server.json` 那次编译再跑测试，否则测试验的还是旧代码。
 
 - 改了 `src/server/**` 的聚合口径或字段：**同步补 `test/*.test.mjs`**，并在 `docs/01-架构与数据契约.md` 更新契约。
 - 改了 `collect.ts` 的 cordis.yml 提取规则：必须补样本测试。`cordis.yml` / `cordis.patch.yml` 里含 `!!js` 表达式，**通用 YAML 解析器会执行或误读它们**，所以这里只做文本提取 —— 插件自带的 `yaml-lite.ts` **不用于** cordis.yml，只用于价目文件。内置价目同样不依赖第三方 YAML 库：它和用户规则共用这一个受限子集解析器（零依赖、零外网、写法不支持就带行号报 issue），因此不需要评估 `js-yaml` / 宿主运行时解析器的体积与可用性。
-- 改了计费口径 / 价目 / 规则文件读写：同步更新 `docs/01-架构与数据契约.md` §3.13、§3.14，并跑 `test/pricing.test.mjs`、`test/pricing-store.test.mjs`、`test/yaml-lite.test.mjs`、`test/client-pricing.test.mjs`；改 `pricing-catalog.yml` 还要同步 `test/fixtures/pricing-catalog.golden.json`（逐条等值断言会挡）。
+- 改了计费口径 / 价目 / 规则文件读写：同步更新 `docs/01-架构与数据契约.md` §3.13、§3.14、§3.15，并跑 `test/pricing.test.mjs`、`test/pricing-store.test.mjs`、`test/yaml-lite.test.mjs`、`test/client-pricing.test.mjs`、`test/model-prices.test.mjs`；改 `pricing-catalog.yml` 还要同步 `test/fixtures/pricing-catalog.golden.json`（逐条等值断言会挡）；改随包聚合价目快照（`data/litellm-model-prices.json`）要同步 `data/README.md` 的字节数 / sha256 / commit / 抓取日期四行，`test/model-prices.test.mjs` 按真实文件算条目数与模型数。
 - **改了 `src/client/**` 必须重新构建**，否则运行的还是旧 `client/client.js`；构建后刷新 GUI 页面即可生效。
 - **改了 `src/server/**` 必须重新编译 `lib/`，并退出重开 DSH**：服务端插件代码在宿主启动时加载，Hub 的 `/restart` 在桌面端返回 `{ok:false, desktop:true}`，无热重载途径。
 - 需要真实网络、浏览器实测、重启宿主、批量导出时：先向用户确认，不要自行执行（重启宿主会中断当前会话）。

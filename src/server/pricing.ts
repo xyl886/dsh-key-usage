@@ -2,21 +2,23 @@
  * 计费规则：用户可维护的单价表，作为成本估算的一手依据（替代「台账反推均价」）。
  *
  * 规则本体存在插件自己的 `$DSH_HOME/dsh-key-usage/pricing-rules.yml`（读写见 pricing-store.ts，
- * 旧版 entry config 只作只读回退），本模块只做纯函数：归一化、优先级匹配、错峰判定、
- * 单位换算与费用 / 缓存省钱计算。不读文件、不联网，因此可以完全离线单测。
+ * 旧版 entry config 只作只读回退），本模块只做纯计算：归一化、优先级匹配、错峰判定、
+ * 单位换算与费用 / 缓存省钱计算；聚合价那一层由 model-prices.ts 查（只读本地 JSON、不联网）。
+ * 因此本模块可以完全离线单测。
  *
- * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 内置官方价目 > 台账反推均价
- * > 无（显示 —）。本模块负责「用户规则」与「内置官方价目」这两层。
+ * 成本优先级：台账当天的**官方成本**（routes 直接用台账字段）> 用户规则 > 内置官方价目（CNY）
+ * > LiteLLM 聚合价（USD）> 台账反推均价 > 无（显示 —）。本模块负责中间四层。
  */
 import { catalogRuleFor } from './pricing-catalog.js'
+import { aggregateRuleFor } from './model-prices.js'
 
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
-/** 成本来源：官方账单 / 用户规则 / 内置官方价目 / 台账反推均价 / 无依据。 */
-export type CostSource = 'official' | 'rule' | 'catalog' | 'estimate' | 'none'
+/** 成本来源：官方账单 / 用户规则 / 内置官方价目 / 聚合价目 / 台账反推均价 / 无依据。 */
+export type CostSource = 'official' | 'rule' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
-/** 命中的价目来自哪一层；`catalog` = 内置官方价目。 */
-export type PricingRuleSource = 'rule' | 'catalog'
+/** 命中的价目来自哪一层；`catalog` = 内置官方价目，`aggregate` = LiteLLM 聚合价（USD）。 */
+export type PricingRuleSource = 'rule' | 'catalog' | 'aggregate'
 
 export interface OffPeakWindow {
   /** 本地时间 `HH:MM`。 */
@@ -76,11 +78,13 @@ export interface PricingUsageRow {
 
 export interface PricedRow {
   cost: number | null
-  /** `rule` = 命中用户规则；`catalog` = 命中内置官方价目；`none` = 没有价目可算（由调用方回落台账均价）。 */
+  /** `rule` = 命中用户规则；`catalog` / `aggregate` = 命中内置官方价目 / 聚合价；`none` = 没有价目可算（由调用方回落台账均价）。 */
   source: PricingRuleSource | 'none'
   rule: PricingRule | null
   /** 相邻时间窗内该规则是否处于错峰（`at` 以参数传入时才有意义）。 */
   offPeak: boolean
+  /** 命中的聚合价目缺一档缓存价、已按未命中价代（界面标「部分」）。 */
+  partial: boolean
   /** 该行因缓存命中而少付的钱（未命中价 − 命中价）；无价目或按次计费时为 0。 */
   cacheSavings: number
 }
@@ -294,19 +298,35 @@ export function matchPricingRule(rules: PricingRule[], provider: string, model: 
   return null
 }
 
+/** 一条命中的价目：规则本体 + 来自哪一层 + 是否为「部分收录」的聚合价。 */
+export interface PricedRuleHit {
+  rule: PricingRule
+  source: PricingRuleSource
+  /** 聚合价目只收录了一个缓存档，缺的那档按未命中价代。 */
+  partial: boolean
+}
+
 /**
- * 找一条可用于该行的价目：用户规则优先，没命中再查内置官方价目。
- * 内置价目不落盘、用户也不可编辑，因此只有「查得到 / 查不到」两种结果。
+ * 找一条可用于该行的价目：用户规则 > 内置官方价目（CNY）> LiteLLM 聚合价（USD）。
+ * 前两层不落盘、用户也不可编辑，因此只有「查得到 / 查不到」两种结果；聚合价查不到时由调用方回落均价。
  */
 export function matchPricedRule(
   rules: PricingRule[],
   provider: string,
   model: string,
-): { rule: PricingRule; source: PricingRuleSource } | null {
+): PricedRuleHit | null {
   const userRule = matchPricingRule(rules, provider, model)
-  if (userRule !== null) return { rule: userRule, source: 'rule' }
+  if (userRule !== null) return { rule: userRule, source: 'rule', partial: false }
   const catalogRule = catalogRuleFor(provider, model)
-  if (catalogRule !== null) return { rule: catalogRule, source: 'catalog' }
+  if (catalogRule !== null) return { rule: catalogRule, source: 'catalog', partial: false }
+  // 聚合价目是可选层：它坏掉只该让这一层失效，绝不能影响其它端点（上层已保证不抛错，这里再兜一次底）
+  let aggregate
+  try {
+    aggregate = aggregateRuleFor(provider, model)
+  } catch {
+    aggregate = null
+  }
+  if (aggregate !== null && aggregate.ok) return { rule: aggregate.hit.rule, source: 'aggregate', partial: aggregate.hit.partial }
   return null
 }
 
@@ -407,7 +427,7 @@ export function priceRowsByRules(
   return rows.map((row) => {
     const matched = matchPricedRule(config.rules, row.provider, row.model)
     if (matched === null) {
-      return { cost: null, source: 'none', rule: null, offPeak: false, cacheSavings: 0 }
+      return { cost: null, source: 'none', rule: null, offPeak: false, partial: false, cacheSavings: 0 }
     }
     const rule = matched.rule
     const standard = costAtRates(row, rule, rule)
@@ -421,6 +441,7 @@ export function priceRowsByRules(
       source: matched.source,
       rule,
       offPeak: share >= 1,
+      partial: matched.partial,
       // 省下的钱 = 命中缓存的 tokens ×（未命中价 − 命中价），按要求只用标准价
       cacheSavings: rule.unit === 'perCall' ? 0 : (row.cacheReadTokens ?? 0) * (rule.input - rule.cacheRead) * UNIT_FACTORS[rule.unit],
     }
@@ -431,7 +452,7 @@ export interface RowCostSummary {
   cost: number | null
   /** 只要有一行回落台账均价，整体就降级为 estimate（宁可标弱也不冒称精确）。 */
   source: CostSource
-  /** 命中用户规则或内置价目的行数。 */
+  /** 命中价目（用户规则 / 内置官方价目 / 聚合价）的行数。 */
   ruleRows: number
   /** 缓存命中省下的钱（只统计命中价目的行）。 */
   cacheSavings: number
@@ -441,6 +462,8 @@ export interface RowCost {
   cost: number | null
   source: CostSource
   rule: PricingRule | null
+  /** 这一格的成本来自「部分收录」的聚合价目（缺一档缓存价，按未命中价代）。 */
+  partial: boolean
   cacheSavings: number
 }
 
@@ -453,7 +476,7 @@ function round2(value: number): number {
 }
 
 /**
- * 逐行定价：用户规则 > 内置官方价目，都没命中时回落调用方给的均价查价（台账反推均价）。
+ * 逐行定价：用户规则 > 内置官方价目 > LiteLLM 聚合价，都没命中时回落调用方给的均价查价（台账反推均价）。
  * @param averagePrice - 台账反推均价查价函数（由调用方注入，避免本模块依赖 ledger）
  */
 export function rowCostsOf(
@@ -466,15 +489,15 @@ export function rowCostsOf(
   return rows.map((row, index) => {
     const hit = priced[index]
     if (hit.cost !== null) {
-      return { cost: round2(hit.cost), source: hit.source as CostSource, rule: hit.rule, cacheSavings: hit.cacheSavings }
+      return { cost: round2(hit.cost), source: hit.source as CostSource, rule: hit.rule, partial: hit.partial, cacheSavings: hit.cacheSavings }
     }
     const average = averagePrice(row)
-    if (average !== null) return { cost: average, source: 'estimate' as CostSource, rule: null, cacheSavings: 0 }
-    return { cost: null, source: 'none' as CostSource, rule: null, cacheSavings: 0 }
+    if (average !== null) return { cost: average, source: 'estimate' as CostSource, rule: null, partial: false, cacheSavings: 0 }
+    return { cost: null, source: 'none' as CostSource, rule: null, partial: false, cacheSavings: 0 }
   })
 }
 
-/** 组合「用户规则 → 内置官方价目 → 台账反推均价」三层估算，给出金额、最弱来源、命中行数与缓存省钱。 */
+/** 组合「用户规则 → 内置官方价目 → 聚合价 → 台账反推均价」四层估算，给出金额、最弱来源、命中行数与缓存省钱。 */
 export function costOfUsageRows(
   rows: PricingUsageRow[],
   config: PricingConfig,
@@ -492,7 +515,7 @@ export function costOfUsageRows(
     total += row.cost
     matched = true
     cacheSavings += row.cacheSavings
-    if (row.source === 'rule' || row.source === 'catalog') ruleRows += 1
+    if (row.source === 'rule' || row.source === 'catalog' || row.source === 'aggregate') ruleRows += 1
     weakest = weakestOf(weakest, row.source)
   }
   if (!matched) return { cost: null, source: 'none', ruleRows: 0, cacheSavings: 0 }
@@ -506,7 +529,7 @@ export function costOfUsageRows(
 
 /** 两个来源取更弱的那个（与 routes 的 `weakestSource` 同一顺序）。 */
 function weakestOf(current: CostSource, candidate: CostSource): CostSource {
-  const rank: Record<CostSource, number> = { official: 0, rule: 1, catalog: 2, estimate: 3, none: 4 }
+  const rank: Record<CostSource, number> = { official: 0, rule: 1, catalog: 2, aggregate: 3, estimate: 4, none: 5 }
   return rank[candidate] > rank[current] ? candidate : current
 }
 
@@ -519,8 +542,9 @@ export function addMoney(target: MoneyByCurrency, currency: string, amount: numb
 }
 
 /**
- * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中用户规则 / 命中内置价目 / 回落均价 / 无依据，
- * 并按**所有行**累加金额与缓存省钱（各按价目自己的币种分组，跨币种不换算不合计）。
+ * 覆盖度统计（计费面板用）：按 `provider|model` 数出命中用户规则 / 命中内置官方价目 / 命中聚合价 /
+ * 回落均价 / 无依据，并按**所有行**累加金额与缓存省钱（各按价目自己的币种分组，跨币种不换算不合计）。
+ * `partialModels` = 命中的聚合价目里缺一档缓存价（按未命中价代）的模型数。
  */
 export function summarizeCoverage(
   rows: PricingUsageRow[],
@@ -529,6 +553,8 @@ export function summarizeCoverage(
 ): {
   ruleModels: number
   catalogModels: number
+  aggregateModels: number
+  partialModels: number
   averagedModels: number
   unpricedModels: number
   costByCurrency: MoneyByCurrency
@@ -540,6 +566,8 @@ export function summarizeCoverage(
   const savingsByModel = new Map<string, { provider: string; model: string; currency: string; cacheReadTokens: number; amount: number }>()
   const rulerKeys = new Set<string>()
   const catalogKeys = new Set<string>()
+  const aggregateKeys = new Set<string>()
+  const partialKeys = new Set<string>()
   const averagedKeys = new Set<string>()
   const unpricedKeys = new Set<string>()
   for (const row of rows) {
@@ -552,7 +580,9 @@ export function summarizeCoverage(
       continue
     }
     if (priced.source === 'catalog') catalogKeys.add(key)
+    else if (priced.source === 'aggregate') aggregateKeys.add(key)
     else rulerKeys.add(key)
+    if (priced.partial) partialKeys.add(key)
     addMoney(costByCurrency, priced.rule.currency, priced.cost)
     if (priced.cacheSavings <= 0) continue
     addMoney(savingsByCurrency, priced.rule.currency, priced.cacheSavings)
@@ -576,6 +606,8 @@ export function summarizeCoverage(
   return {
     ruleModels: rulerKeys.size,
     catalogModels: catalogKeys.size,
+    aggregateModels: aggregateKeys.size,
+    partialModels: partialKeys.size,
     averagedModels: averagedKeys.size,
     unpricedModels: unpricedKeys.size,
     costByCurrency,

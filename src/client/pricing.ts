@@ -15,7 +15,7 @@ import { fmtTokens } from './format.ts'
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
 /** 成本来源角标：与服务端 `costSource` 字段一一对应。 */
-export type CostSource = 'official' | 'rule' | 'catalog' | 'estimate' | 'none'
+export type CostSource = 'official' | 'rule' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
 export interface OffPeakWindow {
   from: string
@@ -59,12 +59,99 @@ export interface CatalogSummary {
   rules: PricingRule[]
 }
 
+/** 聚合价目的装载来源：shipped = 随包快照；local = 本机刷新下来的文件；none = 两个都读不到。 */
+export type AggregateLoaded = 'local' | 'shipped' | 'none'
+
+export const AGGREGATE_LOADED_LABELS: Record<AggregateLoaded, string> = {
+  local: '本地刷新文件',
+  shipped: '随包快照',
+  none: '未装载',
+}
+
+/** 装载状态文案；服务端给了没见过的取值时按「未知」显示，不崩。 */
+export function aggregateLoadedLabelOf(loaded: string | null | undefined): string {
+  if (loaded === 'local' || loaded === 'shipped' || loaded === 'none') return AGGREGATE_LOADED_LABELS[loaded]
+  return loaded === undefined || loaded === null || loaded === '' ? '未装载' : '未知（' + loaded + '）'
+}
+
+/** 聚合价目装载 / 刷新过程中出现的问题（与用户规则的 `PricingIssue` 不是一回事）。 */
+export interface AggregateIssue {
+  kind: string
+  message: string
+}
+
+/**
+ * LiteLLM 聚合价目（第三方维护、美元计价）：随包内置一份快照，点「刷新价目」才联网更新到本机。
+ * 优先级低于内置的厂商官方价目与用户规则；服务端未升级时整块缺省，界面按「读不到」降级。
+ */
+export interface ModelPriceAggregate {
+  loaded: AggregateLoaded
+  path: string
+  shippedPath: string
+  localPath: string
+  entries: number
+  models: number
+  usd: boolean
+  fetchedAt: string | null
+  bytes: number
+  sha256: string | null
+  source: string
+  license: string
+  upstreamCommit: string | null
+  issues: AggregateIssue[]
+}
+
+/**
+ * LiteLLM 仓库地址。这里**不能**写带协议前缀的完整地址字面量：构建后处理
+ * （scripts/normalize-client-banner.mjs）按「字母 + 冒号 + 斜杠」的形状扫全文件找「机器相关绝对路径」，
+ * 协议前缀正好长成那个形状，会被误判成盘符路径而让 `npm run build:client` 直接失败。
+ * 因此拆成三段拼；注意冒号必须在第二段里（`'https' + '//x'` 会少一个冒号）。
+ */
+export const LITELLM_REPO_URL = ['https', '://github.com', '/BerriAI/litellm'].join('')
+
+/** 字节数 → MB 文本；拿不到合法数字时返回 null，由调用方整段省略（不显示 undefined）。 */
+export function megabytesTextOf(bytes: unknown): string | null {
+  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return null
+  return (bytes / 1048576).toFixed(2) + ' MB'
+}
+
+/** URL 里的主机名（刷新回执的「来源」）；解析不出来返回 null。 */
+export function hostOf(url: unknown): string | null {
+  if (typeof url !== 'string' || url.trim() === '') return null
+  try {
+    const host = new URL(url).host
+    return host === '' ? null : host
+  } catch {
+    return null
+  }
+}
+
+/** 时间戳 → 本地 `YYYY-MM-DD HH:mm`；解析不出来返回 null（ISO 之外的写法一律不猜）。 */
+export function localTimeTextOf(timestamp: unknown): string | null {
+  if (typeof timestamp !== 'string' || timestamp.trim() === '') return null
+  const parsed = new Date(timestamp)
+  if (Number.isNaN(parsed.getTime())) return null
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  return String(parsed.getFullYear()) + '-' + pad(parsed.getMonth() + 1) + '-' + pad(parsed.getDate())
+    + ' ' + pad(parsed.getHours()) + ':' + pad(parsed.getMinutes())
+}
+
+/** 上游 commit 的短写法；太短或缺失时返回 null（完整值挂在装载信息的 tooltip 上）。 */
+export function shortCommitOf(commit: unknown): string | null {
+  if (typeof commit !== 'string' || commit.trim().length < 7) return null
+  return commit.trim().slice(0, 7)
+}
+
 export interface PricingCoverage {
   from: string
   to: string
   ruleModels: number
   /** 命中内置官方价目的模型数（未配规则时自动生效的那一层）。 */
   catalogModels: number
+  /** 命中 LiteLLM 聚合价目的模型数（第三方、USD；优先级低于内置官方价目）。 */
+  aggregateModels?: number
+  /** 上面这些里标了 partial 的模型数（缺一个缓存价、按未命中价代）。 */
+  partialModels?: number
   averagedModels: number
   unpricedModels: number
   /** 近 30 天按规则口径算出的金额（仅作参照，界面成本按「官方 > 规则 > 内置 > 均价」逐格取值）。 */
@@ -113,6 +200,8 @@ export interface PricingResponse {
   files?: PricingFiles
   /** YAML 语法 / 条目问题，带行号；缺省为空数组。 */
   issues?: PricingIssue[]
+  /** LiteLLM 聚合价目（第三方、USD）：随包快照 + 本地刷新文件；服务端未升级时缺省。 */
+  aggregate?: ModelPriceAggregate
 }
 
 /** 保存接口的返回：服务端一律 HTTP 200，失败原因在 `error` 里（中文，可直接展示）。 */
@@ -120,10 +209,16 @@ export type PricingSaveResult =
   | { ok: true; path: string; entries: number; issues: PricingIssue[] }
   | { ok: false; error: string }
 
+/** 刷新价目接口的返回：服务端一律 HTTP 200，失败原因在 `error` 里（中文，可直接展示）。 */
+export type PricingRefreshResult =
+  | { ok: true; url: string; bytes: number; entries: number; sha256: string; fetchedAt: string }
+  | { ok: false; error: string }
+
 export const COST_SOURCE_LABELS: Record<CostSource, string> = {
   official: '官方',
   rule: '自定',
   catalog: '官方价',
+  aggregate: '聚合',
   estimate: '估算',
   none: '—',
 }
@@ -133,8 +228,23 @@ export const COST_SOURCE_HINTS: Record<CostSource, string> = {
   official: '官方：台账记录的厂商账单金额',
   rule: '自定：按你维护的计费规则算出',
   catalog: '官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）',
+  aggregate: '聚合：LiteLLM 聚合价目（美元、第三方维护），可在面板点『刷新价目』更新',
   estimate: '估算：按台账反推的均价推算',
   none: '没有价格依据（未配置规则，台账也无成本数据）',
+}
+
+/**
+ * 聚合价目的「部分」标记：该条目缺一个缓存价（缓存写入价未收录），用未命中价代。
+ * 这是口径说明而不是错误，角标旁只写「· 部分」，展开说明放 tooltip。
+ */
+export const PARTIAL_PRICE_TEXT = ' · 部分'
+export const PARTIAL_PRICE_HINT = '缓存写入价未收录，按未命中价计'
+
+/** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
+export function costSourceHintOf(source: CostSource | null | undefined, partial?: boolean | null): string {
+  // 服务端将来加了新档位时，这里不能把 undefined 拼进文案
+  const hint = COST_SOURCE_HINTS[source ?? 'none'] ?? '成本来源未识别：' + String(source ?? '')
+  return partial === true ? hint + '；' + PARTIAL_PRICE_HINT : hint
 }
 
 export const UNIT_LABELS: Record<PricingUnit, string> = {
@@ -149,7 +259,7 @@ export const CURRENCY_OPTIONS = ['CNY', 'USD']
 export const RULES_ORIGIN_TEXT: Record<RulesOrigin, string> = {
   file: '规则来自你的 YAML 文件',
   legacy: '规则还是旧设置服务里的历史值，还没落盘成 YAML —— 在面板上保存一次就会写进文件',
-  none: '还没有用户规则：成本按内置官方价目与台账均价算',
+  none: '还没有用户规则：成本按内置官方价目、聚合价目与台账均价算',
 }
 
 /** 表单外的三个字段只能在 YAML 里维护，界面上必须有一句明示，否则用户以为保存会把它们清掉。 */
@@ -327,7 +437,7 @@ export interface UnpricedModel {
 }
 
 /**
- * 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目。
+ * 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目 − 聚合价目。
  * 逐模型判定优先用 `/models` 的 `costSource`（就是成本单元格上那个角标，口径一致），
  * 角标缺失（旧响应）时退回本地规则匹配，避免整块不显示。
  */
@@ -339,7 +449,9 @@ export function unpricedModelsOf(
   const used = (rows ?? []).filter((row) => row.tokens > 0)
   if (used.length === 0) return []
   const uncovered = used.filter((row) => {
-    if (row.costSource === 'rule' || row.costSource === 'official' || row.costSource === 'catalog') return false
+    // 聚合价目也是真价格依据（第三方、USD），命中它的模型不算缺口
+    if (row.costSource === 'rule' || row.costSource === 'official'
+      || row.costSource === 'catalog' || row.costSource === 'aggregate') return false
     return row.costSource === 'estimate' || row.costSource === 'none'
       || !matchesAnyRule(rules, row.provider, row.model) && catalogRuleFor(catalogRules, row.provider, row.model) === null
   })
@@ -534,7 +646,7 @@ export function buildRulesTemplateYaml(
 
   const pending: string[] = []
   if (uncovered.length > 0) {
-    pending.push('', '# ---- 以下模型还没有价格依据（近 30 天用到，但既没有规则也没命中内置价目）----')
+    pending.push('', '# ---- 以下模型还没有价格依据（近 30 天用到，但规则、内置官方价目与聚合价目都没命中）----')
     pending.push('# 填好四档单价后，把每条开头的「# 」删掉即可；不要用 0 占位 —— 0 会把这批用量算成免费。')
     for (const model of uncovered) {
       pending.push('#')

@@ -3,8 +3,8 @@ import type { CostSource } from './pricing.ts'
 
 /** 计费规则相关的响应类型定义在 pricing.ts（视图模型与响应同源），这里只做转出。 */
 export type {
-  CatalogSummary, CostSource, PricingFileInfo, PricingFiles, PricingIssue,
-  PricingResponse, PricingRule, PricingSaveResult, RulesOrigin,
+  AggregateIssue, AggregateLoaded, CatalogSummary, CostSource, ModelPriceAggregate, PricingFileInfo,
+  PricingFiles, PricingIssue, PricingRefreshResult, PricingResponse, PricingRule, PricingSaveResult, RulesOrigin,
 } from './pricing.ts'
 
 /** 客户端使用的宿主上下文最小面（与 dsh-plugin / dsh-context 的 slots 契约一致）。 */
@@ -73,8 +73,10 @@ export interface DaySummary {
   cacheWriteTokens: number
   reasoningTokens: number
   cost: number
-  /** 成本来源角标：官方账单 / 用户规则 / 台账均价 / 无依据。 */
+  /** 成本来源角标：官方账单 / 用户规则 / 内置官方价目 / 聚合价目 / 台账均价 / 无依据。 */
   costSource?: CostSource
+  /** 该格的聚合价目条目缺一个缓存价（按未命中价代），角标旁标「部分」。 */
+  partial?: boolean
 }
 
 export interface ModelSummary extends DaySummary {
@@ -138,6 +140,8 @@ export interface RangeSummaryRow {
   cost: number
   /** 该通道该范围的成本来源角标。 */
   costSource?: CostSource
+  /** 其中至少有一条聚合价目是 partial（缺一个缓存价）。 */
+  partial?: boolean
 }
 
 export interface SummaryResponse {
@@ -166,9 +170,11 @@ export interface UsageModelRow {
   providerLabel?: string
   /** 占该会话 tokens 的百分比（一位小数）：`/sessions` 行内展开与 `/session` 详情用。 */
   sharePercent?: number
-  /** 该模型这一格的估算金额与来源（规则 / 内置官方价目 / 台账均价）。 */
+  /** 该模型这一格的估算金额与来源（规则 / 内置官方价目 / 聚合价目 / 台账均价）。 */
   cost?: number | null
   costSource?: CostSource
+  /** 该模型的聚合价目条目缺一个缓存价（按未命中价代）。 */
+  partial?: boolean
 }
 
 export interface SessionRow {
@@ -194,6 +200,8 @@ export interface SessionRow {
   cost: number | null
   /** 该行成本的来源角标。 */
   costSource?: CostSource
+  /** 该行成本里至少有一条聚合价目是 partial。 */
+  partial?: boolean
 }
 
 export interface SessionsResponse {
@@ -239,6 +247,8 @@ export interface SessionDetail {
   hours: SessionDetailHour[] | null
   cost: number | null
   costSource: CostSource
+  /** 会话成本里至少有一条聚合价目是 partial。 */
+  partial?: boolean
 }
 
 export interface SessionDetailResponse {
@@ -263,6 +273,8 @@ export interface ProjectRow {
   cost: number | null
   /** 该行成本的来源角标。 */
   costSource?: CostSource
+  /** 该项目成本里至少有一条聚合价目是 partial。 */
+  partial?: boolean
 }
 
 export interface ProjectsResponse {
@@ -297,6 +309,8 @@ export interface ModelAggregateRow {
   buckets: ModelBuckets
   /** 该行成本的来源角标。 */
   costSource?: CostSource
+  /** 该模型的聚合价目条目缺一个缓存价（按未命中价代）。 */
+  partial?: boolean
 }
 
 export interface ModelsResponse {

@@ -509,12 +509,32 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   // 冻结契约：字段集合就是这些，多一个少一个客户端都要跟着改
   assert.deepEqual(
     Object.keys(pricing.body).sort(),
-    ['catalog', 'coverage', 'currency', 'files', 'issues', 'offPeakNow', 'revision', 'rules', 'rulesOrigin', 'writable'],
+    ['aggregate', 'catalog', 'coverage', 'currency', 'files', 'issues', 'offPeakNow', 'revision', 'rules', 'rulesOrigin', 'writable'],
   )
   assert.deepEqual(Object.keys(pricing.body.catalog).sort(), ['entries', 'rules', 'sources'])
   assert.deepEqual(Object.keys(pricing.body.files).sort(), ['catalog', 'user'])
   assert.deepEqual(Object.keys(pricing.body.files.catalog).sort(), ['entries', 'exists', 'path'])
   assert.deepEqual(Object.keys(pricing.body.files.user).sort(), ['entries', 'exists', 'path'])
+  // 聚合价目（第三方 USD）：随包快照装载状态；客户端按这些字段渲染「装载来源 / 条目 / 模型 / 来源与许可」
+  assert.equal(pricing.body.aggregate.loaded, 'shipped', '没有本地刷新文件时读随包快照')
+  assert.ok(pricing.body.aggregate.path.endsWith(join('data', 'litellm-model-prices.json')), pricing.body.aggregate.path)
+  assert.ok(pricing.body.aggregate.shippedPath.endsWith(join('data', 'litellm-model-prices.json')))
+  assert.ok(pricing.body.aggregate.localPath.endsWith(join('dsh-key-usage', 'model-prices.json')))
+  assert.ok(pricing.body.aggregate.entries > 1000, '可定价条目数：' + String(pricing.body.aggregate.entries))
+  assert.ok(pricing.body.aggregate.models > 500, '去重模型名数：' + String(pricing.body.aggregate.models))
+  assert.equal(pricing.body.aggregate.usd, true, '聚合价目只有美元，不做汇率换算')
+  assert.equal(/^[0-9a-f]{64}$/.test(pricing.body.aggregate.sha256), true, '装载文件要有 sha256')
+  assert.ok(pricing.body.aggregate.fetchedAt === null || Number.isFinite(Date.parse(pricing.body.aggregate.fetchedAt)))
+  assert.equal(pricing.body.aggregate.license, 'MIT')
+  assert.equal(/^[0-9a-f]{40}$/.test(pricing.body.aggregate.upstreamCommit), true)
+  assert.ok(pricing.body.aggregate.source.startsWith('https://github.com/BerriAI/litellm'))
+  // 夹具里的 GLM-5.3-Flash 在聚合价目里有 9 条同名候选、opencode-go 没有别名 → 跳过并报出来（不猜通道）
+  assert.equal(pricing.body.coverage.aggregateModels, 0, '定不了通道的模型不参与定价')
+  assert.equal(pricing.body.coverage.partialModels, 0)
+  assert.ok(
+    pricing.body.aggregate.issues.some((issue) => issue.kind === 'match-ambiguous' && issue.message.includes('GLM-5.3-Flash')),
+    '定不了通道时要给出可读的问题：' + JSON.stringify(pricing.body.aggregate.issues),
+  )
   assert.equal(pricing.body.writable, true, '规则由本插件的 POST 端点写盘，恒为可写')
   assert.equal(pricing.body.revision, null, '设置服务已退役：修订号恒为 null')
   assert.equal(pricing.body.rulesOrigin, 'legacy', '没有用户文件时回落到旧版 entry config')
@@ -770,6 +790,19 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
   assert.equal(cleared.body.rulesOrigin, 'file', '文件存在但为空 → 仍是 file（文件是唯一事实来源）')
   assert.deepEqual(cleared.body.rules, [])
   assert.equal(cleared.body.files.user.entries, 0)
+}
+
+// ===== POST /dsh-key-usage/pricing/refresh：只允许回环 + 只接受 POST =====
+// 真刷新（联网、镜像回落、超限、坏 JSON 不覆盖）在 test/model-prices.test.mjs 里用注入的 fetch 验，避免测试打网络
+{
+  const foreignRefresh = await callEndpoint('/dsh-key-usage/pricing/refresh', '10.0.0.7')
+  assert.equal(foreignRefresh.status, 403, '刷新端点与其它端点同一写法：非回环一律 403')
+  assert.deepEqual(foreignRefresh.body, { error: 'loopback only' })
+
+  const wrongMethodRefresh = await callEndpoint('/dsh-key-usage/pricing/refresh')
+  assert.equal(wrongMethodRefresh.status, 200)
+  assert.equal(wrongMethodRefresh.body.ok, false)
+  assert.ok(wrongMethodRefresh.body.error.includes('POST'), wrongMethodRefresh.body.error)
 }
 
 // 台账整体缺失时不会变成空态，而是全量走会话事件

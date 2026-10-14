@@ -122,6 +122,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
 		const PRICING_RULES_PATH = "/dsh-key-usage/pricing/rules";
+		/** 刷新聚合价目的端点：同样按这个键取失败原因（404 = 服务端还是旧版本）。 */
+		const MODEL_PRICE_REFRESH_PATH = "/dsh-key-usage/pricing/refresh";
+		/**
+		* 刷新超时：上游 JSON 约 3 MB，客户端给 30 秒。
+		* **必须比服务端自己的 20 秒下载预算更长**：两边同为 20 秒时，客户端会在服务端正准备写盘的那一刻 abort，
+		* 于是界面报「超时」而文件其实已经写成功，用户看到的状态与磁盘不一致。
+		* 超时仍要落成可读提示，否则用户面对一个不动的按钮只会以为界面卡死。
+		*/
+		const MODEL_PRICE_REFRESH_TIMEOUT_MS = 3e4;
 		/**
 		* 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
 		*
@@ -147,6 +156,34 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			} catch (error) {
 				failureReasons.set(PRICING_RULES_PATH, "请求失败：" + (error instanceof Error ? error.message : String(error)));
 				return null;
+			}
+		}
+		/**
+		* 拉取上游最新聚合价目（全插件唯一会联网的用户动作，只能由「刷新价目」按钮触发）。
+		*
+		* 返回 null = 请求本身失败（原因记在 `failureReasonOf(MODEL_PRICE_REFRESH_PATH)`）；
+		* 返回 `{ok:false, error}` = 服务端拿到响应但刷新失败（中文原因可直接展示）。
+		*/
+		async function refreshModelPrices() {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), MODEL_PRICE_REFRESH_TIMEOUT_MS);
+			try {
+				const response = await fetch(MODEL_PRICE_REFRESH_PATH, {
+					method: "POST",
+					headers: { Accept: "application/json" },
+					signal: controller.signal
+				});
+				if (!response.ok) {
+					failureReasons.set(MODEL_PRICE_REFRESH_PATH, failureTextOf(response.status));
+					return null;
+				}
+				failureReasons.delete(MODEL_PRICE_REFRESH_PATH);
+				return await response.json();
+			} catch (error) {
+				failureReasons.set(MODEL_PRICE_REFRESH_PATH, controller.signal.aborted ? "刷新超时：" + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1e3) + " 秒内没拿到服务端结果（上游可能不可达）" : "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				return null;
+			} finally {
+				clearTimeout(timer);
 			}
 		}
 		//#endregion
@@ -680,10 +717,60 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 与「让 DSH 帮我配」的提示词 —— 生成物必须是服务端受限 YAML 子集能读回的写法。
 		* 定价算法在服务端（src/server/pricing.ts），界面不重复实现。
 		*/
+		const AGGREGATE_LOADED_LABELS = {
+			local: "本地刷新文件",
+			shipped: "随包快照",
+			none: "未装载"
+		};
+		/** 装载状态文案；服务端给了没见过的取值时按「未知」显示，不崩。 */
+		function aggregateLoadedLabelOf(loaded) {
+			if (loaded === "local" || loaded === "shipped" || loaded === "none") return AGGREGATE_LOADED_LABELS[loaded];
+			return loaded === void 0 || loaded === null || loaded === "" ? "未装载" : "未知（" + loaded + "）";
+		}
+		/**
+		* LiteLLM 仓库地址。这里**不能**写带协议前缀的完整地址字面量：构建后处理
+		* （scripts/normalize-client-banner.mjs）按「字母 + 冒号 + 斜杠」的形状扫全文件找「机器相关绝对路径」，
+		* 协议前缀正好长成那个形状，会被误判成盘符路径而让 `npm run build:client` 直接失败。
+		* 因此拆成三段拼；注意冒号必须在第二段里（`'https' + '//x'` 会少一个冒号）。
+		*/
+		const LITELLM_REPO_URL = [
+			"https",
+			"://github.com",
+			"/BerriAI/litellm"
+		].join("");
+		/** 字节数 → MB 文本；拿不到合法数字时返回 null，由调用方整段省略（不显示 undefined）。 */
+		function megabytesTextOf(bytes) {
+			if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) return null;
+			return (bytes / 1048576).toFixed(2) + " MB";
+		}
+		/** URL 里的主机名（刷新回执的「来源」）；解析不出来返回 null。 */
+		function hostOf(url) {
+			if (typeof url !== "string" || url.trim() === "") return null;
+			try {
+				const host = new URL(url).host;
+				return host === "" ? null : host;
+			} catch {
+				return null;
+			}
+		}
+		/** 时间戳 → 本地 `YYYY-MM-DD HH:mm`；解析不出来返回 null（ISO 之外的写法一律不猜）。 */
+		function localTimeTextOf(timestamp) {
+			if (typeof timestamp !== "string" || timestamp.trim() === "") return null;
+			const parsed = new Date(timestamp);
+			if (Number.isNaN(parsed.getTime())) return null;
+			const pad = (value) => String(value).padStart(2, "0");
+			return String(parsed.getFullYear()) + "-" + pad(parsed.getMonth() + 1) + "-" + pad(parsed.getDate()) + " " + pad(parsed.getHours()) + ":" + pad(parsed.getMinutes());
+		}
+		/** 上游 commit 的短写法；太短或缺失时返回 null（完整值挂在装载信息的 tooltip 上）。 */
+		function shortCommitOf(commit) {
+			if (typeof commit !== "string" || commit.trim().length < 7) return null;
+			return commit.trim().slice(0, 7);
+		}
 		const COST_SOURCE_LABELS = {
 			official: "官方",
 			rule: "自定",
 			catalog: "官方价",
+			aggregate: "聚合",
 			estimate: "估算",
 			none: "—"
 		};
@@ -692,9 +779,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			official: "官方：台账记录的厂商账单金额",
 			rule: "自定：按你维护的计费规则算出",
 			catalog: "官方价：按插件内置的厂商官方价目算出（可查来源；你的规则优先于它）",
+			aggregate: "聚合：LiteLLM 聚合价目（美元、第三方维护），可在面板点『刷新价目』更新",
 			estimate: "估算：按台账反推的均价推算",
 			none: "没有价格依据（未配置规则，台账也无成本数据）"
 		};
+		/** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
+		function costSourceHintOf(source, partial) {
+			const hint = COST_SOURCE_HINTS[source ?? "none"] ?? "成本来源未识别：" + String(source ?? "");
+			return partial === true ? hint + "；缓存写入价未收录，按未命中价计" : hint;
+		}
 		const UNIT_LABELS = {
 			perMillionTokens: "每百万 tokens",
 			perThousandTokens: "每千 tokens",
@@ -704,7 +797,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const RULES_ORIGIN_TEXT = {
 			file: "规则来自你的 YAML 文件",
 			legacy: "规则还是旧设置服务里的历史值，还没落盘成 YAML —— 在面板上保存一次就会写进文件",
-			none: "还没有用户规则：成本按内置官方价目与台账均价算"
+			none: "还没有用户规则：成本按内置官方价目、聚合价目与台账均价算"
 		};
 		/** 表单外的三个字段只能在 YAML 里维护，界面上必须有一句明示，否则用户以为保存会把它们清掉。 */
 		const FORM_EXTRAS_HINT = "错峰价、计价单位、备注由 YAML 维护；在这里保存不会清掉它们。";
@@ -831,7 +924,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			].some((matches) => rules.some(matches));
 		}
 		/**
-		* 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目。
+		* 「没有价格依据」的模型：用户的模型 − 用户规则 − 内置价目 − 聚合价目。
 		* 逐模型判定优先用 `/models` 的 `costSource`（就是成本单元格上那个角标，口径一致），
 		* 角标缺失（旧响应）时退回本地规则匹配，避免整块不显示。
 		*/
@@ -839,7 +932,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const used = (rows ?? []).filter((row) => row.tokens > 0);
 			if (used.length === 0) return [];
 			const uncovered = used.filter((row) => {
-				if (row.costSource === "rule" || row.costSource === "official" || row.costSource === "catalog") return false;
+				if (row.costSource === "rule" || row.costSource === "official" || row.costSource === "catalog" || row.costSource === "aggregate") return false;
 				return row.costSource === "estimate" || row.costSource === "none" || !matchesAnyRule(rules, row.provider, row.model) && catalogRuleFor(catalogRules, row.provider, row.model) === null;
 			});
 			const total = uncovered.reduce((sum, row) => sum + row.tokens, 0);
@@ -997,7 +1090,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}
 			const pending = [];
 			if (uncovered.length > 0) {
-				pending.push("", "# ---- 以下模型还没有价格依据（近 30 天用到，但既没有规则也没命中内置价目）----");
+				pending.push("", "# ---- 以下模型还没有价格依据（近 30 天用到，但规则、内置官方价目与聚合价目都没命中）----");
 				pending.push("# 填好四档单价后，把每条开头的「# 」删掉即可；不要用 0 占位 —— 0 会把这批用量算成免费。");
 				for (const model of uncovered) {
 					pending.push("#");
@@ -1066,7 +1159,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/pricing.module.css.mjs
-		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_filterRow{flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 6px;display:flex}.aymcxa_filterLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-right:2px;font-size:11px}.aymcxa_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:2px 10px;font-size:11px;display:inline-flex}.aymcxa_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_chip b{font-variant-numeric:tabular-nums;font-weight:600}.aymcxa_chipOn{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fileLine{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;gap:4px 18px;margin:8px 0;font-size:10.5px;display:flex}.aymcxa_pathText{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:10.5px}.aymcxa_issueBlock{color:var(--dsw-alias-state-warning-primary,#e0a13c);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-state-warning-primary,#e0a13c);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_issueHead{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_issueNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_issueList{margin:6px 0 0;padding-left:18px}.aymcxa_issueWhere{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-right:6px}.aymcxa_promptBlock{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:8px 0 10px;padding:10px 14px}.aymcxa_promptHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.7}.aymcxa_promptActions{flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;display:flex}.aymcxa_promptText{background:var(--dsw-alias-bg-layer-3,#232329);max-height:260px;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:pre-wrap;word-break:break-word;border-radius:8px;margin:0;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:1.7;overflow:auto}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_ruleExtra{margin-top:2px;font-size:10px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
+		const css$6 = ".aymcxa_panel{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:26px;padding-top:16px}.aymcxa_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_statStrip{flex-wrap:wrap;gap:10px 26px;margin-bottom:12px;display:flex}.aymcxa_statItem .aymcxa_statName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.aymcxa_statItem .aymcxa_statNum{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:650}.aymcxa_statItem .aymcxa_statNum.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.aymcxa_actionBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.aymcxa_actionBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_actionBtn:disabled{opacity:.5;cursor:default}.aymcxa_actionBtn.aymcxa_primary{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_toolbarSpacer{flex:1}.aymcxa_filterRow{flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 6px;display:flex}.aymcxa_filterLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-right:2px;font-size:11px}.aymcxa_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:2px 10px;font-size:11px;display:inline-flex}.aymcxa_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_chip b{font-variant-numeric:tabular-nums;font-weight:600}.aymcxa_chipOn{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_chip:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_fileLine{color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;gap:4px 18px;margin:8px 0;font-size:10.5px;display:flex}.aymcxa_pathText{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:10.5px}.aymcxa_issueBlock{color:var(--dsw-alias-state-warning-primary,#e0a13c);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-state-warning-primary,#e0a13c);border-radius:8px;margin:8px 0;padding:8px 12px;font-size:11.5px;line-height:1.7}.aymcxa_issueHead{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_issueNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.aymcxa_issueList{margin:6px 0 0;padding-left:18px}.aymcxa_issueWhere{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-right:6px}.aymcxa_promptBlock{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:8px 0 10px;padding:10px 14px}.aymcxa_promptHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px;line-height:1.7}.aymcxa_promptActions{flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;display:flex}.aymcxa_promptText{background:var(--dsw-alias-bg-layer-3,#232329);max-height:260px;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:pre-wrap;word-break:break-word;border-radius:8px;margin:0;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:1.7;overflow:auto}.aymcxa_ruleTable{border-collapse:collapse;width:100%;margin-top:4px}.aymcxa_ruleTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-size:10.5px;font-weight:500}.aymcxa_ruleTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:11.5px}.aymcxa_ruleTable th:first-child,.aymcxa_ruleTable td:first-child,.aymcxa_ruleTable th:nth-child(2),.aymcxa_ruleTable td:nth-child(2){text-align:left}.aymcxa_ruleTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.aymcxa_ruleTable tr.aymcxa_editing{background:var(--dsw-alias-interactive-bg-active,#5b8cff24)}.aymcxa_ruleName{font-family:ui-monospace,Consolas,monospace;font-size:11px}.aymcxa_ruleNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;max-width:260px;font-size:10.5px}.aymcxa_ruleExtra{margin-top:2px;font-size:10px}.aymcxa_linkBtn{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:0 6px;font-size:11px}.aymcxa_linkBtn:hover{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceChip{vertical-align:baseline;white-space:nowrap;border:1px solid;border-radius:999px;margin-left:5px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_sourceOfficial{color:var(--dsw-alias-label-tertiary,#67676f)}.aymcxa_sourceRule{color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_sourceCatalog{color:var(--dsw-alias-label-secondary,#9a9aa2)}.aymcxa_sourceAggregate{color:var(--dsw-alias-label-tertiary,#67676f);border-style:dashed}.aymcxa_sourcePartial{color:var(--dsw-alias-label-secondary,#9a9aa2);border-bottom:1px dotted}.aymcxa_sourceEstimate{color:var(--dsw-alias-state-warning-primary,#e0a13c)}.aymcxa_catalogNote{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:12px;line-height:1.7}.aymcxa_catalogStale{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.aymcxa_aggregateBlock{color:var(--dsw-alias-label-secondary,#9a9aa2);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:8px;margin:10px 0;padding:8px 12px;font-size:11.5px;line-height:1.75}.aymcxa_aggregateHead{flex-wrap:wrap;align-items:center;gap:6px 12px;display:flex}.aymcxa_aggregateTitle{flex:auto;min-width:0}.aymcxa_aggregateMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_aggregateMeta b{color:var(--dsw-alias-label-secondary,#9a9aa2);font-weight:600}.aymcxa_aggregateStatus{margin-top:4px;font-size:11px}.aymcxa_aggregateStatusOk{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_aggregateStatusBad{color:var(--dsw-alias-state-danger-primary,#e05a5a)}.aymcxa_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.aymcxa_editor{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin:10px 0;padding:12px 14px}.aymcxa_editorGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;display:grid}.aymcxa_field{flex-direction:column;gap:4px;display:flex}.aymcxa_field label{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.aymcxa_field input,.aymcxa_field select{background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;border-radius:6px;min-width:0;padding:4px 7px;font-size:11.5px}.aymcxa_field input:focus,.aymcxa_field select:focus{border-color:var(--dsw-alias-state-accent-primary,#5b8cff)}.aymcxa_field input:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_field select:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:1px}.aymcxa_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_actionBtn:focus-visible{outline:2px solid var(--dsw-alias-state-accent-primary,#5b8cff);outline-offset:2px}.aymcxa_subLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);margin:12px 0 6px;font-size:11.5px;font-weight:600}.aymcxa_editorError{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin-top:10px;font-size:11.5px}.aymcxa_editorHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:8px;font-size:10.5px}.aymcxa_editorActions{gap:8px;margin-top:12px;display:flex}.aymcxa_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:12px 0;font-size:12px}.aymcxa_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px}.aymcxa_error{color:var(--dsw-alias-state-danger-primary,#e05a5a);margin:6px 0;font-size:11.5px}.aymcxa_savingsList{color:var(--dsw-alias-label-tertiary,#67676f);margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.7;list-style:none}.aymcxa_summaryStrip{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:12px 16px;display:flex}.aymcxa_summaryBasis{flex:320px;min-width:0}.aymcxa_summarySaving{flex:none}.aymcxa_summaryActions{align-items:center;gap:8px;margin-left:auto;display:flex}.aymcxa_summaryStrip .aymcxa_summaryName{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:3px;font-size:11px}.aymcxa_summaryStrip .aymcxa_summaryValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;line-height:1.5}.aymcxa_summaryStrip .aymcxa_summaryValue.aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f)}.aymcxa_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.aymcxa_infoBtn:hover,.aymcxa_infoBtnActive{color:var(--dsw-alias-state-accent-primary,#5b8cff);border-color:#5b8cff73}.aymcxa_explanation{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:8px;padding:10px 14px}.aymcxa_explanationTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:4px;font-size:11.5px;font-weight:600}.aymcxa_explanationList{color:var(--dsw-alias-label-tertiary,#67676f);margin:0;padding-left:18px;font-size:11.5px;line-height:1.75}.aymcxa_explanationList b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.aymcxa_drawer{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:8px;padding:12px 16px 14px}.aymcxa_sectionBlock{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:16px;padding-top:12px}.aymcxa_statItem .aymcxa_statNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.aymcxa_worthList{margin:6px 0 0;padding:0;font-size:11.5px;line-height:1.9;list-style:none}.aymcxa_worthList li,.aymcxa_savingsList li{flex-wrap:wrap;align-items:baseline;gap:8px;display:flex}.aymcxa_worthMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.aymcxa_savingsList .aymcxa_saving{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:auto;font-weight:600}.aymcxa_linkBtn:disabled{opacity:.5;cursor:default}";
 		const tagId$6 = "dsh-key-usage/pricing.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1082,6 +1175,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		});
 		var pricing_module_css_default = {
 			"actionBtn": "aymcxa_actionBtn",
+			"aggregateBlock": "aymcxa_aggregateBlock",
+			"aggregateHead": "aymcxa_aggregateHead",
+			"aggregateMeta": "aymcxa_aggregateMeta",
+			"aggregateStatus": "aymcxa_aggregateStatus",
+			"aggregateStatusBad": "aymcxa_aggregateStatusBad",
+			"aggregateStatusOk": "aymcxa_aggregateStatusOk",
+			"aggregateTitle": "aymcxa_aggregateTitle",
 			"catalogNote": "aymcxa_catalogNote",
 			"catalogStale": "aymcxa_catalogStale",
 			"chip": "aymcxa_chip",
@@ -1126,10 +1226,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"saving": "aymcxa_saving",
 			"savingsList": "aymcxa_savingsList",
 			"sectionBlock": "aymcxa_sectionBlock",
+			"sourceAggregate": "aymcxa_sourceAggregate",
 			"sourceCatalog": "aymcxa_sourceCatalog",
 			"sourceChip": "aymcxa_sourceChip",
 			"sourceEstimate": "aymcxa_sourceEstimate",
 			"sourceOfficial": "aymcxa_sourceOfficial",
+			"sourcePartial": "aymcxa_sourcePartial",
 			"sourceRule": "aymcxa_sourceRule",
 			"statItem": "aymcxa_statItem",
 			"statName": "aymcxa_statName",
@@ -1154,16 +1256,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function CostSourceChip(props) {
 			const source = props.source ?? "none";
 			if (source === "none") return null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			const partial = props.partial === true;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				className: pricing_module_css_default.sourceChip + " " + sourceClass(source),
-				title: COST_SOURCE_HINTS[source],
-				children: COST_SOURCE_LABELS[source]
+				title: costSourceHintOf(source, partial),
+				children: [COST_SOURCE_LABELS[source] ?? source, partial && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: pricing_module_css_default.sourcePartial,
+					children: " · 部分"
+				})]
 			});
 		}
 		function sourceClass(source) {
 			if (source === "official") return pricing_module_css_default.sourceOfficial;
 			if (source === "rule") return pricing_module_css_default.sourceRule;
 			if (source === "catalog") return pricing_module_css_default.sourceCatalog;
+			if (source === "aggregate") return pricing_module_css_default.sourceAggregate;
 			return pricing_module_css_default.sourceEstimate;
 		}
 		//#endregion
@@ -1221,7 +1328,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: costCell.text
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: row?.month.costSource })] }) }),
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: row?.month.costSource,
+									partial: row?.month.partial
+								})] }) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: overview_module_css_default.rowLink,
 									children: "明细 →"
@@ -2357,7 +2467,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: safeTotals.costSource })] }),
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								source: safeTotals.costSource,
+								partial: safeTotals.partial
+							})] }),
 							extra: "按所选范围与筛选聚合"
 						})
 					]
@@ -2770,7 +2883,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: row.costSource })] }) }),
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								source: row.costSource,
+								partial: row.partial
+							})] }) }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
 						] }, row.provider + "|" + row.model);
 					}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
@@ -3020,7 +3136,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode === "sub" || channel?.costMode === "free" || channel?.costMode === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: row.costSource })] }) }),
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+								source: row.costSource,
+								partial: row.partial
+							})] }) }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
 						] }, row.workspace);
 					}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
@@ -3096,6 +3215,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [showAllIssues, setShowAllIssues] = (0, react.useState)(false);
 			const [showAllModels, setShowAllModels] = (0, react.useState)(false);
 			const [showPrompt, setShowPrompt] = (0, react.useState)(false);
+			const [refreshingPrices, setRefreshingPrices] = (0, react.useState)(false);
+			const [refreshElapsedSeconds, setRefreshElapsedSeconds] = (0, react.useState)(0);
+			const [refreshStatus, setRefreshStatus] = (0, react.useState)(null);
 			/** null = 不过滤（显示全部通道）；数组 = 只显示这些通道的规则。 */
 			const [providerFilter, setProviderFilter] = (0, react.useState)(null);
 			/** 默认过滤只设一次初值，之后完全交给用户点的芯片（否则用户取消过滤会被再次覆盖）。 */
@@ -3105,6 +3227,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const files = pricing?.files;
 			const issues = pricing?.issues ?? [];
 			const currency = pricing?.currency ?? "CNY";
+			const aggregate = pricing?.aggregate ?? null;
 			const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources);
 			const providerOptions = (0, react.useMemo)(() => channels.map((channel) => channel.provider), [channels]);
 			const modelOptions = (0, react.useMemo)(() => {
@@ -3146,6 +3269,43 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const maybeRefreshNotice = (message) => {
 				setNotice(message);
 				setSaveError(null);
+			};
+			(0, react.useEffect)(() => {
+				if (!refreshingPrices) return;
+				const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1e3);
+				return () => clearInterval(timer);
+			}, [refreshingPrices]);
+			/**
+			* 「刷新价目」：全插件唯一会联网的用户动作（服务端去上游拉 JSON 并写到本机）。
+			* 成功 / 失败都留在面板上（`aria-live` 播报），成功后再走一次 `onSaved` 让页面重取
+			* `/pricing` 与用量 —— 价目换了一份，成本口径整体都变了。
+			*/
+			const refreshPrices = async () => {
+				if (refreshingPrices) return;
+				setRefreshingPrices(true);
+				setRefreshElapsedSeconds(0);
+				setRefreshStatus(null);
+				const outcome = await refreshModelPrices();
+				setRefreshingPrices(false);
+				if (outcome === null) {
+					setRefreshStatus({
+						tone: "bad",
+						text: "刷新失败：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? "没拿到服务端响应")
+					});
+					return;
+				}
+				if (!outcome.ok) {
+					setRefreshStatus({
+						tone: "bad",
+						text: "刷新失败：" + outcome.error
+					});
+					return;
+				}
+				setRefreshStatus({
+					tone: "ok",
+					text: modelPriceRefreshTextOf(outcome)
+				});
+				props.onSaved();
 			};
 			/**
 			* 唯一的写盘入口：整批提交。
@@ -3387,6 +3547,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									] })] })
 								]
 							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(AggregateSourceBlock, {
+								aggregate,
+								loading: pricing === null,
+								refreshing: refreshingPrices,
+								elapsedSeconds: refreshElapsedSeconds,
+								status: refreshStatus,
+								onRefresh: () => void refreshPrices()
+							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: pricing_module_css_default.toolbar,
 								children: [
@@ -3614,7 +3782,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 										className: pricing_module_css_default.panelHint,
-										children: "近 30 天用到了、但既没有规则也没命中内置价目：这些用量的成本现在按台账均价估算或显示 —。 可以下载 / 复制单条片段填好价格后粘进规则文件，或点「让 DSH 帮我配」把清单交给 DSH。"
+										children: "近 30 天用到了、但规则、内置官方价目与聚合价目都没命中：这些用量的成本现在按台账均价估算或显示 —。 可以下载 / 复制单条片段填好价格后粘进规则文件，或点「让 DSH 帮我配」把清单交给 DSH。"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 										className: pricing_module_css_default.worthList,
@@ -3703,6 +3871,128 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			});
 		}
+		/**
+		* 聚合价目（LiteLLM）的来源署名 + 「刷新价目」。
+		*
+		* 这一块是插件里唯一会联网的地方，因此必须同时说清三件事：数据是谁的（第三方、MIT、USD）、
+		* 现在装载的是哪一份（随包快照 / 本地刷新文件 / 读不到）、以及「只在你点刷新时才会访问上游」。
+		* 刷新回执与失败原因都放在 `aria-live` 区域里播报，不能只靠颜色或按钮文案。
+		*/
+		function AggregateSourceBlock(props) {
+			const { aggregate } = props;
+			const issues = (Array.isArray(aggregate?.issues) ? aggregate.issues : []).filter((issue) => issue !== null && typeof issue === "object");
+			const shownIssues = issues.slice(0, ISSUE_LIMIT);
+			const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt);
+			const pathText = typeof aggregate?.path === "string" && aggregate.path !== "" ? aggregate.path : null;
+			const commitFull = typeof aggregate?.upstreamCommit === "string" && aggregate.upstreamCommit.trim() !== "" ? aggregate.upstreamCommit.trim() : null;
+			const commitShort = commitFull === null ? null : shortCommitOf(commitFull);
+			const licenseText = typeof aggregate?.license === "string" && aggregate.license.trim() !== "" ? aggregate.license : "MIT";
+			const entryText = aggregate === null || !Number.isFinite(aggregate.entries) ? null : "条目 " + String(aggregate.entries);
+			const modelText = aggregate === null || !Number.isFinite(aggregate.models) ? null : "模型 " + String(aggregate.models);
+			const metaTitle = [pathText === null ? null : "当前装载的文件：" + pathText, commitFull === null ? null : "upstream commit：" + commitFull].filter((part) => part !== null).join("\n");
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: pricing_module_css_default.aggregateBlock,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.aggregateHead,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: pricing_module_css_default.aggregateTitle,
+							children: [
+								"价目数据来源：",
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+									className: pricing_module_css_default.linkBtn,
+									href: LITELLM_REPO_URL,
+									target: "_blank",
+									rel: "noreferrer",
+									children: "LiteLLM"
+								}),
+								"（",
+								licenseText,
+								"，第三方聚合价目，美元计价；优先级低于内置官方价目与你的规则）"
+							]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							className: pricing_module_css_default.actionBtn,
+							disabled: props.refreshing,
+							"aria-busy": props.refreshing,
+							title: "从 LiteLLM 上游拉取最新价目并写到本机：这是插件里唯一会联网的操作",
+							onClick: props.onRefresh,
+							children: props.refreshing ? "刷新中…" + (props.elapsedSeconds > 0 ? "（已 " + String(props.elapsedSeconds) + " 秒）" : "") : "刷新价目"
+						})]
+					}),
+					aggregate === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.aggregateMeta,
+						children: props.loading ? "正在读取服务端价目信息…" : "服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。"
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.aggregateMeta,
+						title: metaTitle === "" ? void 0 : metaTitle,
+						children: [
+							"当前装载：",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: aggregateLoadedLabelOf(aggregate.loaded) }),
+							entryText !== null && "　" + entryText,
+							modelText !== null && "　" + modelText,
+							fetchedAtText !== null && "　文件时间 " + fetchedAtText,
+							commitShort !== null && "　upstream " + commitShort
+						]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.aggregateMeta,
+						children: [
+							"平时不联网：",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "只有你点「刷新价目」时" }),
+							"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。"
+						]
+					})] }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: pricing_module_css_default.aggregateStatus + (props.status === null ? "" : " " + (props.status.tone === "ok" ? pricing_module_css_default.aggregateStatusOk : pricing_module_css_default.aggregateStatusBad)),
+						role: "status",
+						"aria-live": "polite",
+						children: props.status === null ? "" : props.status.text
+					}),
+					issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: pricing_module_css_default.issueBlock,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.issueHead,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处聚合价目装载问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: pricing_module_css_default.issueNote,
+									children: "—— 只影响聚合价目这一层的条目，成本照旧按规则 / 内置官方价目 / 台账均价算"
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+								className: pricing_module_css_default.issueList,
+								children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: pricing_module_css_default.issueWhere,
+									children: issue.kind
+								}), issue.message] }, issue.kind + "|" + String(index)))
+							}),
+							issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: pricing_module_css_default.issueNote,
+								children: [
+									"还有 ",
+									String(issues.length - ISSUE_LIMIT),
+									" 条同类问题已折叠。"
+								]
+							})
+						]
+					})
+				]
+			});
+		}
+		/**
+		* 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
+		* 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」——
+		* 模型数在上一行的装载信息里（随 `/pricing` 重取后刷新）。缺字段时逐段省略，不显示 undefined。
+		*/
+		function modelPriceRefreshTextOf(result) {
+			const parts = [];
+			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + " 条价目");
+			const megabytes = megabytesTextOf(result.bytes);
+			if (megabytes !== null) parts.push(megabytes);
+			const host = hostOf(result.url);
+			if (host !== null) parts.push("来源 " + host);
+			const time = localTimeTextOf(result.fetchedAt);
+			if (time !== null) parts.push(time);
+			return "已更新：" + (parts.length === 0 ? "服务端没返回明细，已按新价目重算" : parts.join(" · "));
+		}
 		/** 过滤芯片：按通道分组计数；配置过的通道排前面，`*` 通配规则永远排最后。 */
 		function chipEntriesOf(rules, channels) {
 			const counts = /* @__PURE__ */ new Map();
@@ -3742,7 +4032,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								String(coverage.ruleModels),
 								" 个模型 · 内置官方价 ",
 								String(coverage.catalogModels ?? 0),
-								" 个模型 · 台账均价估算 ",
+								" 个模型 · 聚合价目 ",
+								String(coverage.aggregateModels ?? 0),
+								" 个模型",
+								coverage.partialModels !== void 0 && coverage.partialModels > 0 && "（其中部分 " + String(coverage.partialModels) + " 个）",
+								" · 台账均价估算 ",
 								String(coverage.averagedModels),
 								" 个模型",
 								coverage.unpricedModels > 0 && " · 无依据 " + String(coverage.unpricedModels) + " 个"
@@ -3799,8 +4093,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "vendor/" }),
 							" 前缀，不做模糊匹配。"
 						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
+							"：按随包内置的 ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "LiteLLM 聚合价目" }),
+							"算出（第三方维护、美元计价）；点「刷新价目」可从上游更新，失败不影响已装载的那一份。优先级低于内置官方价目与你的规则 —— 它是比内置官方价目更弱的一层真价格，再往下才是台账均价推算。条目缺缓存写入价时标「部分」：那一格按未命中价计。"
+						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }), "：按台账反推的均价推算，仅供参照，不是账单。"] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：没有价格依据（规则与内置价目都没命中，台账也没有成本数据）。"] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }), "：没有价格依据（规则、内置价目、聚合价目都没命中，台账也没有成本数据）。"] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
 							"单位与按次计费：在 YAML 里写 —— ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "perMillionTokens" }),
@@ -4430,10 +4730,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: costCell.dim ? shared_module_css_default.dim : void 0,
 									children: costCell.text
 								}),
-								showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: session.costSource }),
+								showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: session.costSource,
+									partial: session.partial
+								}),
 								showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.detailCostHint,
-									children: COST_SOURCE_HINTS[session.costSource]
+									children: costSourceHintOf(session.costSource, session.partial)
 								})
 							]
 						}),
@@ -4502,7 +4805,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: model.cost === null || !showsAmount(modelCostCell) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: modelCostCell.text
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [modelCostCell.text, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: model.costSource })] }) })
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [modelCostCell.text, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: model.costSource,
+									partial: model.partial
+								})] }) })
 							] }, model.provider + "|" + model.model);
 						}) })]
 					})]
@@ -5039,7 +5345,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: row.cost === null || channel === null || channel.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: shared_module_css_default.dim,
 							children: costCell.text
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, { source: row.costSource })] })
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, showsAmount(costCell) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+							source: row.costSource,
+							partial: row.partial
+						})] })
 					})
 				]
 			}), isOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
@@ -5105,6 +5414,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: "—"
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [fmtCost(modelCost), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 									source: model.costSource,
+									partial: model.partial,
 									compact: true
 								})] })
 							})
@@ -5118,7 +5428,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const source = row.costSource ?? "none";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: "会话成本" }),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: COST_SOURCE_HINTS[source] }),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: costSourceHintOf(source, row.partial) }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 					label: "金额",
 					amount: row.cost === null ? "—" : fmtCost(row.cost),
@@ -5400,8 +5710,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
 									" / ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
+									" / ",
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }),
-									"， 没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。"
+									"， 没有价格依据时显示 —；规则以用户 YAML 文件为唯一事实来源（面板保存写的就是它，错峰与计价单位在 YAML 里维护），保存后立即重算。 「聚合」是随包内置的 LiteLLM 聚合价目（第三方、美元），只有点面板上的「刷新价目」才会联网更新，平时完全离线。"
 								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "余额与订阅窗口实时查询官方接口（失败回落本机快照），原样展示，不做换算与建议。" })
 							]

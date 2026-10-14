@@ -4,6 +4,34 @@
 
 > 0.1.0 ～ 0.1.2 是发布当日的快速迭代，此处只记要点；逐条改动见仓库提交历史。发布时间取自 npm registry。
 
+## [0.1.7] —— 2026-10-14
+
+> 本节对应的提交已推送到 GitHub 供验收，**尚未发布到 npm**；验收通过后按 `publish.yml` 发布，本节即 0.1.7 的正式记录。
+
+### 新增
+
+- **LiteLLM 聚合价目层（第三方、USD）**：随包内置上游 `model_prices_and_context_window.json` 的**字节原样快照** `data/litellm-model-prices.json`（2,797,533 B、sha256 `6b5e1ee7e77f02c7afd4a130099d48174aabb157389de3a7512c5e1d1063e403`、upstream commit `30b8db325e85740eb86901d08597da845b206504`、抓取 2026-10-14；许可 MIT，原文见 `data/litellm-LICENSE.txt`，来源说明见 `data/README.md`）。按实现口径是 **2697 条可定价条目 / 1546 个模型名**（`mode ∈ {chat, completion}` 且 input、output 都 > 0，已排除 `sample_spec`）；`src/server/model-prices.ts` 只在内存里建索引，两份文件都读不到时整层失效、**绝不抛错**；
+- **面板「刷新价目」按钮 + `POST /dsh-key-usage/pricing/refresh`**（第二个写端点，仅回环、无请求体、先 GitHub raw 再 jsDelivr 镜像、服务端下载预算 20 秒、响应上限 12 MiB、校验 JSON 与最少条目数后**原子写** `$DSH_HOME/dsh-key-usage/model-prices.json`，**失败不覆盖旧文件**）—— 这是本项目除余额/配额查询之外的**第二个、也是唯一的显式外网动作**：只在用户点按钮时联网，不开机拉取、不定时轮询；
+- **`GET /dsh-key-usage/pricing` 新增 `aggregate` 块**（`loaded` / `path` / `shippedPath` / `localPath` / `entries` / `models` / `usd` / `fetchedAt` / `bytes` / `sha256` / `source` / `license` / `upstreamCommit` / `issues`）与 `coverage.aggregateModels` / `coverage.partialModels`；
+- 客户端新增 **「聚合」角标**与 **「· 部分」** 标记（该条目缺一档缓存价、按未命中价代），并显示装载来源（本地刷新文件 / 随包快照 / 未装载）、条目数与上游 commit。
+
+### 变更
+
+- **成本来源排序由四层变五层**：`官方账单 > 你的规则 > 内置官方价目（CNY） > LiteLLM 聚合价（USD） > 台账反推均价`；`CostSource` 新增 `aggregate`，整行/整天的「取最弱一格」排序（`weakestSource`）同步加档；
+- **客户端刷新超时改为 30 秒**（`MODEL_PRICE_REFRESH_TIMEOUT_MS`）—— **必须比服务端自己的 20 秒下载预算更长**：两边同为 20 秒时，客户端会在服务端正准备写盘的那一刻 abort，界面报「超时」而文件其实已经写成功。现在点刷新最多等 30 秒；服务端 20 秒内没下完会自己返回失败原因；
+- `.gitattributes` 新增 `data/litellm-model-prices.json -text`：快照按二进制处理、不做换行转换，保证 `data/README.md` 记录的 sha256 在**原样字节**上稳定；
+- **随包体积增加约 2.7 MB**（未压缩快照 2,797,533 B）：`npm pack --dry-run` 由上一批的 27 个文件升到 **31 个文件**（新增 `data/README.md`、`data/litellm-LICENSE.txt`、`data/litellm-model-prices.json`、`lib/model-prices.js`），打包 909.3 kB、未压缩 4.4 MB；
+- `package.json` 的 `check` 列表新增 `lib/model-prices.js`。
+
+### 移除
+
+- 无移除。
+
+### 文档
+
+- README、`AGENTS.md` 与 `docs/01`/`05`/`06` 同步到五层价目与刷新按钮后的现状：端点总数改为 **10 个只读 GET + 2 个写 POST（共 12 个）**、离线测试 **14 个**、写盘目录变**三个文件**；
+- 如实记入两条口径限制：① 聚合价是 **USD 原样并列、不做汇率换算**，而 `/usage`、`/summary`、`/sessions` 等处的合计仍是**按行直接相加**（同一格里理论上可能把人民币与美元加到一起）—— 这是本批**之前就存在**的问题、本批没有让它变差，正确修法是「按币种分列小计」，已记为后续；② 聚合价层对**当前**通道几乎不产生新数字（能命中的条目都被优先级更高的内置人民币官方价目覆盖，其余在 LiteLLM 里是多候选、按「不猜通道」跳过），它的作用是给**以后**新增的通道/模型兜底。
+
 ## [0.1.6] —— 2026-10-14
 
 > 本节对应的提交已推送到 GitHub 供验收，**尚未发布到 npm**；验收通过后按 `publish.yml` 发布，本节即 0.1.6 的正式记录。

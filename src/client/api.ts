@@ -4,6 +4,7 @@ import type {
   Channel,
   HeatmapDay,
   ModelsResponse,
+  PricingRefreshResult,
   PricingResponse,
   PricingSaveResult,
   ProjectsResponse,
@@ -106,6 +107,17 @@ export function loadPricing(): Promise<PricingResponse | null> {
 /** 保存计费规则的端点：界面按这个键取失败原因，所以路径在这里统一。 */
 export const PRICING_RULES_PATH = '/dsh-key-usage/pricing/rules'
 
+/** 刷新聚合价目的端点：同样按这个键取失败原因（404 = 服务端还是旧版本）。 */
+export const MODEL_PRICE_REFRESH_PATH = '/dsh-key-usage/pricing/refresh'
+
+/**
+ * 刷新超时：上游 JSON 约 3 MB，客户端给 30 秒。
+ * **必须比服务端自己的 20 秒下载预算更长**：两边同为 20 秒时，客户端会在服务端正准备写盘的那一刻 abort，
+ * 于是界面报「超时」而文件其实已经写成功，用户看到的状态与磁盘不一致。
+ * 超时仍要落成可读提示，否则用户面对一个不动的按钮只会以为界面卡死。
+ */
+export const MODEL_PRICE_REFRESH_TIMEOUT_MS = 30000
+
 /**
  * 整批提交规则（规则写盘的唯一入口，服务端只接受回环请求）。
  *
@@ -128,5 +140,37 @@ export async function savePricingRules(rules: Array<Record<string, string | numb
   } catch (error) {
     failureReasons.set(PRICING_RULES_PATH, '请求失败：' + (error instanceof Error ? error.message : String(error)))
     return null
+  }
+}
+
+/**
+ * 拉取上游最新聚合价目（全插件唯一会联网的用户动作，只能由「刷新价目」按钮触发）。
+ *
+ * 返回 null = 请求本身失败（原因记在 `failureReasonOf(MODEL_PRICE_REFRESH_PATH)`）；
+ * 返回 `{ok:false, error}` = 服务端拿到响应但刷新失败（中文原因可直接展示）。
+ */
+export async function refreshModelPrices(): Promise<PricingRefreshResult | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), MODEL_PRICE_REFRESH_TIMEOUT_MS)
+  try {
+    // 没有请求体，因此不设 Content-Type
+    const response = await fetch(MODEL_PRICE_REFRESH_PATH, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      failureReasons.set(MODEL_PRICE_REFRESH_PATH, failureTextOf(response.status))
+      return null
+    }
+    failureReasons.delete(MODEL_PRICE_REFRESH_PATH)
+    return await response.json() as PricingRefreshResult
+  } catch (error) {
+    failureReasons.set(MODEL_PRICE_REFRESH_PATH, controller.signal.aborted
+      ? '刷新超时：' + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1000) + ' 秒内没拿到服务端结果（上游可能不可达）'
+      : '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    return null
+  } finally {
+    clearTimeout(timer)
   }
 }

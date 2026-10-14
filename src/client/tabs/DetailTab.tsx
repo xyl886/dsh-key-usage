@@ -259,7 +259,7 @@ export function DetailTab(props: {
           label="成本"
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
-            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={safeTotals.costSource} />}</>}
+            : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
           extra="按所选范围与筛选聚合"
         />
       </div>

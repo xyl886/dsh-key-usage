@@ -11,13 +11,17 @@
  */
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
-  CURRENCY_OPTIONS, FORM_EXTRAS_HINT, FORM_KEY_CHANGE_HINT, RULES_ORIGIN_TEXT, UNIT_LABELS,
-  blankRule, buildAgentPrompt, buildRuleSnippetYaml, buildRulesTemplateYaml, catalogStaleDays,
-  fetchedDaysAgo, fileSafeOf, moneyTextOf, offPeakWindowsText, ruleExtrasTextOf, ruleKeyOf,
-  ruleLabelOf, ruleProblemOf, submittableRuleOf, unpricedModelsOf,
-  type CatalogSummary, type PricingResponse, type PricingRule, type UnpricedModel,
+  CURRENCY_OPTIONS, FORM_EXTRAS_HINT, FORM_KEY_CHANGE_HINT, LITELLM_REPO_URL, RULES_ORIGIN_TEXT,
+  UNIT_LABELS, aggregateLoadedLabelOf, blankRule, buildAgentPrompt, buildRuleSnippetYaml,
+  buildRulesTemplateYaml, catalogStaleDays, fetchedDaysAgo, fileSafeOf, hostOf, localTimeTextOf,
+  megabytesTextOf, moneyTextOf, offPeakWindowsText, ruleExtrasTextOf, ruleKeyOf, ruleLabelOf,
+  ruleProblemOf, shortCommitOf, submittableRuleOf, unpricedModelsOf,
+  type AggregateIssue, type CatalogSummary, type ModelPriceAggregate, type PricingRefreshResult,
+  type PricingResponse, type PricingRule, type UnpricedModel,
 } from '../pricing.ts'
-import { PRICING_RULES_PATH, failureReasonOf, savePricingRules } from '../api.ts'
+import {
+  MODEL_PRICE_REFRESH_PATH, PRICING_RULES_PATH, failureReasonOf, refreshModelPrices, savePricingRules,
+} from '../api.ts'
 import { TEXT_MIME, YAML_MIME, downloadFile, exportFileName } from '../export.ts'
 import { fmtTokens } from '../format.ts'
 import type { Channel, ModelsResponse } from '../types.ts'
@@ -68,6 +72,9 @@ export function PricingRulesPanel(props: {
   const [showAllIssues, setShowAllIssues] = useState(false)
   const [showAllModels, setShowAllModels] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
+  const [refreshingPrices, setRefreshingPrices] = useState(false)
+  const [refreshElapsedSeconds, setRefreshElapsedSeconds] = useState(0)
+  const [refreshStatus, setRefreshStatus] = useState<PriceRefreshStatus | null>(null)
   /** null = 不过滤（显示全部通道）；数组 = 只显示这些通道的规则。 */
   const [providerFilter, setProviderFilter] = useState<string[] | null>(null)
   /** 默认过滤只设一次初值，之后完全交给用户点的芯片（否则用户取消过滤会被再次覆盖）。 */
@@ -78,6 +85,8 @@ export function PricingRulesPanel(props: {
   const files = pricing?.files
   const issues = pricing?.issues ?? []
   const currency = pricing?.currency ?? 'CNY'
+  // 服务端没升级时整块缺省：按「读不到聚合价目」降级，不影响其余功能
+  const aggregate: ModelPriceAggregate | null = pricing?.aggregate ?? null
 
   // 超过阈值就改成警示样式并提示复核：价目是静态数据，厂商调价后只能人工更新
   const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources)
@@ -129,6 +138,40 @@ export function PricingRulesPanel(props: {
   const maybeRefreshNotice = (message: string): void => {
     setNotice(message)
     setSaveError(null)
+  }
+
+  // 刷新期间每秒推进一次「已等 N 秒」：20 秒的超时窗口里用户得看到它在跑，否则会以为界面卡死
+  useEffect(() => {
+    if (!refreshingPrices) return
+    const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1000)
+    return () => clearInterval(timer)
+  }, [refreshingPrices])
+
+  /**
+   * 「刷新价目」：全插件唯一会联网的用户动作（服务端去上游拉 JSON 并写到本机）。
+   * 成功 / 失败都留在面板上（`aria-live` 播报），成功后再走一次 `onSaved` 让页面重取
+   * `/pricing` 与用量 —— 价目换了一份，成本口径整体都变了。
+   */
+  const refreshPrices = async (): Promise<void> => {
+    if (refreshingPrices) return
+    setRefreshingPrices(true)
+    setRefreshElapsedSeconds(0)
+    setRefreshStatus(null)
+    const outcome = await refreshModelPrices()
+    setRefreshingPrices(false)
+    if (outcome === null) {
+      setRefreshStatus({
+        tone: 'bad',
+        text: '刷新失败：' + (failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? '没拿到服务端响应'),
+      })
+      return
+    }
+    if (!outcome.ok) {
+      setRefreshStatus({ tone: 'bad', text: '刷新失败：' + outcome.error })
+      return
+    }
+    setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
+    props.onSaved()
   }
 
   /**
@@ -373,6 +416,15 @@ export function PricingRulesPanel(props: {
             </div>
           )}
 
+          <AggregateSourceBlock
+            aggregate={aggregate}
+            loading={pricing === null}
+            refreshing={refreshingPrices}
+            elapsedSeconds={refreshElapsedSeconds}
+            status={refreshStatus}
+            onRefresh={() => void refreshPrices()}
+          />
+
           <div className={pricingStyles.toolbar}>
             <button
               className={pricingStyles.actionBtn}
@@ -571,7 +623,7 @@ export function PricingRulesPanel(props: {
                 没有价格依据的模型（{String(uncovered.length)} 个）
               </div>
               <div className={pricingStyles.panelHint}>
-                近 30 天用到了、但既没有规则也没命中内置价目：这些用量的成本现在按台账均价估算或显示 —。
+                近 30 天用到了、但规则、内置官方价目与聚合价目都没命中：这些用量的成本现在按台账均价估算或显示 —。
                 可以下载 / 复制单条片段填好价格后粘进规则文件，或点「让 DSH 帮我配」把清单交给 DSH。
               </div>
               <ul className={pricingStyles.worthList}>
@@ -646,6 +698,156 @@ interface ProviderChip {
   count: number
 }
 
+/** 刷新价目的结果提示：ok = 成功回执，bad = 服务端原因或请求失败，两种都要留在界面上。 */
+interface PriceRefreshStatus {
+  tone: 'ok' | 'bad'
+  text: string
+}
+
+/**
+ * 聚合价目（LiteLLM）的来源署名 + 「刷新价目」。
+ *
+ * 这一块是插件里唯一会联网的地方，因此必须同时说清三件事：数据是谁的（第三方、MIT、USD）、
+ * 现在装载的是哪一份（随包快照 / 本地刷新文件 / 读不到）、以及「只在你点刷新时才会访问上游」。
+ * 刷新回执与失败原因都放在 `aria-live` 区域里播报，不能只靠颜色或按钮文案。
+ */
+function AggregateSourceBlock(props: {
+  aggregate: ModelPriceAggregate | null
+  /** /pricing 还没回来：这时「没有 aggregate 字段」只是还没读到，不能说成服务端旧版本。 */
+  loading: boolean
+  refreshing: boolean
+  elapsedSeconds: number
+  status: PriceRefreshStatus | null
+  onRefresh: () => void
+}): ReactNode {
+  const { aggregate } = props
+  // issues 是新增字段，老响应可能整块没有；非数组一律当空（不让一条脏数据把面板整块带崩）
+  const issues = (Array.isArray(aggregate?.issues) ? aggregate.issues : [])
+    .filter((issue): issue is AggregateIssue => issue !== null && typeof issue === 'object')
+  const shownIssues = issues.slice(0, ISSUE_LIMIT)
+  const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt)
+  // 逐段兜底：缺字段 / 空串一律整段省略，不把 undefined 渲染到界面上
+  const pathText = typeof aggregate?.path === 'string' && aggregate.path !== '' ? aggregate.path : null
+  const commitFull = typeof aggregate?.upstreamCommit === 'string' && aggregate.upstreamCommit.trim() !== ''
+    ? aggregate.upstreamCommit.trim()
+    : null
+  const commitShort = commitFull === null ? null : shortCommitOf(commitFull)
+  const licenseText = typeof aggregate?.license === 'string' && aggregate.license.trim() !== ''
+    ? aggregate.license
+    : 'MIT'
+  const entryText = aggregate === null || !Number.isFinite(aggregate.entries)
+    ? null
+    : '条目 ' + String(aggregate.entries)
+  const modelText = aggregate === null || !Number.isFinite(aggregate.models)
+    ? null
+    : '模型 ' + String(aggregate.models)
+  const metaTitle = [
+    pathText === null ? null : '当前装载的文件：' + pathText,
+    commitFull === null ? null : 'upstream commit：' + commitFull,
+  ].filter((part): part is string => part !== null).join('\n')
+
+  return (
+    <div className={pricingStyles.aggregateBlock}>
+      <div className={pricingStyles.aggregateHead}>
+        <span className={pricingStyles.aggregateTitle}>
+          价目数据来源：
+          <a className={pricingStyles.linkBtn} href={LITELLM_REPO_URL} target="_blank" rel="noreferrer">
+            LiteLLM
+          </a>
+          （{licenseText}，第三方聚合价目，美元计价；优先级低于内置官方价目与你的规则）
+        </span>
+        <button
+          className={pricingStyles.actionBtn}
+          disabled={props.refreshing}
+          aria-busy={props.refreshing}
+          title="从 LiteLLM 上游拉取最新价目并写到本机：这是插件里唯一会联网的操作"
+          onClick={props.onRefresh}
+        >
+          {props.refreshing
+            ? '刷新中…' + (props.elapsedSeconds > 0 ? '（已 ' + String(props.elapsedSeconds) + ' 秒）' : '')
+            : '刷新价目'}
+        </button>
+      </div>
+
+      {aggregate === null
+        ? (
+          <div className={pricingStyles.aggregateMeta}>
+            {props.loading
+              ? '正在读取服务端价目信息…'
+              : '服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。'}
+          </div>
+        )
+        : (
+          <>
+            <div className={pricingStyles.aggregateMeta} title={metaTitle === '' ? undefined : metaTitle}>
+              当前装载：<b>{aggregateLoadedLabelOf(aggregate.loaded)}</b>
+              {entryText !== null && '　' + entryText}
+              {modelText !== null && '　' + modelText}
+              {fetchedAtText !== null && '　文件时间 ' + fetchedAtText}
+              {commitShort !== null && '　upstream ' + commitShort}
+            </div>
+            <div className={pricingStyles.aggregateMeta}>
+              平时不联网：<b>只有你点「刷新价目」时</b>才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。
+            </div>
+          </>
+        )}
+
+      <div
+        className={pricingStyles.aggregateStatus + (props.status === null ? '' : ' ' + (props.status.tone === 'ok'
+          ? pricingStyles.aggregateStatusOk
+          : pricingStyles.aggregateStatusBad))}
+        role="status"
+        aria-live="polite"
+      >
+        {props.status === null ? '' : props.status.text}
+      </div>
+
+      {issues.length > 0 && (
+        <div className={pricingStyles.issueBlock}>
+          <div className={pricingStyles.issueHead}>
+            <b>{String(issues.length)} 处聚合价目装载问题</b>
+            <span className={pricingStyles.issueNote}>
+              —— 只影响聚合价目这一层的条目，成本照旧按规则 / 内置官方价目 / 台账均价算
+            </span>
+          </div>
+          <ul className={pricingStyles.issueList}>
+            {shownIssues.map((issue, index) => (
+              <li key={issue.kind + '|' + String(index)}>
+                <span className={pricingStyles.issueWhere}>{issue.kind}</span>
+                {issue.message}
+              </li>
+            ))}
+          </ul>
+          {issues.length > ISSUE_LIMIT && (
+            <div className={pricingStyles.issueNote}>
+              还有 {String(issues.length - ISSUE_LIMIT)} 条同类问题已折叠。
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 刷新成功回执：「已更新：… 条价目 · M MB · 来源 host · 时间」。
+ * 冻结契约里的刷新回执只给 `entries`（条目数）不给模型数，所以这里写「条」而不冒充「个模型」——
+ * 模型数在上一行的装载信息里（随 `/pricing` 重取后刷新）。缺字段时逐段省略，不显示 undefined。
+ */
+function modelPriceRefreshTextOf(result: Extract<PricingRefreshResult, { ok: true }>): string {
+  const parts: string[] = []
+  if (typeof result.entries === 'number' && Number.isFinite(result.entries)) {
+    parts.push(String(result.entries) + ' 条价目')
+  }
+  const megabytes = megabytesTextOf(result.bytes)
+  if (megabytes !== null) parts.push(megabytes)
+  const host = hostOf(result.url)
+  if (host !== null) parts.push('来源 ' + host)
+  const time = localTimeTextOf(result.fetchedAt)
+  if (time !== null) parts.push(time)
+  return '已更新：' + (parts.length === 0 ? '服务端没返回明细，已按新价目重算' : parts.join(' · '))
+}
+
 /** 过滤芯片：按通道分组计数；配置过的通道排前面，`*` 通配规则永远排最后。 */
 function chipEntriesOf(rules: PricingRule[], channels: Channel[]): ProviderChip[] {
   const counts = new Map<string, number>()
@@ -686,6 +888,9 @@ function SummaryStrip(props: {
               官方账单 {days === null ? '—' : String(days)} 天 ·
               你的规则 {String(coverage.ruleModels)} 个模型 ·
               内置官方价 {String(coverage.catalogModels ?? 0)} 个模型 ·
+              聚合价目 {String(coverage.aggregateModels ?? 0)} 个模型
+              {coverage.partialModels !== undefined && coverage.partialModels > 0
+                && '（其中部分 ' + String(coverage.partialModels) + ' 个）'} ·
               台账均价估算 {String(coverage.averagedModels)} 个模型
               {coverage.unpricedModels > 0 && ' · 无依据 ' + String(coverage.unpricedModels) + ' 个'}
             </>}
@@ -733,8 +938,9 @@ function ExplanationBlock(): ReactNode {
         <li><b>官方</b>：台账记录的厂商账单金额，是既成事实，不会被规则覆盖。</li>
         <li><b>自定</b>：按你填的规则算出，匹配顺序 精确 → 通道通配 → 模型通配 → 全通配。</li>
         <li><b>官方价</b>：按插件<b>内置的厂商官方价目</b>算出（自动生效，不需要你维护）；你的规则优先于它。匹配只做精确 / 忽略大小写 / 去 <code>vendor/</code> 前缀，不做模糊匹配。</li>
+        <li><b>聚合</b>：按随包内置的 <b>LiteLLM 聚合价目</b>算出（第三方维护、美元计价）；点「刷新价目」可从上游更新，失败不影响已装载的那一份。优先级低于内置官方价目与你的规则 —— 它是比内置官方价目更弱的一层真价格，再往下才是台账均价推算。条目缺缓存写入价时标「部分」：那一格按未命中价计。</li>
         <li><b>估算</b>：按台账反推的均价推算，仅供参照，不是账单。</li>
-        <li><b>—</b>：没有价格依据（规则与内置价目都没命中，台账也没有成本数据）。</li>
+        <li><b>—</b>：没有价格依据（规则、内置价目、聚合价目都没命中，台账也没有成本数据）。</li>
         <li>单位与按次计费：在 YAML 里写 —— <code>perMillionTokens</code>（每百万，缺省）/ <code>perThousandTokens</code>（每千）/ <code>perCall</code>（每次调用，只用「输入」档当每次调用价）。</li>
         <li>错峰：也在 YAML 里写。窗口按<b>本地时间</b>判断，起止相同表示全天，<code>from</code> 大于 <code>to</code> 表示跨午夜；每个窗口可按<b>每天 / 仅工作日 / 仅周末</b>限定生效的星期（不写即每天）。跨天范围拿不到小时分布，按标准价算。</li>
         <li>多币种不换算、不合计：规则与内置价目各按文档原币种算（DeepSeek 取中文文档的 CNY，Kimi 为 CNY，OpenRouter / Z.ai 为 USD），金额按币种分行显示。</li>

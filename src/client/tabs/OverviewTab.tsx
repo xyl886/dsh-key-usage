@@ -51,7 +51,7 @@ export function OverviewTab(props: {
                 <td>{todayTokens > 0 ? fmtTokens(todayTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
-                <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row?.month.costSource} />}</>}</td>
+                <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{showsAmount(costCell) && <CostSourceChip source={row?.month.costSource} partial={row?.month.partial} />}</>}</td>
                 <td>{disabled ? null : <span className={overviewStyles.rowLink}>明细 →</span>}</td>
               </tr>
             )
