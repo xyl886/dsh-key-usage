@@ -200,11 +200,38 @@ dsh plugin --profile web remove dsh-key-usage              # 卸载（桌面端�
 
 ## 开发
 
-构建、测试、CI、目录结构与「改动生效条件」见 [`docs/06-开发与构建.md`](./docs/06-开发与构建.md)。
+```bash
+pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
+pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
+pnpm run typecheck    # 客户端 + 服务端类型检查
+pnpm run test         # 10 个离线测试
+pnpm run check        # lib/*.js 语法检查
+pnpm run verify       # 上面全套（CI 跑的就是这条）
+pnpm run pack:dry     # 发布清单自检
+```
+
+> 本目录的 `node_modules` 目前是 pnpm 10.32.1 装的；用**不同大版本**的 pnpm 执行 `pnpm run` 会触发「清空 modules 目录」而中止。此时改用 `npm run <script>`（等价），或先按 `packageManager` 字段对齐 pnpm 版本再重装依赖。
+
+**改动生效条件**（最容易踩的坑）：
+
+| 改动 | 生效方式 |
+| --- | --- |
+| `src/client/**` | `pnpm run build` → **刷新页面** |
+| `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
+
+**验证安装**（9 个端点全部是只读 `GET`、只接受回环请求）：
 
 ```bash
-pnpm run verify    # typecheck + build + check + 10 个离线测试（CI 跑的就是这条）
+curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [...] } 即已挂载
 ```
+
+**CI**：[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) 在 push / PR 上跑 `pnpm run verify`，另加「构建产物必须与源码同步」与「发布包必须含三件套」两道闸；发布由人工触发 [`publish.yml`](./.github/workflows/publish.yml)（带 provenance 签名）。
+
+目录结构、产物契约（`lib/` 与 `client/` 为什么必须提交、构建为什么要与机器无关）与计费规则的离线自检见 [`docs/06-开发与构建.md`](./docs/06-开发与构建.md)。
+
+## 延伸文档
+
+[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [开发与构建](./docs/06-开发与构建.md) · [AGENTS.md](./AGENTS.md)
 
 ## 许可证
 
