@@ -121,6 +121,49 @@ export function currencySymbolOf(currency: string): string {
   return currency + ' '
 }
 
+/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
+const AMOUNT_DIGITS = 2
+
+/** 金额文本：币种符号 + 两位小数（规则面板与预算都用它，避免两处精度不一致）。 */
+export function moneyTextOf(currency: string, amount: number): string {
+  return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS)
+}
+
+/**
+ * 取设置服务里的一段：宿主 `configForms` / `describe()` 给的是**命名空间根对象**
+ * （`{ pricing: …, budget: … }`），字段在它下面；没有该键时整份值就是这一段（两种形状都能读）。
+ * 与服务端 pricing.ts 的 `settingsSectionOf` 同一判定。
+ */
+export function settingsSectionOf(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== 'object') return value
+  const record = value as Record<string, unknown>
+  return key in record ? record[key] : value
+}
+
+/** 内置价目的更新提醒线：超过这些天就提示按官方文档复核（价目是静态数据，厂商调价后要人工改）。 */
+export const CATALOG_STALE_DAYS = 90
+
+/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
+export function fetchedDaysAgo(fetchedAt: string, now: Date = new Date()): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fetchedAt.trim())
+  if (match === null) return null
+  const fetched = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()
+  if (!Number.isFinite(fetched)) return null
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  // 按本地日历日相减：跨夏令时那天可能差 23/25 小时，四舍五入回到整天
+  return Math.max(0, Math.round((today - fetched) / 86400000))
+}
+
+/** 最新一次抓取距今的天数；没有可解析的日期、或还没超过阈值时返回 null。 */
+export function catalogStaleDays(sources: Array<{ fetchedAt: string }>, now: Date = new Date()): number | null {
+  const days = sources
+    .map((entry) => fetchedDaysAgo(entry.fetchedAt, now))
+    .filter((day): day is number => day !== null)
+  if (days.length === 0) return null
+  const newest = Math.min(...days)
+  return newest > CATALOG_STALE_DAYS ? newest : null
+}
+
 export function ruleKeyOf(rule: PricingRule): string {
   return rule.provider + '|' + rule.model
 }
@@ -227,8 +270,9 @@ function windowsOf(raw: unknown): OffPeakWindow[] {
  * 宿主 schema 会把缺省的 `offPeak` 补成 `{windows: [], …}`，那种空壳要还原成「无错峰」。
  */
 export function normalizeClientPricing(value: unknown): PricingConfig {
-  if (typeof value !== 'object' || value === null) return EMPTY_CONFIG
-  const record = value as Record<string, unknown>
+  const section = settingsSectionOf(value, 'pricing')
+  if (typeof section !== 'object' || section === null) return EMPTY_CONFIG
+  const record = section as Record<string, unknown>
   const currency = toText(record.currency, EMPTY_CONFIG.currency)
   const rules: PricingRule[] = []
   for (const entry of Array.isArray(record.rules) ? record.rules : []) {

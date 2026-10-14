@@ -1,6 +1,7 @@
 /** 同源只读端点的取数封装：任何失败都返回 null，由调用方决定空态。 */
 
 import type {
+  BudgetResponse,
   Channel,
   HeatmapDay,
   ModelsResponse,
@@ -84,4 +85,9 @@ export function loadModels(limit = 200): Promise<ModelsResponse | null> {
 /** 计费规则面板的服务端对照：内置模板、错峰状态与近 30 天覆盖度。 */
 export function loadPricing(): Promise<PricingResponse | null> {
   return fetchJson<PricingResponse>('/dsh-key-usage/pricing')
+}
+
+/** 预算与告警：今日 / 本月读数对阈值（未配置阈值时 `enabled:false`，界面不渲染）。 */
+export function loadBudget(): Promise<BudgetResponse | null> {
+  return fetchJson<BudgetResponse>('/dsh-key-usage/budget')
 }

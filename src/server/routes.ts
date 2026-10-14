@@ -8,6 +8,7 @@
  * - /dsh-key-usage/sessions  会话用量（来自宿主会话事件折叠）
  * - /dsh-key-usage/projects  项目（工作目录）用量
  * - /dsh-key-usage/models    模型（provider + model）用量与估算成本
+ * - /dsh-key-usage/budget    预算与告警（今日 / 本月用量对阈值，纯提示、不阻断）
  *
  * 台账已停更时（本机停在 2026-09-30），按天序列会用会话事件补齐缺的日期（见 merge.ts），
  * 并在响应里用 `sessionDates` 标出来源。非本机回环请求一律 403。
@@ -62,15 +63,26 @@ import {
 import {
   EMPTY_PRICING_VIEW,
   PRICING_TEMPLATES,
+  addMoney,
   displayTokensOf,
   isOffPeakNow,
+  matchPricedRule,
   priceRowsByRules,
   rowCostsOf,
   summarizeCoverage,
   type CostSource,
+  type MoneyByCurrency,
+  type PricingConfig,
   type PricingUsageRow,
   type PricingView,
 } from './pricing.js'
+import {
+  EMPTY_BUDGET,
+  evaluateBudget,
+  normalizeBudget,
+  type BudgetThresholds,
+  type BudgetUsage,
+} from './budget.js'
 import { catalogEntryCount, catalogSources } from './pricing-catalog.js'
 
 interface WebServer {
@@ -174,6 +186,31 @@ export function sourceOfProvider(days: AnnotatedDaySummary[], provider: string, 
   return sources.length === 0 ? 'none' : weakestSource(sources)
 }
 
+/** 某一天的展示口径 tokens（输入 + 输出 + 缓存读，不含缓存写）；该天没有记录时返回 0。 */
+export function displayTokensOn(days: ChannelDailySummary[], date: string): number {
+  const day = days.find((candidate) => candidate.date === date)
+  if (day === undefined) return 0
+  return day.inputTokens + day.outputTokens + day.cacheReadTokens
+}
+
+/**
+ * 逐模型成本按币种加总（预算的「每月成本」逐币种比较）。
+ * 金额与界面成本是同一份数字（`annotateCosts` 的结果）；币种取该模型命中的价目
+ * （你的规则 / 内置官方价目），没命中价目的（台账官方账单、台账均价）记入规则默认币种。
+ * 逐币种独立累加，不换算、不合计。
+ */
+export function costByCurrencyOf(days: AnnotatedDaySummary[], config: PricingConfig): MoneyByCurrency {
+  const byCurrency: MoneyByCurrency = {}
+  for (const day of days) {
+    for (const model of day.models) {
+      if (model.cost === 0) continue
+      const currency = matchPricedRule(config.rules, model.provider, model.model)?.rule.currency ?? config.currency
+      addMoney(byCurrency, currency, model.cost)
+    }
+  }
+  return byCurrency
+}
+
 function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {
   const payload = JSON.stringify(body)
   response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' })
@@ -196,6 +233,11 @@ function dayKeyOf(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
+/** 本地日历月的首日：预算里的「月」是自然月，不是滚动 30 天。 */
+function monthStartKey(date: Date): string {
+  return dayKeyOf(date).slice(0, 8) + '01'
+}
+
 function shiftedDayKey(offsetDays: number): string {
   return dayKeyOf(new Date(Date.now() + offsetDays * 86400000))
 }
@@ -215,12 +257,20 @@ export interface PricingSource {
 
 export const noPricingSource: PricingSource = { current: () => EMPTY_PRICING_VIEW }
 
+/** 预算阈值来源（由 index.ts 注入）；值不可信，一律经 `normalizeBudget` 兜底，缺省 = 未配置。 */
+export interface BudgetSource {
+  current(): unknown
+}
+
+export const noBudgetSource: BudgetSource = { current: () => undefined }
+
 export function mountKeyUsageRoutes(
   webServer: WebServer,
   sessionSource: SessionSource = unavailableSessionSource,
   liveQuota: LiveQuotaService = disabledLiveQuota,
   hostServices: { get(name: string): unknown } = { get: () => undefined },
   pricingSource: PricingSource = noPricingSource,
+  budgetSource: BudgetSource = noBudgetSource,
 ): void {
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
@@ -242,6 +292,15 @@ export function mountKeyUsageRoutes(
       return pricingSource.current()
     } catch {
       return EMPTY_PRICING_VIEW
+    }
+  }
+
+  /** 阈值同样每次请求现取；设置服务缺失 / 值非法 / 取不到一律当未配置，这个端点绝不因此报错。 */
+  const budgetThresholds = (): BudgetThresholds => {
+    try {
+      return normalizeBudget(budgetSource.current())
+    } catch {
+      return EMPTY_BUDGET
     }
   }
 
@@ -626,6 +685,45 @@ export function mountKeyUsageRoutes(
           savingsByCurrency: coverage.savingsByCurrency,
           savingsDetail: coverage.savingsDetail,
         },
+      })
+    },
+  })
+
+  /**
+   * 预算与告警：今日 / 本月用量对阈值，判定在 budget.ts（纯函数，可离线单测）。
+   * 「日」「月」按本地日历日 / 日历月切分；用量与成本都走上面同一套台账 × 会话合并，
+   * 否则预算里的数字会和总览、使用明细对不上。
+   */
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/budget',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const now = new Date()
+      const today = dayKeyOf(now)
+      const monthFrom = monthStartKey(now)
+      const ledger = loadLedger()
+      const collection = await sessionSource.collect()
+      const knownProviders = loadChannels().map((channel) => channel.provider)
+      const merged = mergeDailySeries(
+        aggregateRange(ledger, monthFrom, today, null).days,
+        sessionDayRows(collection.records, knownProviders),
+        monthFrom,
+        today,
+      )
+      const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
+      const totals = totalsOfMerged(days)
+      const usage: BudgetUsage = {
+        todayTokens: displayTokensOn(days, today),
+        monthTokens: totals.inputTokens + totals.outputTokens + totals.cacheReadTokens,
+        monthCostByCurrency: costByCurrencyOf(days, pricingView().config),
+      }
+      const thresholds = budgetThresholds()
+      sendJson(response, 200, {
+        ...evaluateBudget(thresholds, usage),
+        today: { date: today, tokens: usage.todayTokens },
+        month: { from: monthFrom, to: today, tokens: usage.monthTokens, costByCurrency: usage.monthCostByCurrency },
+        thresholds,
       })
     },
   })

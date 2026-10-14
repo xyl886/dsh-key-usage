@@ -1,8 +1,11 @@
-/** 总览：Key 清单表（原型列结构）+ 年度热力图。 */
+/** 总览：Key 清单表（原型列结构）+ 年度热力图 + 预算进度（配了阈值才有）。 */
 import type { ReactNode } from 'react'
+import {
+  budgetAmountTextOf, budgetBarColorOf, budgetEntryNameOf, budgetLevelOf, budgetPercentTextOf,
+} from '../budget.ts'
 import { costCellText, showsAmount, statusColorOf } from '../channels.ts'
 import { fmtCalls, fmtTokens } from '../format.ts'
-import type { Channel, HeatmapDay, QuotaProvider, SummaryResponse } from '../types.ts'
+import type { BudgetResponse, Channel, HeatmapDay, QuotaProvider, SummaryResponse } from '../types.ts'
 import type { TooltipApi } from '../tooltip.tsx'
 import { Heatmap } from '../components/Heatmap.tsx'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
@@ -14,12 +17,15 @@ export function OverviewTab(props: {
   summary: SummaryResponse | null
   quotas: QuotaProvider[]
   heatmap: HeatmapDay[]
+  budget: BudgetResponse | null
   tooltip: TooltipApi
   onOpenDetail: (provider: string) => void
 }): ReactNode {
   const { channels, summary } = props
   return (
     <div>
+      {props.budget !== null && props.budget.enabled && <BudgetRow budget={props.budget} />}
+
       <div className={styles.groupLabel}>Key 清单</div>
       <table className={overviewStyles.keyTable}>
         <thead>
@@ -68,6 +74,34 @@ export function OverviewTab(props: {
       {props.quotas.length === 0 && channels.length > 0 && (
         <div className={styles.empty}>未读取到余额快照，余额 / 窗口列显示为 —</div>
       )}
+    </div>
+  )
+}
+
+/**
+ * 预算进度：只在配了阈值时出现（`enabled:false` 由调用方挡掉）。
+ * 逐项一条：今日 / 本月 Tokens、本月各币种成本 —— 超限与接近只改颜色与文案，不做任何拦截。
+ */
+function BudgetRow(props: { budget: BudgetResponse }): ReactNode {
+  return (
+    <div className={overviewStyles.budgetRow}>
+      <span className={overviewStyles.budgetLabel}>预算</span>
+      {props.budget.entries.map((entry) => {
+        const level = budgetLevelOf(entry.percent)
+        const levelClass = level === 'over' ? overviewStyles.danger : level === 'near' ? overviewStyles.warn : ''
+        return (
+          <span className={overviewStyles.budgetItem} key={entry.kind + '|' + (entry.currency ?? '')}>
+            <span className={overviewStyles.budgetName}>{budgetEntryNameOf(entry)}</span>
+            <span className={overviewStyles.budgetBar}>
+              {/* 超限时进度条封顶，百分比照原样显示（说清超了多少） */}
+              <i style={{ width: Math.min(100, Math.max(2, entry.percent)) + '%', background: budgetBarColorOf(level) }} />
+            </span>
+            <span className={[overviewStyles.budgetValue, levelClass].join(' ').trim()}>
+              {budgetAmountTextOf(entry)} · {budgetPercentTextOf(entry.percent)}
+            </span>
+          </span>
+        )
+      })}
     </div>
   )
 }

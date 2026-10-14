@@ -1,10 +1,12 @@
 /**
- * 计费规则的读写通道：把宿主的配置表单服务（`ctx.configForms`）包成一个 React 可订阅的 store。
+ * 计费规则与预算阈值的读写通道：把宿主的配置表单服务（`ctx.configForms`）包成一个 React 可订阅的 store。
  *
  * 为什么不用自己的 HTTP 路由写文件：插件只允许写 `quota-snapshots.json` 一个文件。
- * 规则的命名空间就是本插件在 profile 里的条目 id（`dsh-key-usage`），
+ * 命名空间就是本插件在 profile 里的条目 id（`dsh-key-usage`），
  * 写入由宿主的 config-editor 落到当前 profile 的 cordis patch 上，插件全程不碰文件系统。
+ * 两段值（`pricing` / `budget`）同住一个命名空间，因此共用这一条通路，各自只写自己那一段。
  */
+import { EMPTY_BUDGET_THRESHOLDS, budgetThresholdsForWrite, normalizeClientBudget, type BudgetThresholds } from './budget.ts'
 import { EMPTY_CONFIG, configForWrite, normalizeClientPricing, type PricingConfig } from './pricing.ts'
 
 /** `configForms.get(entryId)` 返回的表单控制器（宿主 dsh-client-ui-settings 提供）。 */
@@ -24,6 +26,8 @@ export interface PricingSettingsState {
   status: 'loading' | 'ready' | 'unavailable'
   writable: boolean
   config: PricingConfig
+  /** 预算阈值（与规则同一个命名空间，因此同一条通路）。 */
+  budget: BudgetThresholds
   /** 写入失败的中文原因（乐观锁冲突 / 命名空间未服务 / 宿主拒绝）。 */
   error: string | null
 }
@@ -37,6 +41,8 @@ export interface PricingSettingsStore {
   attach(form: PricingForm | null): () => void
   /** 整份规则写回；成功返回 true。 */
   save(config: PricingConfig): Promise<boolean>
+  /** 只写阈值那一段，不碰规则；成功返回 true。 */
+  saveBudget(thresholds: BudgetThresholds): Promise<boolean>
   /** 设置命名空间是否由宿主服务（决定要不要注册插件页卡片）。 */
   isServed(): boolean
   noteError(message: string): void
@@ -47,6 +53,7 @@ export function createPricingSettings(): PricingSettingsStore {
     status: 'loading',
     writable: false,
     config: EMPTY_CONFIG,
+    budget: EMPTY_BUDGET_THRESHOLDS,
     error: null,
   }
   let form: PricingForm | null = null
@@ -56,7 +63,7 @@ export function createPricingSettings(): PricingSettingsStore {
   const publish = (next: PricingSettingsState): void => {
     if (
       next.status === state.status && next.writable === state.writable
-      && next.error === state.error && next.config === state.config
+      && next.error === state.error && next.config === state.config && next.budget === state.budget
     ) return
     state = next
     for (const listener of listeners) listener()
@@ -64,7 +71,7 @@ export function createPricingSettings(): PricingSettingsStore {
 
   const sync = (): void => {
     if (form === null) {
-      publish({ status: 'unavailable', writable: false, config: state.config, error: state.error })
+      publish({ status: 'unavailable', writable: false, config: state.config, budget: state.budget, error: state.error })
       return
     }
     const snapshot = form.getSnapshot()
@@ -73,8 +80,26 @@ export function createPricingSettings(): PricingSettingsStore {
       status: ready ? 'ready' : snapshot.status === 'unavailable' ? 'unavailable' : 'loading',
       writable: snapshot.writable === true,
       config: ready ? normalizeClientPricing(snapshot.value) : state.config,
+      budget: ready ? normalizeClientBudget(snapshot.value) : state.budget,
       error: state.error,
     })
+  }
+
+  const write = async (ops: Array<{ op: 'set' | 'unset'; path: string[]; value?: unknown }>, failureNote: string): Promise<boolean> => {
+    if (form === null) {
+      publish({ ...state, error: failureNote })
+      return false
+    }
+    publish({ ...state, error: null })
+    let accepted = false
+    try {
+      accepted = await form.mutate(ops)
+    } catch (error) {
+      publish({ ...state, error: '写入失败：' + (error instanceof Error ? error.message : String(error)) })
+      return false
+    }
+    if (!accepted) publish({ ...state, error: '写入被宿主拒绝（可能是配置在别处被同时修改，请重试）' })
+    return accepted
   }
 
   return {
@@ -100,22 +125,19 @@ export function createPricingSettings(): PricingSettingsStore {
         form = null
       }
     },
-    async save(config) {
-      if (form === null) {
-        publish({ ...state, error: '宿主没有提供配置表单服务，规则只能导出 / 导入，无法保存' })
-        return false
-      }
-      publish({ ...state, error: null })
-      let accepted = false
-      try {
-        // 整段替换而非逐条改数组：宿主的数组层是整体覆盖语义，逐条改很容易留下旧元素
-        accepted = await form.mutate([{ op: 'set', path: ['pricing'], value: configForWrite(config) }])
-      } catch (error) {
-        publish({ ...state, error: '写入失败：' + (error instanceof Error ? error.message : String(error)) })
-        return false
-      }
-      if (!accepted) publish({ ...state, error: '写入被宿主拒绝（可能是规则在别处被同时修改，请重试）' })
-      return accepted
+    save(config) {
+      // 整段替换而非逐条改数组：宿主的数组层是整体覆盖语义，逐条改很容易留下旧元素
+      return write(
+        [{ op: 'set', path: ['pricing'], value: configForWrite(config) }],
+        '宿主没有提供配置表单服务，规则只能导出 / 导入，无法保存',
+      )
+    },
+    saveBudget(thresholds) {
+      // 只写 `budget` 一段：规则那一段原样保留，预算保存失败也不会动到规则
+      return write(
+        [{ op: 'set', path: ['budget'], value: budgetThresholdsForWrite(thresholds) }],
+        '宿主没有提供配置表单服务，预算阈值无法保存',
+      )
     },
     isServed: () => state.status !== 'unavailable',
     noteError(message) {

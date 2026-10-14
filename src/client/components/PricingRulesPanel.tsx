@@ -9,10 +9,11 @@ import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   CURRENCY_OPTIONS, DAY_SCOPE_DAYS, DAY_SCOPE_LABELS, DAY_SCOPE_OPTIONS, EMPTY_CONFIG,
   UNIT_LABELS, UNIT_OPTIONS,
-  blankRule, currencySymbolOf, dayScopeOf, offPeakWindowsText,
+  blankRule, catalogStaleDays, dayScopeOf, fetchedDaysAgo, moneyTextOf, offPeakWindowsText,
   parseImportedPricing, ruleKeyOf, ruleLabelOf, ruleProblemOf,
   type DayScope, type OffPeakWindow, type PricingConfig, type PricingRates, type PricingResponse, type PricingRule,
 } from '../pricing.ts'
+import { EMPTY_BUDGET_THRESHOLDS, type BudgetThresholds } from '../budget.ts'
 import type { PricingSettingsState, PricingSettingsStore } from '../pricingSettings.ts'
 import { JSON_MIME, downloadFile, exportFileName, toJson } from '../export.ts'
 import { fmtTokens } from '../format.ts'
@@ -21,8 +22,6 @@ import styles from '../styles/shared.module.css'
 import pricingStyles from '../styles/pricing.module.css'
 import exportStyles from '../styles/export.module.css'
 
-/** 金额一律两位小数；服务端给的 4 位是计算精度，不是展示精度。 */
-const AMOUNT_DIGITS = 2
 /** 「最值得补规则」最多列几条 —— 多于一屏就失去「最值得」的意义。 */
 const WORTH_RULE_LIMIT = 3
 
@@ -56,8 +55,10 @@ export function PricingRulesPanel(props: {
   }
 
   const templates = pricing?.templates ?? []
-  // 内置官方价目：随插件发布、自动生效；这里只展示条数与来源，用户不需要也不能编辑它
+  // 内置官方价目：随插件发布、自动生效；这里只展示条数、来源与抓取日期，用户不需要也不能编辑它
   const catalog = pricing?.catalog ?? null
+  // 超过阈值就改成警示样式并提示复核：价目是静态数据，厂商调价后只能人工更新
+  const catalogStale = catalog === null ? null : catalogStaleDays(catalog.sources)
   const providerOptions = useMemo(() => channels.map((channel) => channel.provider), [channels])
   const modelOptions = useMemo(() => {
     const ids = new Set<string>()
@@ -185,7 +186,7 @@ export function PricingRulesPanel(props: {
               <div className={pricingStyles.statItem}>
                 <div className={pricingStyles.statName}>按当前规则试算（近 30 天，仅参照）</div>
                 <div className={pricingStyles.statNum}>
-                  {ruleCostEntries.map(([currency, amount]) => moneyText(currency, amount)).join(' / ')}
+                  {ruleCostEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(' / ')}
                 </div>
                 <div className={pricingStyles.statNote}>
                   不是账单：实际成本按「官方 &gt; 规则 &gt; 官方价 &gt; 均价」逐格取值
@@ -195,18 +196,24 @@ export function PricingRulesPanel(props: {
           )}
 
           {catalog !== null && catalog.entries > 0 && (
-            <div className={pricingStyles.catalogNote}>
+            <div className={pricingStyles.catalogNote + (catalogStale === null ? '' : ' ' + pricingStyles.catalogStale)}>
               已内置 <b>{String(catalog.entries)}</b> 条厂商官方价目，<b>无需套用模板即自动生效</b>
               （你的规则优先于它）。来源：
-              {catalog.sources.map((entry, index) => (
-                <span key={entry.source}>
-                  {index > 0 && '；'}
-                  <a className={pricingStyles.linkBtn} href={entry.source} target="_blank" rel="noreferrer">
-                    {entry.providers.join(' / ')}
-                  </a>
-                  （{entry.count} 条，{entry.fetchedAt} 抓取）
-                </span>
-              ))}
+              {catalog.sources.map((entry, index) => {
+                const daysAgo = fetchedDaysAgo(entry.fetchedAt)
+                return (
+                  <span key={entry.source}>
+                    {index > 0 && '；'}
+                    <a className={pricingStyles.linkBtn} href={entry.source} target="_blank" rel="noreferrer">
+                      {entry.providers.join(' / ')}
+                    </a>
+                    （{entry.count} 条，{entry.fetchedAt} 抓取{daysAgo === null ? '' : '，距今 ' + String(daysAgo) + ' 天'}）
+                  </span>
+                )
+              })}
+              {catalogStale !== null && (
+                <>　<b>价目最新一次抓取距今 {String(catalogStale)} 天，建议按官方文档复核价目。</b></>
+              )}
             </div>
           )}
 
@@ -351,7 +358,7 @@ export function PricingRulesPanel(props: {
                       命中缓存 {fmtTokens(entry.cacheReadTokens)} tokens
                     </span>
                     <span className={pricingStyles.saving}>
-                      省 {moneyText(entry.currency, entry.amount)}
+                      省 {moneyTextOf(entry.currency, entry.amount)}
                     </span>
                   </li>
                 ))}
@@ -363,8 +370,131 @@ export function PricingRulesPanel(props: {
               )}
             </div>
           )}
+
+          <BudgetEditor settings={settings} state={state} />
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * 预算与告警：阈值与规则同住一个设置命名空间，保存只写 `budget` 一段（不碰规则）。
+ * 判定在服务端（src/server/budget.ts），越线时页面顶部的横幅与总览的进度条才会出现。
+ */
+function BudgetEditor(props: { settings: PricingSettingsStore; state: PricingSettingsState }): ReactNode {
+  const [draft, setDraft] = useState<BudgetThresholds | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  // 宿主还没回（loading）或命名空间不可写时不让点保存：状态提示由抽屉顶部的 StatusNotice 统一给出
+  const editable = props.state.status === 'ready' && props.state.writable
+  const value = draft ?? props.state.budget
+
+  const numberField = (label: string, key: 'dailyTokens' | 'monthlyTokens', hint: string): ReactNode => (
+    <div className={pricingStyles.field} key={key}>
+      <label>{label}</label>
+      <input
+        type="number"
+        min={0}
+        step="any"
+        value={String(value[key])}
+        onChange={(event) => {
+          const next = Number(event.target.value)
+          setDraft({ ...value, [key]: Number.isFinite(next) && next > 0 ? next : 0 })
+        }}
+      />
+      <span className={pricingStyles.editorHint}>{hint}</span>
+    </div>
+  )
+
+  const save = async (): Promise<void> => {
+    const accepted = await props.settings.saveBudget(draft ?? props.state.budget)
+    if (!accepted) return
+    setDraft(null)
+    setNotice('预算阈值已保存')
+  }
+
+  const clear = async (): Promise<void> => {
+    const accepted = await props.settings.saveBudget(EMPTY_BUDGET_THRESHOLDS)
+    if (!accepted) return
+    setDraft(null)
+    setNotice('已清除预算阈值：不再告警')
+  }
+
+  return (
+    <div className={pricingStyles.sectionBlock}>
+      <div className={pricingStyles.subLabel}>预算与告警</div>
+      <div className={pricingStyles.panelHint}>
+        按<b>本地日历日 / 日历月</b>切分（不是滚动 30 天）；Tokens 用展示口径（输入 + 输出 + 缓存读）；
+        成本上限<b>按币种独立比较</b>，不换算、不合计；<b>0 或留空 = 该项不启用</b>；
+        告警只是提示，不阻断任何操作。
+      </div>
+
+      <div className={pricingStyles.editorGrid}>
+        {numberField('每日 Tokens 上限', 'dailyTokens', '留空 / 0 = 不启用')}
+        {numberField('每月 Tokens 上限', 'monthlyTokens', '留空 / 0 = 不启用')}
+      </div>
+
+      <div className={pricingStyles.subLabel}>每月成本上限（逐币种独立比较，不换算）</div>
+      {value.monthlyCost.length === 0 && <div className={pricingStyles.panelHint}>还没有币种上限。</div>}
+      {value.monthlyCost.map((entry, index) => (
+        <div className={pricingStyles.windowRow} key={index}>
+          <select
+            className={pricingStyles.actionBtn}
+            value={entry.currency}
+            onChange={(event) => setDraft({
+              ...value,
+              monthlyCost: value.monthlyCost.map((candidate, position) => (
+                position === index ? { ...candidate, currency: event.target.value } : candidate
+              )),
+            })}
+          >
+            {CURRENCY_OPTIONS.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+          </select>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            value={String(entry.amount)}
+            onChange={(event) => {
+              const next = Number(event.target.value)
+              setDraft({
+                ...value,
+                monthlyCost: value.monthlyCost.map((candidate, position) => (
+                  position === index ? { ...candidate, amount: Number.isFinite(next) && next > 0 ? next : 0 } : candidate
+                )),
+              })
+            }}
+          />
+          <button
+            className={pricingStyles.linkBtn}
+            onClick={() => setDraft({
+              ...value,
+              monthlyCost: value.monthlyCost.filter((_, position) => position !== index),
+            })}
+          >
+            移除
+          </button>
+        </div>
+      ))}
+      <button
+        className={pricingStyles.actionBtn}
+        onClick={() => setDraft({
+          ...value,
+          monthlyCost: [...value.monthlyCost, { currency: CURRENCY_OPTIONS[0], amount: 0 }],
+        })}
+      >
+        + 添加币种上限
+      </button>
+
+      {notice !== null && <div className={pricingStyles.panelHint}>{notice}</div>}
+      <div className={pricingStyles.editorActions}>
+        <button className={pricingStyles.actionBtn + ' ' + pricingStyles.primary} disabled={!editable} onClick={() => void save()}>
+          保存阈值
+        </button>
+        <button className={pricingStyles.actionBtn} disabled={!editable} onClick={() => void clear()}>
+          清除阈值
+        </button>
+      </div>
     </div>
   )
 }
@@ -408,7 +538,7 @@ function SummaryStrip(props: {
         <div className={pricingStyles.summaryValue + (props.savingsEntries.length > 0 ? ' ' + pricingStyles.saving : '')}>
           {props.savingsEntries.length === 0
             ? '—'
-            : props.savingsEntries.map(([currency, amount]) => moneyText(currency, amount)).join(' / ')}
+            : props.savingsEntries.map(([currency, amount]) => moneyTextOf(currency, amount)).join(' / ')}
         </div>
       </div>
 
@@ -474,11 +604,6 @@ function StatusNotice(props: { state: PricingSettingsState }): ReactNode {
     return <div className={pricingStyles.error}>保存失败：{state.error}，可重试</div>
   }
   return null
-}
-
-/** 两位小数 + 币种符号；未知币种保留代码前缀，避免把 USD 当 CNY 渲染。 */
-function moneyText(currency: string, amount: number): string {
-  return currencySymbolOf(currency) + amount.toFixed(AMOUNT_DIGITS)
 }
 
 function percentText(share: number): string {

@@ -58,6 +58,11 @@
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
+/* 价目抓取超过阈值：只换成警示色并加一句复核提示，数值一律不动（自动改价会静默算错钱） */
+.catalogStale {
+  color: var(--dsw-alias-state-warn-primary, #e0a13c);
+  border-color: var(--dsw-alias-state-warn-primary, #e0a13c);
+}
 
 .offPeakChip {
   display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;

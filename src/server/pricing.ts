@@ -128,6 +128,18 @@ export function unwrapSettingValue(value: unknown): unknown {
   return value
 }
 
+/**
+ * 取设置服务里的一段：宿主 `describe()` / 客户端 `configForms` 给的是**命名空间根对象**
+ * （`{ pricing: …, budget: … }`，见宿主 dsh-settings 的 `projectForm(form, plainConfig(config))`），
+ * 字段在它下面。没有该键时（直传一段值、或宿主还没加载新 Config）就用整份值，两种形状都能读。
+ */
+export function settingsSectionOf(raw: unknown, key: string): unknown {
+  const value = unwrapSettingValue(raw)
+  if (value === null || typeof value !== 'object') return value
+  const record = value as Record<string, unknown>
+  return key in record ? record[key] : value
+}
+
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
 }
@@ -181,7 +193,7 @@ function windowsOf(raw: unknown): OffPeakWindow[] {
  * 无法解释的规则整条丢弃（而不是填 0），否则 0 价会被当成「免费」静默算错。
  */
 export function normalizePricing(raw: unknown): PricingConfig {
-  const value = unwrapSettingValue(raw)
+  const value = settingsSectionOf(raw, 'pricing')
   if (typeof value !== 'object' || value === null) return EMPTY_PRICING
   const record = value as Record<string, unknown>
   const currency = textOr(record.currency, EMPTY_PRICING.currency)

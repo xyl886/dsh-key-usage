@@ -4,6 +4,9 @@ import type { CostSource } from './pricing.ts'
 /** 计费规则相关的响应类型定义在 pricing.ts（视图模型与响应同源），这里只做转出。 */
 export type { CostSource, PricingConfig, PricingResponse, PricingRule, PricingTemplate } from './pricing.ts'
 
+/** 预算与告警的响应类型定义在 budget.ts（同上：视图模型与响应同源）。 */
+export type { BudgetEntry, BudgetLevel, BudgetResponse, BudgetThresholds } from './budget.ts'
+
 /** 客户端使用的宿主上下文最小面（与 dsh-plugin / dsh-context 的 slots 契约一致）。 */
 export interface SlotRegistration {
   name: string
