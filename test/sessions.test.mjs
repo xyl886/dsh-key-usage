@@ -270,4 +270,25 @@ assert.equal(emptyDetail.hours, null)
 assert.deepEqual(emptyDetail.models, [])
 assert.equal(emptyDetail.durationMs, 0)
 
+// 13. 子代理归属：宿主在 header 里给 parentSession / origin，父行统计子会话数，子行标来源
+const subagentRecords = [
+  { id: 'session-parent', title: '主会话', workspace: 'D:/work', parentSessionId: null, origin: null, summary: summarizeSession(foldSessionEvents([])) },
+  { id: 'session-child-1', title: '子代理 A', workspace: 'D:/work', parentSessionId: 'session-parent', origin: 'subagent', summary: summarizeSession(foldSessionEvents([])) },
+  { id: 'session-child-2', title: '子代理 B', workspace: 'D:/work', parentSessionId: 'session-parent', origin: 'subagent', summary: summarizeSession(foldSessionEvents([])) },
+]
+const subagentRows = sessionRowsOf(subagentRecords, [])
+const parentRow = subagentRows.find((row) => row.id === 'session-parent')
+const childRow = subagentRows.find((row) => row.id === 'session-child-1')
+assert.equal(parentRow.subagentCount, 2, '父会话统计到 2 个子会话')
+assert.equal(parentRow.origin, null, '父会话没有 origin')
+assert.equal(childRow.subagentCount, 0, '子会话自己不再挂子会话')
+assert.equal(childRow.origin, 'subagent', '子会话标出来源，界面据此打「子代理」')
+assert.equal(childRow.parentSessionId, 'session-parent', '子会话记住父会话 id')
+
+// 缺字段的老记录按「无父会话」处理：不能把它们算成某个 undefined 父会话的子会话
+const legacyRows = sessionRowsOf([{ id: 'session-legacy', title: null, workspace: null, summary: summarizeSession(foldSessionEvents([])) }], [])
+assert.equal(legacyRows[0].parentSessionId, null)
+assert.equal(legacyRows[0].origin, null)
+assert.equal(legacyRows[0].subagentCount, 0, '没有 parentSessionId 的记录不参与子会话统计')
+
 console.log('sessions.test: 全部通过')

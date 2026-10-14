@@ -194,6 +194,12 @@ export interface SessionRow {
   providerLabel: string | null
   /** 该会话出现过的模型个数（列表只展示前几个）；服务端旧版本可能没有这个字段。 */
   modelCount?: number
+  /** 子代理会话指向的父会话 id；普通会话为 null。 */
+  parentSessionId?: string | null
+  /** 会话来源；`subagent` = 子代理会话。 */
+  origin?: string | null
+  /** 挂在这个会话下的子代理会话数。 */
+  subagentCount?: number
   firstTime: number | null
   lastTime: number | null
   calls: number

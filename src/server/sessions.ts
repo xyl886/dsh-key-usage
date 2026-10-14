@@ -40,6 +40,10 @@ export interface SessionUsageRecord {
   id: string
   title: string | null
   workspace: string | null
+  /** 子代理会话指向的父会话 id（宿主 header 的 `parentSession`）；普通会话为 null。 */
+  parentSessionId: string | null
+  /** 会话来源（宿主 header 的 `origin`，子代理会话为 `subagent`）；老会话可能没有。 */
+  origin: string | null
   summary: SessionSummary
 }
 
@@ -76,7 +80,15 @@ interface PendingSession {
 }
 
 interface LiveSessionsService {
-  list(): Array<{ id: string; events?: SessionEvent[]; title?: string; cwd?: string }>
+  list(): Array<{
+    id: string
+    events?: SessionEvent[]
+    title?: string
+    cwd?: string
+    parentSession?: string
+    parentSessionId?: string
+    origin?: string
+  }>
 }
 
 interface HostContextLike {
@@ -113,10 +125,18 @@ function firstString(...values: unknown[]): string | null {
   return null
 }
 
-function metadataOf(header: Record<string, unknown>): { title: string | null; workspace: string | null } {
+function metadataOf(header: Record<string, unknown>): {
+  title: string | null
+  workspace: string | null
+  parentSessionId: string | null
+  origin: string | null
+} {
   return {
     title: firstString(header.title, header.name, header.summary, header.label),
     workspace: firstString(header.cwd, header.workspace, header.workspacePath, header.projectPath, header.project),
+    // 子代理会话在 header 里带父会话 id 与来源（宿主的 listFields 也按这两个名字下发）
+    parentSessionId: firstString(header.parentSession, header.parentSessionId),
+    origin: firstString(header.origin),
   }
 }
 
@@ -163,6 +183,8 @@ export function createSessionSource(host: HostContextLike): {
         id: pending.id,
         title: metadata.title,
         workspace: metadata.workspace,
+        parentSessionId: metadata.parentSessionId,
+        origin: metadata.origin,
         summary: summarizeSession(fold),
       }
       cache.set(pending.id, { revision: pending.revision, eventCount: pending.eventCount, record })
@@ -232,8 +254,20 @@ export function createSessionSource(host: HostContextLike): {
         total += 1
         try {
           const fold = foldSessionEvents(session.events ?? [])
-          const metadata = { title: firstString(session.title), workspace: firstString(session.cwd) }
-          merged.set(session.id, { id: session.id, title: metadata.title, workspace: metadata.workspace, summary: summarizeSession(fold) })
+          const metadata = {
+            title: firstString(session.title),
+            workspace: firstString(session.cwd),
+            parentSessionId: firstString(session.parentSession, session.parentSessionId),
+            origin: firstString(session.origin),
+          }
+          merged.set(session.id, {
+            id: session.id,
+            title: metadata.title,
+            workspace: metadata.workspace,
+            parentSessionId: metadata.parentSessionId,
+            origin: metadata.origin,
+            summary: summarizeSession(fold),
+          })
         } catch {
           skipped += 1
         }
@@ -248,7 +282,14 @@ export function createSessionSource(host: HostContextLike): {
           const { events } = await persistence.readFrom(id, 0)
           const fold = foldSessionEvents(events)
           const metadata = metadataOf(snapshot.header)
-          merged.set(id, { id, title: metadata.title, workspace: metadata.workspace, summary: summarizeSession(fold) })
+          merged.set(id, {
+            id,
+            title: metadata.title,
+            workspace: metadata.workspace,
+            parentSessionId: metadata.parentSessionId,
+            origin: metadata.origin,
+            summary: summarizeSession(fold),
+          })
         } catch {
           skipped += 1
         }
@@ -318,7 +359,14 @@ export function createSessionSource(host: HostContextLike): {
         }
         try {
           const { events } = await persistence.readFrom(sessionId, 0)
-          const record: SessionUsageRecord = { id: sessionId, title: metadata.title, workspace: metadata.workspace, summary: summarizeSession(foldSessionEvents(events)) }
+          const record: SessionUsageRecord = {
+            id: sessionId,
+            title: metadata.title,
+            workspace: metadata.workspace,
+            parentSessionId: metadata.parentSessionId,
+            origin: metadata.origin,
+            summary: summarizeSession(foldSessionEvents(events)),
+          }
           return { status: 'ok', id: sessionId, title: record.title, workspace: record.workspace, reason: null, record }
         } catch (error) {
           return { status: 'degraded', id: sessionId, title: metadata.title, workspace: metadata.workspace, reason: readFailureText(error), record: null }
@@ -395,6 +443,12 @@ export interface SessionRow {
   provider: string | null
   /** 该会话出现过的模型个数（列表只展示前几个，计数要看这个）。 */
   modelCount: number
+  /** 子代理会话指向的父会话 id；普通会话为 null。 */
+  parentSessionId: string | null
+  /** 会话来源；`subagent` = 子代理会话。 */
+  origin: string | null
+  /** 挂在这个会话下的子代理会话数（0 = 没有）。 */
+  subagentCount: number
   firstTime: number | null
   lastTime: number | null
   calls: number
@@ -437,6 +491,13 @@ export function sessionRowsOf(
 ): SessionRow[] {
   const titles = meta.titles ?? new Map<string, string>()
   const archived = meta.archived ?? new Set<string>()
+  // 子代理会话数：父会话行标「子会话 N」，子会话行自己标「子代理」；缺字段的老记录按「无父会话」处理
+  const subagentCounts = new Map<string, number>()
+  for (const record of records) {
+    const parent = record.parentSessionId ?? null
+    if (parent === null || parent === '') continue
+    subagentCounts.set(parent, (subagentCounts.get(parent) ?? 0) + 1)
+  }
   return records
     .map((record) => ({
       id: record.id,
@@ -447,6 +508,9 @@ export function sessionRowsOf(
       workspace: record.workspace,
       provider: record.summary.primaryModelKey === null ? null : attributeModelKey(record.summary.primaryModelKey, knownProviders).provider,
       modelCount: record.summary.models.length,
+      parentSessionId: record.parentSessionId ?? null,
+      origin: record.origin ?? null,
+      subagentCount: subagentCounts.get(record.id) ?? 0,
       firstTime: record.summary.firstTime,
       lastTime: record.summary.lastTime,
       calls: record.summary.calls,

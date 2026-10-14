@@ -32,6 +32,11 @@
   margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
   color: var(--dsw-alias-label-tertiary, #67676f); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
 }
+/* 子代理会话的标记：与「已归档」同尺寸，用主色区分（它是来源，不是状态） */
+.subagentTag {
+  margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
+  color: var(--dsw-alias-state-accent-primary, #5b8cff); border: 1px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+}
 
 /* 首列是长文本（会话标题 / 模型名 / 项目路径）的表格必须用固定布局：
    auto 布局下，首列里 nowrap 的标题会把该列的最小宽度顶到整段文本宽度，

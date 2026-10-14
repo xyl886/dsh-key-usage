@@ -284,6 +284,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               {row.title ?? '（无提问）· ' + shortIdOf(row.id)}
             </button>
             {row.archived && <span className={listStyles.archivedTag}>已归档</span>}
+            {row.origin === 'subagent' && <span className={listStyles.subagentTag}>子代理</span>}
           </div>
           <div className={listStyles.listSub}>
             {workspace === null
@@ -303,6 +304,9 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               )}
             {row.modelCount !== undefined && row.modelCount > 1 && (
               <span className={listStyles.sessionMeta}>{row.modelCount} 个模型</span>
+            )}
+            {row.subagentCount !== undefined && row.subagentCount > 0 && (
+              <span className={listStyles.sessionMeta}>{row.subagentCount} 个子会话</span>
             )}
           </div>
         </td>
