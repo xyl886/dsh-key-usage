@@ -67,7 +67,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 **写什么**（只有三处，都在 `$DSH_HOME/dsh-key-usage/`）：
 
-- `quota-snapshots.json` —— 余额与窗口快照，实时查询成功即原子写；
+- `snapshot.json` —— 统一快照：6 个 Tab 的数据（含明细），每 5 分钟本地重建一次，点「刷新」时整体重算；
 - `model-prices.json` —— 点「刷新价目」成功后写入的聚合价目副本（校验不过不覆盖旧文件）；
 - `fx-rate.json` —— 汇率缓存（成功才写，12 小时内直接复用）。
 
@@ -233,7 +233,7 @@ pnpm run pack:dry     # 发布清单自检
 | `src/client/**` | `pnpm run build` → **刷新页面** |
 | `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
 
-**验证安装**（共 **13 个端点 = 12 个只读 `GET` + 1 个写 `POST`**，全部只接受回环请求）：
+**验证安装**（共 **15 个端点 = 13 个只读 `GET` + 2 个写 `POST`**，全部只接受回环请求）：
 
 ```bash
 curl -s http://127.0.0.1:19387/dsh-key-usage/channels   # 返回 { channels: [...] } 即已挂载
