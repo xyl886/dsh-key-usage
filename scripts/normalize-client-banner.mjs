@@ -36,5 +36,9 @@ if (absolutePath !== null) {
   process.exit(1)
 }
 
+// 版本号占位符 -> package.json 的 version（客户端拿不到 package.json，只能在构建期写入）
+const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
+code = code.split('__DSH_KEY_USAGE_VERSION__').join(version)
+
 fs.writeFileSync(file, code)
 console.log('client banner 归一化完成：' + required)

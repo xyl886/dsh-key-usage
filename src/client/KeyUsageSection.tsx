@@ -4,6 +4,7 @@ import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQ
 import { fxSummaryTextOf, useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { useT } from './core/i18n.ts'
+import { PLUGIN_VERSION } from './core/version.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
@@ -286,7 +287,7 @@ export function KeyUsageSection() {
 
       {showCaliber && (
       <Dialog title={t('caliber.title')} closeLabel={t('action.close')} onClose={() => setShowCaliber(false)}>
-        <div className={styles.caliberVersion}>{t('caliber.version', { version: __PLUGIN_VERSION__ })}</div>
+        <div className={styles.caliberVersion}>{t('caliber.version', { version: PLUGIN_VERSION })}</div>
         <ul className={styles.footnoteList}>
           <li>
             {t('caliber.source', {

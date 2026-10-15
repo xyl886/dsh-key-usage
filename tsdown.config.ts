@@ -24,7 +24,6 @@ export default defineConfig({
   format: 'cjs',
   platform: 'browser',
   target: 'es2022',
-  define: { __PLUGIN_VERSION__: JSON.stringify(pkg.version) },
   dts: false,
   sourcemap: true,
   clean: false,
