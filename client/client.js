@@ -2517,32 +2517,56 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const shareSummary = rows.length === 0 ? title + t("sh.noData") : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? t("sh.morePrefix") + String(rows.length) + t("sh.moreSuffix") : "");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.statLabel,
-					children: title
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: detail_module_css_default.shareBar,
-					role: "img",
-					"aria-label": shareSummary,
-					onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: title }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("sh.shareAll") }),
-						rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
-							color: row.color,
-							label: row.label,
-							amount: fmtTokens(row.tokens),
-							rate: (totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%"
-						}, row.key))
-					] })),
-					onMouseLeave: props.tooltip.hide,
-					children: rows.map((row) => {
-						totalTokens > 0 && Math.round(row.tokens / totalTokens * 100);
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: shared_module_css_default.statLabel,
+						children: title
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: detail_module_css_default.shareBar,
+						role: "img",
+						"aria-label": shareSummary,
+						onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: title }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("sh.shareAll") }),
+							rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
+								color: row.color,
+								label: row.label,
+								amount: fmtTokens(row.tokens),
+								rate: (totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%"
+							}, row.key))
+						] })),
+						onMouseLeave: props.tooltip.hide,
+						children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
 							width: row.tokens / totalTokens * 100 + "%",
 							background: row.color
-						} }, row.key);
+						} }, row.key))
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+						className: detail_module_css_default.shareLegend,
+						children: rows.map((row) => {
+							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: detail_module_css_default.shareDot,
+									style: { background: row.color }
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: detail_module_css_default.shareName,
+									children: row.label
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: detail_module_css_default.sharePercent,
+									children: [percent, "%"]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: detail_module_css_default.shareTokens,
+									children: fmtTokens(row.tokens)
+								})
+							] }, row.key);
+						})
 					})
-				})]
+				]
 			});
 		}
 		//#endregion

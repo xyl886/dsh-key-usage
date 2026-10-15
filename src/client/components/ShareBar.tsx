@@ -93,13 +93,24 @@ export function ShareBar(props: {
         ))}
         onMouseLeave={props.tooltip.hide}
       >
+        {rows.map((row) => (
+          <i key={row.key} style={{ width: (row.tokens / totalTokens * 100) + '%', background: row.color }} />
+        ))}
+      </div>
+      {/* 一次列全：小占比段不用悬停也能看到（tip 里是同一份数据） */}
+      <ul className={detailStyles.shareLegend}>
         {rows.map((row) => {
           const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0
           return (
-            <i key={row.key} style={{ width: (row.tokens / totalTokens * 100) + '%', background: row.color }} />
+            <li key={row.key}>
+              <span className={detailStyles.shareDot} style={{ background: row.color }} />
+              <span className={detailStyles.shareName}>{row.label}</span>
+              <span className={detailStyles.sharePercent}>{percent}%</span>
+              <span className={detailStyles.shareTokens}>{fmtTokens(row.tokens)}</span>
+            </li>
           )
         })}
-      </div>
+      </ul>
     </div>
   )
 }
