@@ -5,6 +5,7 @@ import type { Channel, HeatmapDay, QuotaProvider, SummaryResponse } from '../typ
 import type { TooltipApi } from '../tooltip.tsx'
 import { Heatmap } from '../components/Heatmap.tsx'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
+import { t, useT } from '../i18n.ts'
 import styles from '../styles/shared.module.css'
 import overviewStyles from '../styles/overview.module.css'
 
@@ -16,6 +17,8 @@ export function OverviewTab(props: {
   tooltip: TooltipApi
   onOpenDetail: (provider: string) => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const { channels, summary } = props
   return (
     <div>
@@ -45,7 +48,7 @@ export function OverviewTab(props: {
                     <div className={overviewStyles.keyDisplay}>{channel.displayName}</div>
                   </div>
                 </td>
-                <td><span className={tagClassOf(channel)}>{channel.status === 'off' ? '未配置' : channel.costLabel}</span></td>
+                <td><span className={tagClassOf(channel)}>{channel.status === 'off' ? t('err.noApiKey') : channel.costLabel}</span></td>
                 <td>{todayTokens > 0 ? fmtTokens(todayTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
@@ -100,13 +103,13 @@ function quotaCellOf(channel: Channel): ReactNode {
       </span>
     )
   }
-  const fallback = channel.costMode === 'none' ? '无计费' : channel.costMode === 'free' ? '—' : '未查询'
+  const fallback = channel.costMode === 'none' ? t('o.noBilling') : channel.costMode === 'free' ? '—' : t('o.notQueried')
   return <span className={[overviewStyles.quotaText, overviewStyles.dim].join(' ')}>{fallback}</span>
 }
 
 /** 供标题行使用的调用汇总（占位保持导出面稳定）。 */
 export function overviewCaptionOf(summary: SummaryResponse | null): string {
-  if (summary === null) return '台账不可用'
+  if (summary === null) return t('o.ledgerUnavailable')
   const calls = summary.channels.reduce((total, row) => total + row.month.calls, 0)
   return fmtCalls(calls) + ' 次调用'
 }

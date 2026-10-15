@@ -5,6 +5,7 @@ import { fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../format
 import { moneyTotalsTextOf } from '../currency.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
+import { t, useT } from '../i18n.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
 import { Button } from '../components/ui/Button.tsx'
@@ -27,20 +28,20 @@ const PAGE_SIZE = 50
 
 /** 导出列：标题可能带逗号或换行，由 toCsv 统一转义。 */
 const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
-  { key: 'id', label: '会话 id', value: (row) => row.id },
-  { key: 'title', label: '标题', value: (row) => row.title },
-  { key: 'prompt', label: '首条提问', value: (row) => row.prompt },
-  { key: 'workspace', label: '工作区', value: (row) => row.workspace },
-  { key: 'provider', label: '通道', value: (row) => row.provider },
-  { key: 'firstTime', label: '首次时间', value: (row) => fmtDateTime(row.firstTime) },
-  { key: 'lastTime', label: '最近时间', value: (row) => fmtDateTime(row.lastTime) },
-  { key: 'crossDays', label: '跨天', value: (row) => row.crossDays },
-  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'id', labelKey: 's.id', value: (row) => row.id },
+  { key: 'title', labelKey: 's.title', value: (row) => row.title },
+  { key: 'prompt', labelKey: 's.prompt', value: (row) => row.prompt },
+  { key: 'workspace', labelKey: 'common.workspace', value: (row) => row.workspace },
+  { key: 'provider', labelKey: 'common.channel', value: (row) => row.provider },
+  { key: 'firstTime', labelKey: 's.first', value: (row) => fmtDateTime(row.firstTime) },
+  { key: 'lastTime', labelKey: 's.last', value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'crossDays', labelKey: 's.crossDays', value: (row) => row.crossDays },
+  { key: 'calls', labelKey: 'common.calls', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
-  { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
-  { key: 'archived', label: '已归档', value: (row) => row.archived ? '是' : '否' },
+  { key: 'cacheHitRate', labelKey: 's.hitRate', value: (row) => row.cacheHitRate },
+  { key: 'cost', labelKey: 's.costNative', value: (row) => row.cost },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'archived', labelKey: 's.archived', value: (row) => row.archived ? t('s.yes') : t('s.no') },
 ]
 
 export function SessionsTab(props: {
@@ -50,6 +51,8 @@ export function SessionsTab(props: {
   /** 点工作目录：切到「项目用量」并只看这个项目（筛选状态提升在 KeyUsageSection） */
   onOpenProject: (workspace: string) => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [daysFilter, setDaysFilter] = useState('30')
@@ -108,7 +111,7 @@ export function SessionsTab(props: {
     else downloadFile(exportFileName('sessions', 'json'), toJson(visible), JSON_MIME)
   }
 
-  if (props.data === null) return <EmptyState title="会话数据读取中或不可用…" />
+  if (props.data === null) return <EmptyState title={t('s.loading')} />
 
   // 分组在「最新会话」排序下才有意义（其它排序是全局榜单，日期头会重复出现）
   const groups: Array<{ label: string; rows: SessionRow[]; tokens: number }> = []
@@ -155,56 +158,56 @@ export function SessionsTab(props: {
       {props.data.coverage.status !== 'complete' && (
         <div className={styles.warning}>
           {props.data.coverage.status === 'unavailable'
-            ? '会话数据不可用（宿主未提供会话服务或全部读取失败）'
-            : '会话数据不完整：' + String(props.data.coverage.skippedSessions) + ' 个会话读取失败，未计入统计'}
+            ? t('s.unavailable')
+            : t('s.partial') + ' ' + String(props.data.coverage.skippedSessions) + t('s.partialTail')}
         </div>
       )}
       <div className={listStyles.filterBar}>
-        <input className={listStyles.searchInput} placeholder="搜索会话标题、首条提问、session id、工作区…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className={listStyles.searchInput} placeholder={t('s.searchPlaceholder')} value={query} onChange={(event) => setQuery(event.target.value)} />
         <Select
-          ariaLabel="按通道筛选"
+          ariaLabel={t('s.filterChannel')}
           value={channelFilter}
           onChange={setChannelFilter}
-          options={[{ value: 'ALL', label: '全部通道' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
         />
         <Select
-          ariaLabel="按时间范围筛选"
+          ariaLabel={t('s.filterRange')}
           value={daysFilter}
           onChange={setDaysFilter}
-          options={[{ value: '7', label: '近 7 天' }, { value: '30', label: '近 30 天' }, { value: '0', label: '全部' }]}
+          options={[{ value: '7', label: t('s.days7') }, { value: '30', label: t('s.days30') }, { value: '0', label: t('s.rangeAll') }]}
         />
         <Select
-          ariaLabel="排序方式"
+          ariaLabel={t('s.sort')}
           value={sortKey}
           onChange={(value) => setSortKey(value as SortKey)}
           options={[
-            { value: 'recent', label: '最新会话' },
-            { value: 'tokensDesc', label: 'Tokens 最多' },
-            { value: 'tokensAsc', label: 'Tokens 最少' },
-            { value: 'durationDesc', label: '时长最长' },
-            { value: 'costDesc', label: '成本最高' },
-            { value: 'hitDesc', label: '命中率最高' },
-            { value: 'callsDesc', label: '调用最多' },
+            { value: 'recent', label: t('s.sortRecent') },
+            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
+            { value: 'tokensAsc', label: t('s.sortTokensAsc') },
+            { value: 'durationDesc', label: t('s.sortDuration') },
+            { value: 'costDesc', label: t('s.sortCost') },
+            { value: 'hitDesc', label: t('s.sortHit') },
+            { value: 'callsDesc', label: t('s.sortCalls') },
           ]}
         />
         <Select
-          ariaLabel="归档会话筛选（归档只做标记，仍然计入统计）"
+          ariaLabel={t('s.filterArchive')}
           value={archiveFilter}
           onChange={(value) => setArchiveFilter(value as ArchiveFilter)}
           options={[
-            { value: 'hide', label: '隐藏已归档' },
-            { value: 'all', label: '全部对话（显示已归档）' },
-            { value: 'only', label: '仅显示已归档' },
+            { value: 'hide', label: t('s.archiveHide') },
+            { value: 'all', label: t('s.archiveAll') },
+            { value: 'only', label: t('s.archiveOnly') },
           ]}
         />
         <Select
-          ariaLabel="子会话筛选"
+          ariaLabel={t('s.filterSubagent')}
           value={subagentFilter}
           onChange={(value) => setSubagentFilter(value as 'hide' | 'all' | 'only')}
           options={[
-            { value: 'hide', label: '只显示主会话' },
-            { value: 'all', label: '显示子会话' },
-            { value: 'only', label: '仅显示子会话' },
+            { value: 'hide', label: t('s.subagentHide') },
+            { value: 'all', label: t('s.subagentAll') },
+            { value: 'only', label: t('s.subagentOnly') },
           ]}
         />
         <span className={exportStyles.exportGroup}>
@@ -220,7 +223,7 @@ export function SessionsTab(props: {
       )}
       {subagentFilter !== 'only' && subagentCount > 0 && (
         <div className={styles.statExtra}>
-          另有 {subagentCount} 个子代理会话{subagentFilter === 'hide' ? '未显示' : '（已显示）'}：子会话各自计入统计，不并入父会话
+          另有 {subagentCount} 个子代理会话{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}：子会话各自计入统计，不并入父会话
         </div>
       )}
       {archiveFilter === 'hide' && archivedCount > 0 && (
@@ -263,7 +266,7 @@ export function SessionsTab(props: {
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算
-        {props.data.priced ? '' : '（台账无成本数据，暂不可估）'}
+        {props.data.priced ? '' : t('s.noCost')}
       </div>
 
       {detailId !== null && (
@@ -317,7 +320,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                   type="button"
                   className={listStyles.sessionToggle}
                   aria-expanded={isOpen}
-                  aria-label={isOpen ? '收起模型构成' : '展开模型构成'}
+                  aria-label={isOpen ? t('s.collapseModels') : t('s.expandModels')}
                   onClick={(event) => {
                     event.stopPropagation()
                     options.onToggleModels(row.id)
@@ -334,7 +337,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                 options.onOpenDetail(row.id)
               }}
             >
-              {row.title ?? '（无提问）· ' + shortIdOf(row.id)}
+              {row.title ?? t('s.noPrompt') + ' · ' + shortIdOf(row.id)}
             </button>
             {row.archived && <span className={listStyles.archivedTag}>已归档</span>}
             {row.origin === 'subagent' && (
@@ -352,12 +355,12 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
           </div>
           <div className={listStyles.listSub}>
             {workspace === null
-              ? '未归属工作区'
+              ? t('s.noWorkspace')
               : (
                 <button
                   type="button"
                   className={listStyles.linkBtn}
-                  title={'在「项目用量」里只看 ' + workspace}
+                  title={t('s.gotoProject') + workspace}
                   onClick={(event) => {
                     event.stopPropagation()
                     options.onOpenProject(workspace)
@@ -373,7 +376,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               <button
                 type="button"
                 className={listStyles.sessionMetaBtn}
-                title={'只看这个会话与它的 ' + String(row.subagentCount) + ' 个子会话（子会话 tokens 只是小计，不并入本行）'}
+                title={t('s.focusChildren') + String(row.subagentCount) + t('s.focusChildrenTail')}
                 onClick={(event) => {
                   event.stopPropagation()
                   options.onFocusSession(row.id)

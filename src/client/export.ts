@@ -3,11 +3,15 @@
  * CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
  */
 import { isoDate } from './format.ts'
+import { t } from './i18n.ts'
 
 /** 列定义。`value` 取原始值（数字保持数字），避免把界面文本再解析回数字。 */
 export interface ExportColumn<Row> {
   key: string
-  label: string
+  /** 固定表头（与语言无关，如 Tokens） */
+  label?: string
+  /** 词典键：导出时取词，切语言后导出的表头也跟着变 */
+  labelKey?: string
   value: (row: Row) => string | number | null
 }
 
@@ -20,7 +24,7 @@ export const TEXT_MIME = 'text/plain;charset=utf-8'
 
 /** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
 export function toCsv<Row>(rows: Row[], columns: Array<ExportColumn<Row>>): string {
-  const lines = [columns.map((column) => csvCell(column.label)).join(',')]
+  const lines = [columns.map((column) => csvCell(column.labelKey === undefined ? (column.label ?? column.key) : t(column.labelKey))).join(',')]
   for (const row of rows) {
     lines.push(columns.map((column) => csvCell(column.value(row))).join(','))
   }

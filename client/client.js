@@ -32,6 +32,76 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.currency": "金额按所选币种折算（带 ≈），当前{fx}。",
 			"caliber.fxMissing": "还没取到汇率，跨币种按原币种显示",
 			"caliber.refresh": "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。",
+			"common.calls": "调用",
+			"common.channel": "通道",
+			"common.workspace": "工作区",
+			"s.id": "会话 id",
+			"s.title": "标题",
+			"s.prompt": "首条提问",
+			"s.first": "首次",
+			"s.last": "最近",
+			"s.crossDays": "跨天",
+			"s.hitRate": "命中率(%)",
+			"s.costNative": "成本(原币合计)",
+			"s.costSource": "成本来源",
+			"s.archived": "已归档",
+			"s.yes": "是",
+			"s.no": "否",
+			"s.loading": "会话数据读取中或不可用",
+			"s.unavailable": "会话数据不可用",
+			"s.partial": "会话数据不完整",
+			"s.partialTail": " 个会话读取失败",
+			"s.searchPlaceholder": "搜索标题、提问、id、工作区",
+			"s.filterChannel": "按通道筛选",
+			"s.allChannels": "全部通道",
+			"s.filterRange": "时间范围",
+			"s.days7": "近 7 天",
+			"s.days30": "近 30 天",
+			"s.rangeAll": "全部",
+			"s.sort": "排序",
+			"s.sortRecent": "最新会话",
+			"s.sortTokensDesc": "Tokens 最多",
+			"s.sortTokensAsc": "Tokens 最少",
+			"s.sortDuration": "时长最长",
+			"s.sortCost": "成本最高",
+			"s.sortHit": "命中率最高",
+			"s.sortCalls": "调用最多",
+			"s.filterArchive": "归档筛选",
+			"s.archiveHide": "隐藏已归档",
+			"s.archiveAll": "含已归档",
+			"s.archiveOnly": "仅已归档",
+			"s.filterSubagent": "子会话筛选",
+			"s.subagentHide": "只显示主会话",
+			"s.subagentAll": "含子会话",
+			"s.subagentOnly": "仅子会话",
+			"s.subagentHidden": "未显示",
+			"s.subagentShown": "（已显示）",
+			"s.noCost": "无台账成本",
+			"s.expandModels": "展开模型",
+			"s.collapseModels": "收起模型",
+			"s.noPrompt": "（无提问）",
+			"s.noWorkspace": "无工作区",
+			"s.gotoProject": "在项目用量筛选：",
+			"s.focusChildren": "只看该会话与其 ",
+			"s.focusChildrenTail": " 个子会话（tokens 不并入本行）",
+			"d.title": "会话详情",
+			"d.close": "关闭会话详情",
+			"d.unknownReason": "未知原因",
+			"d.unavailable": "会话用量不可用",
+			"d.partial": "会话用量不完整",
+			"d.costMode": "计费模式",
+			"d.activeDays": "活跃天数",
+			"d.crossDays": "（跨 {count} 天）",
+			"d.hitRate": "命中率",
+			"d.cacheWrite": "缓存写",
+			"d.ioNote": "输入 + 输出 + 缓存读",
+			"d.billingOnly": "只参与计费",
+			"d.busiest": "最忙 {hour} 时，",
+			"d.samples": "样本数",
+			"d.noHours": "无按小时用量",
+			"o.noBilling": "无计费",
+			"o.notQueried": "未查询",
+			"o.ledgerUnavailable": "台账不可用",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -133,6 +203,76 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.currency": "Amounts convert to the selected currency (≈). Currently {fx}.",
 			"caliber.fxMissing": "no FX rate yet, showing original currencies",
 			"caliber.refresh": "Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason.",
+			"common.calls": "Calls",
+			"common.channel": "Channel",
+			"common.workspace": "Workspace",
+			"s.id": "Session",
+			"s.title": "Title",
+			"s.prompt": "First prompt",
+			"s.first": "First",
+			"s.last": "Last",
+			"s.crossDays": "Days",
+			"s.hitRate": "Hit %",
+			"s.costNative": "Cost (native)",
+			"s.costSource": "Cost source",
+			"s.archived": "Archived",
+			"s.yes": "Yes",
+			"s.no": "No",
+			"s.loading": "Loading sessions",
+			"s.unavailable": "Sessions unavailable",
+			"s.partial": "Incomplete session data",
+			"s.partialTail": " sessions failed",
+			"s.searchPlaceholder": "Search title, prompt, id, workspace",
+			"s.filterChannel": "Channel",
+			"s.allChannels": "All channels",
+			"s.filterRange": "Range",
+			"s.days7": "7 days",
+			"s.days30": "30 days",
+			"s.rangeAll": "All",
+			"s.sort": "Sort",
+			"s.sortRecent": "Latest",
+			"s.sortTokensDesc": "Tokens desc",
+			"s.sortTokensAsc": "Tokens asc",
+			"s.sortDuration": "Longest",
+			"s.sortCost": "Cost desc",
+			"s.sortHit": "Hit % desc",
+			"s.sortCalls": "Calls desc",
+			"s.filterArchive": "Archive",
+			"s.archiveHide": "Hide archived",
+			"s.archiveAll": "With archived",
+			"s.archiveOnly": "Archived only",
+			"s.filterSubagent": "Sub-sessions",
+			"s.subagentHide": "Main only",
+			"s.subagentAll": "With sub-sessions",
+			"s.subagentOnly": "Sub-sessions only",
+			"s.subagentHidden": "hidden",
+			"s.subagentShown": "(shown)",
+			"s.noCost": "No ledger cost",
+			"s.expandModels": "Show models",
+			"s.collapseModels": "Hide models",
+			"s.noPrompt": "(no prompt)",
+			"s.noWorkspace": "No workspace",
+			"s.gotoProject": "Filter in Projects: ",
+			"s.focusChildren": "Focus this session + ",
+			"s.focusChildrenTail": " sub-sessions (tokens not merged)",
+			"d.title": "Session",
+			"d.close": "Close session",
+			"d.unknownReason": "Unknown reason",
+			"d.unavailable": "Session usage unavailable",
+			"d.partial": "Session usage incomplete",
+			"d.costMode": "Billing",
+			"d.activeDays": "Active days",
+			"d.crossDays": "(crosses {count} days)",
+			"d.hitRate": "Hit %",
+			"d.cacheWrite": "Cache write",
+			"d.ioNote": "input + output + cache read",
+			"d.billingOnly": "billing only",
+			"d.busiest": "Busiest {hour}h, ",
+			"d.samples": "Samples",
+			"d.noHours": "No hourly usage",
+			"o.noBilling": "No billing",
+			"o.notQueried": "Not queried",
+			"o.ledgerUnavailable": "Ledger unavailable",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -1471,6 +1611,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/tabs/OverviewTab.tsx
 		function OverviewTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { channels, summary } = props;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1509,7 +1651,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								}) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: tagClassOf(channel),
-									children: channel.status === "off" ? "未配置" : channel.costLabel
+									children: channel.status === "off" ? t("err.noApiKey") : channel.costLabel
 								}) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: todayTokens > 0 ? fmtTokens(todayTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
@@ -1595,7 +1737,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					})
 				});
 			}
-			const fallback = channel.costMode === "none" ? "无计费" : channel.costMode === "free" ? "—" : "未查询";
+			const fallback = channel.costMode === "none" ? t("o.noBilling") : channel.costMode === "free" ? "—" : t("o.notQueried");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 				className: [overview_module_css_default.quotaText, overview_module_css_default.dim].join(" "),
 				children: fallback
@@ -1612,7 +1754,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const JSON_MIME = "application/json;charset=utf-8";
 		/** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
 		function toCsv(rows, columns) {
-			const lines = [columns.map((column) => csvCell(column.label)).join(",")];
+			const lines = [columns.map((column) => csvCell(column.labelKey === void 0 ? column.label ?? column.key : t(column.labelKey))).join(",")];
 			for (const row of rows) lines.push(columns.map((column) => csvCell(column.value(row))).join(","));
 			return UTF8_BOM + lines.join("\r\n") + "\r\n";
 		}
@@ -4289,6 +4431,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/components/SessionDetailDrawer.tsx
 		/** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 		function SessionDetailDrawer(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const [data, setData] = (0, react.useState)(null);
 			const [failed, setFailed] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
@@ -4326,7 +4470,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: lists_module_css_default.drawerHead,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: lists_module_css_default.drawerTitle,
-								children: [session?.title ?? props.fallbackTitle ?? "（无提问）· " + shortIdOf$1(props.sessionId), session?.archived === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								children: [session?.title ?? props.fallbackTitle ?? t("s.noPrompt") + " · " + shortIdOf$1(props.sessionId), session?.archived === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.archivedTag,
 									children: "已归档"
 								})]
@@ -4334,7 +4478,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								type: "button",
 								className: lists_module_css_default.drawerClose,
 								onClick: props.onClose,
-								"aria-label": "关闭会话详情",
+								"aria-label": t("d.close"),
 								children: "✕"
 							})]
 						}),
@@ -4354,11 +4498,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						failed && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: shared_module_css_default.warning,
-							children: ["会话详情读取失败：", failureReasonOf(sessionDetailPath(props.sessionId)) ?? "未知原因"]
+							children: ["会话详情读取失败：", failureReasonOf(sessionDetailPath(props.sessionId)) ?? t("d.unknownReason")]
 						}),
 						data !== null && data.coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: shared_module_css_default.warning,
-							children: [data.coverage.status === "unavailable" ? "会话用量不可用" : "会话用量不完整", data.coverage.reason === null ? "" : "：" + data.coverage.reason]
+							children: [data.coverage.status === "unavailable" ? t("d.unavailable") : t("d.partial"), data.coverage.reason === null ? "" : "：" + data.coverage.reason]
 						}),
 						data !== null && session !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionDetailBody, {
 							session,
@@ -4384,7 +4528,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								onClick: () => props.onOpenSession(child.id),
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.subagentRowTitle,
-									children: child.title ?? "（无提问）· " + shortIdOf$1(child.id)
+									children: child.title ?? t("s.noPrompt") + " · " + shortIdOf$1(child.id)
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 									className: lists_module_css_default.subagentRowMeta,
 									children: [
@@ -4411,7 +4555,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 							label: "工作区",
-							value: session.workspace ?? "未归属工作区",
+							value: session.workspace ?? t("s.noWorkspace"),
 							wide: true
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
@@ -4419,7 +4563,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: session.provider === null ? "—" : session.providerLabel ?? displayNameOf(props.channels, session.provider)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "计费模式",
+							label: t("d.costMode"),
 							value: channel === null ? "—" : channel.costLabel
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
@@ -4432,10 +4576,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 							label: "时长",
-							value: fmtDuration(session.durationMs) + (session.crossDays >= 1 ? "（跨 " + String(session.crossDays) + " 天）" : "")
+							value: fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t("d.crossDays", { count: session.crossDays }) : "")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "活跃天数",
+							label: t("d.activeDays"),
 							value: String(session.days)
 						})
 					]
@@ -4446,7 +4590,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
 							label: "Tokens",
 							value: fmtTokens(session.tokens),
-							note: "输入 + 输出 + 缓存读"
+							note: t("d.ioNote")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
 							label: "输入",
@@ -4461,18 +4605,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: fmtTokens(session.buckets.cacheReadTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "缓存写",
+							label: t("d.cacheWrite"),
 							value: fmtTokens(session.buckets.cacheWriteTokens),
-							note: "只参与计费"
+							note: t("d.billingOnly")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "命中率",
+							label: t("d.hitRate"),
 							value: session.cacheHitRate === null ? "—" : session.cacheHitRate.toFixed(1) + "%"
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "调用",
+							label: t("common.calls"),
 							value: fmtCalls(session.calls),
-							note: "结算样本数"
+							note: t("d.samples")
 						})
 					]
 				}),
@@ -4605,7 +4749,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 读屏用户的数值概述：柱状图本身只有悬停才看得到数。 */
 		function hourChartSummary(hours) {
 			const busiest = hours.reduce((best, hour, index) => hour.tokens > hours[best].tokens ? index : best, 0);
-			return hours[busiest].tokens === 0 ? "该会话没有按小时的用量分布" : "最忙的是 " + String(busiest) + " 时，" + fmtTokens(hours[busiest].tokens) + " tokens";
+			return hours[busiest].tokens === 0 ? t("d.noHours") : t("d.busiest", { hour: busiest }) + fmtTokens(hours[busiest].tokens) + " tokens";
 		}
 		function DetailItem(props) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4762,47 +4906,47 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS = [
 			{
 				key: "id",
-				label: "会话 id",
+				labelKey: "s.id",
 				value: (row) => row.id
 			},
 			{
 				key: "title",
-				label: "标题",
+				labelKey: "s.title",
 				value: (row) => row.title
 			},
 			{
 				key: "prompt",
-				label: "首条提问",
+				labelKey: "s.prompt",
 				value: (row) => row.prompt
 			},
 			{
 				key: "workspace",
-				label: "工作区",
+				labelKey: "common.workspace",
 				value: (row) => row.workspace
 			},
 			{
 				key: "provider",
-				label: "通道",
+				labelKey: "common.channel",
 				value: (row) => row.provider
 			},
 			{
 				key: "firstTime",
-				label: "首次时间",
+				labelKey: "s.first",
 				value: (row) => fmtDateTime(row.firstTime)
 			},
 			{
 				key: "lastTime",
-				label: "最近时间",
+				labelKey: "s.last",
 				value: (row) => fmtDateTime(row.lastTime)
 			},
 			{
 				key: "crossDays",
-				label: "跨天",
+				labelKey: "s.crossDays",
 				value: (row) => row.crossDays
 			},
 			{
 				key: "calls",
-				label: "调用",
+				labelKey: "common.calls",
 				value: (row) => row.calls
 			},
 			{
@@ -4812,26 +4956,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cacheHitRate",
-				label: "命中率(%)",
+				labelKey: "s.hitRate",
 				value: (row) => row.cacheHitRate
 			},
 			{
 				key: "cost",
-				label: "成本(原币种合计)",
+				labelKey: "s.costNative",
 				value: (row) => row.cost
 			},
 			{
 				key: "costSource",
-				label: "成本来源",
+				labelKey: "s.costSource",
 				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
 			},
 			{
 				key: "archived",
-				label: "已归档",
-				value: (row) => row.archived ? "是" : "否"
+				labelKey: "s.archived",
+				value: (row) => row.archived ? t("s.yes") : t("s.no")
 			}
 		];
 		function SessionsTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const [query, setQuery] = (0, react.useState)("");
 			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
 			const [daysFilter, setDaysFilter] = (0, react.useState)("30");
@@ -4900,7 +5046,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (format === "csv") downloadFile(exportFileName("sessions", "csv"), toCsv(visible, EXPORT_COLUMNS), CSV_MIME);
 				else downloadFile(exportFileName("sessions", "json"), toJson(visible), JSON_MIME);
 			};
-			if (props.data === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EmptyState, { title: "会话数据读取中或不可用…" });
+			if (props.data === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EmptyState, { title: t("s.loading") });
 			const groups = [];
 			if (sortKey === "recent") for (const row of visible) {
 				const label = dayLabelOf(row.lastTime, nowMs);
@@ -4948,118 +5094,118 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				props.data.coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.warning,
-					children: props.data.coverage.status === "unavailable" ? "会话数据不可用（宿主未提供会话服务或全部读取失败）" : "会话数据不完整：" + String(props.data.coverage.skippedSessions) + " 个会话读取失败，未计入统计"
+					children: props.data.coverage.status === "unavailable" ? t("s.unavailable") : t("s.partial") + " " + String(props.data.coverage.skippedSessions) + t("s.partialTail")
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.filterBar,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 							className: lists_module_css_default.searchInput,
-							placeholder: "搜索会话标题、首条提问、session id、工作区…",
+							placeholder: t("s.searchPlaceholder"),
 							value: query,
 							onChange: (event) => setQuery(event.target.value)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
-							ariaLabel: "按通道筛选",
+							ariaLabel: t("s.filterChannel"),
 							value: channelFilter,
 							onChange: setChannelFilter,
 							options: [{
 								value: "ALL",
-								label: "全部通道"
+								label: t("s.allChannels")
 							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
 								label: channel.displayName
 							}))]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
-							ariaLabel: "按时间范围筛选",
+							ariaLabel: t("s.filterRange"),
 							value: daysFilter,
 							onChange: setDaysFilter,
 							options: [
 								{
 									value: "7",
-									label: "近 7 天"
+									label: t("s.days7")
 								},
 								{
 									value: "30",
-									label: "近 30 天"
+									label: t("s.days30")
 								},
 								{
 									value: "0",
-									label: "全部"
+									label: t("s.rangeAll")
 								}
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
-							ariaLabel: "排序方式",
+							ariaLabel: t("s.sort"),
 							value: sortKey,
 							onChange: (value) => setSortKey(value),
 							options: [
 								{
 									value: "recent",
-									label: "最新会话"
+									label: t("s.sortRecent")
 								},
 								{
 									value: "tokensDesc",
-									label: "Tokens 最多"
+									label: t("s.sortTokensDesc")
 								},
 								{
 									value: "tokensAsc",
-									label: "Tokens 最少"
+									label: t("s.sortTokensAsc")
 								},
 								{
 									value: "durationDesc",
-									label: "时长最长"
+									label: t("s.sortDuration")
 								},
 								{
 									value: "costDesc",
-									label: "成本最高"
+									label: t("s.sortCost")
 								},
 								{
 									value: "hitDesc",
-									label: "命中率最高"
+									label: t("s.sortHit")
 								},
 								{
 									value: "callsDesc",
-									label: "调用最多"
+									label: t("s.sortCalls")
 								}
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
-							ariaLabel: "归档会话筛选（归档只做标记，仍然计入统计）",
+							ariaLabel: t("s.filterArchive"),
 							value: archiveFilter,
 							onChange: (value) => setArchiveFilter(value),
 							options: [
 								{
 									value: "hide",
-									label: "隐藏已归档"
+									label: t("s.archiveHide")
 								},
 								{
 									value: "all",
-									label: "全部对话（显示已归档）"
+									label: t("s.archiveAll")
 								},
 								{
 									value: "only",
-									label: "仅显示已归档"
+									label: t("s.archiveOnly")
 								}
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
-							ariaLabel: "子会话筛选",
+							ariaLabel: t("s.filterSubagent"),
 							value: subagentFilter,
 							onChange: (value) => setSubagentFilter(value),
 							options: [
 								{
 									value: "hide",
-									label: "只显示主会话"
+									label: t("s.subagentHide")
 								},
 								{
 									value: "all",
-									label: "显示子会话"
+									label: t("s.subagentAll")
 								},
 								{
 									value: "only",
-									label: "仅显示子会话"
+									label: t("s.subagentOnly")
 								}
 							]
 						}),
@@ -5093,7 +5239,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						"另有 ",
 						subagentCount,
 						" 个子代理会话",
-						subagentFilter === "hide" ? "未显示" : "（已显示）",
+						subagentFilter === "hide" ? t("s.subagentHidden") : t("s.subagentShown"),
 						"：子会话各自计入统计，不并入父会话"
 					]
 				}),
@@ -5168,7 +5314,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
-					children: ["会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算", props.data.priced ? "" : "（台账无成本数据，暂不可估）"]
+					children: ["会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算", props.data.priced ? "" : t("s.noCost")]
 				}),
 				detailId !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionDetailDrawer, {
 					sessionId: detailId,
@@ -5201,7 +5347,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								type: "button",
 								className: lists_module_css_default.sessionToggle,
 								"aria-expanded": isOpen,
-								"aria-label": isOpen ? "收起模型构成" : "展开模型构成",
+								"aria-label": isOpen ? t("s.collapseModels") : t("s.expandModels"),
 								onClick: (event) => {
 									event.stopPropagation();
 									options.onToggleModels(row.id);
@@ -5219,7 +5365,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									event.stopPropagation();
 									options.onOpenDetail(row.id);
 								},
-								children: row.title ?? "（无提问）· " + shortIdOf(row.id)
+								children: row.title ?? t("s.noPrompt") + " · " + shortIdOf(row.id)
 							}),
 							row.archived && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: lists_module_css_default.archivedTag,
@@ -5238,10 +5384,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: lists_module_css_default.listSub,
 						children: [
-							workspace === null ? "未归属工作区" : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							workspace === null ? t("s.noWorkspace") : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: lists_module_css_default.linkBtn,
-								title: "在「项目用量」里只看 " + workspace,
+								title: t("s.gotoProject") + workspace,
 								onClick: (event) => {
 									event.stopPropagation();
 									options.onOpenProject(workspace);
@@ -5255,7 +5401,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							row.subagentCount !== void 0 && row.subagentCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
 								className: lists_module_css_default.sessionMetaBtn,
-								title: "只看这个会话与它的 " + String(row.subagentCount) + " 个子会话（子会话 tokens 只是小计，不并入本行）",
+								title: t("s.focusChildren") + String(row.subagentCount) + t("s.focusChildrenTail"),
 								onClick: (event) => {
 									event.stopPropagation();
 									options.onFocusSession(row.id);

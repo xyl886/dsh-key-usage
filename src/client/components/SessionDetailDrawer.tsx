@@ -4,6 +4,7 @@ import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts
 import { channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
 import { costSourceHintOf } from '../pricing.ts'
+import { t, useT } from '../i18n.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
 import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../types.ts'
 import styles from '../styles/shared.module.css'
@@ -23,6 +24,8 @@ export function SessionDetailDrawer(props: {
   parentTitle: string | null
   onClose: () => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const [data, setData] = useState<SessionDetailResponse | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -57,10 +60,10 @@ export function SessionDetailDrawer(props: {
       >
         <div className={listStyles.drawerHead}>
           <div className={listStyles.drawerTitle}>
-            {session?.title ?? props.fallbackTitle ?? '（无提问）· ' + shortIdOf(props.sessionId)}
+            {session?.title ?? props.fallbackTitle ?? t('s.noPrompt') + ' · ' + shortIdOf(props.sessionId)}
             {session?.archived === true && <span className={listStyles.archivedTag}>已归档</span>}
           </div>
-          <button type="button" className={listStyles.drawerClose} onClick={props.onClose} aria-label="关闭会话详情">✕</button>
+          <button type="button" className={listStyles.drawerClose} onClick={props.onClose} aria-label={t('d.close')}>✕</button>
         </div>
         <div className={listStyles.drawerId}>{props.sessionId}</div>
 
@@ -77,12 +80,12 @@ export function SessionDetailDrawer(props: {
         {data === null && !failed && <div className={styles.empty}>会话详情读取中…</div>}
         {failed && (
           <div className={styles.warning}>
-            会话详情读取失败：{failureReasonOf(sessionDetailPath(props.sessionId)) ?? '未知原因'}
+            会话详情读取失败：{failureReasonOf(sessionDetailPath(props.sessionId)) ?? t('d.unknownReason')}
           </div>
         )}
         {data !== null && data.coverage.status !== 'complete' && (
           <div className={styles.warning}>
-            {data.coverage.status === 'unavailable' ? '会话用量不可用' : '会话用量不完整'}
+            {data.coverage.status === 'unavailable' ? t('d.unavailable') : t('d.partial')}
             {data.coverage.reason === null ? '' : '：' + data.coverage.reason}
           </div>
         )}
@@ -104,7 +107,7 @@ export function SessionDetailDrawer(props: {
                 className={listStyles.subagentRow}
                 onClick={() => props.onOpenSession(child.id)}
               >
-                <span className={listStyles.subagentRowTitle}>{child.title ?? '（无提问）· ' + shortIdOf(child.id)}</span>
+                <span className={listStyles.subagentRowTitle}>{child.title ?? t('s.noPrompt') + ' · ' + shortIdOf(child.id)}</span>
                 <span className={listStyles.subagentRowMeta}>{fmtTokens(child.tokens)} · {fmtCalls(child.calls)} · {fmtDateTime(child.lastTime)}</span>
               </button>
             ))}
@@ -122,26 +125,26 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
   return (
     <div>
       <div className={listStyles.detailGrid}>
-        <DetailItem label="工作区" value={session.workspace ?? '未归属工作区'} wide />
+        <DetailItem label="工作区" value={session.workspace ?? t('s.noWorkspace')} wide />
         <DetailItem label="通道" value={session.provider === null ? '—' : (session.providerLabel ?? displayNameOf(props.channels, session.provider))} />
-        <DetailItem label="计费模式" value={channel === null ? '—' : channel.costLabel} />
+        <DetailItem label={t('d.costMode')} value={channel === null ? '—' : channel.costLabel} />
         <DetailItem label="首次" value={fmtDateTime(session.firstTime)} />
         <DetailItem label="最近" value={fmtDateTime(session.lastTime)} />
         <DetailItem
           label="时长"
-          value={fmtDuration(session.durationMs) + (session.crossDays >= 1 ? '（跨 ' + String(session.crossDays) + ' 天）' : '')}
+          value={fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t('d.crossDays', { count: session.crossDays }) : '')}
         />
-        <DetailItem label="活跃天数" value={String(session.days)} />
+        <DetailItem label={t('d.activeDays')} value={String(session.days)} />
       </div>
 
       <div className={listStyles.detailStrip}>
-        <StripItem label="Tokens" value={fmtTokens(session.tokens)} note="输入 + 输出 + 缓存读" />
+        <StripItem label="Tokens" value={fmtTokens(session.tokens)} note={t('d.ioNote')} />
         <StripItem label="输入" value={fmtTokens(session.buckets.inputTokens)} />
         <StripItem label="输出" value={fmtTokens(session.buckets.outputTokens)} />
         <StripItem label="缓存读" value={fmtTokens(session.buckets.cacheReadTokens)} />
-        <StripItem label="缓存写" value={fmtTokens(session.buckets.cacheWriteTokens)} note="只参与计费" />
-        <StripItem label="命中率" value={session.cacheHitRate === null ? '—' : session.cacheHitRate.toFixed(1) + '%'} />
-        <StripItem label="调用" value={fmtCalls(session.calls)} note="结算样本数" />
+        <StripItem label={t('d.cacheWrite')} value={fmtTokens(session.buckets.cacheWriteTokens)} note={t('d.billingOnly')} />
+        <StripItem label={t('d.hitRate')} value={session.cacheHitRate === null ? '—' : session.cacheHitRate.toFixed(1) + '%'} />
+        <StripItem label={t('common.calls')} value={fmtCalls(session.calls)} note={t('d.samples')} />
       </div>
 
       <div className={listStyles.detailBlock}>
@@ -229,8 +232,8 @@ function HourMiniChart(props: { hours: Array<{ calls: number; tokens: number }> 
 function hourChartSummary(hours: Array<{ calls: number; tokens: number }>): string {
   const busiest = hours.reduce((best, hour, index) => (hour.tokens > hours[best].tokens ? index : best), 0)
   return hours[busiest].tokens === 0
-    ? '该会话没有按小时的用量分布'
-    : '最忙的是 ' + String(busiest) + ' 时，' + fmtTokens(hours[busiest].tokens) + ' tokens'
+    ? t('d.noHours')
+    : t('d.busiest', { hour: busiest }) + fmtTokens(hours[busiest].tokens) + ' tokens'
 }
 
 function DetailItem(props: { label: string; value: string; wide?: boolean }): ReactNode {
