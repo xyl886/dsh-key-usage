@@ -189,7 +189,6 @@ export function SessionsTab(props: {
           className={listStyles.filterSelect}
           value={subagentFilter}
           onChange={(event) => setSubagentFilter(event.target.value as 'hide' | 'all' | 'only')}
-          title="子代理跑在自己的子会话里，单独成行会淹没主会话；子会话单独计入统计，不并进父会话"
         >
           <option value="hide">只显示主会话</option>
           <option value="all">显示子会话</option>
@@ -317,7 +316,6 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
             <button
               type="button"
               className={listStyles.sessionTitleBtn}
-              title="查看会话详情"
               onClick={(event) => {
                 event.stopPropagation()
                 options.onOpenDetail(row.id)
@@ -330,7 +328,6 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
               <button
                 type="button"
                 className={listStyles.subagentTagBtn}
-                title="子代理跑的独立子会话；点这里只看它所属的父会话"
                 onClick={(event) => {
                   event.stopPropagation()
                   if (row.parentSessionId !== null && row.parentSessionId !== undefined) options.onFocusSession(row.parentSessionId)

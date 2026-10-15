@@ -102,7 +102,6 @@ export function SessionDetailDrawer(props: {
                 type="button"
                 key={child.id}
                 className={listStyles.subagentRow}
-                title="打开这个子会话的详情"
                 onClick={() => props.onOpenSession(child.id)}
               >
                 <span className={listStyles.subagentRowTitle}>{child.title ?? '（无提问）· ' + shortIdOf(child.id)}</span>

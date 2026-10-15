@@ -4008,7 +4008,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}), props.subagents.map((child) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
 								className: lists_module_css_default.subagentRow,
-								title: "打开这个子会话的详情",
 								onClick: () => props.onOpenSession(child.id),
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.subagentRowTitle,
@@ -4569,7 +4568,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: lists_module_css_default.filterSelect,
 							value: subagentFilter,
 							onChange: (event) => setSubagentFilter(event.target.value),
-							title: "子代理跑在自己的子会话里，单独成行会淹没主会话；子会话单独计入统计，不并进父会话",
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 									value: "hide",
@@ -4734,7 +4732,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: lists_module_css_default.sessionTitleBtn,
-								title: "查看会话详情",
 								onClick: (event) => {
 									event.stopPropagation();
 									options.onOpenDetail(row.id);
@@ -4748,7 +4745,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							row.origin === "subagent" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: lists_module_css_default.subagentTagBtn,
-								title: "子代理跑的独立子会话；点这里只看它所属的父会话",
 								onClick: (event) => {
 									event.stopPropagation();
 									if (row.parentSessionId !== null && row.parentSessionId !== void 0) options.onFocusSession(row.parentSessionId);
