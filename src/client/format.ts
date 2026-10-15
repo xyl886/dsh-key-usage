@@ -1,3 +1,4 @@
+import { t } from './i18n.ts'
 /** 展示层格式化：全部与统计口径无关，只负责把数字变成界面文本。 */
 
 /** 本地日历 `YYYY-MM-DD`。 */
@@ -11,15 +12,27 @@ export function shiftedIsoDate(offsetDays: number): string {
   return isoDate(new Date(Date.now() + offsetDays * 86400000))
 }
 
+/** 空格千分位：不用 toLocaleString（结果跟随浏览器区域设置，导出与截图会不一致）。 */
+export function fmtCount(count: number): string {
+  if (!Number.isFinite(count)) return '—'
+  return String(Math.round(count)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
+/** 大数按 B / M / K 缩写；四舍五入到 1000 就降级显示（999 999 显示 999 999，不显示 1000K）。 */
 export function fmtTokens(count: number): string {
-  if (count >= 1e9) return (count / 1e9).toFixed(2) + 'B'
-  if (count >= 1e6) return (count / 1e6).toFixed(1) + 'M'
-  if (count >= 1e3) return (count / 1e3).toFixed(0) + 'K'
-  return String(count)
+  if (!Number.isFinite(count)) return '—'
+  const units: Array<[number, string]> = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']]
+  for (const [base, suffix] of units) {
+    if (Math.abs(count) < base) continue
+    const value = count / base
+    const text = value.toFixed(Math.abs(value) >= 100 ? 0 : 1)
+    if (Number(text) < 1000) return text + suffix
+  }
+  return fmtCount(count)
 }
 
 export function fmtCalls(count: number): string {
-  return count.toLocaleString('en-US').replace(/,/g, ' ')
+  return fmtCount(count)
 }
 
 /** `MM-DD`（图表坐标轴与范围文案用）。 */
@@ -63,10 +76,10 @@ export function fmtDuration(milliseconds: number | null): string {
 export function fmtRelative(timeMs: number | null, nowMs: number): string {
   if (timeMs === null) return '—'
   const minutes = Math.round((nowMs - timeMs) / 60000)
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} 小时前`
-  return `${Math.round(minutes / (60 * 24))} 天前`
+  if (minutes < 1) return t('fmt.justNow')
+  if (minutes < 60) return t('fmt.minutesAgo', { count: minutes })
+  if (minutes < 60 * 24) return t('fmt.hoursAgo', { count: Math.round(minutes / 60) })
+  return t('fmt.daysAgo', { count: Math.round(minutes / (60 * 24)) })
 }
 
 /** 命中率：一位小数百分数，无提示侧 token 时返回 —。 */

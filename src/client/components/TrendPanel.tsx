@@ -11,6 +11,7 @@ import { COST_SOURCE_LABELS } from '../pricing.ts'
 import type { Channel, DaySummary, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import trendStyles from '../styles/trend.module.css'
+import { t, useT } from '../i18n.ts'
 
 /** 与 DetailTab 的 `RangeKey` 同形：单独声明，避免两个模块互相 import 类型。 */
 export type TrendRangeKey = 'today' | 'week' | 'month' | 'total' | 'custom'
@@ -32,11 +33,11 @@ interface TrendRow {
   change: ReactNode
 }
 
-const FLAT: ChangeView = { text: '持平', kind: 'flat', warn: false }
+const FLAT: ChangeView = { text: t('t.flat'), kind: 'flat', warn: false }
 const UNAVAILABLE: ChangeView = { text: '—', kind: 'none', warn: false }
 
 /** 标题文案：折叠控件与「总计范围没有上一段」分支共用。 */
-const TITLE_TEXT = '环比对比 · 与上一段等长范围'
+const TITLE_TEXT = t('t.title') + ' · ' + t('t.titleNote')
 
 /** 闭区间天数，至少 1（日期键按本地日历算，与 DetailTab 的横轴口径一致）。 */
 function spanDaysOf(from: string, to: string): number {
@@ -70,7 +71,7 @@ function hasAnyData(totals: DaySummary | null): boolean {
 
 /** 环比百分比；上期为 0 时不给百分比（Infinity / NaN 不进界面）。 */
 function percentChangeOf(current: number, previous: number, warnOnUp: boolean): ChangeView {
-  if (previous <= 0) return current <= 0 ? FLAT : { text: '上期为 0', kind: 'none', warn: false }
+  if (previous <= 0) return current <= 0 ? FLAT : { text: t('t.prevZero'), kind: 'none', warn: false }
   const percent = (current - previous) / previous * 100
   if (Math.abs(percent) < 0.05) return FLAT
   return {
@@ -116,6 +117,8 @@ export function TrendPanel(props: {
   /** 价目版本号：价目换了一份两期就不是同一套成本口径，靠它触发上期重取。 */
   pricingRevision: number
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const { usage, bounds, channelFilter } = props
   const comparable = props.range !== 'total'
   const previousWindow = useMemo(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to])
@@ -126,8 +129,8 @@ export function TrendPanel(props: {
   const instanceId = useId()
   const bodyId = instanceId + '-trend-body'
 
-  const periodText = '本期 ' + bounds.from + ' ~ ' + bounds.to
-    + (comparable ? ' · 上期 ' + previousWindow.from + ' ~ ' + previousWindow.to : '')
+  const periodText = t('t.currentPrefix') + bounds.from + ' ~ ' + bounds.to
+    + (comparable ? t('t.previousPrefix') + previousWindow.from + ' ~ ' + previousWindow.to : '')
 
   useEffect(() => {
     if (!comparable) return
@@ -158,7 +161,7 @@ export function TrendPanel(props: {
   const previousTotals = previousUsage?.totals ?? null
   const previousHasData = status === 'ready' && hasAnyData(previousTotals)
   const currentHasData = hasAnyData(currentTotals)
-  const previousPlaceholder = status === 'loading' ? '读取中…' : previousUsage === null ? '无法获取' : '上期无数据'
+  const previousPlaceholder = status === 'loading' ? t('t.loading') : previousUsage === null ? t('t.failed') : t('t.prevNoData')
 
   const currentValue = (text: string): ReactNode => <span className={trendStyles.current}>{text}</span>
   const previousValue = (text: string): ReactNode => previousHasData
@@ -184,7 +187,7 @@ export function TrendPanel(props: {
   const rows: TrendRow[] = [
     {
       key: 'calls',
-      label: '调用次数',
+      label: t('d.callCount'),
       current: currentValue(fmtCalls(currentCalls)),
       previous: previousValue(fmtCalls(previousCalls)),
       change: changeValue(percentChangeOf(currentCalls, previousCalls, false)),
@@ -209,7 +212,7 @@ export function TrendPanel(props: {
     },
     {
       key: 'hitRate',
-      label: '缓存命中率',
+      label: t('d.hitRateShort'),
       current: currentValue(currentHitRate === null ? '—' : currentHitRate.toFixed(1) + '%'),
       previous: previousValue(previousHitRate === null ? '—' : previousHitRate.toFixed(1) + '%'),
       change: changeValue(currentHitRate !== null && previousHitRate !== null
@@ -220,23 +223,23 @@ export function TrendPanel(props: {
 
   const notes: string[] = []
   if ((usage.sessionDates ?? []).length > 0 || (previousUsage?.sessionDates ?? []).length > 0) {
-    notes.push('含会话补位数据，与台账口径不完全可比')
+    notes.push(t('t.notComparableSession'))
   }
   if (previousHasData && costComparable) {
     const currentSource = currentTotals?.costSource ?? 'none'
     const previousSource = previousTotals?.costSource ?? 'none'
     if (currentSource !== previousSource) {
-      notes.push('两期成本来源不同（本期 ' + COST_SOURCE_LABELS[currentSource] + ' / 上期 ' + COST_SOURCE_LABELS[previousSource] + '），口径不完全可比')
+      notes.push(t('t.sourceDiffPrefix') + COST_SOURCE_LABELS[currentSource] + t('t.sourceDiffMiddle') + COST_SOURCE_LABELS[previousSource] + t('t.sourceDiffSuffix'))
     }
   }
-  if (status === 'ready' && previousUsage === null) notes.push('上一段范围读取失败，无法对比')
-  if (!currentHasData) notes.push('本期范围内无用量记录')
-  notes.push('命中率的变化按百分点（pp）计，其余指标为环比百分比')
+  if (status === 'ready' && previousUsage === null) notes.push(t('t.prevLoadFailed'))
+  if (!currentHasData) notes.push(t('t.noUsage'))
+  notes.push(t('t.ppNote'))
 
   /** 折叠态摘要：复用表里已算好的值（成本不可比时退到 Tokens），不新增任何计算口径。 */
   const summary = costComparable
-    ? { label: '本期成本', text: currentCostText.text, change: percentChangeOf(currentCost, previousCost, true) }
-    : { label: '本期 Tokens', text: fmtTokens(currentTokens), change: percentChangeOf(currentTokens, previousTokens, false) }
+    ? { label: t('t.currentCost'), text: currentCostText.text, change: percentChangeOf(currentCost, previousCost, true) }
+    : { label: t('t.currentTokens'), text: fmtTokens(currentTokens), change: percentChangeOf(currentTokens, previousTokens, false) }
 
   const toggle = (
     <button
@@ -260,7 +263,7 @@ export function TrendPanel(props: {
           : (
             <span className={trendStyles.summary}>
               {summary.label} <b>{summary.text}</b>
-              {' · 环比 '}
+              {t('t.vs')}
               {previousHasData
                 ? changeNodeOf(summary.change)
                 : <span className={trendStyles.muted}>{previousPlaceholder}</span>}

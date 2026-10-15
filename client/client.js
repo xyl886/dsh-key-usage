@@ -102,6 +102,59 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"o.noBilling": "无计费",
 			"o.notQueried": "未查询",
 			"o.ledgerUnavailable": "台账不可用",
+			"r.today": "今日",
+			"r.week": "周",
+			"r.month": "月",
+			"r.total": "总计",
+			"r.custom": "自定义",
+			"c.date": "日期",
+			"c.calls": "调用",
+			"c.input": "输入",
+			"c.output": "输出",
+			"c.cacheRead": "缓存读",
+			"c.hitRate": "命中率(%)",
+			"c.costNative": "成本(原币合计)",
+			"d.chartHourPrefix": "按小时 Tokens（",
+			"d.chartDayPrefix": "按天 Tokens（",
+			"d.chartDaysSuffix": " 天）",
+			"d.chartHourAriaPrefix": "按小时 Tokens 柱状图（",
+			"d.chartAriaMiddle": "），共 ",
+			"d.chartHourAriaSuffix": " 个小时，含输入 / 输出 / 缓存读",
+			"d.chartDayAriaPrefix": "按天 Tokens 柱状图，共 ",
+			"d.chartDayAriaSuffix": " 天（含无用量日），含输入 / 输出 / 缓存读",
+			"d.callCount": "调用次数",
+			"d.channelsWithUsageSuffix": " 个通道有用量",
+			"d.sameCaliber": "与上方 Tokens 同口径",
+			"d.shareOfTokensPrefix": "占 Tokens 的 ",
+			"d.hitRateShort": "缓存命中率",
+			"d.hitRateFormula": "缓存读 ÷（输入 + 输出 + 缓存读）",
+			"d.dailyAvg": "日均 Tokens",
+			"d.daysWithUsagePrefix": "范围内 ",
+			"d.daysWithUsageSuffix": " 天有用量",
+			"d.rangeAggregate": "按所选范围与筛选聚合",
+			"t.flat": "持平",
+			"t.title": "环比对比",
+			"t.titleNote": "与上一段等长范围",
+			"t.prevZero": "上期为 0",
+			"t.currentPrefix": "本期 ",
+			"t.previousPrefix": " · 上期 ",
+			"t.loading": "读取中",
+			"t.failed": "无法获取",
+			"t.prevNoData": "上期无数据",
+			"t.notComparableSession": "含会话补位数据，口径不完全可比",
+			"t.sourceDiffPrefix": "两期成本来源不同（本期 ",
+			"t.sourceDiffMiddle": " / 上期 ",
+			"t.sourceDiffSuffix": "）",
+			"t.prevLoadFailed": "上一段范围读取失败",
+			"t.noUsage": "本期无用量",
+			"t.ppNote": "命中率按百分点（pp），其余为环比百分比",
+			"t.currentCost": "本期成本",
+			"t.currentTokens": "本期 Tokens",
+			"t.vs": " · 环比 ",
+			"fmt.justNow": "刚刚",
+			"fmt.minutesAgo": "{count} 分钟前",
+			"fmt.hoursAgo": "{count} 小时前",
+			"fmt.daysAgo": "{count} 天前",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -273,6 +326,59 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"o.noBilling": "No billing",
 			"o.notQueried": "Not queried",
 			"o.ledgerUnavailable": "Ledger unavailable",
+			"r.today": "Today",
+			"r.week": "Week",
+			"r.month": "Month",
+			"r.total": "Total",
+			"r.custom": "Custom",
+			"c.date": "Date",
+			"c.calls": "Calls",
+			"c.input": "Input",
+			"c.output": "Output",
+			"c.cacheRead": "Cache read",
+			"c.hitRate": "Hit %",
+			"c.costNative": "Cost (native)",
+			"d.chartHourPrefix": "Hourly tokens (",
+			"d.chartDayPrefix": "Daily tokens (",
+			"d.chartDaysSuffix": " days)",
+			"d.chartHourAriaPrefix": "Hourly token bars (",
+			"d.chartAriaMiddle": "), ",
+			"d.chartHourAriaSuffix": " hours, input / output / cache read",
+			"d.chartDayAriaPrefix": "Daily token bars, ",
+			"d.chartDayAriaSuffix": " days (including empty days), input / output / cache read",
+			"d.callCount": "Calls",
+			"d.channelsWithUsageSuffix": " channels with usage",
+			"d.sameCaliber": "same basis as tokens above",
+			"d.shareOfTokensPrefix": "of tokens: ",
+			"d.hitRateShort": "Cache hit rate",
+			"d.hitRateFormula": "cache read ÷ (input + output + cache read)",
+			"d.dailyAvg": "Daily avg tokens",
+			"d.daysWithUsagePrefix": "",
+			"d.daysWithUsageSuffix": " days with usage",
+			"d.rangeAggregate": "Aggregated over the selected range",
+			"t.flat": "Flat",
+			"t.title": "Comparison",
+			"t.titleNote": "same-length previous range",
+			"t.prevZero": "previous 0",
+			"t.currentPrefix": "now ",
+			"t.previousPrefix": " · prev ",
+			"t.loading": "Loading",
+			"t.failed": "Unavailable",
+			"t.prevNoData": "No previous data",
+			"t.notComparableSession": "includes session fallback days, not fully comparable",
+			"t.sourceDiffPrefix": "cost sources differ (now ",
+			"t.sourceDiffMiddle": " / prev ",
+			"t.sourceDiffSuffix": ")",
+			"t.prevLoadFailed": "previous range failed to load",
+			"t.noUsage": "No usage in current range",
+			"t.ppNote": "hit rate in percentage points, others as % change",
+			"t.currentCost": "Current cost",
+			"t.currentTokens": "Current tokens",
+			"t.vs": " · vs ",
+			"fmt.justNow": "just now",
+			"fmt.minutesAgo": "{count} min ago",
+			"fmt.hoursAgo": "{count} h ago",
+			"fmt.daysAgo": "{count} d ago",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -603,14 +709,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function shiftedIsoDate(offsetDays) {
 			return isoDate(new Date(Date.now() + offsetDays * 864e5));
 		}
+		/** 空格千分位：不用 toLocaleString（结果跟随浏览器区域设置，导出与截图会不一致）。 */
+		function fmtCount(count) {
+			if (!Number.isFinite(count)) return "—";
+			return String(Math.round(count)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+		}
+		/** 大数按 B / M / K 缩写；四舍五入到 1000 就降级显示（999 999 显示 999 999，不显示 1000K）。 */
 		function fmtTokens(count) {
-			if (count >= 1e9) return (count / 1e9).toFixed(2) + "B";
-			if (count >= 1e6) return (count / 1e6).toFixed(1) + "M";
-			if (count >= 1e3) return (count / 1e3).toFixed(0) + "K";
-			return String(count);
+			if (!Number.isFinite(count)) return "—";
+			for (const [base, suffix] of [
+				[1e9, "B"],
+				[1e6, "M"],
+				[1e3, "K"]
+			]) {
+				if (Math.abs(count) < base) continue;
+				const value = count / base;
+				const text = value.toFixed(Math.abs(value) >= 100 ? 0 : 1);
+				if (Number(text) < 1e3) return text + suffix;
+			}
+			return fmtCount(count);
 		}
 		function fmtCalls(count) {
-			return count.toLocaleString("en-US").replace(/,/g, " ");
+			return fmtCount(count);
 		}
 		/** `MM-DD`（图表坐标轴与范围文案用）。 */
 		function fmtShortDate(dateKey) {
@@ -648,10 +768,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function fmtRelative(timeMs, nowMs) {
 			if (timeMs === null) return "—";
 			const minutes = Math.round((nowMs - timeMs) / 6e4);
-			if (minutes < 1) return "刚刚";
-			if (minutes < 60) return `${minutes} 分钟前`;
-			if (minutes < 1440) return `${Math.round(minutes / 60)} 小时前`;
-			return `${Math.round(minutes / 1440)} 天前`;
+			if (minutes < 1) return t("fmt.justNow");
+			if (minutes < 60) return t("fmt.minutesAgo", { count: minutes });
+			if (minutes < 1440) return t("fmt.hoursAgo", { count: Math.round(minutes / 60) });
+			return t("fmt.daysAgo", { count: Math.round(minutes / 1440) });
 		}
 		//#endregion
 		//#region src/client/currency.ts
@@ -2023,7 +2143,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		*/
 		const DAY_MS = 864e5;
 		const FLAT = {
-			text: "持平",
+			text: t("t.flat"),
 			kind: "flat",
 			warn: false
 		};
@@ -2033,7 +2153,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			warn: false
 		};
 		/** 标题文案：折叠控件与「总计范围没有上一段」分支共用。 */
-		const TITLE_TEXT = "环比对比 · 与上一段等长范围";
+		const TITLE_TEXT = t("t.title") + " · " + t("t.titleNote");
 		/** 闭区间天数，至少 1（日期键按本地日历算，与 DetailTab 的横轴口径一致）。 */
 		function spanDaysOf(from, to) {
 			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
@@ -2065,7 +2185,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 环比百分比；上期为 0 时不给百分比（Infinity / NaN 不进界面）。 */
 		function percentChangeOf(current, previous, warnOnUp) {
 			if (previous <= 0) return current <= 0 ? FLAT : {
-				text: "上期为 0",
+				text: t("t.prevZero"),
 				kind: "none",
 				warn: false
 			};
@@ -2120,6 +2240,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		function TrendPanel(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { usage, bounds, channelFilter } = props;
 			const comparable = props.range !== "total";
 			const previousWindow = (0, react.useMemo)(() => previousWindowOf(bounds.from, bounds.to), [bounds.from, bounds.to]);
@@ -2128,7 +2250,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 默认折叠，且不记住上次状态：每次进页面都从收起的一行开始（多个实例各自独立）。 */
 			const [expanded, setExpanded] = (0, react.useState)(false);
 			const bodyId = (0, react.useId)() + "-trend-body";
-			const periodText = "本期 " + bounds.from + " ~ " + bounds.to + (comparable ? " · 上期 " + previousWindow.from + " ~ " + previousWindow.to : "");
+			const periodText = t("t.currentPrefix") + bounds.from + " ~ " + bounds.to + (comparable ? t("t.previousPrefix") + previousWindow.from + " ~ " + previousWindow.to : "");
 			(0, react.useEffect)(() => {
 				if (!comparable) return;
 				let cancelled = false;
@@ -2168,7 +2290,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const previousTotals = previousUsage?.totals ?? null;
 			const previousHasData = status === "ready" && hasAnyData(previousTotals);
 			const currentHasData = hasAnyData(currentTotals);
-			const previousPlaceholder = status === "loading" ? "读取中…" : previousUsage === null ? "无法获取" : "上期无数据";
+			const previousPlaceholder = status === "loading" ? t("t.loading") : previousUsage === null ? t("t.failed") : t("t.prevNoData");
 			const currentValue = (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 				className: trend_module_css_default.current,
 				children: text
@@ -2199,7 +2321,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const rows = [
 				{
 					key: "calls",
-					label: "调用次数",
+					label: t("d.callCount"),
 					current: currentValue(fmtCalls(currentCalls)),
 					previous: previousValue(fmtCalls(previousCalls)),
 					change: changeValue(percentChangeOf(currentCalls, previousCalls, false))
@@ -2226,29 +2348,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				},
 				{
 					key: "hitRate",
-					label: "缓存命中率",
+					label: t("d.hitRateShort"),
 					current: currentValue(currentHitRate === null ? "—" : currentHitRate.toFixed(1) + "%"),
 					previous: previousValue(previousHitRate === null ? "—" : previousHitRate.toFixed(1) + "%"),
 					change: changeValue(currentHitRate !== null && previousHitRate !== null ? pointChangeOf(currentHitRate, previousHitRate) : UNAVAILABLE)
 				}
 			];
 			const notes = [];
-			if ((usage.sessionDates ?? []).length > 0 || (previousUsage?.sessionDates ?? []).length > 0) notes.push("含会话补位数据，与台账口径不完全可比");
+			if ((usage.sessionDates ?? []).length > 0 || (previousUsage?.sessionDates ?? []).length > 0) notes.push(t("t.notComparableSession"));
 			if (previousHasData && costComparable) {
 				const currentSource = currentTotals?.costSource ?? "none";
 				const previousSource = previousTotals?.costSource ?? "none";
-				if (currentSource !== previousSource) notes.push("两期成本来源不同（本期 " + COST_SOURCE_LABELS[currentSource] + " / 上期 " + COST_SOURCE_LABELS[previousSource] + "），口径不完全可比");
+				if (currentSource !== previousSource) notes.push(t("t.sourceDiffPrefix") + COST_SOURCE_LABELS[currentSource] + t("t.sourceDiffMiddle") + COST_SOURCE_LABELS[previousSource] + t("t.sourceDiffSuffix"));
 			}
-			if (status === "ready" && previousUsage === null) notes.push("上一段范围读取失败，无法对比");
-			if (!currentHasData) notes.push("本期范围内无用量记录");
-			notes.push("命中率的变化按百分点（pp）计，其余指标为环比百分比");
+			if (status === "ready" && previousUsage === null) notes.push(t("t.prevLoadFailed"));
+			if (!currentHasData) notes.push(t("t.noUsage"));
+			notes.push(t("t.ppNote"));
 			/** 折叠态摘要：复用表里已算好的值（成本不可比时退到 Tokens），不新增任何计算口径。 */
 			const summary = costComparable ? {
-				label: "本期成本",
+				label: t("t.currentCost"),
 				text: currentCostText.text,
 				change: percentChangeOf(currentCost, previousCost, true)
 			} : {
-				label: "本期 Tokens",
+				label: t("t.currentTokens"),
 				text: fmtTokens(currentTokens),
 				change: percentChangeOf(currentTokens, previousTokens, false)
 			};
@@ -2280,7 +2402,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							summary.label,
 							" ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: summary.text }),
-							" · 环比 ",
+							t("t.vs"),
 							previousHasData ? changeNodeOf(summary.change) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: trend_module_css_default.muted,
 								children: previousPlaceholder
@@ -2582,11 +2704,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/tabs/DetailTab.tsx
 		const RANGE_TABS = [
-			["today", "今日"],
-			["week", "周"],
-			["month", "月"],
-			["total", "总计"],
-			["custom", "自定义"]
+			["today", "r.today"],
+			["week", "r.week"],
+			["month", "r.month"],
+			["total", "r.total"],
+			["custom", "r.custom"]
 		];
 		/** 图表最多铺开的列数：超过这个跨度的范围按天全画会挤成一团。 */
 		const MAX_AXIS_DAYS = 366;
@@ -2594,37 +2716,37 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$3 = [
 			{
 				key: "date",
-				label: "日期",
+				label: t("c.date"),
 				value: (row) => row.date
 			},
 			{
 				key: "calls",
-				label: "调用",
+				label: t("c.calls"),
 				value: (row) => row.calls
 			},
 			{
 				key: "inputTokens",
-				label: "输入",
+				label: t("c.input"),
 				value: (row) => row.inputTokens
 			},
 			{
 				key: "outputTokens",
-				label: "输出",
+				label: t("c.output"),
 				value: (row) => row.outputTokens
 			},
 			{
 				key: "cacheReadTokens",
-				label: "缓存读",
+				label: t("c.cacheRead"),
 				value: (row) => row.cacheReadTokens
 			},
 			{
 				key: "cacheHitRate",
-				label: "命中率(%)",
+				label: t("c.hitRate"),
 				value: (row) => hitRateValueOf(row)
 			},
 			{
 				key: "cost",
-				label: "成本(原币种合计)",
+				label: t("c.costNative"),
 				value: (row) => row.cost
 			}
 		];
@@ -2656,6 +2778,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return keys;
 		}
 		function DetailTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { usage, channels, bounds, tooltip, channelFilter } = props;
 			if (usage === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
@@ -2782,8 +2906,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 			const useHourAxis = singleDay && usage.hours !== null;
 			const chartRows = useHourAxis ? hourlyRows : dailyRows;
-			const chartTitle = useHourAxis ? "按小时 Tokens（" + bounds.from + "）" : "按天 Tokens（" + rangeDays + " 天）";
-			const chartAriaLabel = useHourAxis ? "按小时 Tokens 堆叠柱状图（" + bounds.from + "），共 " + String(chartRows.length) + " 个小时，含输入 / 输出 / 缓存读三段" : "按天 Tokens 堆叠柱状图，共 " + String(chartRows.length) + " 天（含无用量日），含输入 / 输出 / 缓存读三段";
+			const chartTitle = useHourAxis ? t("d.chartHourPrefix") + bounds.from + "）" : t("d.chartDayPrefix") + rangeDays + t("d.chartDaysSuffix");
+			const chartAriaLabel = useHourAxis ? t("d.chartHourAriaPrefix") + bounds.from + t("d.chartAriaMiddle") + String(chartRows.length) + t("d.chartHourAriaSuffix") : t("d.chartDayAriaPrefix") + String(chartRows.length) + t("d.chartDayAriaSuffix");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: detail_module_css_default.rangeBar,
@@ -2850,17 +2974,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "调用次数",
 							value: fmtCalls(safeTotals.calls),
-							extra: activeProviders.size + " 个通道有用量"
+							extra: activeProviders.size + t("d.channelsWithUsageSuffix")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "Tokens",
 							value: fmtTokens(totalTokens),
-							extra: "输入 " + fmtTokens(safeTotals.inputTokens) + " · 输出 " + fmtTokens(safeTotals.outputTokens)
+							extra: t("c.input") + " " + fmtTokens(safeTotals.inputTokens) + t("c.output") + " " + fmtTokens(safeTotals.outputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "缓存读",
 							value: fmtTokens(safeTotals.cacheReadTokens),
-							extra: cacheReadShare === null ? "与上方 Tokens 同口径" : "占 Tokens 的 " + cacheReadShare
+							extra: cacheReadShare === null ? t("d.sameCaliber") : t("d.shareOfTokensPrefix") + cacheReadShare
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "缓存命中率",
@@ -2870,7 +2994,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "日均 Tokens",
 							value: activeDays === 0 ? "—" : fmtTokens(Math.round(totalTokens / activeDays)),
-							extra: "范围内 " + String(activeDays) + " 天有用量"
+							extra: t("d.daysWithUsagePrefix") + String(activeDays) + t("d.daysWithUsageSuffix")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "成本",
