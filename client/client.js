@@ -232,6 +232,27 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"r.yesterday": "昨日",
 			"o.callsSuffix": " 次调用",
 			"c.cost": "成本",
+			"q.resetUnknown": "重置于 —",
+			"q.retryHint": "，暂无快照，点刷新重试",
+			"q.snapshotPrefix": "，快照 ",
+			"q.stalePrefix": "，",
+			"q.daysStaleSuffix": " 天未更新",
+			"q.modelRatesPrefix": " 个模型单价 · ",
+			"q.aggregateSuffix": " · LiteLLM 聚合）",
+			"q.convertedPrefix": "（≈ 为折算值：",
+			"q.rangePrefix": " · 区间 ",
+			"q.partialPrefix": "其中部分 ",
+			"q.priceEntriesSuffix": " 条价目",
+			"q.entriesClose": " 条）",
+			"q.modelsSuffix": " 个模型",
+			"q.agoPrefix": "，距今 ",
+			"q.minutesAgoSuffix": " 分钟前",
+			"q.hoursAgoSuffix": " 小时前",
+			"q.rowPrefix": " 第 ",
+			"q.rowSuffix": " 行",
+			"q.daySuffix": " 天",
+			"q.countSuffix": " 个",
+			"q.noBasis": "无依据",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -533,6 +554,27 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"r.yesterday": "Yesterday",
 			"o.callsSuffix": " calls",
 			"c.cost": "Cost",
+			"q.resetUnknown": "Resets —",
+			"q.retryHint": ", no snapshot — tap refresh",
+			"q.snapshotPrefix": ", snapshot ",
+			"q.stalePrefix": ", ",
+			"q.daysStaleSuffix": " days old",
+			"q.modelRatesPrefix": " model rates · ",
+			"q.aggregateSuffix": " · LiteLLM)",
+			"q.convertedPrefix": "(≈ converted: ",
+			"q.rangePrefix": " · range ",
+			"q.partialPrefix": "partial ",
+			"q.priceEntriesSuffix": " price entries",
+			"q.entriesClose": " entries)",
+			"q.modelsSuffix": " models",
+			"q.agoPrefix": ", ",
+			"q.minutesAgoSuffix": " min ago",
+			"q.hoursAgoSuffix": " h ago",
+			"q.rowPrefix": " row ",
+			"q.rowSuffix": "",
+			"q.daySuffix": " d",
+			"q.countSuffix": "",
+			"q.noBasis": "None",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -3997,10 +4039,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			none: "source.none"
 		};
 		function resetTextOf(value) {
-			if (typeof value !== "string" || value === "") return "重置时间 —";
+			if (typeof value !== "string" || value === "") return t("q.resetUnknown");
 			const time = new Date(value);
-			if (Number.isNaN(time.getTime())) return "重置于 " + value;
-			return "重置于 " + fmtDateTime(time.getTime());
+			if (Number.isNaN(time.getTime())) return t("quota.resetAt") + " " + value;
+			return t("quota.resetAt") + " " + fmtDateTime(time.getTime());
 		}
 		function QuotaTab(props) {
 			/** 取词：宿主切语言时重渲染（模块级辅助函数直接用 import 的 t） */
@@ -4024,12 +4066,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const result = await loadFxRate(force);
 				setFxLoading(false);
 				if (result === null) {
-					setFxError(failureReasonOf("/dsh-key-usage/fx") ?? "没拿到服务端响应");
+					setFxError(failureReasonOf("/dsh-key-usage/fx") ?? t("quota.noResponse"));
 					return;
 				}
 				setFxError(null);
 				const normalized = normalizeFxRate(result);
-				if (normalized === null) setFxError("服务端返回的汇率无法解析");
+				if (normalized === null) setFxError(t("quota.fxBad"));
 				setFxRate(normalized);
 			}, []);
 			(0, react.useEffect)(() => {
@@ -4069,14 +4111,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (outcome === null) {
 					setRefreshStatus({
 						tone: "bad",
-						text: "刷新失败：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? "没拿到服务端响应")
+						text: t("quota.refreshFailed") + "：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? t("quota.noResponse"))
 					});
 					return;
 				}
 				if (!outcome.ok) {
 					setRefreshStatus({
 						tone: "bad",
-						text: "刷新失败：" + outcome.error
+						text: t("quota.refreshFailed") + "：" + outcome.error
 					});
 					return;
 				}
@@ -4096,7 +4138,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const entry = rateChannels.find((item) => item.provider === provider);
 				return entry === void 0 || !Array.isArray(entry.models) ? [] : entry.models;
 			};
-			const fxText = display.fx === null ? fxError === null ? fxSummaryTextOf(null) : "汇率不可用：" + fxError : fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx);
+			const fxText = display.fx === null ? fxError === null ? fxSummaryTextOf(null) : t("quota.fxUnavailable") + "：" + fxError : fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx);
 			const fxTone = display.fx === null || display.fx.source === "default" ? quota_module_css_default.fxWarn : quota_module_css_default.fxText;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4157,8 +4199,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: [
 							showPricingInfo ? "▾" : "▸",
 							" 价目数据来源与文件（内置厂商官方价目",
-							catalog !== null && Number.isFinite(catalog.entries) ? " " + String(catalog.entries) + " 条" : "",
-							" · LiteLLM 聚合价目）"
+							catalog !== null && Number.isFinite(catalog.entries) ? " " + String(catalog.entries) + t("quota.entriesSuffix") : "",
+							t("q.aggregateSuffix")
 						]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						id: pricingInfoId,
@@ -4248,9 +4290,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: quota_module_css_default.staleLine,
 									children: [
 										"数据时间 ",
-										outcome.capturedAt === null ? "未知" : localTimeTextOf(outcome.capturedAt),
+										outcome.capturedAt === null ? t("quota.unknown") : localTimeTextOf(outcome.capturedAt),
 										" · 本机快照 · 本次失败：",
-										outcome.error ?? "未查询"
+										outcome.error ?? t("quota.notQueried")
 									]
 								}),
 								balance !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -4317,7 +4359,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										"实时查询未成功（",
 										errorTextOf(snapshot.error),
 										"）",
-										snapshot.updatedAt === null ? "，且暂无可用快照 —— 点右上角「刷新」重试" : "，显示快照 · 快照时间 " + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? "，已 " + staleDaysOf(snapshot.updatedAt) + " 天未更新" : "")
+										snapshot.updatedAt === null ? t("q.retryHint") : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t("q.stalePrefix") + staleDaysOf(snapshot.updatedAt) + t("q.daysStaleSuffix") : "")
 									]
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -4326,7 +4368,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: isOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RateTable, {
 										rows: rateRows,
 										loading: ratesLoading,
-										failureText: rates === null ? failureReasonOf("/dsh-key-usage/rates") ?? "没拿到服务端响应" : null,
+										failureText: rates === null ? failureReasonOf("/dsh-key-usage/rates") ?? t("quota.noResponse") : null,
 										display: display.display,
 										convertedHint: display.fx === null ? null : fxSummaryTextOf(display.fx),
 										range: rates !== null && typeof rates.from === "string" && typeof rates.to === "string" ? {
@@ -4350,17 +4392,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const counts = /* @__PURE__ */ new Map();
 				for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1);
 				const mix = [...counts.entries()].map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
-				return String(rows.length) + " 个模型单价 · " + mix;
+				return String(rows.length) + t("q.modelRatesPrefix") + mix;
 			}
-			if (loading) return "读取单价…";
-			if (failed) return failureText === null ? "单价表不可用" : "单价表不可用：" + failureText;
-			return "近 30 天无用量";
+			if (loading) return t("quota.loadingRates");
+			if (failed) return failureText === null ? t("quota.ratesUnavailable") : t("quota.ratesUnavailable") + "：" + failureText;
+			return t("quota.noUsage");
 		}
 		/** 单价表：`rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。 */
 		function RateTable(props) {
 			if (props.rows.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: quota_module_css_default.rateEmpty,
-				children: props.loading ? "正在读取单价…" : props.failureText !== null ? "单价表不可用：" + props.failureText : "近 30 天没有这条通道的模型用量，列不出单价。"
+				children: props.loading ? t("quota.loadingRates") : props.failureText !== null ? t("quota.ratesUnavailable") + "：" + props.failureText : t("quota.ratesEmpty")
 			});
 			const converted = props.rows.some((row) => convertsCurrencyOf(row.currency));
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4373,8 +4415,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					t("quota.displayCurrency"),
 					" ",
 					DISPLAY_CURRENCY_LABELS[props.display],
-					converted && props.convertedHint !== null ? "（≈ 为折算值：" + props.convertedHint + "）" : "",
-					props.range === null ? "" : " · 统计区间 " + props.range.from + " ~ " + props.range.to
+					converted && props.convertedHint !== null ? t("q.convertedPrefix") + props.convertedHint + "）" : "",
+					props.range === null ? "" : t("q.rangePrefix") + props.range.from + " ~ " + props.range.to
 				]
 			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: quota_module_css_default.rateScroll,
@@ -4477,7 +4519,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						" 条厂商官方价目，",
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自动生效，不需要你维护" }),
 						"。来源：",
-						sources.length === 0 ? "服务端没返回来源明细" : sources.map((entry, index) => {
+						sources.length === 0 ? t("quota.noSourceDetail") : sources.map((entry, index) => {
 							const daysAgo = fetchedDaysAgo(entry.fetchedAt);
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 								index > 0 && "；",
@@ -4493,7 +4535,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								" 条，",
 								entry.fetchedAt,
 								" 抓取",
-								daysAgo === null ? "" : "，距今 " + String(daysAgo) + " 天",
+								daysAgo === null ? "" : t("q.agoPrefix") + String(daysAgo) + t("q.daySuffix"),
 								"）"
 							] }, entry.source);
 						})
@@ -4507,7 +4549,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: pricing_module_css_default.pathText,
 							children: files.catalog.path
 						}),
-						files.catalog.exists ? "（" + String(files.catalog.entries) + " 条）" : "（读不到，成本会少一层依据）"
+						files.catalog.exists ? "（" + String(files.catalog.entries) + t("q.entriesClose") : "（" + t("quota.unreadable") + "）"
 					] })
 				}),
 				issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4524,7 +4566,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: pricing_module_css_default.issueList,
 							children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: pricing_module_css_default.issueWhere,
-								children: ["内置价目", issue.line === null ? "" : " 第 " + String(issue.line) + " 行"]
+								children: ["内置价目", issue.line === null ? "" : t("q.rowPrefix") + String(issue.line) + t("q.rowSuffix")]
 							}), issue.message] }, String(issue.file) + "|" + String(issue.line) + "|" + String(index)))
 						}),
 						issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4561,15 +4603,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						aggregate === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: pricing_module_css_default.aggregateMeta,
-							children: pricing === null ? "正在读取服务端价目信息…" : "服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。"
+							children: pricing === null ? t("quota.loadingPricing") : t("quota.pricingUnavailable")
 						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: pricing_module_css_default.aggregateMeta,
 							children: [
 								"当前装载：",
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: aggregateLoadedLabelOf(aggregate.loaded) }),
-								Number.isFinite(aggregate.entries) ? "　条目 " + String(aggregate.entries) : "",
-								Number.isFinite(aggregate.models) ? "　模型 " + String(aggregate.models) : "",
-								fetchedAtText === null ? "" : "　文件时间 " + fetchedAtText,
+								Number.isFinite(aggregate.entries) ? t("quota.entry") + " " + String(aggregate.entries) : "",
+								Number.isFinite(aggregate.models) ? t("quota.modelCount") + " " + String(aggregate.models) : "",
+								fetchedAtText === null ? "" : t("quota.fileTime") + " " + fetchedAtText,
 								commitShort === null ? "" : "　upstream " + commitShort
 							]
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4578,7 +4620,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								"平时不联网：",
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "只有你点「刷新价目」时" }),
 								"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。",
-								pathText === null ? "" : "　当前文件：" + pathText
+								pathText === null ? "" : t("quota.currentFile") + "：" + pathText
 							]
 						})] }),
 						aggregateIssues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4606,17 +4648,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (coverage === null) return null;
 			const days = coverage.from === void 0 || coverage.to === void 0 ? null : daysBetween(coverage.from, coverage.to);
 			const parts = [];
-			if (days !== null) parts.push("官方账单 " + String(days) + " 天");
+			if (days !== null) parts.push(t("quota.officialBill") + " " + String(days) + t("q.daySuffix"));
 			const counts = [
-				["官方价", coverage.catalogModels],
-				["聚合", coverage.aggregateModels],
-				["估算", coverage.averagedModels],
-				["无依据", coverage.unpricedModels]
+				[t("cso.catalog"), coverage.catalogModels],
+				[t("cso.aggregate"), coverage.aggregateModels],
+				[t("cso.estimate"), coverage.averagedModels],
+				[t("q.noBasis"), coverage.unpricedModels]
 			];
-			for (const [label, value] of counts) if (typeof value === "number" && Number.isFinite(value)) parts.push(label + " " + String(value) + " 个模型");
-			if (typeof coverage.partialModels === "number" && coverage.partialModels > 0) parts.push("其中部分 " + String(coverage.partialModels) + " 个");
+			for (const [label, value] of counts) if (typeof value === "number" && Number.isFinite(value)) parts.push(label + " " + String(value) + t("q.modelsSuffix"));
+			if (typeof coverage.partialModels === "number" && coverage.partialModels > 0) parts.push(t("q.partialPrefix") + String(coverage.partialModels) + t("q.countSuffix"));
 			if (parts.length === 0) return null;
-			return "近 30 天这一格钱的依据：" + parts.join(" · ") + "（三层价目自动生效，不需要你填价格）";
+			return t("quota.basis") + "：" + parts.join(" · ") + t("quota.basisAuto");
 		}
 		/** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
 		function daysBetween(from, to) {
@@ -4667,22 +4709,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
 		function modelPriceRefreshTextOf(result) {
 			const parts = [];
-			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + " 条价目");
+			if (typeof result.entries === "number" && Number.isFinite(result.entries)) parts.push(String(result.entries) + t("q.priceEntriesSuffix"));
 			const megabytes = megabytesTextOf(result.bytes);
 			if (megabytes !== null) parts.push(megabytes);
 			const host = hostOf(result.url);
-			if (host !== null) parts.push("来源 " + host);
+			if (host !== null) parts.push(t("quota.sourceLabel") + " " + host);
 			const time = localTimeTextOf(result.fetchedAt);
 			if (time !== null) parts.push(time);
-			return "已更新：" + (parts.length === 0 ? "服务端没返回明细，已按新价目重算" : parts.join(" · "));
+			return t("quota.updated") + "：" + (parts.length === 0 ? t("quota.recomputed") : parts.join(" · "));
 		}
 		function freshTextOf(fetchedAt) {
-			if (fetchedAt === null) return "刚刚";
+			if (fetchedAt === null) return t("quota.justNow");
 			const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1e3));
-			if (seconds < 60) return "刚刚";
+			if (seconds < 60) return t("quota.justNow");
 			const minutes = Math.floor(seconds / 60);
-			if (minutes < 60) return minutes + " 分钟前";
-			return Math.floor(minutes / 60) + " 小时前";
+			if (minutes < 60) return minutes + t("q.minutesAgoSuffix");
+			return Math.floor(minutes / 60) + t("q.hoursAgoSuffix");
 		}
 		function errorTextOf(error) {
 			if (error === null) return t("err.noLiveQuery");
@@ -4720,12 +4762,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 无数据时的分档说明：区分未配置凭据 / 免费额度 / 本地端点 / 无查询能力。 */
 		function emptyReasonOf(channel, snapshot) {
-			if (snapshot?.source === "snapshot" && snapshot.error === "no-key") return "该通道未配置 API Key，无法查询余额";
-			if (snapshot?.source === "snapshot" && snapshot.error === "unauthorized") return "凭据被通道拒绝，无法查询余额";
-			if (channel.status === "off") return "凭据引用存在，Key 未填写";
-			if (channel.costMode === "none") return "本地端点，无余额查询接口";
-			if (channel.costMode === "free") return "该通道无余额查询接口（免费额度）";
-			return "该通道暂无可查询的余额 / 配额接口";
+			if (snapshot?.source === "snapshot" && snapshot.error === "no-key") return t("err.detail.noKey");
+			if (snapshot?.source === "snapshot" && snapshot.error === "unauthorized") return t("err.detail.rejected");
+			if (channel.status === "off") return t("err.detail.keyMissing");
+			if (channel.costMode === "none") return t("err.detail.local");
+			if (channel.costMode === "free") return t("err.detail.free");
+			return t("err.detail.none");
 		}
 		//#endregion
 		//#region src/client/components/SessionDetailDrawer.tsx

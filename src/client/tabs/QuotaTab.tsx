@@ -51,10 +51,10 @@ interface PriceRefreshStatus {
 }
 
 function resetTextOf(value: unknown): string {
-  if (typeof value !== 'string' || value === '') return '重置时间 —'
+  if (typeof value !== 'string' || value === '') return t('q.resetUnknown')
   const time = new Date(value)
-  if (Number.isNaN(time.getTime())) return '重置于 ' + value
-  return '重置于 ' + fmtDateTime(time.getTime())
+  if (Number.isNaN(time.getTime())) return t('quota.resetAt') + ' ' + value
+  return t('quota.resetAt') + ' ' + fmtDateTime(time.getTime())
 }
 
 export function QuotaTab(props: {
@@ -92,13 +92,13 @@ export function QuotaTab(props: {
     const result = await loadFxRate(force)
     setFxLoading(false)
     if (result === null) {
-      setFxError(failureReasonOf(FX_PATH) ?? '没拿到服务端响应')
+      setFxError(failureReasonOf(FX_PATH) ?? t('quota.noResponse'))
       return
     }
     setFxError(null)
     // 归一化返回 null 说明 rate 非法：宁可说「没取到汇率」，也不要拿上一次的值冒充
     const normalized = normalizeFxRate(result)
-    if (normalized === null) setFxError('服务端返回的汇率无法解析')
+    if (normalized === null) setFxError(t('quota.fxBad'))
     setFxRate(normalized)
   }, [])
 
@@ -140,11 +140,11 @@ export function QuotaTab(props: {
     const outcome = await refreshModelPrices()
     setRefreshingPrices(false)
     if (outcome === null) {
-      setRefreshStatus({ tone: 'bad', text: '刷新失败：' + (failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? '没拿到服务端响应') })
+      setRefreshStatus({ tone: 'bad', text: t('quota.refreshFailed') + '：' + (failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? t('quota.noResponse')) })
       return
     }
     if (!outcome.ok) {
-      setRefreshStatus({ tone: 'bad', text: '刷新失败：' + outcome.error })
+      setRefreshStatus({ tone: 'bad', text: t('quota.refreshFailed') + '：' + outcome.error })
       return
     }
     setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
@@ -166,7 +166,7 @@ export function QuotaTab(props: {
   }
 
   const fxText = display.fx === null
-    ? (fxError === null ? fxSummaryTextOf(null) : '汇率不可用：' + fxError)
+    ? (fxError === null ? fxSummaryTextOf(null) : t('quota.fxUnavailable') + '：' + fxError)
     : (fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx))
   const fxTone = display.fx === null || display.fx.source === 'default' ? quotaStyles.fxWarn : quotaStyles.fxText
 
@@ -230,8 +230,8 @@ export function QuotaTab(props: {
           onClick={() => setShowPricingInfo((previous) => !previous)}
         >
           {showPricingInfo ? '▾' : '▸'} 价目数据来源与文件（内置厂商官方价目
-          {catalog !== null && Number.isFinite(catalog.entries) ? ' ' + String(catalog.entries) + ' 条' : ''}
-          {' · LiteLLM 聚合价目）'}
+          {catalog !== null && Number.isFinite(catalog.entries) ? ' ' + String(catalog.entries) + t('quota.entriesSuffix') : ''}
+          {t('q.aggregateSuffix')}
         </button>
         <div id={pricingInfoId} className={quotaStyles.pricingInfoBody} hidden={!showPricingInfo}>
           <PricingInfoBlock pricing={pricing} aggregate={aggregate} issues={issues} catalogStale={catalogStale} />
@@ -290,8 +290,8 @@ export function QuotaTab(props: {
 
               {outcome !== null && outcome.ok === false && (
                 <div className={quotaStyles.staleLine}>
-                  数据时间 {outcome.capturedAt === null ? '未知' : localTimeTextOf(outcome.capturedAt)} · 本机快照 · 本次失败：
-                  {outcome.error ?? '未查询'}
+                  数据时间 {outcome.capturedAt === null ? t('quota.unknown') : localTimeTextOf(outcome.capturedAt)} · 本机快照 · 本次失败：
+                  {outcome.error ?? t('quota.notQueried')}
                 </div>
               )}
 
@@ -340,8 +340,8 @@ export function QuotaTab(props: {
                 <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
                   实时查询未成功（{errorTextOf(snapshot.error)}）
                   {snapshot.updatedAt === null
-                    ? '，且暂无可用快照 —— 点右上角「刷新」重试'
-                    : '，显示快照 · 快照时间 ' + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? '，已 ' + staleDaysOf(snapshot.updatedAt) + ' 天未更新' : '')}
+                    ? t('q.retryHint')
+                    : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t('q.stalePrefix') + staleDaysOf(snapshot.updatedAt) + t('q.daysStaleSuffix') : '')}
                 </div>
               )}
 
@@ -351,7 +351,7 @@ export function QuotaTab(props: {
                   <RateTable
                     rows={rateRows}
                     loading={ratesLoading}
-                    failureText={rates === null ? (failureReasonOf(RATES_PATH) ?? '没拿到服务端响应') : null}
+                    failureText={rates === null ? (failureReasonOf(RATES_PATH) ?? t('quota.noResponse')) : null}
                     display={display.display}
                     convertedHint={display.fx === null ? null : fxSummaryTextOf(display.fx)}
                     range={rates !== null && typeof rates.from === 'string' && typeof rates.to === 'string'
@@ -377,11 +377,11 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
     const mix = [...counts.entries()]
       .map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
       .join(' / ')
-    return String(rows.length) + ' 个模型单价 · ' + mix
+    return String(rows.length) + t('q.modelRatesPrefix') + mix
   }
-  if (loading) return '读取单价…'
-  if (failed) return failureText === null ? '单价表不可用' : '单价表不可用：' + failureText
-  return '近 30 天无用量'
+  if (loading) return t('quota.loadingRates')
+  if (failed) return failureText === null ? t('quota.ratesUnavailable') : t('quota.ratesUnavailable') + '：' + failureText
+  return t('quota.noUsage')
 }
 
 /** 单价表：`rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。 */
@@ -398,10 +398,10 @@ function RateTable(props: {
     return (
       <div className={quotaStyles.rateEmpty}>
         {props.loading
-          ? '正在读取单价…'
+          ? t('quota.loadingRates')
           : props.failureText !== null
-            ? '单价表不可用：' + props.failureText
-            : '近 30 天没有这条通道的模型用量，列不出单价。'}
+            ? t('quota.ratesUnavailable') + '：' + props.failureText
+            : t('quota.ratesEmpty')}
       </div>
     )
   }
@@ -410,8 +410,8 @@ function RateTable(props: {
     <>
       <div className={quotaStyles.rateHead}>
         {t('quota.priceUnit')}（{t('unit.perMillion')}）· {t('quota.displayCurrency')} {DISPLAY_CURRENCY_LABELS[props.display]}
-        {converted && props.convertedHint !== null ? '（≈ 为折算值：' + props.convertedHint + '）' : ''}
-        {props.range === null ? '' : ' · 统计区间 ' + props.range.from + ' ~ ' + props.range.to}
+        {converted && props.convertedHint !== null ? t('q.convertedPrefix') + props.convertedHint + '）' : ''}
+        {props.range === null ? '' : t('q.rangePrefix') + props.range.from + ' ~ ' + props.range.to}
       </div>
       <div className={quotaStyles.rateScroll}>
         <table className={quotaStyles.rateTable}>
@@ -514,7 +514,7 @@ function PricingInfoBlock(props: {
         <div className={pricingStyles.catalogNote + (props.catalogStale === null ? '' : ' ' + pricingStyles.catalogStale)}>
           已内置 <b>{String(catalog.entries)}</b> 条厂商官方价目，<b>自动生效，不需要你维护</b>。来源：
           {sources.length === 0
-            ? '服务端没返回来源明细'
+            ? t('quota.noSourceDetail')
             : sources.map((entry, index) => {
               const daysAgo = fetchedDaysAgo(entry.fetchedAt)
               return (
@@ -523,7 +523,7 @@ function PricingInfoBlock(props: {
                   {typeof entry.source === 'string' && entry.source !== ''
                     ? <a className={pricingStyles.linkBtn} href={entry.source} target="_blank" rel="noreferrer">{(entry.providers ?? []).join(' / ')}</a>
                     : (entry.providers ?? []).join(' / ')}
-                  （{String(entry.count)} 条，{entry.fetchedAt} 抓取{daysAgo === null ? '' : '，距今 ' + String(daysAgo) + ' 天'}）
+                  （{String(entry.count)} 条，{entry.fetchedAt} 抓取{daysAgo === null ? '' : t('q.agoPrefix') + String(daysAgo) + t('q.daySuffix')}）
                 </span>
               )
             })}
@@ -534,7 +534,7 @@ function PricingInfoBlock(props: {
         <div className={pricingStyles.fileLine}>
           <span>
             内置价目文件 <code className={pricingStyles.pathText}>{files.catalog.path}</code>
-            {files.catalog.exists ? '（' + String(files.catalog.entries) + ' 条）' : '（读不到，成本会少一层依据）'}
+            {files.catalog.exists ? '（' + String(files.catalog.entries) + t('q.entriesClose') : '（' + t('quota.unreadable') + '）'}
           </span>
         </div>
       )}
@@ -551,7 +551,7 @@ function PricingInfoBlock(props: {
             {shownIssues.map((issue, index) => (
               <li key={String(issue.file) + '|' + String(issue.line) + '|' + String(index)}>
                 <span className={pricingStyles.issueWhere}>
-                  内置价目{issue.line === null ? '' : ' 第 ' + String(issue.line) + ' 行'}
+                  内置价目{issue.line === null ? '' : t('q.rowPrefix') + String(issue.line) + t('q.rowSuffix')}
                 </span>
                 {issue.message}
               </li>
@@ -575,22 +575,22 @@ function PricingInfoBlock(props: {
           ? (
             <div className={pricingStyles.aggregateMeta}>
               {pricing === null
-                ? '正在读取服务端价目信息…'
-                : '服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。'}
+                ? t('quota.loadingPricing')
+                : t('quota.pricingUnavailable')}
             </div>
           )
           : (
             <>
               <div className={pricingStyles.aggregateMeta}>
                 当前装载：<b>{aggregateLoadedLabelOf(aggregate.loaded)}</b>
-                {Number.isFinite(aggregate.entries) ? '　条目 ' + String(aggregate.entries) : ''}
-                {Number.isFinite(aggregate.models) ? '　模型 ' + String(aggregate.models) : ''}
-                {fetchedAtText === null ? '' : '　文件时间 ' + fetchedAtText}
+                {Number.isFinite(aggregate.entries) ? t('quota.entry') + ' ' + String(aggregate.entries) : ''}
+                {Number.isFinite(aggregate.models) ? t('quota.modelCount') + ' ' + String(aggregate.models) : ''}
+                {fetchedAtText === null ? '' : t('quota.fileTime') + ' ' + fetchedAtText}
                 {commitShort === null ? '' : '　upstream ' + commitShort}
               </div>
               <div className={pricingStyles.aggregateMeta}>
                 平时不联网：<b>只有你点「刷新价目」时</b>才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。
-                {pathText === null ? '' : '　当前文件：' + pathText}
+                {pathText === null ? '' : t('quota.currentFile') + '：' + pathText}
               </div>
             </>
           )}
@@ -620,21 +620,21 @@ function coverageTextOf(coverage: PricingResponse['coverage'] | null): string | 
   if (coverage === null) return null
   const days = coverage.from === undefined || coverage.to === undefined ? null : daysBetween(coverage.from, coverage.to)
   const parts: string[] = []
-  if (days !== null) parts.push('官方账单 ' + String(days) + ' 天')
+  if (days !== null) parts.push(t('quota.officialBill') + ' ' + String(days) + t('q.daySuffix'))
   const counts: Array<[string, number | undefined]> = [
-    ['官方价', coverage.catalogModels],
-    ['聚合', coverage.aggregateModels],
-    ['估算', coverage.averagedModels],
-    ['无依据', coverage.unpricedModels],
+    [t('cso.catalog'), coverage.catalogModels],
+    [t('cso.aggregate'), coverage.aggregateModels],
+    [t('cso.estimate'), coverage.averagedModels],
+    [t('q.noBasis'), coverage.unpricedModels],
   ]
   for (const [label, value] of counts) {
-    if (typeof value === 'number' && Number.isFinite(value)) parts.push(label + ' ' + String(value) + ' 个模型')
+    if (typeof value === 'number' && Number.isFinite(value)) parts.push(label + ' ' + String(value) + t('q.modelsSuffix'))
   }
   if (typeof coverage.partialModels === 'number' && coverage.partialModels > 0) {
-    parts.push('其中部分 ' + String(coverage.partialModels) + ' 个')
+    parts.push(t('q.partialPrefix') + String(coverage.partialModels) + t('q.countSuffix'))
   }
   if (parts.length === 0) return null
-  return '近 30 天这一格钱的依据：' + parts.join(' · ') + '（三层价目自动生效，不需要你填价格）'
+  return t('quota.basis') + '：' + parts.join(' · ') + t('quota.basisAuto')
 }
 
 /** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
@@ -664,24 +664,24 @@ function ExplanationBlock(): ReactNode {
 function modelPriceRefreshTextOf(result: Extract<PricingRefreshResult, { ok: true }>): string {
   const parts: string[] = []
   if (typeof result.entries === 'number' && Number.isFinite(result.entries)) {
-    parts.push(String(result.entries) + ' 条价目')
+    parts.push(String(result.entries) + t('q.priceEntriesSuffix'))
   }
   const megabytes = megabytesTextOf(result.bytes)
   if (megabytes !== null) parts.push(megabytes)
   const host = hostOf(result.url)
-  if (host !== null) parts.push('来源 ' + host)
+  if (host !== null) parts.push(t('quota.sourceLabel') + ' ' + host)
   const time = localTimeTextOf(result.fetchedAt)
   if (time !== null) parts.push(time)
-  return '已更新：' + (parts.length === 0 ? '服务端没返回明细，已按新价目重算' : parts.join(' · '))
+  return t('quota.updated') + '：' + (parts.length === 0 ? t('quota.recomputed') : parts.join(' · '))
 }
 
 function freshTextOf(fetchedAt: number | null): string {
-  if (fetchedAt === null) return '刚刚'
+  if (fetchedAt === null) return t('quota.justNow')
   const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1000))
-  if (seconds < 60) return '刚刚'
+  if (seconds < 60) return t('quota.justNow')
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return minutes + ' 分钟前'
-  return Math.floor(minutes / 60) + ' 小时前'
+  if (minutes < 60) return minutes + t('q.minutesAgoSuffix')
+  return Math.floor(minutes / 60) + t('q.hoursAgoSuffix')
 }
 
 function errorTextOf(error: string | null): string {
@@ -727,10 +727,10 @@ function orderedWindows(windows: Array<{ key?: unknown }>): Array<{ key?: unknow
 
 /** 无数据时的分档说明：区分未配置凭据 / 免费额度 / 本地端点 / 无查询能力。 */
 function emptyReasonOf(channel: Channel, snapshot: QuotaProvider | null): string {
-  if (snapshot?.source === 'snapshot' && snapshot.error === 'no-key') return '该通道未配置 API Key，无法查询余额'
-  if (snapshot?.source === 'snapshot' && snapshot.error === 'unauthorized') return '凭据被通道拒绝，无法查询余额'
-  if (channel.status === 'off') return '凭据引用存在，Key 未填写'
-  if (channel.costMode === 'none') return '本地端点，无余额查询接口'
-  if (channel.costMode === 'free') return '该通道无余额查询接口（免费额度）'
-  return '该通道暂无可查询的余额 / 配额接口'
+  if (snapshot?.source === 'snapshot' && snapshot.error === 'no-key') return t('err.detail.noKey')
+  if (snapshot?.source === 'snapshot' && snapshot.error === 'unauthorized') return t('err.detail.rejected')
+  if (channel.status === 'off') return t('err.detail.keyMissing')
+  if (channel.costMode === 'none') return t('err.detail.local')
+  if (channel.costMode === 'free') return t('err.detail.free')
+  return t('err.detail.none')
 }
