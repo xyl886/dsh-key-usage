@@ -123,7 +123,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
   const channel = channelOf(props.channels, session.provider)
   const costCell = costCellOf(channel, session)
   return (
-    <div>
+    <div className={listStyles.detailBody}>
       <div className={listStyles.detailGrid}>
         <DetailItem label={t('common.workspace')} value={session.workspace ?? t('s.noWorkspace')} wide />
         <DetailItem label={t('common.channel')} value={session.provider === null ? '—' : (session.providerLabel ?? displayNameOf(props.channels, session.provider))} />
@@ -166,7 +166,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
           : <div className={listStyles.promptText}>{session.prompt}</div>}
       </div>
 
-      <div className={listStyles.detailBlock}>
+      <div className={listStyles.detailBlock + ' ' + listStyles.detailColLeft}>
         <div className={listStyles.detailBlockTitle}>{t('d.byModel')}</div>
         {session.models.length === 0
           ? <div className={styles.empty}>{t('empty.noUsage')}</div>
@@ -204,7 +204,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
       </div>
 
       {session.hours !== null && (
-        <div className={listStyles.detailBlock}>
+        <div className={listStyles.detailBlock + ' ' + listStyles.detailColRight}>
           <div className={listStyles.detailBlockTitle}>{t('d.hoursNote')}</div>
           <HourMiniChart hours={session.hours} />
         </div>

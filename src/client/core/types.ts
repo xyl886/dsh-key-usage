@@ -382,6 +382,9 @@ export interface RatesResponse {
 
 /** `/fx`：人民币对美元汇率（服务端 12 小时内走缓存，`?refresh=1` 强制刷新）。 */
 export interface FxResponse {
+  /** 说明文案的词典键（服务端下发；给了就优先按它渲染，便于双语） */
+  noteCode?: string | null
+  noteParams?: Record<string, string | number> | null
   ok?: boolean
   base?: string
   quote?: string

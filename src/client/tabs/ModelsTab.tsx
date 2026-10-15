@@ -122,7 +122,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
                 <td>
                   <div className={listStyles.listTitle}>
                     <div>
-                      <div className={listStyles.listMain}>{row.model}</div>
+                      <div className={listStyles.listMain}>{row.model === '' ? t('m.others') : row.model}</div>
                       <div className={listStyles.listSub}>
                         <span
                           className={styles.statusDot}

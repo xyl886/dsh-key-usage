@@ -236,7 +236,7 @@ export function cappedModelRows(
   const restCost = sumOrNull(rest)
   head.push({
     provider: '',
-    model: '其它',
+    model: '',
     tokens: rest.reduce((sum, model) => sum + model.tokens, 0),
     calls: rest.reduce((sum, model) => sum + model.calls, 0),
     sharePercent: Math.round(rest.reduce((sum, model) => sum + model.sharePercent, 0) * 10) / 10,

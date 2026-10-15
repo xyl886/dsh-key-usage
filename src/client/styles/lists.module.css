@@ -171,7 +171,7 @@
 .drawerClose:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .drawerId { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--dsw-alias-label-tertiary, #67676f); margin: 2px 0 12px; overflow-wrap: anywhere; }
 
-.detailGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 16px; }
+.detailGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 16px; }
 .detailItemWide { grid-column: 1 / -1; }
 .detailItemLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; }
 .detailItemValue { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -181,6 +181,15 @@
   margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
 }
 .detailBlock { margin-top: 16px; }
+/* 弹窗下半区两栏：宽窗口并排，窄窗口自动堆叠 */
+.detailColumns { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 4px 20px; align-items: start; }
+/* 弹窗正文两栏：字段区与分条带占整行，逐模型与小时分布并排 */
+.detailBody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.detailBody > .detailGrid, .detailBody > .detailStrip { grid-column: 1 / -1; }
+.detailBody > .detailBlock { grid-column: 1 / -1; }
+.detailBody > .detailColLeft { grid-column: 1; }
+.detailBody > .detailColRight { grid-column: 2; }
+.detailColumns .detailBlock { margin-top: 14px; }
 .detailBlockTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin-bottom: 6px; }
 .detailCost { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; }
 .detailCostHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }

@@ -286,9 +286,10 @@ function seedCache(path, entry) {
   // 回环请求吃第 8 步写好的缓存（TTL 内），因此这里同样不联网
   const local = await call('/dsh-key-usage/fx')
   assert.equal(local.status, 200)
+  // 契约：十个基础字段 + 说明文案的词典键与参数（客户端按语言渲染；旧客户端忽略）
   assert.deepEqual(Object.keys(local.body).sort(), [
-    'base', 'fetchedAt', 'note', 'ok', 'quote', 'rate', 'source', 'stale', 'ttlHours', 'upstream',
-  ], '响应字段就是冻结契约里的那十个')
+    'base', 'fetchedAt', 'note', 'noteCode', 'noteParams', 'ok', 'quote', 'rate', 'source', 'stale', 'ttlHours', 'upstream',
+  ], '响应字段 = 基础十项 + noteCode/noteParams')
   assert.equal(local.body.ok, true)
   assert.equal(local.body.rate, 7.33)
   assert.equal(local.body.source, 'cache')

@@ -41,6 +41,10 @@ export interface FxRateView {
   ttlHours: number
   /** 可读中文说明（含失败原因），界面直接展示。 */
   note: string
+  /** 说明文案的词典键与参数（客户端按语言渲染；旧客户端忽略） */
+  noteCode?: string
+  noteParams?: Record<string, string | number>
+
 }
 
 export interface FxCacheEntry {
@@ -232,6 +236,8 @@ export async function resolveFxRate(options: FxResolveOptions = {}): Promise<FxR
       upstream: null,
       ttlHours: FX_TTL_HOURS,
       note: '使用 ' + String(FX_TTL_HOURS) + ' 小时内的缓存汇率（本次未联网）',
+      noteCode: 'srv.fxCache',
+      noteParams: { hours: FX_TTL_HOURS },
     }
   }
 
@@ -256,6 +262,8 @@ export async function resolveFxRate(options: FxResolveOptions = {}): Promise<FxR
       upstream: url,
       ttlHours: FX_TTL_HOURS,
       note: '实时汇率来自 ' + hostOf(url) + '（USD → CNY）' + (written.ok ? '' : '；本机缓存写入失败：' + written.error),
+      noteCode: 'srv.fxLive',
+      noteParams: { host: hostOf(url) },
     }
   }
 
@@ -273,6 +281,8 @@ export async function resolveFxRate(options: FxResolveOptions = {}): Promise<FxR
       ttlHours: FX_TTL_HOURS,
       note: '上游汇率获取失败' + reason + '，回落到本机缓存'
         + (fresh ? '（缓存仍在 ' + String(FX_TTL_HOURS) + ' 小时内）' : '（缓存已超过 ' + String(FX_TTL_HOURS) + ' 小时）'),
+      noteCode: 'srv.fxFailedCache',
+      noteParams: { reason },
     }
   }
   return {
@@ -287,5 +297,7 @@ export async function resolveFxRate(options: FxResolveOptions = {}): Promise<FxR
     ttlHours: FX_TTL_HOURS,
     note: '无法获取汇率' + reason + '，也没有可用的本机缓存，暂用默认 ' + String(FX_DEFAULT_RATE) + ' 兜底（USD → CNY）'
       + (problem === null ? '' : '；' + problem),
+      noteCode: 'srv.fxFailedDefault',
+      noteParams: { reason, rate: FX_DEFAULT_RATE },
   }
 }

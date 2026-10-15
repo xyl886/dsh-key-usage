@@ -40,6 +40,9 @@ export interface FxRate {
   stale: boolean
   upstream: string | null
   note: string | null
+  /** 说明文案的词典键与参数：给了就按词典渲染（双语） */
+  noteCode?: string | null
+  noteParams?: Record<string, string | number> | null
 }
 
 export interface CurrencyDisplayState {
@@ -281,8 +284,15 @@ export function normalizeFxRate(raw: unknown): FxRate | null {
 }
 
 /** 服务端兜底汇率时的显式提示：`source: 'default'` 必须让人看出「这不是联网拿到的」。 */
+/** 汇率说明：服务端给了 code 就按词典渲染（双语），否则回落它给的中文串。 */
+export function fxNoteTextOf(fx: FxRate | null): string | null {
+  if (fx === null) return null
+  if (fx.noteCode !== undefined && fx.noteCode !== null) return t(fx.noteCode, (fx.noteParams ?? {}) as Record<string, string | number>)
+  return fx.note
+}
+
 export function fxFallbackWarningOf(fx: FxRate | null): string | null {
   if (fx === null || fx.source !== 'default') return null
   return t('fx.defaultPrefix') + rateValueTextOf(fx.rate) + t('fx.defaultSuffix')
-    + (fx.note === null ? '' : '（' + fx.note + '）')
+    + (fxNoteTextOf(fx) === null ? '' : '（' + fxNoteTextOf(fx) + '）')
 }
