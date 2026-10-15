@@ -3,15 +3,15 @@
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { loadUsage } from '../api.ts'
-import { channelOf, costCellOf } from '../channels.ts'
-import { fmtCalls, fmtTokens, isoDate } from '../format.ts'
-import { comparableMoneyAmountOf, rowMoneyViewOf, type CostRowLike } from '../currency.ts'
-import { COST_SOURCE_LABELS } from '../pricing.ts'
-import type { Channel, DaySummary, UsageResponse } from '../types.ts'
+import { loadUsage } from '../core/api.ts'
+import { channelOf, costCellOf } from '../core/channels.ts'
+import { fmtCalls, fmtTokens, isoDate } from '../core/format.ts'
+import { comparableMoneyAmountOf, rowMoneyViewOf, type CostRowLike } from '../core/currency.ts'
+import { COST_SOURCE_LABELS } from '../core/pricing.ts'
+import type { Channel, DaySummary, UsageResponse } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
 import trendStyles from '../styles/trend.module.css'
-import { t, useT } from '../i18n.ts'
+import { t, useT } from '../core/i18n.ts'
 import uiStyles from '../styles/ui.module.css'
 
 /** 与 DetailTab 的 `RangeKey` 同形：单独声明，避免两个模块互相 import 类型。 */

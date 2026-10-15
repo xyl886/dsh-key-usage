@@ -24,7 +24,7 @@ import {
   sumMoneyByCurrency,
   unwrapSettingValue,
   weakestOf,
-} from '../lib/pricing.js'
+} from '../lib/pricing/pricing.js'
 import {
   catalogCurrency,
   catalogEntries,
@@ -36,7 +36,7 @@ import {
   catalogRuleList,
   catalogSources,
   parseCatalogText,
-} from '../lib/pricing-catalog.js'
+} from '../lib/pricing/pricing-catalog.js'
 
 /** 迁移基线：迁移前从 lib/pricing-catalog.js 导出的 18 条原样条目（字段、顺序、数字一字不差）。 */
 const GOLDEN_CATALOG = JSON.parse(readFileSync(new URL('./fixtures/pricing-catalog.golden.json', import.meta.url), 'utf8'))

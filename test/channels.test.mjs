@@ -3,7 +3,7 @@
  * 运行：node test/channels.test.mjs
  */
 import assert from 'node:assert/strict'
-import { classifyChannels, costModeLabel, extractChannels, quotaWindowLabel } from '../lib/collect.js'
+import { classifyChannels, costModeLabel, extractChannels, quotaWindowLabel } from '../lib/data/collect.js'
 
 function channel(overrides) {
   return {

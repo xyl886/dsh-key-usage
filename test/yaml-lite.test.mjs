@@ -4,7 +4,7 @@
  * 运行：node test/yaml-lite.test.mjs（依赖 lib/yaml-lite.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'
-import { parseYamlLite, yamlField, yamlItems, yamlKindLabel, yamlLine, yamlNumber, yamlText } from '../lib/yaml-lite.js'
+import { parseYamlLite, yamlField, yamlItems, yamlKindLabel, yamlLine, yamlNumber, yamlText } from '../lib/pricing/yaml-lite.js'
 
 /** 取标量节点的原始值（区分「字符串 2」与「数字 2」用）。 */
 function scalarValue(node) {

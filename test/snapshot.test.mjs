@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { SNAPSHOT_FILE, createSnapshotService, readSnapshotFile, snapshotPath, writeSnapshotFile } from '../lib/snapshot.js'
+import { SNAPSHOT_FILE, createSnapshotService, readSnapshotFile, snapshotPath, writeSnapshotFile } from '../lib/snapshot/snapshot.js'
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-snapshot-'))
 process.env.DSH_HOME = home

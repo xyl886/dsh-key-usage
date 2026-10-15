@@ -4,8 +4,8 @@
  * 价格由服务端三层价目自动决定，客户端只经 `/pricing`、`/rates`、`/fx` 读。
  */
 import { createElement as h } from 'react'
-import type { SectionContext } from './types.ts'
-import { installI18n, t, type LocaleFace } from './i18n.ts'
+import type { SectionContext } from './core/types.ts'
+import { installI18n, t, type LocaleFace } from './core/i18n.ts'
 import { UsageIcon } from './UsageIcon.tsx'
 import { UsagePage } from './UsagePage.tsx'
 

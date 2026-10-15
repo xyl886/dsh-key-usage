@@ -3,7 +3,7 @@
  * 运行：node test/ledger.test.mjs
  */
 import assert from 'node:assert/strict'
-import { readLedger, aggregateRange, buildHeatmap } from '../lib/ledger.js'
+import { readLedger, aggregateRange, buildHeatmap } from '../lib/data/ledger.js'
 
 const ledger = {
   version: 1,

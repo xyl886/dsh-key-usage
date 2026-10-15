@@ -5,20 +5,20 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
 import {
   FX_PATH, MODEL_PRICE_REFRESH_PATH, RATES_PATH, failureReasonOf, loadFxRate, loadRates, refreshModelPrices,
-} from '../api.ts'
-import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../channels.ts'
+} from '../core/api.ts'
+import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../core/channels.ts'
 import {
   convertsCurrencyOf, fxFallbackWarningOf, fxSummaryTextOf, normalizeFxRate, rateTextOf, setDisplayCurrency,
   setFxRate, useCurrencyDisplay, DISPLAY_CURRENCIES, DISPLAY_CURRENCY_LABELS, type DisplayCurrency,
-} from '../currency.ts'
-import { fmtDateTime, fmtTokens, localTimeTextOf } from '../format.ts'
-import { t, useT } from '../i18n.ts'
+} from '../core/currency.ts'
+import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
+import { t, useT } from '../core/i18n.ts'
 import {
   LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
   megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
   type AggregateIssue, type CostSource, type ModelPriceAggregate, type PricingRefreshResult, type PricingResponse,
-} from '../pricing.ts'
-import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../types.ts'
+} from '../core/pricing.ts'
+import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../core/types.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'

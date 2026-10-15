@@ -1,12 +1,12 @@
 /** 占比条：全部通道看通道占比，单通道看模型占比（名字与百分比走悬停 tip）。 */
 import type { ReactNode } from 'react'
-import { channelColorOf, displayNameOf } from '../channels.ts'
-import { fmtTokens } from '../format.ts'
-import type { Channel, UsageResponse } from '../types.ts'
-import { TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
+import { channelColorOf, displayNameOf } from '../core/channels.ts'
+import { fmtTokens } from '../core/format.ts'
+import type { Channel, UsageResponse } from '../core/types.ts'
+import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
-import { t, useT } from '../i18n.ts'
+import { t, useT } from '../core/i18n.ts'
 
 interface ShareRow {
   key: string

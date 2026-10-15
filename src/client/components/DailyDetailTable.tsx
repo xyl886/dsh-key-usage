@@ -1,12 +1,12 @@
 /** 每日细目：以「天」为折叠单位，展开行显示该天的模型维度。 */
 import { Fragment, type ReactNode } from 'react'
-import { displayNameOf } from '../channels.ts'
-import { fmtCalls, fmtTokens } from '../format.ts'
-import { hiddenEmptyRowsText } from '../rows.ts'
-import type { Channel, UsageResponse } from '../types.ts'
+import { displayNameOf } from '../core/channels.ts'
+import { fmtCalls, fmtTokens } from '../core/format.ts'
+import { hiddenEmptyRowsText } from '../core/rows.ts'
+import type { Channel, UsageResponse } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
-import { t, useT } from '../i18n.ts'
+import { t, useT } from '../core/i18n.ts'
 import uiStyles from '../styles/ui.module.css'
 
 export interface DetailSortState {

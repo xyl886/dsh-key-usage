@@ -1,7 +1,7 @@
 /** 堆叠柱状图：按天或按小时，含 x 轴标签与左侧纵轴刻度。 */
 import type { ReactNode } from 'react'
-import { fmtTokens } from '../format.ts'
-import type { TooltipApi } from '../tooltip.tsx'
+import { fmtTokens } from '../core/format.ts'
+import type { TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/detail.module.css'
 
 export interface TokenBarRow {

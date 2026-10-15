@@ -3,7 +3,7 @@
  * 凭据经宿主 `credentials` seam 解析（不落盘、不进日志、不返前端），失败由调用方回落本地快照。
  * 结果按 provider 缓存 60 秒。
  */
-import type { ChannelInfo } from './collect.js'
+import type { ChannelInfo } from '../data/collect.js'
 
 export interface LiveWindow {
   /** 归一后的窗口键：5h / week / month（与界面标签一致）。 */

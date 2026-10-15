@@ -7,8 +7,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mountKeyUsageRoutes, parseDays, parseRatesLimit } from '../lib/routes.js'
-import { createSessionSource } from '../lib/sessions.js'
-import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
+import { createSessionSource } from '../lib/data/sessions.js'
+import { foldSessionEvents, summarizeSession } from '../lib/data/session-usage.js'
 
 /** 本地日历日（与 routes 的 shiftedDayKey 同一口径）；夹具用相对日期，避免依赖运行当天的具体日期。 */
 function localDayKey(offsetDays) {

@@ -50,7 +50,7 @@ export const AGGREGATE_PROVIDER_ALIASES: Record<string, string[]> = {
   volcengine: ['volcengine'],
 }
 
-const SHIPPED_PATH = fileURLToPath(new URL('../data/litellm-model-prices.json', import.meta.url))
+const SHIPPED_PATH = fileURLToPath(new URL('../../data/litellm-model-prices.json', import.meta.url))
 
 /** 本机刷新文件的唯一可写目标。 */
 export function aggregateLocalPath(): string {

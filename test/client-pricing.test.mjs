@@ -10,11 +10,11 @@
 import assert from 'node:assert/strict'
 
 // 标签/说明已改成 i18n 词典键：这里直接校验词典里的中文文案
-const { zh } = await import('../src/client/copy.ts')
+const { zh } = await import('../src/client/core/copy.ts')
 
 let clientPricing = null
 try {
-  clientPricing = await import('../src/client/pricing.ts')
+  clientPricing = await import('../src/client/core/pricing.ts')
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   if (/Unknown file extension|strip-types|ERR_UNKNOWN_FILE_EXTENSION|TypeScript/i.test(message)) {

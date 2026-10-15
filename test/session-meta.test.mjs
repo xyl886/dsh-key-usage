@@ -4,9 +4,9 @@
  * 运行：node test/session-meta.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createArchiveSource, createTitleSource, normalizeSessionId, parseTitles } from '../lib/session-meta.js'
-import { foldSessionEvents, promptSnippetOf, summarizeSession, PROMPT_TITLE_CHARS } from '../lib/session-usage.js'
-import { projectRowsOf, sessionRowsOf } from '../lib/sessions.js'
+import { createArchiveSource, createTitleSource, normalizeSessionId, parseTitles } from '../lib/data/session-meta.js'
+import { foldSessionEvents, promptSnippetOf, summarizeSession, PROMPT_TITLE_CHARS } from '../lib/data/session-usage.js'
+import { projectRowsOf, sessionRowsOf } from '../lib/data/sessions.js'
 
 // ---------- 1) 标题解析 ----------
 const projection = {

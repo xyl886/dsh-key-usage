@@ -8,8 +8,8 @@ import {
   sessionDayRows,
   summarizeMergedByProvider,
   totalsOfMerged,
-} from '../lib/merge.js'
-import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
+} from '../lib/data/merge.js'
+import { foldSessionEvents, summarizeSession } from '../lib/data/session-usage.js'
 
 function ledgerDay(date, provider, model, inputTokens, cost) {
   return {

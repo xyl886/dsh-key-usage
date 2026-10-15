@@ -3,8 +3,8 @@
  * `partial`（聚合价目缺一个缓存价、按未命中价代）是口径说明不是错误，不用告警色。
  */
 import type { ReactNode } from 'react'
-import { COST_SOURCE_LABELS, PARTIAL_PRICE_TEXT, costSourceHintOf, type CostSource } from '../pricing.ts'
-import { t, useT } from '../i18n.ts'
+import { COST_SOURCE_LABELS, PARTIAL_PRICE_TEXT, costSourceHintOf, type CostSource } from '../core/pricing.ts'
+import { t, useT } from '../core/i18n.ts'
 import styles from '../styles/pricing.module.css'
 
 export function CostSourceChip(props: {

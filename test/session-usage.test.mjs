@@ -12,7 +12,7 @@ import {
   summarizeSession,
   PROMPT_SNIPPET_CHARS,
   PROMPT_TITLE_CHARS,
-} from '../lib/session-usage.js'
+} from '../lib/data/session-usage.js'
 
 // 固定本地时间，避免测试依赖机器时区
 const baseTime = new Date(2026, 9, 13, 10, 30, 0).getTime()

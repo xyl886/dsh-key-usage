@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region src/client/copy.ts
+		//#region src/client/core/copy.ts
 		/**
 		* 界面文案词典（zh / en）。规则：界面标签中文 ≤6 字、提示 ≤8 字、英文 ≤2 词；
 		* 解释性长句只允许出现在口径弹窗或 tooltip 里，且必须给英文。
@@ -793,7 +793,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"err.detail.none": "No balance API"
 		};
 		//#endregion
-		//#region src/client/i18n.ts
+		//#region src/client/core/i18n.ts
 		/**
 		* i18n：按宿主 `@deepseek-ai/dsh-client-locale` 的契约注册命名空间字典，组件用 `t()` 取词。
 		*
@@ -889,7 +889,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/api.ts
+		//#region src/client/core/api.ts
 		/** 最近一次请求失败的原因，按路径记住（空态文案据此指向「要重启宿主」）。 */
 		const failureReasons = /* @__PURE__ */ new Map();
 		function failureReasonOf(path) {
@@ -1030,7 +1030,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}
 		}
 		//#endregion
-		//#region src/client/format.ts
+		//#region src/client/core/format.ts
 		/** 展示层格式化：全部与统计口径无关，只负责把数字变成界面文本。 */
 		/** 本地日历 `YYYY-MM-DD`。 */
 		function isoDate(date) {
@@ -1106,7 +1106,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return t("fmt.daysAgo", { count: Math.round(minutes / 1440) });
 		}
 		//#endregion
-		//#region src/client/currency.ts
+		//#region src/client/core/currency.ts
 		/**
 		* 显示币种与汇率折算：全插件金额渲染的唯一收口点（模块级订阅 store，切币种时整页重渲染）。
 		* 逐币种小计走 `costsByCurrency`（`cost` 是混币种相加，只当兜底）；能折算才折算（带 `≈`），绝不猜汇率；
@@ -1344,7 +1344,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return t("fx.defaultPrefix") + rateValueTextOf(fx.rate) + t("fx.defaultSuffix") + (fx.note === null ? "" : "（" + fx.note + "）");
 		}
 		//#endregion
-		//#region src/client/pricing.ts
+		//#region src/client/core/pricing.ts
 		/**
 		* 价目视图模型：只把服务端给的三层价目来源、覆盖度与装载状态翻译成文案，**界面不维护任何价格**。
 		* 金额渲染见 `currency.ts`（显示币种与汇率折算的唯一收口点）。
@@ -1499,7 +1499,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"warning": "d29QNW_warning"
 		};
 		//#endregion
-		//#region src/client/tooltip.tsx
+		//#region src/client/core/tooltip.tsx
 		/** 共享浮层：跟随鼠标的 fixed 层，内容用 React 节点渲染（不再拼接 innerHTML）。 */
 		function useTooltip() {
 			const [tooltip, setTooltip] = (0, react.useState)(null);
@@ -1683,7 +1683,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/channels.ts
+		//#region src/client/core/channels.ts
 		/** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
 		const CHANNEL_COLORS = [
 			"var(--dsw-alias-state-business-primary, #5b8cff)",
@@ -2217,7 +2217,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/export.ts
+		//#region src/client/core/export.ts
 		/**
 		* 导出工具：纯函数生成 CSV / JSON 文本 + Blob 触发下载，导出的是当前筛选后的数据。
 		* CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
@@ -2798,7 +2798,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/rows.ts
+		//#region src/client/core/rows.ts
 		/**
 		* 零 Token 行的统一处理：只有调用次数、Token 全 0 的行基本都是调用失败（本机实测 key 失效的模型
 		* 就是这样），留在表里全是噪音；四处列表统一用它过滤，并把隐藏条数如实告诉用户。

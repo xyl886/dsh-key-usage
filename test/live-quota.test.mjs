@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { createLiveQuotaService, schemeIdOf } from '../lib/live-quota.js'
+import { createLiveQuotaService, schemeIdOf } from '../lib/quota/live-quota.js'
 
 function channelOf(provider, apiKeyEnv, baseURL = null) {
   return {

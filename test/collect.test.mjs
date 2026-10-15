@@ -3,7 +3,7 @@
  * 运行：node test/collect.test.mjs
  */
 import assert from 'node:assert/strict'
-import { extractChannels, readProviderSnapshots } from '../lib/collect.js'
+import { extractChannels, readProviderSnapshots } from '../lib/data/collect.js'
 import { readFileSync } from 'node:fs'
 
 // 结构化提取：模拟 cordis.yml 中 llm-pi-ai 段（不含 !!js 也能测骨架）

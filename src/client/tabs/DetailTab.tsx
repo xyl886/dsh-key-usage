@@ -1,11 +1,11 @@
 /** 使用明细：范围切换 + 三张统计卡 + 占比条 + 通道筛选 + 按天/按小时图表 + 每日细目。 */
 import type { ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellOf, displayNameOf, statusColorOf } from '../channels.ts'
-import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../format.ts'
-import { rowMoneyViewOf } from '../currency.ts'
-import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../export.ts'
-import type { Channel, ChannelDailySummary, DaySummary, UsageResponse } from '../types.ts'
-import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
+import { channelColorOf, channelOf, costCellOf, displayNameOf, statusColorOf } from '../core/channels.ts'
+import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../core/format.ts'
+import { rowMoneyViewOf } from '../core/currency.ts'
+import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../core/export.ts'
+import type { Channel, ChannelDailySummary, DaySummary, UsageResponse } from '../core/types.ts'
+import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import { ShareBar } from '../components/ShareBar.tsx'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
@@ -15,7 +15,7 @@ import { DailyDetailTable, type DetailSortState } from '../components/DailyDetai
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
 import exportStyles from '../styles/export.module.css'
-import { t, useT } from '../i18n.ts'
+import { t, useT } from '../core/i18n.ts'
 
 export type RangeKey = 'today' | 'week' | 'month' | 'total' | 'custom'
 

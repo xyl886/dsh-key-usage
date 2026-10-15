@@ -24,7 +24,6 @@
     "lib/",
     "client/",
     "cordis.patch.yml",
-    "pricing-catalog.yml",
     "data/",
     "README.md",
     "CHANGELOG.md",
@@ -55,7 +54,7 @@
     "build:client": "tsdown && node scripts/normalize-client-banner.mjs",
     "build:server": "tsc -p tsconfig.server.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "check": "node --check lib/index.js && node --check lib/ledger.js && node --check lib/collect.js && node --check lib/routes.js && node --check lib/sessions.js && node --check lib/session-usage.js && node --check lib/session-meta.js && node --check lib/quota-snapshots.js && node --check lib/merge.js && node --check lib/live-quota.js && node --check lib/pricing.js && node --check lib/pricing-catalog.js && node --check lib/yaml-lite.js && node --check lib/model-prices.js && node --check lib/fx-rate.js && node --check lib/snapshot.js",
+    "check": "node --check lib/index.js && node --check lib/data/ledger.js && node --check lib/data/collect.js && node --check lib/routes.js && node --check lib/data/sessions.js && node --check lib/data/session-usage.js && node --check lib/data/session-meta.js && node --check lib/quota/quota-snapshots.js && node --check lib/data/merge.js && node --check lib/quota/live-quota.js && node --check lib/pricing/pricing.js && node --check lib/pricing/pricing-catalog.js && node --check lib/pricing/yaml-lite.js && node --check lib/pricing/model-prices.js && node --check lib/quota/fx-rate.js && node --check lib/snapshot/snapshot.js",
     "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/session-meta.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/pricing.test.mjs && node test/client-pricing.test.mjs && node test/yaml-lite.test.mjs && node test/model-prices.test.mjs && node test/fx-rate.test.mjs && node test/snapshot.test.mjs && node test/routes.test.mjs",
     "verify": "npm run typecheck && npm run build && npm run check && npm run test",
     "pack:dry": "npm pack --dry-run"

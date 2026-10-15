@@ -1,12 +1,12 @@
 /** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 import { useEffect, useState, type ReactNode } from 'react'
-import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts'
-import { COST_MODE_KEYS, channelOf, costCellOf, displayNameOf } from '../channels.ts'
-import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
-import { costSourceHintOf } from '../pricing.ts'
-import { t, useT } from '../i18n.ts'
+import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../core/api.ts'
+import { COST_MODE_KEYS, channelOf, costCellOf, displayNameOf } from '../core/channels.ts'
+import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../core/format.ts'
+import { costSourceHintOf } from '../core/pricing.ts'
+import { t, useT } from '../core/i18n.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
-import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../types.ts'
+import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 

@@ -1,5 +1,5 @@
 /**
- * 内置官方价目：**唯一事实来源是随包发布的仓库根 `pricing-catalog.yml`**（本模块只读、不写、不联网）。
+ * 内置官方价目：**唯一事实来源是随包发布的 `data/pricing-catalog.yml`**（本模块只读、不写、不联网）。
  * 导出 catalogRuleList / catalogEntryCount / catalogSources / catalogRuleFor / catalogEntries。
  * 容错：文件缺失 / 写法不支持 / 条目非法，都带行号报 issue 并跳过该条，绝不抛错、绝不猜单价。
  */
@@ -47,8 +47,8 @@ export interface CatalogSourceSummary {
   source: string
 }
 
-/** YAML 与编译产物同包：`lib/pricing-catalog.js` 的上一级就是包根。 */
-const CATALOG_PATH = fileURLToPath(new URL('../pricing-catalog.yml', import.meta.url))
+/** YAML 与编译产物同包：`lib/pricing/pricing-catalog.js` 向上两级就是包根（YAML 在 `data/`）。 */
+const CATALOG_PATH = fileURLToPath(new URL('../../data/pricing-catalog.yml', import.meta.url))
 
 interface LoadedCatalog {
   path: string

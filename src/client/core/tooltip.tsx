@@ -1,6 +1,6 @@
 /** 共享浮层：跟随鼠标的 fixed 层，内容用 React 节点渲染（不再拼接 innerHTML）。 */
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import styles from './styles/shared.module.css'
+import styles from '../styles/shared.module.css'
 
 export interface TooltipContent {
   x: number

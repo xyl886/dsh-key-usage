@@ -20,8 +20,8 @@ import {
   invalidateAggregateCache,
   refreshModelPrices,
   writeModelPricesFile,
-} from '../lib/model-prices.js'
-import { rowCostsOf } from '../lib/pricing.js'
+} from '../lib/pricing/model-prices.js'
+import { rowCostsOf } from '../lib/pricing/pricing.js'
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-prices-'))
 // DSH_HOME 一定要在第一次匹配前设好：本地刷新文件路径是按请求现算的

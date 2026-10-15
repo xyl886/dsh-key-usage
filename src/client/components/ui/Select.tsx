@@ -1,7 +1,7 @@
 /** 通用下拉：原生 `select` 的外观改不动（各系统长相不一，与宿主主题脱节），这里自建 listbox。
  *  键盘：↑↓ 移动、Enter 选中、Esc 关闭；点外部关闭；role=listbox/option 供读屏。 */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { t } from '../../i18n.ts'
+import { t } from '../../core/i18n.ts'
 import styles from '../../styles/ui.module.css'
 
 export interface SelectOption {

@@ -11,8 +11,8 @@ import {
   projectRowsOf,
   sessionDetailOf,
   sessionRowsOf,
-} from '../lib/sessions.js'
-import { foldSessionEvents, summarizeSession } from '../lib/session-usage.js'
+} from '../lib/data/sessions.js'
+import { foldSessionEvents, summarizeSession } from '../lib/data/session-usage.js'
 
 const morning = new Date(2026, 9, 13, 9, 15, 0).getTime()
 const afternoon = new Date(2026, 9, 13, 15, 40, 0).getTime()

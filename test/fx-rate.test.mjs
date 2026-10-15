@@ -16,7 +16,7 @@ import {
   readFxCache,
   resolveFxRate,
   writeFxCache,
-} from '../lib/fx-rate.js'
+} from '../lib/quota/fx-rate.js'
 import { mountKeyUsageRoutes } from '../lib/routes.js'
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-fx-'))

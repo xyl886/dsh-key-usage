@@ -3,13 +3,13 @@
  * 格子固定方形 + 横向滚动，保证三类格子（有数据 / 无数据 / 无用量）等大。
  */
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { channelColorOf, displayNameOf } from '../channels.ts'
-import { fmtTokens, isoDate } from '../format.ts'
-import type { Channel, HeatmapDay } from '../types.ts'
-import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
+import { channelColorOf, displayNameOf } from '../core/channels.ts'
+import { fmtTokens, isoDate } from '../core/format.ts'
+import type { Channel, HeatmapDay } from '../core/types.ts'
+import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/overview.module.css'
 import shared from '../styles/shared.module.css'
-import { t, useT } from '../i18n.ts'
+import { t, useT } from '../core/i18n.ts'
 
 /** 9 个月 ≈ 39 周；配合 18px 方形格子，窄窗口下横向滚动。 */
 const WEEK_COUNT = 39
