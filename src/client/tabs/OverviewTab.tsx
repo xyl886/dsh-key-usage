@@ -23,11 +23,11 @@ export function OverviewTab(props: {
   const { channels, summary } = props
   return (
     <div>
-      <div className={styles.groupLabel}>Key 清单</div>
+      <div className={styles.groupLabel}>{t('o.keyList')}</div>
       <div className={uiStyles.tableScroll}><table className={overviewStyles.keyTable}>
         <thead>
           <tr>
-            <th>通道</th><th>类型</th><th>今日</th><th>近 30 天</th><th>余额 / 窗口</th><th>30 天成本</th><th></th>
+            <th>{t('common.channel')}</th><th>{t('o.type')}</th><th>{t('r.today')}</th><th>{t('s.days30')}</th><th>{t('o.balanceWindow')}</th><th>{t('o.cost30')}</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -54,21 +54,21 @@ export function OverviewTab(props: {
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
                 <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{costCell.amount && <CostSourceChip source={row?.month.costSource} partial={row?.month.partial} />}</>}</td>
-                <td>{disabled ? null : <span className={overviewStyles.rowLink}>明细 →</span>}</td>
+                <td>{disabled ? null : <span className={overviewStyles.rowLink}>{t('o.detailArrow')}</span>}</td>
               </tr>
             )
           })}
-          {channels.length === 0 && <tr><td colSpan={7} className={styles.empty}>未读取到通道配置</td></tr>}
+          {channels.length === 0 && <tr><td colSpan={7} className={styles.empty}>{t('o.noChannels')}</td></tr>}
         </tbody>
       </table></div>
 
       <Heatmap days={props.heatmap} channels={channels} tooltip={props.tooltip} />
 
       {summary === null && (
-        <div className={styles.empty}>台账读取中或不可用，今日 / 近 30 天列为空</div>
+        <div className={styles.empty}>{t('o.ledgerHint')}</div>
       )}
       {props.quotas.length === 0 && channels.length > 0 && (
-        <div className={styles.empty}>未读取到余额快照，余额 / 窗口列显示为 —</div>
+        <div className={styles.empty}>{t('o.snapshotHint')}</div>
       )}
     </div>
   )

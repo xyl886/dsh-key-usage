@@ -257,6 +257,70 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"export.json": "导出 JSON",
 			"d.hourUnit": " 时 · ",
 			"d.callUnit": " 次",
+			"dd.title": "每日细目",
+			"dd.sum": "合计",
+			"empty.noUsage": "无用量记录",
+			"h.summary": "近 9 个月活跃度",
+			"h.noData": "无数据",
+			"h.level1": "少",
+			"h.level2": "较少",
+			"h.level3": "中",
+			"h.level4": "较多",
+			"h.level5": "多",
+			"sh.shareByTokens": "占比 · 按 Tokens",
+			"sh.shareLabel": "占比",
+			"t.noPrevRange": "无可对比上一段",
+			"t.incomparable": "不可比",
+			"t.metric": "指标",
+			"t.currentCol": "本期",
+			"t.previousCol": "上期",
+			"t.change": "变化",
+			"m.share": "占比",
+			"m.empty": "无匹配模型",
+			"p.project": "项目",
+			"o.keyList": "Key 清单",
+			"o.type": "类型",
+			"o.balanceWindow": "余额 / 窗口",
+			"o.cost30": "30 天成本",
+			"o.detailArrow": "明细 →",
+			"o.noChannels": "未读到通道配置",
+			"o.ledgerHint": "台账不可用，两列为空",
+			"o.snapshotHint": "无余额快照，显示为 —",
+			"h.wd0": "日",
+			"h.wd1": "一",
+			"h.wd2": "二",
+			"h.wd3": "三",
+			"h.wd4": "四",
+			"h.wd5": "五",
+			"h.wd6": "六",
+			"d.loading": "会话详情读取中",
+			"d.noDetail": "没有可展示的详情",
+			"d.noCostBasis": "台账无成本，价目也没命中，只能显示 —",
+			"d.noPrompt": "没有人类提问（可能是 teammate / 系统会话）",
+			"d.byModel": "逐模型用量",
+			"d.hoursNote": "一天里的分布（各小时合计，跨天累加）",
+			"d.ledgerLoading": "台账读取中或不可用",
+			"d.sourceSession": "来源：会话事件（该日台账无记录）",
+			"d.hourlyNote": "按小时来自会话事件，不含成本",
+			"r.from": "从",
+			"r.to": "至",
+			"s.timeDuration": "时间 / 时长",
+			"s.empty": "无匹配会话",
+			"s.sessionCost": "会话成本",
+			"q.offPeak": "错峰中",
+			"q.catalogPrefix": " 条厂商官方价目，",
+			"q.catalogAuto": "自动生效，不需要维护",
+			"q.aggregateRefreshOnly": "只有点刷新价目时才联网",
+			"q.aggregateScope": "只影响聚合价目这一层",
+			"caliber.orderPrefix": "取值顺序：",
+			"caliber.orderCatalog": "（内置厂商价目，人民币）",
+			"caliber.orderAggregate": "（LiteLLM，美元）",
+			"caliber.orderTail": "（台账反推均价），每格取第一个可用的",
+			"caliber.officialNote": "是台账里的厂商账单，不会被价目覆盖；",
+			"caliber.estimateNote": "仅供参照，不是账单。",
+			"caliber.unitNote": "单价按每百万 tokens；错峰按本地时间判定；聚合价缺缓存写入价时标「部分」，那一档按未命中价计。",
+			"caliber.nonePrefix": "没有价格依据的格子显示 ",
+			"caliber.convertNote": "；多币种按当前汇率折算后相加，折算值前缀 ",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -583,6 +647,70 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"export.json": "JSON",
 			"d.hourUnit": "h · ",
 			"d.callUnit": " calls",
+			"dd.title": "Daily detail",
+			"dd.sum": "Total",
+			"empty.noUsage": "No usage",
+			"h.summary": "Last 9 months",
+			"h.noData": "No data",
+			"h.level1": "Less",
+			"h.level2": "Low",
+			"h.level3": "Mid",
+			"h.level4": "High",
+			"h.level5": "More",
+			"sh.shareByTokens": "share · by tokens",
+			"sh.shareLabel": "share",
+			"t.noPrevRange": "No previous range",
+			"t.incomparable": "Not comparable",
+			"t.metric": "Metric",
+			"t.currentCol": "Now",
+			"t.previousCol": "Prev",
+			"t.change": "Change",
+			"m.share": "Share",
+			"m.empty": "No matches",
+			"p.project": "Project",
+			"o.keyList": "Keys",
+			"o.type": "Type",
+			"o.balanceWindow": "Balance / window",
+			"o.cost30": "30d cost",
+			"o.detailArrow": "Details →",
+			"o.noChannels": "No channel config",
+			"o.ledgerHint": "Ledger unavailable, columns empty",
+			"o.snapshotHint": "No balance snapshot, showing —",
+			"h.wd0": "S",
+			"h.wd1": "M",
+			"h.wd2": "T",
+			"h.wd3": "W",
+			"h.wd4": "T",
+			"h.wd5": "F",
+			"h.wd6": "S",
+			"d.loading": "Loading session",
+			"d.noDetail": "No detail to show",
+			"d.noCostBasis": "No ledger cost and no price match, showing —",
+			"d.noPrompt": "No human prompt (teammate or system session)",
+			"d.byModel": "By model",
+			"d.hoursNote": "Distribution over a day (hours summed, cross-day merged)",
+			"d.ledgerLoading": "Ledger loading or unavailable",
+			"d.sourceSession": "Source: session events (no ledger entry that day)",
+			"d.hourlyNote": "Hourly data from session events, cost excluded",
+			"r.from": "From",
+			"r.to": "To",
+			"s.timeDuration": "Time / duration",
+			"s.empty": "No matches",
+			"s.sessionCost": "Session cost",
+			"q.offPeak": "Off-peak",
+			"q.catalogPrefix": " vendor catalog entries, ",
+			"q.catalogAuto": "applied automatically",
+			"q.aggregateRefreshOnly": "online only when you refresh prices",
+			"q.aggregateScope": "affects the aggregate layer only",
+			"caliber.orderPrefix": "Order: ",
+			"caliber.orderCatalog": " (built-in catalog, CNY)",
+			"caliber.orderAggregate": " (LiteLLM, USD)",
+			"caliber.orderTail": " (ledger average); the first available wins",
+			"caliber.officialNote": "is the vendor bill in the ledger, not overridden by prices; ",
+			"caliber.estimateNote": "is indicative, not a bill.",
+			"caliber.unitNote": "Prices are per 1M tokens; off-peak uses local time; aggregate entries missing the cache-write price are marked partial and billed at the miss price.",
+			"caliber.nonePrefix": "Cells without any price basis show ",
+			"caliber.convertNote": "; multi-currency amounts are converted then summed, prefixed with ",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -1632,6 +1760,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (percent >= 60) return "var(--dsw-alias-state-warning-primary, #e0a13c)";
 			return "var(--dsw-alias-state-success-primary, #3fb96f)";
 		}
+		const COST_MODE_KEYS = {
+			sub: "ch.inSub",
+			perToken: "ch.metered",
+			free: "ch.free",
+			none: "ch.noBilling",
+			unknown: "ch.notQueried"
+		};
 		t("ch.subscription"), t("ch.local");
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
@@ -1795,17 +1930,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: overview_module_css_default.heatmapHead,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: overview_module_css_default.heatmapTitle,
-						children: "活跃热力图 · 近 9 个月 · 按当日 Tokens 总量 · 悬停查看当日各模型占比"
+						children: t("h.summary")
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: shared_module_css_default.legend,
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: overview_module_css_default.ghost }), "无数据"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), "无用量"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[1] } }), "少"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[2] } }), "较少"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[3] } }), "中"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[4] } }), "较多"] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[5] } }), "多"] })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: overview_module_css_default.ghost }), t("h.noData")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), t("h.noUsage")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[1] } }), t("h.level1")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[2] } }), t("h.level2")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[3] } }), t("h.level3")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[4] } }), t("h.level4")] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[5] } }), t("h.level5")] })
 						]
 					})]
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1816,13 +1951,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: overview_module_css_default.heatWeekdays,
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "日" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "一" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "二" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "三" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "四" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "五" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "六" })
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd0") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd1") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd2") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd3") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd4") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd5") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("h.wd6") })
 							]
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: overview_module_css_default.heatGridCol,
@@ -1855,7 +1990,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: cell.date }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-					"合计 ",
+					t("dd.sum"),
+					" ",
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: fmtTokens(day.totalTokens) }),
 					" tokens"
 				] }),
@@ -1951,19 +2087,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.groupLabel,
-					children: "Key 清单"
+					children: t("o.keyList")
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: ui_module_css_default.tableScroll,
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: overview_module_css_default.keyTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "类型" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "今日" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "余额 / 窗口" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "30 天成本" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("common.channel") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("o.type") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("r.today") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("s.days30") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("o.balanceWindow") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("o.cost30") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {})
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [channels.map((channel) => {
 							const row = summary?.channels.find((item) => item.provider === channel.provider) ?? null;
@@ -2007,14 +2143,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									})] }) }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: overview_module_css_default.rowLink,
-										children: "明细 →"
+										children: t("o.detailArrow")
 									}) })
 								]
 							}, channel.provider);
 						}), channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 							colSpan: 7,
 							className: shared_module_css_default.empty,
-							children: "未读取到通道配置"
+							children: t("o.noChannels")
 						}) })] })]
 					})
 				}),
@@ -2025,11 +2161,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				summary === null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.empty,
-					children: "台账读取中或不可用，今日 / 近 30 天列为空"
+					children: t("o.ledgerHint")
 				}),
 				props.quotas.length === 0 && channels.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.empty,
-					children: "未读取到余额快照，余额 / 窗口列显示为 —"
+					children: t("o.snapshotHint")
 				})
 			] });
 		}
@@ -2176,11 +2312,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				className: shared_module_css_default.card,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.statLabel,
-					children: "占比 · 按 Tokens"
+					children: t("sh.shareByTokens")
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.empty,
 					style: { padding: "8px 0" },
-					children: "所选范围内无用量记录"
+					children: t("empty.noUsage")
 				})]
 			});
 			let rows = [];
@@ -2233,7 +2369,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							},
 							onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: row.label }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: ["占比 ", /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [percent, "%"] })] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
+									t("sh.shareLabel"),
+									" ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [percent, "%"] })
+								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 									color: row.color,
 									label: "Tokens",
@@ -2502,7 +2642,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					})]
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: trend_module_css_default.placeholder,
-					children: "总计范围没有可对比的上一段"
+					children: t("t.noPrevRange")
 				})]
 			});
 			const currentTotals = usage.totals;
@@ -2562,7 +2702,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					previous: previousValue(previousCostText.text),
 					change: costComparable ? changeValue(percentChangeOf(currentCost, previousCost, true)) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: trend_module_css_default.muted,
-						children: "不可比"
+						children: t("t.incomparable")
 					})
 				},
 				{
@@ -2636,10 +2776,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 							className: shared_module_css_default.table,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "指标" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "本期" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "上期" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "变化" })
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("t.metric") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("t.currentCol") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("t.previousCol") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("t.change") })
 							] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.label }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.current }),
@@ -2777,15 +2917,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const totalTokens = totals === null ? 0 : totals.inputTokens + totals.outputTokens + totals.cacheReadTokens;
 			if (ordered.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.blockLabel,
-				children: "每日细目"
+				children: t("dd.title")
 			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
-				children: "所选范围内无用量记录"
+				children: t("empty.noUsage")
 			})] });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.blockLabel,
-					children: "每日细目"
+					children: t("dd.title")
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: ui_module_css_default.tableScroll,
@@ -2837,23 +2977,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: detail_module_css_default.subNumber,
-											children: "调用"
+											children: t("common.calls")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: detail_module_css_default.subNumber,
-											children: "输入"
+											children: t("c.input")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: detail_module_css_default.subNumber,
-											children: "输出"
+											children: t("c.output")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: detail_module_css_default.subNumber,
-											children: "缓存读"
+											children: t("c.cacheRead")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: detail_module_css_default.subNumber,
-											children: "命中率"
+											children: t("d.hitRate")
 										})
 									]
 								}), modelsInPeriod.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -2895,7 +3035,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
 							className: shared_module_css_default.total,
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: "合计" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: t("dd.sum") }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totalTokens) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(totals?.calls ?? 0) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.inputTokens ?? 0) }),
@@ -3014,7 +3154,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const { usage, channels, bounds, tooltip, channelFilter } = props;
 			if (usage === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
-				children: "台账读取中或不可用…"
+				children: t("d.ledgerLoading")
 			});
 			const safeTotals = usage.totals ?? {
 				date: "",
@@ -3052,9 +3192,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cacheReadTokens: slot.buckets.cacheReadTokens,
 					inputTokens: slot.buckets.inputTokens,
 					outputTokens: slot.buckets.outputTokens,
-					tip: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: bounds.from + " " + String(hour).padStart(2, "0") + ":00" }), slot.calls === 0 && slotTokens === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: "该小时无用量记录" }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					tip: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: bounds.from + " " + String(hour).padStart(2, "0") + ":00" }), slot.calls === 0 && slotTokens === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("h.noUsage") }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-							"调用 ",
+							t("common.calls"),
+							" ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: fmtCalls(slot.calls) }),
 							" · Tokens ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: fmtTokens(slotTokens) })
@@ -3088,7 +3229,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cacheReadTokens: 0,
 					inputTokens: 0,
 					outputTokens: 0,
-					tip: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: dateKey }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: "当日无用量记录" })] })
+					tip: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: dateKey }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("h.noUsage") })] })
 				};
 				const dayTotal = day.inputTokens + day.outputTokens + day.cacheReadTokens;
 				const fromSession = sessionDates.has(day.date);
@@ -3102,7 +3243,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					tip: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: day.date }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-							"调用 ",
+							t("common.calls"),
+							" ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: fmtCalls(day.calls) }),
 							" · Tokens ",
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: fmtTokens(dayTotal) })
@@ -3123,8 +3265,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							amount: fmtTokens(day.cacheReadTokens),
 							rate: hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipDivider, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "成本" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: dayMoneyOf(day) })] }),
-						fromSession && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: "来源：会话事件（该日台账无记录，不含官方成本）" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipDivider, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("c.cost") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: dayMoneyOf(day) })] }),
+						fromSession && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("d.sourceSession") }),
 						topModels.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							label: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: shared_module_css_default.dim,
@@ -3158,7 +3300,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: detail_module_css_default.dateField,
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: detail_module_css_default.dateLabel,
-										children: "从"
+										children: t("r.from")
 									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 										type: "date",
 										className: detail_module_css_default.rangeInput,
@@ -3174,7 +3316,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: detail_module_css_default.dateField,
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: detail_module_css_default.dateLabel,
-										children: "至"
+										children: t("r.to")
 									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 										type: "date",
 										className: detail_module_css_default.rangeInput,
@@ -3190,12 +3332,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: export_module_css_default.exportBtn,
 							disabled: usage.days.length === 0,
 							onClick: () => exportDaily("csv"),
-							children: "导出 CSV"
+							children: t("export.csv")
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							className: export_module_css_default.exportBtn,
 							disabled: usage.days.length === 0,
 							onClick: () => exportDaily("json"),
-							children: "导出 JSON"
+							children: t("export.json")
 						})]
 					})]
 				}),
@@ -3285,7 +3427,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									alignItems: "center",
 									gap: 8
 								},
-								children: singleChannel === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "全部通道" }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								children: singleChannel === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("s.allChannels") }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.statusDot,
 									style: { background: statusColorOf(singleChannel.status) }
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: singleChannel.displayName })] })
@@ -3308,15 +3450,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: shared_module_css_default.legend,
 								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "rgba(91,140,255,.28)" } }), "缓存读"] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "var(--dsw-alias-state-business-primary, #5b8cff)" } }), "输入"] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "var(--dsw-alias-state-business-primary, #9a7bff)" } }), "输出"] })
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "rgba(91,140,255,.28)" } }), t("c.cacheRead")] }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "var(--dsw-alias-state-business-primary, #5b8cff)" } }), t("c.input")] }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: "var(--dsw-alias-state-business-primary, #9a7bff)" } }), t("c.output")] })
 								]
 							})]
 						}),
 						chartRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.empty,
-							children: "所选范围内无用量记录"
+							children: t("empty.noUsage")
 						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TokenBars, {
 							rows: chartRows,
 							tooltip,
@@ -3324,7 +3466,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						useHourAxis && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.statExtra,
-							children: "按小时数据来自本地会话事件，不含成本"
+							children: t("d.hourlyNote")
 						})
 					]
 				}),
@@ -3709,13 +3851,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: shared_module_css_default.table + " " + lists_module_css_default.modelTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.model") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("common.calls") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "命中率" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.share") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("d.hitRate") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.cost") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.lastActive") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
 							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 							const channel = channelOf(props.channels, row.provider);
@@ -3770,7 +3912,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 							colSpan: 7,
 							className: shared_module_css_default.empty,
-							children: "没有符合条件的模型"
+							children: t("m.empty")
 						}) })] })]
 					})
 				}),
@@ -3888,7 +4030,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			if (props.data === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
-				children: "会话数据读取中或不可用…"
+				children: t("s.loading")
 			});
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				props.data.coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -3974,12 +4116,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: shared_module_css_default.table + " " + lists_module_css_default.projectTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "项目" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("p.project") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("common.calls") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.share") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.cost") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.lastActive") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
 							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 							const dominant = row.dominantProvider;
@@ -4269,7 +4411,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: quota_module_css_default.toolbarLabel,
-							children: "显示币种"
+							children: t("quota.displayCurrency")
 						}),
 						DISPLAY_CURRENCIES.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
@@ -4399,7 +4541,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											children: [
 												channel.provider,
 												" · ",
-												channel.costLabel
+												t(COST_MODE_KEYS[channel.costMode] ?? "ch.notQueried")
 											]
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -4504,7 +4646,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}, channel.provider);
 					}), props.channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.empty,
-						children: "未读取到通道配置"
+						children: t("o.noChannels")
 					})]
 				})
 			] });
@@ -4548,14 +4690,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: quota_module_css_default.rateTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "来源" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天 tokens" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "说明" })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.model") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.input") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.cacheRead") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("d.cacheWrite") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.output") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("quota.sourceLabel") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.lastActive") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.model") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: props.rows.map((row) => {
 							const rates = row.rates;
 							const hasRates = rates !== null && typeof rates === "object";
@@ -4576,7 +4718,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: quota_module_css_default.offPeakChip,
-										children: "错峰中"
+										children: t("q.offPeak")
 									})
 								] }),
 								hasRates ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
@@ -4592,7 +4734,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: quota_module_css_default.rateSourceNone,
 									title: costSourceHintOf("none", row.partial),
-									children: "无依据"
+									children: t("q.noBasis")
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 									source: row.source,
 									partial: row.partial
@@ -4642,8 +4784,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						"已内置 ",
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
-						" 条厂商官方价目，",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "自动生效，不需要你维护" }),
+						t("q.catalogPrefix"),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("q.catalogAuto") }),
 						"。来源：",
 						sources.length === 0 ? t("quota.noSourceDetail") : sources.map((entry, index) => {
 							const daysAgo = fetchedDaysAgo(entry.fetchedAt);
@@ -4744,7 +4886,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: pricing_module_css_default.aggregateMeta,
 							children: [
 								"平时不联网：",
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "只有你点「刷新价目」时" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("q.aggregateRefreshOnly") }),
 								"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。",
 								pathText === null ? "" : t("quota.currentFile") + "：" + pathText
 							]
@@ -4755,7 +4897,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								className: pricing_module_css_default.issueHead,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(aggregateIssues.length), " 处聚合价目装载问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: pricing_module_css_default.issueNote,
-									children: "—— 只影响聚合价目这一层的条目"
+									children: t("q.aggregateScope")
 								})]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 								className: pricing_module_css_default.issueList,
@@ -4799,32 +4941,32 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				className: pricing_module_css_default.explanation,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: pricing_module_css_default.explanationTitle,
-					children: "成本口径"
+					children: t("caliber.title")
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 					className: pricing_module_css_default.explanationList,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"取值顺序：",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方账单" }),
+							t("caliber.orderPrefix"),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("quota.officialBill") }),
 							" > ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方价" }),
-							"（内置厂商价目，人民币）> ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "聚合" }),
-							"（LiteLLM，美元）> ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }),
-							"（台账反推均价），每格取第一个可用的。"
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.catalog") }),
+							t("caliber.orderCatalog"),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.aggregate") }),
+							t("caliber.orderAggregate"),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.estimate") }),
+							t("caliber.orderTail")
 						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "官方" }),
-							"是台账里的厂商账单，不会被价目覆盖；",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "估算" }),
-							"仅供参照，不是账单。"
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.official") }),
+							t("caliber.officialNote"),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.estimate") }),
+							t("caliber.estimateNote")
 						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "单价按每百万 tokens；错峰按本地时间判定（命中时单价表标「错峰中」）；聚合价缺缓存写入价时标「部分」，那一档按未命中价计。" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.unitNote") }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							"没有价格依据的格子显示 ",
+							t("caliber.nonePrefix"),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }),
-							"；多币种按当前汇率折算后相加，折算值前缀 ",
+							t("caliber.convertNote"),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "≈" }),
 							"。"
 						] })
@@ -4940,7 +5082,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								className: lists_module_css_default.drawerTitle,
 								children: [session?.title ?? props.fallbackTitle ?? t("s.noPrompt") + " · " + shortIdOf$1(props.sessionId), session?.archived === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.archivedTag,
-									children: "已归档"
+									children: t("s.archived")
 								})]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
@@ -4962,7 +5104,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						data === null && !failed && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.empty,
-							children: "会话详情读取中…"
+							children: t("d.loading")
 						}),
 						failed && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: shared_module_css_default.warning,
@@ -4979,7 +5121,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						data !== null && session === null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.empty,
-							children: "该会话没有可展示的详情"
+							children: t("d.noDetail")
 						}),
 						props.subagents.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: lists_module_css_default.subagentBlock,
@@ -5032,7 +5174,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 							label: t("d.costMode"),
-							value: channel === null ? "—" : channel.costLabel
+							value: channel === null ? "—" : t(COST_MODE_KEYS[channel.costMode] ?? "ch.notQueried")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 							label: t("d.first"),
@@ -5093,7 +5235,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: lists_module_css_default.detailBlockTitle,
-							children: "成本"
+							children: t("c.cost")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: lists_module_css_default.detailCost,
@@ -5114,7 +5256,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						!props.priced && session.cost === null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.statExtra,
-							children: "台账里没有成本数据，三层价目也都没命中，暂时只能显示「—」"
+							children: t("d.noCostBasis")
 						})
 					]
 				}),
@@ -5122,10 +5264,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: lists_module_css_default.detailBlock,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: lists_module_css_default.detailBlockTitle,
-						children: "首条提问"
+						children: t("s.prompt")
 					}), session.prompt === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.empty,
-						children: "这个会话没有人类提问（可能是 teammate / 系统会话）"
+						children: t("d.noPrompt")
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: lists_module_css_default.promptText,
 						children: session.prompt
@@ -5135,17 +5277,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: lists_module_css_default.detailBlock,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: lists_module_css_default.detailBlockTitle,
-						children: "逐模型用量"
+						children: t("d.byModel")
 					}), session.models.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.empty,
-						children: "没有按模型的用量记录"
+						children: t("empty.noUsage")
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: shared_module_css_default.table + " " + lists_module_css_default.sessionDetailModelTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.model") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.share") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.cost") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: session.models.map((model) => {
 							const modelCostCell = costCellOf(channelOf(props.channels, model.provider), model);
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
@@ -5189,7 +5331,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: lists_module_css_default.detailBlock,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: lists_module_css_default.detailBlockTitle,
-						children: "一天里的分布（各小时合计，跨天会话已累加）"
+						children: t("d.hoursNote")
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(HourMiniChart, { hours: session.hours })]
 				})
 			] });
@@ -5588,12 +5730,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("csv"),
-								children: "导出 CSV"
+								children: t("export.csv")
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("json"),
-								children: "导出 JSON"
+								children: t("export.json")
 							})]
 						})
 					]
@@ -5603,7 +5745,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: ["只看该会话及其子会话（含父会话行）·", /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						className: lists_module_css_default.linkBtn,
 						onClick: () => setParentFocus(null),
-						children: "清除筛选"
+						children: t("p.clearFilter")
 					})]
 				}),
 				subagentFilter !== "only" && subagentCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -5629,12 +5771,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 						className: shared_module_css_default.table + " " + lists_module_css_default.sessionTable,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "会话" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "时间 / 时长" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("s.id") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("common.channel") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("s.timeDuration") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "命中率" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("d.hitRate") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.cost") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [
 							sortKey === "recent" && shownGroups.map((group) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", {
 								className: lists_module_css_default.sessionDay,
@@ -5654,7 +5796,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 								colSpan: 6,
 								className: shared_module_css_default.empty,
-								children: "没有符合条件的会话"
+								children: t("s.empty")
 							}) })
 						] })]
 					})
@@ -5742,7 +5884,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}),
 							row.archived && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: lists_module_css_default.archivedTag,
-								children: "已归档"
+								children: t("s.archived")
 							}),
 							row.origin === "subagent" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
@@ -5823,22 +5965,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				colSpan: 6,
 				children: row.models.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.empty,
-					children: "没有按模型的用量记录"
+					children: t("empty.noUsage")
 				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.composeRow + " " + lists_module_css_default.composeHead,
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "模型" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("m.model") }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: lists_module_css_default.composeNumber,
 							children: "Tokens"
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: lists_module_css_default.composeNumber,
-							children: "占比"
+							children: t("m.share")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: lists_module_css_default.composeNumber,
-							children: "成本"
+							children: t("c.cost")
 						})
 					]
 				}), row.models.map((model) => {
@@ -5894,7 +6036,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function costTipOf(row) {
 			const source = row.costSource ?? "none";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: "会话成本" }),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: t("s.sessionCost") }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: costSourceHintOf(source, row.partial) }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 					label: t("s.amount"),

@@ -110,7 +110,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
 
       <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.modelTable}>
         <thead>
-          <tr><th>模型</th><th>调用</th><th>Tokens</th><th>占比</th><th>命中率</th><th>成本</th><th>最近活跃</th></tr>
+          <tr><th>{t('m.model')}</th><th>{t('common.calls')}</th><th>Tokens</th><th>{t('m.share')}</th><th>{t('d.hitRate')}</th><th>{t('c.cost')}</th><th>{t('m.lastActive')}</th></tr>
         </thead>
         <tbody>
           {visible.map((row) => {
@@ -148,7 +148,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
               </tr>
             )
           })}
-          {visible.length === 0 && <tr><td colSpan={7} className={styles.empty}>没有符合条件的模型</td></tr>}
+          {visible.length === 0 && <tr><td colSpan={7} className={styles.empty}>{t('m.empty')}</td></tr>}
         </tbody>
       </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}

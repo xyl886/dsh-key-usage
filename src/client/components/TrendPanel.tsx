@@ -153,7 +153,7 @@ export function TrendPanel(props: {
           <span className={styles.statLabel}>{TITLE_TEXT}</span>
           <span className={trendStyles.span}>{periodText}</span>
         </div>
-        <div className={trendStyles.placeholder}>总计范围没有可对比的上一段</div>
+        <div className={trendStyles.placeholder}>{t('t.noPrevRange')}</div>
       </div>
     )
   }
@@ -209,7 +209,7 @@ export function TrendPanel(props: {
       previous: previousValue(previousCostText.text),
       change: costComparable
         ? changeValue(percentChangeOf(currentCost, previousCost, true))
-        : <span className={trendStyles.muted}>不可比</span>,
+        : <span className={trendStyles.muted}>{t('t.incomparable')}</span>,
     },
     {
       key: 'hitRate',
@@ -277,10 +277,10 @@ export function TrendPanel(props: {
             <div className={uiStyles.tableScroll}><table className={styles.table}>
               <thead>
                 <tr>
-                  <th>指标</th>
-                  <th>本期</th>
-                  <th>上期</th>
-                  <th>变化</th>
+                  <th>{t('t.metric')}</th>
+                  <th>{t('t.currentCol')}</th>
+                  <th>{t('t.previousCol')}</th>
+                  <th>{t('t.change')}</th>
                 </tr>
               </thead>
               <tbody>

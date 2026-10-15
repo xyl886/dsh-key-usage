@@ -134,15 +134,15 @@ export function DailyDetailTable(props: {
   if (periodCount === 0) {
     return (
       <div>
-        <div className={styles.blockLabel}>每日细目</div>
-        <div className={styles.empty}>所选范围内无用量记录</div>
+        <div className={styles.blockLabel}>{t('dd.title')}</div>
+        <div className={styles.empty}>{t('empty.noUsage')}</div>
       </div>
     )
   }
 
   return (
     <div>
-      <div className={styles.blockLabel}>每日细目</div>
+      <div className={styles.blockLabel}>{t('dd.title')}</div>
       <div className={uiStyles.tableScroll}><table className={styles.table}>
         <thead>
           <tr>
@@ -198,11 +198,11 @@ export function DailyDetailTable(props: {
                     <td className={detailStyles.subRowCell} colSpan={7}>
                       <div className={detailStyles.subHead}>
                         <span />
-                        <span className={detailStyles.subNumber}>调用</span>
-                        <span className={detailStyles.subNumber}>输入</span>
-                        <span className={detailStyles.subNumber}>输出</span>
-                        <span className={detailStyles.subNumber}>缓存读</span>
-                        <span className={detailStyles.subNumber}>命中率</span>
+                        <span className={detailStyles.subNumber}>{t('common.calls')}</span>
+                        <span className={detailStyles.subNumber}>{t('c.input')}</span>
+                        <span className={detailStyles.subNumber}>{t('c.output')}</span>
+                        <span className={detailStyles.subNumber}>{t('c.cacheRead')}</span>
+                        <span className={detailStyles.subNumber}>{t('d.hitRate')}</span>
                       </div>
                       {modelsInPeriod.map((row) => (
                         <div className={detailStyles.subRow} key={row.period + '|' + row.model + '|' + row.provider}>
@@ -224,7 +224,7 @@ export function DailyDetailTable(props: {
             )
           })}
           <tr className={styles.total}>
-            <td>合计</td>
+            <td>{t('dd.sum')}</td>
             <td>{fmtTokens(totalTokens)}</td>
             <td>{fmtCalls(totals?.calls ?? 0)}</td>
             <td>{fmtTokens(totals?.inputTokens ?? 0)}</td>

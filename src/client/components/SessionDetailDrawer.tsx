@@ -1,7 +1,7 @@
 /** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../api.ts'
-import { channelOf, costCellOf, displayNameOf } from '../channels.ts'
+import { COST_MODE_KEYS, channelOf, costCellOf, displayNameOf } from '../channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../format.ts'
 import { costSourceHintOf } from '../pricing.ts'
 import { t, useT } from '../i18n.ts'
@@ -61,7 +61,7 @@ export function SessionDetailDrawer(props: {
         <div className={listStyles.drawerHead}>
           <div className={listStyles.drawerTitle}>
             {session?.title ?? props.fallbackTitle ?? t('s.noPrompt') + ' · ' + shortIdOf(props.sessionId)}
-            {session?.archived === true && <span className={listStyles.archivedTag}>已归档</span>}
+            {session?.archived === true && <span className={listStyles.archivedTag}>{t('s.archived')}</span>}
           </div>
           <button type="button" className={listStyles.drawerClose} onClick={props.onClose} aria-label={t('d.close')}>✕</button>
         </div>
@@ -77,7 +77,7 @@ export function SessionDetailDrawer(props: {
           </button>
         )}
 
-        {data === null && !failed && <div className={styles.empty}>会话详情读取中…</div>}
+        {data === null && !failed && <div className={styles.empty}>{t('d.loading')}</div>}
         {failed && (
           <div className={styles.warning}>
             会话详情读取失败：{failureReasonOf(sessionDetailPath(props.sessionId)) ?? t('d.unknownReason')}
@@ -93,7 +93,7 @@ export function SessionDetailDrawer(props: {
         {data !== null && session !== null && (
           <SessionDetailBody session={session} channels={props.channels} priced={data.priced} />
         )}
-        {data !== null && session === null && <div className={styles.empty}>该会话没有可展示的详情</div>}
+        {data !== null && session === null && <div className={styles.empty}>{t('d.noDetail')}</div>}
 
         {props.subagents.length > 0 && (
           <div className={listStyles.subagentBlock}>
@@ -127,7 +127,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
       <div className={listStyles.detailGrid}>
         <DetailItem label={t('common.workspace')} value={session.workspace ?? t('s.noWorkspace')} wide />
         <DetailItem label={t('common.channel')} value={session.provider === null ? '—' : (session.providerLabel ?? displayNameOf(props.channels, session.provider))} />
-        <DetailItem label={t('d.costMode')} value={channel === null ? '—' : channel.costLabel} />
+        <DetailItem label={t('d.costMode')} value={channel === null ? '—' : t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')} />
         <DetailItem label={t('d.first')} value={fmtDateTime(session.firstTime)} />
         <DetailItem label={t('d.last')} value={fmtDateTime(session.lastTime)} />
         <DetailItem
@@ -148,7 +148,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
       </div>
 
       <div className={listStyles.detailBlock}>
-        <div className={listStyles.detailBlockTitle}>成本</div>
+        <div className={listStyles.detailBlockTitle}>{t('c.cost')}</div>
         <div className={listStyles.detailCost}>
           <span className={costCell.dim ? styles.dim : undefined}>{costCell.text}</span>
           {costCell.amount && <CostSourceChip source={session.costSource} partial={session.partial} />}
@@ -156,24 +156,24 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
           {costCell.amount && <span className={listStyles.detailCostHint}>{costSourceHintOf(session.costSource, session.partial)}</span>}
         </div>
         {/* `priced` 指「台账里有可反推的均价」，所以只在真的没金额时说明 */}
-        {!props.priced && session.cost === null && <div className={styles.statExtra}>台账里没有成本数据，三层价目也都没命中，暂时只能显示「—」</div>}
+        {!props.priced && session.cost === null && <div className={styles.statExtra}>{t('d.noCostBasis')}</div>}
       </div>
 
       <div className={listStyles.detailBlock}>
-        <div className={listStyles.detailBlockTitle}>首条提问</div>
+        <div className={listStyles.detailBlockTitle}>{t('s.prompt')}</div>
         {session.prompt === null
-          ? <div className={styles.empty}>这个会话没有人类提问（可能是 teammate / 系统会话）</div>
+          ? <div className={styles.empty}>{t('d.noPrompt')}</div>
           : <div className={listStyles.promptText}>{session.prompt}</div>}
       </div>
 
       <div className={listStyles.detailBlock}>
-        <div className={listStyles.detailBlockTitle}>逐模型用量</div>
+        <div className={listStyles.detailBlockTitle}>{t('d.byModel')}</div>
         {session.models.length === 0
-          ? <div className={styles.empty}>没有按模型的用量记录</div>
+          ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : (
             <table className={styles.table + ' ' + listStyles.sessionDetailModelTable}>
               <thead>
-                <tr><th>模型</th><th>Tokens</th><th>占比</th><th>成本</th></tr>
+                <tr><th>{t('m.model')}</th><th>Tokens</th><th>{t('m.share')}</th><th>{t('c.cost')}</th></tr>
               </thead>
               <tbody>
                 {session.models.map((model) => {
@@ -205,7 +205,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
 
       {session.hours !== null && (
         <div className={listStyles.detailBlock}>
-          <div className={listStyles.detailBlockTitle}>一天里的分布（各小时合计，跨天会话已累加）</div>
+          <div className={listStyles.detailBlockTitle}>{t('d.hoursNote')}</div>
           <HourMiniChart hours={session.hours} />
         </div>
       )}

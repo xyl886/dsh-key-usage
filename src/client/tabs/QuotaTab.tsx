@@ -6,7 +6,7 @@ import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
 import {
   FX_PATH, MODEL_PRICE_REFRESH_PATH, RATES_PATH, failureReasonOf, loadFxRate, loadRates, refreshModelPrices,
 } from '../api.ts'
-import { quotaBarColor, statusColorOf } from '../channels.ts'
+import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../channels.ts'
 import {
   convertsCurrencyOf, fxFallbackWarningOf, fxSummaryTextOf, normalizeFxRate, rateTextOf, setDisplayCurrency,
   setFxRate, useCurrencyDisplay, DISPLAY_CURRENCIES, DISPLAY_CURRENCY_LABELS, type DisplayCurrency,
@@ -174,7 +174,7 @@ export function QuotaTab(props: {
   return (
     <div>
       <div className={quotaStyles.toolbar}>
-        <span className={quotaStyles.toolbarLabel}>显示币种</span>
+        <span className={quotaStyles.toolbarLabel}>{t('quota.displayCurrency')}</span>
         {DISPLAY_CURRENCIES.map((currency) => (
           <button
             key={currency}
@@ -285,7 +285,7 @@ export function QuotaTab(props: {
                 <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
                 {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}</span>}
                 <span className={quotaStyles.rateCount}>{rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))}</span>
-                <span className={quotaStyles.quotaProvider}>{channel.provider} · {channel.costLabel}</span>
+                <span className={quotaStyles.quotaProvider}>{channel.provider} · {t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')}</span>
                 <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
               </button>
 
@@ -364,7 +364,7 @@ export function QuotaTab(props: {
             </div>
           )
         })}
-        {props.channels.length === 0 && <div className={styles.empty}>未读取到通道配置</div>}
+        {props.channels.length === 0 && <div className={styles.empty}>{t('o.noChannels')}</div>}
       </div>
     </div>
   )
@@ -418,8 +418,8 @@ function RateTable(props: {
         <div className={uiStyles.tableScroll}><table className={quotaStyles.rateTable}>
           <thead>
             <tr>
-              <th>模型</th><th>输入</th><th>缓存读</th><th>缓存写</th><th>输出</th>
-              <th>来源</th><th>近 30 天 tokens</th><th>说明</th>
+              <th>{t('m.model')}</th><th>{t('c.input')}</th><th>{t('c.cacheRead')}</th><th>{t('d.cacheWrite')}</th><th>{t('c.output')}</th>
+              <th>{t('quota.sourceLabel')}</th><th>{t('m.lastActive')}</th><th>{t('m.model')}</th>
             </tr>
           </thead>
           <tbody>
@@ -435,7 +435,7 @@ function RateTable(props: {
                       币种 {typeof row.currency === 'string' && row.currency !== '' ? row.currency : '—'}
                       {rowConverted ? ' → ' + props.display : ''}
                     </div>
-                    {row.offPeak === true && <span className={quotaStyles.offPeakChip}>错峰中</span>}
+                    {row.offPeak === true && <span className={quotaStyles.offPeakChip}>{t('q.offPeak')}</span>}
                   </td>
                   {hasRates
                     ? (
@@ -453,7 +453,7 @@ function RateTable(props: {
                     )}
                   <td>
                     {row.source === 'none'
-                      ? <span className={quotaStyles.rateSourceNone} title={costSourceHintOf('none', row.partial)}>无依据</span>
+                      ? <span className={quotaStyles.rateSourceNone} title={costSourceHintOf('none', row.partial)}>{t('q.noBasis')}</span>
                       : <CostSourceChip source={row.source} partial={row.partial} />}
                   </td>
                   <td>{fmtTokens(typeof row.tokens === 'number' && Number.isFinite(row.tokens) ? row.tokens : 0)}</td>
@@ -513,7 +513,7 @@ function PricingInfoBlock(props: {
 
       {catalog !== null && Number.isFinite(catalog.entries) && catalog.entries > 0 && (
         <div className={pricingStyles.catalogNote + (props.catalogStale === null ? '' : ' ' + pricingStyles.catalogStale)}>
-          已内置 <b>{String(catalog.entries)}</b> 条厂商官方价目，<b>自动生效，不需要你维护</b>。来源：
+          已内置 <b>{String(catalog.entries)}</b>{t('q.catalogPrefix')}<b>{t('q.catalogAuto')}</b>。来源：
           {sources.length === 0
             ? t('quota.noSourceDetail')
             : sources.map((entry, index) => {
@@ -590,7 +590,7 @@ function PricingInfoBlock(props: {
                 {commitShort === null ? '' : '　upstream ' + commitShort}
               </div>
               <div className={pricingStyles.aggregateMeta}>
-                平时不联网：<b>只有你点「刷新价目」时</b>才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。
+                平时不联网：<b>{t('q.aggregateRefreshOnly')}</b>才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。
                 {pathText === null ? '' : t('quota.currentFile') + '：' + pathText}
               </div>
             </>
@@ -599,7 +599,7 @@ function PricingInfoBlock(props: {
           <div className={pricingStyles.issueBlock}>
             <div className={pricingStyles.issueHead}>
               <b>{String(aggregateIssues.length)} 处聚合价目装载问题</b>
-              <span className={pricingStyles.issueNote}>—— 只影响聚合价目这一层的条目</span>
+              <span className={pricingStyles.issueNote}>{t('q.aggregateScope')}</span>
             </div>
             <ul className={pricingStyles.issueList}>
               {aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => (
@@ -650,12 +650,12 @@ function daysBetween(from: string, to: string): number | null {
 function ExplanationBlock(): ReactNode {
   return (
     <div className={pricingStyles.explanation}>
-      <div className={pricingStyles.explanationTitle}>成本口径</div>
+      <div className={pricingStyles.explanationTitle}>{t('caliber.title')}</div>
       <ul className={pricingStyles.explanationList}>
-        <li>取值顺序：<b>官方账单</b> &gt; <b>官方价</b>（内置厂商价目，人民币）&gt; <b>聚合</b>（LiteLLM，美元）&gt; <b>估算</b>（台账反推均价），每格取第一个可用的。</li>
-        <li><b>官方</b>是台账里的厂商账单，不会被价目覆盖；<b>估算</b>仅供参照，不是账单。</li>
-        <li>单价按每百万 tokens；错峰按本地时间判定（命中时单价表标「错峰中」）；聚合价缺缓存写入价时标「部分」，那一档按未命中价计。</li>
-        <li>没有价格依据的格子显示 <b>—</b>；多币种按当前汇率折算后相加，折算值前缀 <code>≈</code>。</li>
+        <li>{t('caliber.orderPrefix')}<b>{t('quota.officialBill')}</b> &gt; <b>{t('cso.catalog')}</b>{t('caliber.orderCatalog')}<b>{t('cso.aggregate')}</b>{t('caliber.orderAggregate')}<b>{t('cso.estimate')}</b>{t('caliber.orderTail')}</li>
+        <li><b>{t('cso.official')}</b>{t('caliber.officialNote')}<b>{t('cso.estimate')}</b>{t('caliber.estimateNote')}</li>
+        <li>{t('caliber.unitNote')}</li>
+        <li>{t('caliber.nonePrefix')}<b>—</b>{t('caliber.convertNote')}<code>≈</code>。</li>
       </ul>
     </div>
   )

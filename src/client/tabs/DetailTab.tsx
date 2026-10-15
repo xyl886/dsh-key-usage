@@ -92,7 +92,7 @@ export function DetailTab(props: {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const { usage, channels, bounds, tooltip, channelFilter } = props
-  if (usage === null) return <div className={styles.empty}>台账读取中或不可用…</div>
+  if (usage === null) return <div className={styles.empty}>{t('d.ledgerLoading')}</div>
 
   const totals = usage.totals
   const safeTotals: DaySummary = totals ?? {
@@ -136,10 +136,10 @@ export function DetailTab(props: {
           <>
             <TipTitle>{bounds.from + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
             {slot.calls === 0 && slotTokens === 0
-              ? <TipSub>该小时无用量记录</TipSub>
+              ? <TipSub>{t('h.noUsage')}</TipSub>
               : (
                 <>
-                  <TipSub>调用 <b>{fmtCalls(slot.calls)}</b> · Tokens <b>{fmtTokens(slotTokens)}</b></TipSub>
+                  <TipSub>{t('common.calls')} <b>{fmtCalls(slot.calls)}</b> · Tokens <b>{fmtTokens(slotTokens)}</b></TipSub>
                   <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label={t('c.input')} amount={fmtTokens(slot.buckets.inputTokens)} />
                   <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label={t('c.output')} amount={fmtTokens(slot.buckets.outputTokens)} />
                   <TipRow
@@ -171,7 +171,7 @@ export function DetailTab(props: {
         tip: (
           <>
             <TipTitle>{dateKey}</TipTitle>
-            <TipSub>当日无用量记录</TipSub>
+            <TipSub>{t('h.noUsage')}</TipSub>
           </>
         ),
       }
@@ -190,7 +190,7 @@ export function DetailTab(props: {
       tip: (
         <>
           <TipTitle>{day.date}</TipTitle>
-          <TipSub>调用 <b>{fmtCalls(day.calls)}</b> · Tokens <b>{fmtTokens(dayTotal)}</b></TipSub>
+          <TipSub>{t('common.calls')} <b>{fmtCalls(day.calls)}</b> · Tokens <b>{fmtTokens(dayTotal)}</b></TipSub>
           <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label={t('c.input')} amount={fmtTokens(day.inputTokens)} />
           <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label={t('c.output')} amount={fmtTokens(day.outputTokens)} />
           <TipRow
@@ -200,10 +200,10 @@ export function DetailTab(props: {
             rate={hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)}
           />
           <TipDivider>
-            <span>成本</span>
+            <span>{t('c.cost')}</span>
             <b>{dayMoneyOf(day)}</b>
           </TipDivider>
-          {fromSession && <TipSub>来源：会话事件（该日台账无记录，不含官方成本）</TipSub>}
+          {fromSession && <TipSub>{t('d.sourceSession')}</TipSub>}
           {topModels.map((model) => (
             <TipRow
               key={model.provider + '|' + model.model}
@@ -236,20 +236,20 @@ export function DetailTab(props: {
           {props.range === 'custom' && (
             <span className={detailStyles.dateRange}>
               <label className={detailStyles.dateField}>
-                <span className={detailStyles.dateLabel}>从</span>
+                <span className={detailStyles.dateLabel}>{t('r.from')}</span>
                 <input type="date" className={detailStyles.rangeInput} value={props.customFrom} onChange={(event) => props.onCustomFrom(event.target.value)} />
               </label>
               <span className={styles.dim}>–</span>
               <label className={detailStyles.dateField}>
-                <span className={detailStyles.dateLabel}>至</span>
+                <span className={detailStyles.dateLabel}>{t('r.to')}</span>
                 <input type="date" className={detailStyles.rangeInput} value={props.customTo} onChange={(event) => props.onCustomTo(event.target.value)} />
               </label>
             </span>
           )}
         </div>
         <span className={exportStyles.exportGroup}>
-          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('csv')}>导出 CSV</button>
-          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('json')}>导出 JSON</button>
+          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('csv')}>{t('export.csv')}</button>
+          <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('json')}>{t('export.json')}</button>
         </span>
       </div>
 
@@ -310,7 +310,7 @@ export function DetailTab(props: {
         <div className={detailStyles.chartTitle}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             {singleChannel === null
-              ? <b>全部通道</b>
+              ? <b>{t('s.allChannels')}</b>
               : (
                 <>
                   <span className={styles.statusDot} style={{ background: statusColorOf(singleChannel.status) }} />
@@ -323,15 +323,15 @@ export function DetailTab(props: {
         <div className={detailStyles.chartTitle} style={{ marginTop: 10 }}>
           <span className={styles.statLabel}>{chartTitle}</span>
           <span className={styles.legend}>
-            <span><i style={{ background: 'rgba(91,140,255,.28)' }} />缓存读</span>
-            <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />输入</span>
-            <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #9a7bff)' }} />输出</span>
+            <span><i style={{ background: 'rgba(91,140,255,.28)' }} />{t('c.cacheRead')}</span>
+            <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />{t('c.input')}</span>
+            <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #9a7bff)' }} />{t('c.output')}</span>
           </span>
         </div>
         {chartRows.length === 0
-          ? <div className={styles.empty}>所选范围内无用量记录</div>
+          ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : <TokenBars rows={chartRows} tooltip={tooltip} ariaLabel={chartAriaLabel} />}
-        {useHourAxis && <div className={styles.statExtra}>按小时数据来自本地会话事件，不含成本</div>}
+        {useHourAxis && <div className={styles.statExtra}>{t('d.hourlyNote')}</div>}
       </div>
 
       <DailyDetailTable

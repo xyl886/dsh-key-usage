@@ -28,8 +28,8 @@ export function ShareBar(props: {
   if (usage === null || totalTokens <= 0) {
     return (
       <div className={styles.card}>
-        <div className={styles.statLabel}>占比 · 按 Tokens</div>
-        <div className={styles.empty} style={{ padding: '8px 0' }}>所选范围内无用量记录</div>
+        <div className={styles.statLabel}>{t('sh.shareByTokens')}</div>
+        <div className={styles.empty} style={{ padding: '8px 0' }}>{t('empty.noUsage')}</div>
       </div>
     )
   }
@@ -80,7 +80,7 @@ export function ShareBar(props: {
               onMouseMove={(event) => props.tooltip.show(event, (
                 <>
                   <TipTitle>{row.label}</TipTitle>
-                  <TipSub>占比 <b>{percent}%</b></TipSub>
+                  <TipSub>{t('sh.shareLabel')} <b>{percent}%</b></TipSub>
                   <TipRow color={row.color} label="Tokens" amount={fmtTokens(row.tokens)} rate={percent + '%'} />
                 </>
               ))}

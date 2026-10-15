@@ -73,7 +73,7 @@ export function ProjectsTab(props: {
     else downloadFile(exportFileName('projects', 'json'), toJson(visible), JSON_MIME)
   }
 
-  if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
+  if (props.data === null) return <div className={styles.empty}>{t('s.loading')}</div>
 
   return (
     <div>
@@ -113,7 +113,7 @@ export function ProjectsTab(props: {
       )}
       <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.projectTable}>
         <thead>
-          <tr><th>项目</th><th>调用</th><th>Tokens</th><th>占比</th><th>成本</th><th>最近活跃</th></tr>
+          <tr><th>{t('p.project')}</th><th>{t('common.calls')}</th><th>Tokens</th><th>{t('m.share')}</th><th>{t('c.cost')}</th><th>{t('m.lastActive')}</th></tr>
         </thead>
         <tbody>
           {visible.map((row) => {

@@ -211,14 +211,14 @@ export function SessionsTab(props: {
           ]}
         />
         <span className={exportStyles.exportGroup}>
-          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</Button>
-          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</Button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>{t('export.csv')}</Button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>{t('export.json')}</Button>
         </span>
       </div>
       {parentFocus !== null && (
         <div className={styles.statExtra}>
           只看该会话及其子会话（含父会话行）·
-          <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>清除筛选</button>
+          <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>{t('p.clearFilter')}</button>
         </div>
       )}
       {subagentFilter !== 'only' && subagentCount > 0 && (
@@ -234,7 +234,7 @@ export function SessionsTab(props: {
 
       <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.sessionTable}>
         <thead>
-          <tr><th>会话</th><th>通道</th><th>时间 / 时长</th><th>Tokens</th><th>命中率</th><th>成本</th></tr>
+          <tr><th>{t('s.id')}</th><th>{t('common.channel')}</th><th>{t('s.timeDuration')}</th><th>Tokens</th><th>{t('d.hitRate')}</th><th>{t('c.cost')}</th></tr>
         </thead>
         <tbody>
           {sortKey === 'recent' && shownGroups.map((group) => (
@@ -252,7 +252,7 @@ export function SessionsTab(props: {
             </Fragment>
           ))}
           {sortKey !== 'recent' && shownRows.map((row) => sessionRowOf(row, rowOptions))}
-          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的会话</td></tr>}
+          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>{t('s.empty')}</td></tr>}
         </tbody>
       </table></div>
       {visible.length > shownCount && (
@@ -339,7 +339,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
             >
               {row.title ?? t('s.noPrompt') + ' · ' + shortIdOf(row.id)}
             </button>
-            {row.archived && <span className={listStyles.archivedTag}>已归档</span>}
+            {row.archived && <span className={listStyles.archivedTag}>{t('s.archived')}</span>}
             {row.origin === 'subagent' && (
               <button
                 type="button"
@@ -412,14 +412,14 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
         <tr>
           <td className={listStyles.composeCell} colSpan={6}>
             {row.models.length === 0
-              ? <div className={styles.empty}>没有按模型的用量记录</div>
+              ? <div className={styles.empty}>{t('empty.noUsage')}</div>
               : (
                 <>
                   <div className={listStyles.composeRow + ' ' + listStyles.composeHead}>
-                    <span>模型</span>
+                    <span>{t('m.model')}</span>
                     <span className={listStyles.composeNumber}>Tokens</span>
-                    <span className={listStyles.composeNumber}>占比</span>
-                    <span className={listStyles.composeNumber}>成本</span>
+                    <span className={listStyles.composeNumber}>{t('m.share')}</span>
+                    <span className={listStyles.composeNumber}>{t('c.cost')}</span>
                   </div>
                   {row.models.map((model) => {
                     const percent = model.sharePercent ?? 0
@@ -461,7 +461,7 @@ function costTipOf(row: SessionRow): ReactNode {
   const source = row.costSource ?? 'none'
   return (
     <>
-      <TipTitle>会话成本</TipTitle>
+      <TipTitle>{t('s.sessionCost')}</TipTitle>
       <TipSub>{costSourceHintOf(source, row.partial)}</TipSub>
       <TipRow
         label={t('s.amount')}

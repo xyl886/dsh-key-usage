@@ -114,21 +114,21 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
       }
     >
       <div className={styles.heatmapHead}>
-        <span className={styles.heatmapTitle}>活跃热力图 · 近 9 个月 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
+        <span className={styles.heatmapTitle}>{t('h.summary')}</span>
         <span className={shared.legend}>
-          <span><i className={styles.ghost} />无数据</span>
-          <span><i style={{ background: LEVEL_COLORS[0] }} />无用量</span>
-          <span><i style={{ background: LEVEL_COLORS[1] }} />少</span>
-          <span><i style={{ background: LEVEL_COLORS[2] }} />较少</span>
-          <span><i style={{ background: LEVEL_COLORS[3] }} />中</span>
-          <span><i style={{ background: LEVEL_COLORS[4] }} />较多</span>
-          <span><i style={{ background: LEVEL_COLORS[5] }} />多</span>
+          <span><i className={styles.ghost} />{t('h.noData')}</span>
+          <span><i style={{ background: LEVEL_COLORS[0] }} />{t('h.noUsage')}</span>
+          <span><i style={{ background: LEVEL_COLORS[1] }} />{t('h.level1')}</span>
+          <span><i style={{ background: LEVEL_COLORS[2] }} />{t('h.level2')}</span>
+          <span><i style={{ background: LEVEL_COLORS[3] }} />{t('h.level3')}</span>
+          <span><i style={{ background: LEVEL_COLORS[4] }} />{t('h.level4')}</span>
+          <span><i style={{ background: LEVEL_COLORS[5] }} />{t('h.level5')}</span>
         </span>
       </div>
       <div className={styles.heatmapScroll} ref={scrollRef}>
         <div className={styles.heatmapBody}>
           <div className={styles.heatWeekdays}>
-            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+            <span>{t('h.wd0')}</span><span>{t('h.wd1')}</span><span>{t('h.wd2')}</span><span>{t('h.wd3')}</span><span>{t('h.wd4')}</span><span>{t('h.wd5')}</span><span>{t('h.wd6')}</span>
           </div>
           <div className={styles.heatGridCol}>
             <div className={styles.heatGrid}>
@@ -174,7 +174,7 @@ function tipOf(cell: HeatCell, day: HeatmapDay | undefined, channels: Channel[])
   return (
     <>
       <TipTitle>{cell.date}</TipTitle>
-      <TipSub>合计 <b>{fmtTokens(day.totalTokens)}</b> tokens</TipSub>
+      <TipSub>{t('dd.sum')} <b>{fmtTokens(day.totalTokens)}</b> tokens</TipSub>
       {day.models.map((model) => {
         const percent = day.totalTokens > 0 ? Math.round(model.totalTokens / day.totalTokens * 100) : 0
         const color = channelColorOf(channels, model.provider)

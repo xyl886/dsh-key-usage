@@ -78,6 +78,13 @@ export function quotaBarColor(percent: number): string {
   return 'var(--dsw-alias-state-success-primary, #3fb96f)'
 }
 
+export const COST_MODE_KEYS: Record<ChannelCostMode, string> = {
+  sub: 'ch.inSub',
+  perToken: 'ch.metered',
+  free: 'ch.free',
+  none: 'ch.noBilling',
+  unknown: 'ch.notQueried',
+}
 export const COST_MODE_LABELS: Record<ChannelCostMode, string> = {
   sub: t('ch.subscription'),
   perToken: 'ch.metered',
