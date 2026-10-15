@@ -14,7 +14,6 @@ import { ModelsTab } from './tabs/ModelsTab.tsx'
 import { ProjectsTab } from './tabs/ProjectsTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
-import type { DetailSortState } from './components/DailyDetailTable.tsx'
 import type {
   Channel,
   HeatmapDay,
@@ -49,8 +48,6 @@ export function KeyUsageSection() {
   const [channelFilter, setChannelFilter] = useState('ALL')
   /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看那一个项目（不做全局路由） */
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
-  const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({})
-  const [detailSort, setDetailSort] = useState<DetailSortState>({ key: 'period', dir: 'desc' })
 
   const [channels, setChannels] = useState<Channel[]>([])
   const [quotas, setQuotas] = useState<QuotaProvider[]>([])
@@ -254,10 +251,6 @@ export function KeyUsageSection() {
           onCustomTo={setCustomTo}
           channelFilter={channelFilter}
           onChannelFilter={setChannelFilter}
-          expandedPeriods={expandedPeriods}
-          onTogglePeriod={(periodKey) => setExpandedPeriods((previous) => ({ ...previous, [periodKey]: previous[periodKey] !== true }))}
-          sort={detailSort}
-          onSort={setDetailSort}
           bounds={bounds}
           tooltip={tooltip}
           pricingRevision={pricingRevision}
@@ -293,6 +286,7 @@ export function KeyUsageSection() {
 
       {showCaliber && (
       <Dialog title={t('caliber.title')} closeLabel={t('action.close')} onClose={() => setShowCaliber(false)}>
+        <div className={styles.caliberVersion}>{t('caliber.version', { version: __PLUGIN_VERSION__ })}</div>
         <ul className={styles.footnoteList}>
           <li>
             {t('caliber.source', {

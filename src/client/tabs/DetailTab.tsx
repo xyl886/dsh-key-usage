@@ -11,7 +11,6 @@ import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
 import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
 import { TrendPanel } from '../components/TrendPanel.tsx'
-import { DailyDetailTable, type DetailSortState } from '../components/DailyDetailTable.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
 import exportStyles from '../styles/export.module.css'
@@ -80,10 +79,6 @@ export function DetailTab(props: {
   onCustomTo: (value: string) => void
   channelFilter: string
   onChannelFilter: (value: string) => void
-  expandedPeriods: Record<string, boolean>
-  onTogglePeriod: (periodKey: string) => void
-  sort: DetailSortState
-  onSort: (sort: DetailSortState) => void
   bounds: { from: string; to: string }
   tooltip: TooltipApi
   /** 价目版本号：成本在服务端按价目算，价目一换这里要重取上期数据。 */
@@ -333,16 +328,6 @@ export function DetailTab(props: {
           : <TokenBars rows={chartRows} tooltip={tooltip} ariaLabel={chartAriaLabel} />}
         {useHourAxis && <div className={styles.statExtra}>{t('d.hourlyNote')}</div>}
       </div>
-
-      <DailyDetailTable
-        usage={usage}
-        channels={channels}
-        channelFilter={channelFilter}
-        expandedPeriods={props.expandedPeriods}
-        onTogglePeriod={props.onTogglePeriod}
-        sort={props.sort}
-        onSort={props.onSort}
-      />
     </div>
   )
 }

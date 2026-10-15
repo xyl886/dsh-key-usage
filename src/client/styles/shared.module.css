@@ -148,3 +148,6 @@
 
 /* 图例里的「无数据」色块：CSS Modules 需要独立类才能被引用（原来写成裸 className="ghost" 永不生效） */
 .ghost { background: var(--dsw-alias-fill-l2, rgba(128, 128, 140, .10)); border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 140, .28)); }
+
+/* 口径弹窗里的版本号：弱化一行，便于报问题时报出来 */
+.caliberVersion { margin: 0 0 8px; font-size: 11.5px; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }

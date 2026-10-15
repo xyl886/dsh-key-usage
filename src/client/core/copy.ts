@@ -21,6 +21,7 @@ export const zh: Record<string, string> = {
   'action.close': '关闭',
 
   'caliber.title': '口径说明',
+  'caliber.version': '版本 {version}',
   'caliber.source': '按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充{days}；项目 / 会话 / 按模型 / 按小时来自会话事件，每个样本计一次调用。',
   'caliber.sourceDays': '（当前有 {count} 天）',
   'caliber.cost': '成本四层自动生效，不需要填任何价格：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价；角标同此命名，没有依据时显示 —。',
@@ -426,6 +427,7 @@ export const en: Record<string, string> = {
   'action.close': 'Close',
 
   'caliber.title': 'Method',
+  'caliber.version': 'Version {version}',
   'caliber.source': 'Daily figures come from the host ledger (official cost included); days missing there fall back to session events{days}. Projects, sessions, models and hourly buckets come from session events, one call per sample.',
   'caliber.sourceDays': ' ({count} days)',
   'caliber.cost': 'Cost resolves in four layers: official bill > built-in vendor catalog > LiteLLM aggregate > ledger average. Badges use the same names; — means no basis.',
