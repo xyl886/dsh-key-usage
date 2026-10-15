@@ -41,7 +41,7 @@ import {
   type SessionMetaOptions,
   type SessionRow,
 } from './data/sessions.js'
-import { createArchiveSource, createTitleSource, normalizeSessionId } from './data/session-meta.js'
+import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
 import { appendLogRecords, clearLogFile, readLogRecords } from './data/log-file.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
 import {
@@ -397,6 +397,66 @@ function readTextFile(path: string): string | null {
   try { return readFileSync(path, 'utf8') } catch { return null }
 }
 
+/** 「未归入工作区」那一行需要的字段（其余字段沿用被合并行的首行）。 */
+interface CollapsibleProjectRow {
+  workspace: string
+  workspaceTitle: string | null
+  paths: string[]
+  registered: boolean
+  calls: number
+  tokens: number
+  sessionCount: number
+  archivedSessionCount: number
+  lastTime: number | null
+  providers: Record<string, number>
+  models: Array<{ provider: string; model: string; tokens: number; calls: number }>
+  cost: number | null
+  costsByCurrency: Record<string, number>
+  costSource: string
+  partial?: boolean
+  dominantProvider: string | null
+}
+
+/**
+ * 项目页与侧边栏对齐：只有宿主工作区各占一行。
+ *
+ * 历史会话里会出现「曾经用过、但已不在工作区表里」的目录（旧项目、子目录），它们各占一行会让项目数与
+ * 侧边栏对不上；这里把它们合并成一行（`workspace` 置空、`paths` 保留全部目录），用量与归档数照旧累加。
+ */
+export function collapseOrphanProjects<Row extends CollapsibleProjectRow>(rows: Row[]): Row[] {
+  const orphans = rows.filter((row) => !row.registered)
+  if (orphans.length === 0) return rows
+  const providers: Record<string, number> = {}
+  for (const row of orphans) {
+    for (const [provider, tokens] of Object.entries(row.providers)) providers[provider] = (providers[provider] ?? 0) + tokens
+  }
+  const costs = orphans.map((row) => row.cost)
+  const cost = costs.some((value) => value === null) ? null : costs.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+  const merged = {
+    ...orphans[0],
+    workspace: '',
+    workspaceTitle: null,
+    paths: orphans.flatMap((row) => row.paths),
+    registered: false,
+    calls: orphans.reduce((sum, row) => sum + row.calls, 0),
+    tokens: orphans.reduce((sum, row) => sum + row.tokens, 0),
+    sessionCount: orphans.reduce((sum, row) => sum + row.sessionCount, 0),
+    archivedSessionCount: orphans.reduce((sum, row) => sum + row.archivedSessionCount, 0),
+    lastTime: orphans.reduce<number | null>(
+      (latest, row) => row.lastTime === null ? latest : (latest === null ? row.lastTime : Math.max(latest, row.lastTime)),
+      null,
+    ),
+    providers,
+    models: [],
+    dominantProvider: Object.entries(providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
+    cost,
+    costsByCurrency: sumMoneyByCurrency(orphans.map((row) => row.costsByCurrency)),
+    costSource: weakestSource(orphans.map((row) => row.costSource as CostSource)),
+    partial: orphans.some((row) => row.partial === true),
+  }
+  return [...rows.filter((row) => row.registered), merged as unknown as Row]
+}
+
 /**
  * 读 POST 请求体并当 JSON 解析：上限 128 KiB（日志批量远小于这个数），
  * 超限或解析失败一律返回 null —— 端点回 `{ok:false}`，不抛错、不缓冲整个响应体。
@@ -425,10 +485,22 @@ export function mountKeyUsageRoutes(
   const ledgerPath = join(dshHomePath(), 'dsh-usage', 'usage-ledger.json')
   const snapshotPath = join(dshHomePath(), 'dsh-usage', 'provider-snapshots.json')
   const titleSource = createTitleSource(join(dshHomePath(), 'storages', 'session_projcache.json'))
+  /** 会话投影（一会话一文件）：侧边栏显示名与「是不是真子代理」的权威来源。 */
+  const projectionSource = createSessionProjectionSource(join(dshHomePath(), 'storages', 'session_projcache', 'sessions'))
   const archiveSource = createArchiveSource(hostServices, join(dshHomePath(), 'storages', 'workspace.json'))
+  /** 宿主工作区表（path → 侧边栏显示名）：项目页要靠它把「目录」对齐成侧边栏里的「工作区」。 */
+  const workspaceSource = createWorkspaceSource(hostServices, join(dshHomePath(), 'storages', 'workspace.json'))
   const quotaSnapshotPath = join(dshHomePath(), 'dsh-key-usage', 'quota-snapshots.json')
-  /** 会话标题与归档状态：宿主服务/缓存文件都拿不到时返回空集合，界面自行回落。 */
-  const sessionMeta = (): SessionMetaOptions => ({ titles: titleSource.titles(), archived: archiveSource.archived() })
+  /**
+   * 会话标题、子代理判定与归档状态：宿主服务/缓存文件都拿不到时返回空集合，界面自行回落。
+   * 投影按 id 惰性读（只读这次要用到的会话），所以调用方要把 ids 传进来。
+   */
+  const sessionMeta = (ids: string[]): SessionMetaOptions => {
+    const facts = projectionSource.facts(ids)
+    const titles = new Map(titleSource.titles())
+    for (const [id, fact] of facts) if (fact.title !== null) titles.set(id, fact.title)
+    return { titles, facts, archived: archiveSource.archived() }
+  }
 
   const loadLedger = (): UsageLedger => readLedger(ledgerPath, (path) => {
     try { return readFileSync(path, 'utf8') } catch { return null }
@@ -672,7 +744,7 @@ export function mountKeyUsageRoutes(
     const { records, coverage } = await sessionSource.collect()
     const priceTable = buildPriceTable(loadLedger())
     const averageOf = averagePriceOf(priceTable)
-    const meta = sessionMeta()
+    const meta = sessionMeta(records.map((record) => record.id))
     const rows = sessionRowsOf(records, known, meta).slice(0, limit).map((row) => {
       const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
       const cost = costs.length === 0 ? null : sumOrNull(costs)
@@ -700,11 +772,18 @@ export function mountKeyUsageRoutes(
     const { records, coverage } = await sessionSource.collect()
     const priceTable = buildPriceTable(loadLedger())
     const averageOf = averagePriceOf(priceTable)
-    const rows = projectRowsOf(records, known, sessionMeta()).slice(0, limit).map((row) => {
+    const titles = workspaceSource.titles()
+    const priced = projectRowsOf(records, known, sessionMeta(records.map((record) => record.id))).map((row) => {
       const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
       const cost = costs.length === 0 ? null : sumOrNull(costs)
+      const title = titles.get(row.workspace.toLowerCase()) ?? null
       return {
         ...row,
+        /** 宿主工作区名（侧边栏显示名）；目录不在工作区表里时为 null。 */
+        workspaceTitle: title,
+        /** 这一行覆盖的目录（工作区行 = 1 个；「未归入工作区」行 = 多个）。 */
+        paths: [row.workspace],
+        registered: title !== null,
         dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
         cost,
         costsByCurrency: alignMoneyWithCost(
@@ -715,6 +794,8 @@ export function mountKeyUsageRoutes(
         partial: costs.some((entry) => entry.partial),
       }
     })
+    // 项目页与侧边栏对齐：工作区各占一行，不在工作区里的历史目录合并成一行（否则会出现侧边栏里没有的「项目」）
+    const rows = collapseOrphanProjects(priced).slice(0, limit)
     return { rows, coverage, priced: priceTable.size > 0 }
   }
 
@@ -991,7 +1072,7 @@ export function mountKeyUsageRoutes(
       const channels = await channelsWithQuota()
       const knownProviders = channels.map((channel) => channel.provider)
       const priceTable = buildPriceTable(loadLedger())
-      const meta = sessionMeta()
+      const meta = sessionMeta([lookup.id])
       const detail = lookup.record === null
         // 降级时只有会话头字段，但投影缓存里的标题仍然可用，优先级与列表保持一致
         ? emptySessionDetail(

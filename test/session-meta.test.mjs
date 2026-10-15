@@ -4,7 +4,8 @@
  * 运行：node test/session-meta.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createArchiveSource, createTitleSource, normalizeSessionId, parseTitles } from '../lib/data/session-meta.js'
+import { join } from 'node:path'
+import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId, parseTitles, workspaceTitlesOf } from '../lib/data/session-meta.js'
 import { foldSessionEvents, promptSnippetOf, summarizeSession, PROMPT_TITLE_CHARS } from '../lib/data/session-usage.js'
 import { projectRowsOf, sessionRowsOf } from '../lib/data/sessions.js'
 
@@ -125,5 +126,79 @@ const projectRows = projectRowsOf(records, [], { archived: archivedSet })
 assert.equal(projectRows.length, 1, '两个会话同属一个工作区')
 assert.equal(projectRows[0].sessionCount, 2)
 assert.equal(projectRows[0].archivedSessionCount, 1, '归档数单独统计，用量仍全额计入')
+
+// ---------- 7) 会话投影（一会话一文件）：标题 + 真子代理判定 ----------
+{
+  const dir = 'proj-sessions'
+  const pathOf = (name) => join(dir, name + '.json')
+  const files = {
+    [pathOf('session-aaaa1111-0000-0000-0000-000000000001')]: JSON.stringify({
+      version: 7,
+      record: { identity: { isSeeded: true, inheritedEventCount: 5606 }, rows: { title: { val: 'dsh-key-usage 插件开发' }, subagent: { val: {} } } },
+    }),
+    [pathOf('session-bbbb2222-0000-0000-0000-000000000002')]: JSON.stringify({
+      record: { rows: { title: { val: '   ' }, subagent: { val: { identity: { mode: 'continuable', label: 'Split Templates.tsx' } } } } },
+    }),
+    [pathOf('session-cccc3333-0000-0000-0000-000000000003')]: '不是 JSON',
+  }
+  const mtimes = new Map(Object.keys(files).map((path, index) => [path, 1000 + index]))
+  let reads = 0
+  const source = createSessionProjectionSource(
+    dir,
+    (path) => { reads += 1; return files[path] ?? null },
+    (path) => mtimes.get(path) ?? -1,
+  )
+  const facts = source.facts([
+    'session-aaaa1111-0000-0000-0000-000000000001',
+    'session-bbbb2222-0000-0000-0000-000000000002',
+    'session-cccc3333-0000-0000-0000-000000000003',
+    'session-dddd4444-0000-0000-0000-000000000004',
+  ])
+  assert.equal(facts.get('aaaa1111-0000-0000-0000-000000000001').title, 'dsh-key-usage 插件开发', '标题取投影 record.rows.title.val')
+  assert.equal(facts.get('aaaa1111-0000-0000-0000-000000000001').subagent, false, 'subagent.val 是空对象 → 被 seed 续接的会话不是子代理')
+  assert.equal(facts.get('bbbb2222-0000-0000-0000-000000000002').subagent, true, 'subagent.val.identity 存在 → 真子代理')
+  assert.equal(facts.get('bbbb2222-0000-0000-0000-000000000002').title, null, '空白标题视为没有标题')
+  assert.equal(facts.has('cccc3333-0000-0000-0000-000000000003'), false, '坏文件跳过')
+  assert.equal(facts.has('dddd4444-0000-0000-0000-000000000004'), false, '文件不存在就不进结果（调用方回落 header / 提问）')
+  const readsAfterFirst = reads
+  source.facts(['session-aaaa1111-0000-0000-0000-000000000001'])
+  assert.equal(reads, readsAfterFirst, 'mtime 没变就不再读文件')
+  mtimes.set(pathOf('session-aaaa1111-0000-0000-0000-000000000001'), 2000)
+  assert.equal(source.facts(['session-aaaa1111-0000-0000-0000-000000000001']).get('aaaa1111-0000-0000-0000-000000000001').title, 'dsh-key-usage 插件开发')
+  assert.ok(reads > readsAfterFirst, 'mtime 变了要重读')
+
+  // 判定接进会话行：主会话不带父链接；真子代理保留 origin 与父链接
+  const seedRow = sessionRowsOf(
+    [{ ...records[0], id: 'session-aaaa1111-0000-0000-0000-000000000001', parentSessionId: 'session-parent-0000', origin: 'subagent' }],
+    [], { facts },
+  )
+  assert.equal(seedRow[0].origin, null, '投影说不是子代理 → 覆盖 header 的猜测')
+  assert.equal(seedRow[0].parentSessionId, null, '主会话不带父链接（否则界面会把它归到别人名下）')
+  assert.equal(seedRow[0].title, 'dsh-key-usage 插件开发', '投影标题优先于提问片段')
+  const childRow = sessionRowsOf(
+    [{ ...records[0], id: 'session-bbbb2222-0000-0000-0000-000000000002', parentSessionId: 'session-parent-0000', origin: null }],
+    [], { facts },
+  )
+  assert.equal(childRow[0].origin, 'subagent', '投影说是子代理 → 即使 header 没带 origin 也认')
+  assert.equal(childRow[0].parentSessionId, 'session-parent-0000', '子代理保留父链接')
+}
+
+// ---------- 8) 宿主工作区表：path → title（三种形状都要认） ----------
+const fromDict = workspaceTitlesOf({ a: { path: 'D:\\EasyJob', title: 'EasyJob' }, b: { path: 'D:\\X', title: '  ' } })
+assert.equal(fromDict.get('d:\\easyjob'), 'EasyJob', '路径统一小写做键、名字取 title')
+assert.equal(fromDict.get('d:\\x'), 'D:\\X', 'title 为空时回落路径本身')
+const fromArray = workspaceTitlesOf([{ path: 'D:\\EasyJob', title: 'EasyJob' }])
+assert.equal(fromArray.size, 1)
+const fromMap = workspaceTitlesOf(new Map([['id', { path: 'D:\\EasyJob', title: 'EasyJob' }]]))
+assert.equal(fromMap.size, 1)
+assert.equal(workspaceTitlesOf(undefined).size, 0, '拿不到工作区表时返回空表（项目行回落目录名）')
+assert.equal(workspaceTitlesOf([null, 'text', { title: '没有 path' }]).size, 0, '坏条目跳过，不抛错')
+
+const hostTitles = createWorkspaceSource({ get: () => ({ workspaces: [{ path: 'D:\\EasyJob', title: 'EasyJob' }] }) }, '/nonexistent/workspace.json')
+assert.equal(hostTitles.titles().get('d:\\easyjob'), 'EasyJob')
+const fileTitles = createWorkspaceSource({ get: () => undefined }, '/nonexistent/workspace.json', () => JSON.stringify({ tables: { workspaces: { ws1: { path: 'D:\\EasyJob', title: 'EasyJob' } } } }))
+assert.equal(fileTitles.titles().get('d:\\easyjob'), 'EasyJob', 'getter 拿不到时读文件')
+const missingTitles = createWorkspaceSource({ get: () => undefined }, '/nonexistent/workspace.json', () => null)
+assert.equal(missingTitles.titles().size, 0, '文件也读不到时返回空表')
 
 console.log('session-meta.test: 全部通过')

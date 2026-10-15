@@ -31,7 +31,7 @@ import uiStyles from '../styles/ui.module.css'
 /** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
 const BALANCE_ORDER = ['totalBalance', 'topUpBalance', 'giftBalance', 'balance', 'currency']
 const BALANCE_LABELS: Record<string, string> = {
-  totalBalance: 'balance.total', topUpBalance: 'balance.credit', giftBalance: 'balance.grant', balance: 'balance.balance', currency: 'balance.currency',
+  totalBalance: 'balance.total', topUpBalance: 'balance.credit', giftBalance: 'balance.grant', balance: 'balance.balance',
 }
 const WINDOW_ORDER = ['5h', 'week', 'month', 'day']
 const WINDOW_LABELS: Record<string, string> = { '5h': 'window.5h', week: 'window.week', month: 'window.month', day: 'window.day' }
@@ -221,7 +221,6 @@ export function QuotaTab(props: {
   return (
     <div>
       <div className={quotaStyles.toolbar}>
-        <span className={quotaStyles.toolbarLabel}>{t('quota.displayCurrency')}</span>
         {DISPLAY_CURRENCIES.map((currency) => (
           <button
             key={currency}
@@ -297,6 +296,7 @@ export function QuotaTab(props: {
             ? (plan as { windows: Array<{ key?: unknown; percent?: unknown; resetsAt?: unknown }> }).windows
             : null
           const rateRows = rateRowsOf(channel.provider)
+          const balanceView = balance === null ? null : balanceViewOf(balance)
           // 弹窗模式（只渲染一个通道）恒展开：详情弹窗里不留任何展开项
     const isOpen = props.onlyProvider !== undefined || expandedProviders[channel.provider] === true
           const drawerId = instanceId + '-rates-' + String(index)
@@ -313,9 +313,10 @@ export function QuotaTab(props: {
               >
                 <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
                 <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
-                {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}</span>}
+                {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}{' · ' + freshTextOf(snapshot?.fetchedAt ?? null)}</span>}
                 <span className={quotaStyles.rateCount}>{rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))}</span>
-                <span className={quotaStyles.quotaProvider}>{channel.provider} · {t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')}</span>
+                {/* 右侧只留计费模式：通道 id 与左边显示名是同一件事，id 挪到 hover（排障要看时也有） */}
+                <span className={quotaStyles.quotaProvider} title={channel.provider}>{t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')}</span>
                 {props.onlyProvider === undefined && <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>}
               </button>
 
@@ -326,15 +327,18 @@ export function QuotaTab(props: {
                 </div>
               )}
 
-              {balance !== null && (
-                <div className={quotaStyles.balanceStrip}>
-                  {orderedBalanceEntries(balance).map(([key, value]) => (
-                    <div className={quotaStyles.balanceItem} key={key}>
-                      <div className={quotaStyles.bsLabel}>{t(BALANCE_LABELS[key] ?? key)}</div>
-                      <div className={quotaStyles.bsValue}>{String(value)}</div>
-                    </div>
-                  ))}
-                </div>
+              {balanceView !== null && (
+                <>
+                  <div className={quotaStyles.balanceStrip}>
+                    {balanceView.cards.map(([key, value]) => (
+                      <div className={quotaStyles.balanceItem} key={key}>
+                        <div className={quotaStyles.bsLabel}>{t(BALANCE_LABELS[key] ?? key)}</div>
+                        <div className={quotaStyles.bsValue}>{String(value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {balanceView.totalText === null ? null : <div className={quotaStyles.balanceTotal}>{balanceView.totalText}</div>}
+                </>
               )}
 
               {balance === null && windows !== null && windows.length > 0 && (
@@ -362,11 +366,6 @@ export function QuotaTab(props: {
                 <div className={styles.dim}>{emptyReasonOf(channel, snapshot)}</div>
               )}
 
-              {isLive && (
-                <div className={quotaStyles.snapshotHint}>
-                  {t('quota.liveAt', { time: freshTextOf(snapshot?.fetchedAt ?? null) })}
-                </div>
-              )}
               {snapshot !== null && !isLive && snapshot.supported && (
                 <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
                   <LogHint text={t('quota.liveFailedShort')} />
@@ -400,7 +399,7 @@ export function QuotaTab(props: {
   )
 }
 
-/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层。 */
+/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层（默认档不占字）。 */
 function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean, failureText: string | null): string {
   if (rows.length > 0) {
     const counts = new Map<string, number>()
@@ -409,7 +408,8 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
       .filter(([source]) => source !== 'catalog' && source !== 'official')
       .map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
       .join(' / ')
-    return String(rows.length) + t('q.modelRatesPrefix') + mix
+    // 来源全是默认档（catalog / official）时 mix 为空：不能再留一个悬空的分隔符
+    return String(rows.length) + t('q.modelRatesCount') + (mix === '' ? '' : ' · ' + mix)
   }
   if (loading) return t('quota.loadingRates')
   if (failed) return failureText === null ? t('quota.ratesUnavailable') : t('quota.ratesUnavailable') + '：' + failureText
@@ -438,19 +438,21 @@ function RateTable(props: {
     )
   }
   const converted = props.rows.some((row) => convertsCurrencyOf(row.currency))
+  const offPeakNow = props.rows.some((row) => row.offPeak === true)
   return (
     <>
       <div className={quotaStyles.rateHead}>
-        {t('quota.priceUnit')}（{t('unit.perMillion')}）· {t('quota.displayCurrency')} {DISPLAY_CURRENCY_LABELS[props.display]}
+        {t('quota.priceUnit')}（{t('unit.perMillion')} · {DISPLAY_CURRENCY_LABELS[props.display]}）
         {converted && props.convertedHint !== null ? t('q.convertedPrefix') + props.convertedHint + '）' : ''}
-        {props.range === null ? '' : t('q.rangePrefix') + props.range.from + ' ~ ' + props.range.to}
+        {offPeakNow ? t('q.offPeakNow') : ''}
+        {props.range === null ? '' : t('q.ratesRange')}
       </div>
       <div className={quotaStyles.rateScroll}>
         <div className={uiStyles.tableScroll}><table className={quotaStyles.rateTable}>
           <thead>
             <tr>
               <th>{t('m.model')}</th><th>{t('c.input')}</th><th>{t('c.cacheRead')}</th><th>{t('d.cacheWrite')}</th><th>{t('c.output')}</th>
-              <th>{t('quota.sourceLabel')}</th><th>{t('m.lastActive')}</th><th>{t('m.model')}</th>
+              <th>{t('quota.sourceLabel')}</th><th>{t('quota.tokensColumn')}</th>
             </tr>
           </thead>
           <tbody>
@@ -458,15 +460,19 @@ function RateTable(props: {
               const rates = row.rates
               const hasRates = rates !== null && typeof rates === 'object'
               const rowConverted = convertsCurrencyOf(row.currency)
+              // 行币种与显示币种一致时不重复写一遍（这是常态），只有跨币种行才值得说
+              const showCurrency = typeof row.currency === 'string' && row.currency !== '' && row.currency.toUpperCase() !== props.display
+              const note = noteTextOf(row)
               return (
                 <tr key={row.model}>
                   <td>
                     <div className={quotaStyles.rateModel}>{row.model}</div>
-                    <div className={quotaStyles.rateConverted}>
-                      {t('q.currencyLabel', { value: typeof row.currency === 'string' && row.currency !== '' ? row.currency : '—' })}
-                      {rowConverted ? ' → ' + props.display : ''}
-                    </div>
-                    {row.offPeak === true && <span className={quotaStyles.offPeakChip}>{t('q.offPeak')}</span>}
+                    {showCurrency && (
+                      <div className={quotaStyles.rateConverted}>
+                        {t('q.currencyLabel', { value: row.currency ?? '' })}
+                        {rowConverted ? ' → ' + props.display : ''}
+                      </div>
+                    )}
                   </td>
                   {hasRates
                     ? (
@@ -479,16 +485,16 @@ function RateTable(props: {
                     )
                     : (
                       <td className={quotaStyles.rateEmpty} colSpan={4}>
-                        {noteTextOf(row) !== '' ? noteTextOf(row) : noRateTextOf(row.source)}
+                        {note !== '' ? note : noRateTextOf(row.source)}
                       </td>
                     )}
-                  <td>
+                  {/* 长口径不占列：放进来源格的 hover，表格宽度也就够用了 */}
+                  <td title={note === '' ? undefined : note}>
                     {row.source === 'none'
                       ? <span className={quotaStyles.rateSourceNone} title={costSourceHintOf('none', row.partial)}>{t('q.noBasis')}</span>
                       : <CostSourceChip source={row.source} partial={row.partial} />}
                   </td>
                   <td>{fmtTokens(typeof row.tokens === 'number' && Number.isFinite(row.tokens) ? row.tokens : 0)}</td>
-                  <td className={quotaStyles.rateNote}>{row.note !== null && row.note !== '' ? row.note : '—'}</td>
                 </tr>
               )
             })}
@@ -749,6 +755,41 @@ function orderedBalanceEntries(balance: Record<string, unknown>): Array<[string,
     if (!BALANCE_ORDER.includes(entry[0])) ordered.push(entry)
   }
   return ordered
+}
+
+/**
+ * 余额卡片：总余额 = 充值 + 赠送时它是派生值，不再单列一张卡；币种不单独占卡，并进值里。
+ * 拿不到这三项（别的通道返回形状不同）时退回原样，保证任何形状都不会把余额整块吞掉。
+ */
+function balanceViewOf(balance: Record<string, unknown>): { cards: Array<[string, unknown]>; totalText: string | null } {
+  const entries = orderedBalanceEntries(balance)
+  const valueOf = (key: string): number | null => {
+    const hit = entries.find(([entryKey]) => entryKey === key)
+    return hit !== undefined && typeof hit[1] === 'number' ? hit[1] : null
+  }
+  const currency = typeof balance.currency === 'string' && balance.currency !== '' ? balance.currency : ''
+  const total = valueOf('totalBalance')
+  const credit = valueOf('topUpBalance')
+  const grant = valueOf('giftBalance')
+  const withoutCurrency = entries.filter(([key]) => key !== 'currency')
+  if (withoutCurrency.length === 0) return { cards: entries, totalText: null }
+  const withCurrency = (value: unknown): string => String(value) + (currency === '' ? '' : ' ' + currency)
+  if (total !== null && credit !== null && grant !== null && Math.abs(credit + grant - total) <= 0.02) {
+    return {
+      cards: withoutCurrency.filter(([key]) => key !== 'totalBalance'),
+      totalText: t('balance.totalInline', { value: withCurrency(total) }),
+    }
+  }
+  // 总余额不是派生值（或压根没有）：保留卡片，把币种挂到总余额 / 第一张卡的值上
+  let currencyPlaced = false
+  const cards = withoutCurrency.map(([key, value]) => {
+    if (key === 'totalBalance' || (!currencyPlaced && total === null && !entries.some(([entryKey]) => entryKey === 'totalBalance'))) {
+      currencyPlaced = true
+      return [key, withCurrency(value)] as [string, unknown]
+    }
+    return [key, value] as [string, unknown]
+  })
+  return { cards, totalText: null }
 }
 
 function orderedWindows(windows: Array<{ key?: unknown }>): Array<{ key?: unknown; percent?: unknown; resetsAt?: unknown }> {

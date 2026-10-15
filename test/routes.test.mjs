@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mountKeyUsageRoutes, parseDays, parseRatesLimit } from '../lib/routes.js'
+import { collapseOrphanProjects, mountKeyUsageRoutes, parseDays, parseRatesLimit } from '../lib/routes.js'
 import { createSessionSource } from '../lib/data/sessions.js'
 import { foldSessionEvents, summarizeSession } from '../lib/data/session-usage.js'
 
@@ -342,20 +342,32 @@ assert.equal(sessions.body.rows[0].archived, false, '没有归档集合时标记
 mkdirSync(join(home, 'storages'), { recursive: true })
 writeFileSync(join(home, 'storages', 'workspace.json'), JSON.stringify({
   global: { archivedSessionIds: ['session-fixture'] },
+  // 工作区表：项目页靠它把「工作目录」对齐成侧边栏里的「工作区」（名字用 title）
+  tables: { workspaces: { 'ws-easyjob': { path: 'D:\\EasyJob', title: 'EasyJob', sessionIds: [] } } },
 }), 'utf8')
 writeFileSync(join(home, 'storages', 'session_projcache.json'), JSON.stringify({
   tables: { sessions: { 'session-fixture': { rows: { title: { val: '夹具会话标题' } } } } },
 }), 'utf8')
+// 新的按会话分文件投影：侧边栏显示名与「真子代理」判定的权威来源，优先于上面那份聚合文件
+mkdirSync(join(home, 'storages', 'session_projcache', 'sessions'), { recursive: true })
+writeFileSync(join(home, 'storages', 'session_projcache', 'sessions', 'session-fixture.json'), JSON.stringify({
+  version: 7,
+  record: { identity: { isSeeded: true }, rows: { title: { val: '夹具投影标题' }, subagent: { val: {} } } },
+}), 'utf8')
 const sessionsWithMeta = await callEndpoint('/dsh-key-usage/sessions')
 assert.equal(sessionsWithMeta.body.rows[0].archived, true, '归档集合命中（session- 前缀归一后比对）')
-assert.equal(sessionsWithMeta.body.rows[0].title, '夹具会话标题', '标题取宿主投影缓存')
+assert.equal(sessionsWithMeta.body.rows[0].title, '夹具投影标题', '标题取按会话分文件的投影（优先于旧聚合文件）')
+assert.equal(sessionsWithMeta.body.rows[0].origin, null, '投影里 subagent.val 为空 → 不是子代理（seed 续接的会话算主会话）')
 const projectsWithMeta = await callEndpoint('/dsh-key-usage/projects')
 assert.equal(projectsWithMeta.body.rows[0].archivedSessionCount, 1, '项目行统计已归档数，用量不剔除')
 
-// 项目：按工作目录聚合
+// 项目：按工作目录聚合，并标出宿主工作区名
 const projects = await callEndpoint('/dsh-key-usage/projects')
 assert.equal(projects.body.rows.length, 1)
 assert.equal(projects.body.rows[0].workspace, 'D:\\EasyJob')
+assert.equal(projects.body.rows[0].workspaceTitle, 'EasyJob', '名字取宿主工作区 title（与侧边栏一致）')
+assert.equal(projects.body.rows[0].registered, true)
+assert.deepEqual(projects.body.rows[0].paths, ['D:\\EasyJob'])
 assert.equal(projects.body.rows[0].tokens, 9200 + 440, '两次结算样本的 tokens 之和')
 assert.equal(projects.body.rows[0].dominantProvider, 'opencode-go')
 assert.equal(projects.body.rows[0].cost, null)
@@ -971,4 +983,33 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
 }
 
 rmSync(home, { recursive: true, force: true })
+
+// ---- 项目行折叠：非工作区目录并成一行，工作区各占一行（纯函数，直接测） ----
+{
+  const row = (workspace, extra) => ({
+    workspace, workspaceTitle: null, paths: [workspace], registered: false,
+    calls: 1, tokens: 100, sessionCount: 1, archivedSessionCount: 0, lastTime: 1000,
+    providers: { 'opencode-go': 100 }, models: [], cost: null, costsByCurrency: {}, costSource: 'none',
+    partial: false, dominantProvider: 'opencode-go', ...extra,
+  })
+  const collapsed = collapseOrphanProjects([
+    row('D:\\EasyJob', { workspaceTitle: 'EasyJob', registered: true, tokens: 500, calls: 5, lastTime: 5000, cost: 3, costsByCurrency: { CNY: 3 }, costSource: 'catalog' }),
+    row('D:\\old\\A', { tokens: 200, calls: 2, lastTime: 2000 }),
+    row('D:\\old\\B', { tokens: 300, calls: 3, lastTime: 3000, cost: 2, costsByCurrency: { CNY: 2 }, costSource: 'estimate', partial: true }),
+  ])
+  assert.equal(collapsed.length, 2, '1 个工作区 + 1 行「未归入工作区」')
+  assert.equal(collapsed[0].workspaceTitle, 'EasyJob')
+  const orphan = collapsed[1]
+  assert.equal(orphan.workspace, '', '合并行没有单个目录')
+  assert.deepEqual(orphan.paths, ['D:\\old\\A', 'D:\\old\\B'])
+  assert.equal(orphan.tokens, 500, '用量累加')
+  assert.equal(orphan.calls, 5)
+  assert.equal(orphan.lastTime, 3000, '最近时间取最大')
+  assert.equal(orphan.cost, null, '合并里有一行没有成本 → 合计不给数（宁可不给也不低估）')
+  assert.equal(orphan.costSource, 'none', '来源取最弱的一层（一行没有依据 → 合计也不声称有依据）')
+  assert.equal(orphan.partial, true)
+  const allRegistered = collapseOrphanProjects([row('D:\\EasyJob', { registered: true, workspaceTitle: 'EasyJob' })])
+  assert.equal(allRegistered.length, 1, '全部是工作区时原样返回')
+}
+
 console.log('routes.test: 全部通过')

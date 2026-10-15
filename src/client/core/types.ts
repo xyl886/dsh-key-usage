@@ -281,6 +281,12 @@ export interface SessionDetailResponse {
 
 export interface ProjectRow {
   workspace: string
+  /** 宿主工作区名（侧边栏显示名）；`workspace` 为空（未归入工作区）时为 null。 */
+  workspaceTitle?: string | null
+  /** 这一行覆盖的目录；「未归入工作区」行是多条。 */
+  paths?: string[]
+  /** 该行是不是宿主工作区；false 表示所有非工作区目录已并成一行。 */
+  registered?: boolean
   calls: number
   tokens: number
   cacheHitRate: number | null

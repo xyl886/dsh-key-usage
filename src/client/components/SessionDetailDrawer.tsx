@@ -143,7 +143,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
         <DetailItem label={t('d.last')} value={fmtDateTime(session.lastTime)} />
         <DetailItem
           label={t('d.duration')}
-          value={fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t('d.crossDays', { count: session.crossDays }) : '')}
+          value={fmtDuration(session.durationMs)}
         />
         <DetailItem label={t('d.activeDays')} value={String(session.days)} />
       </div>

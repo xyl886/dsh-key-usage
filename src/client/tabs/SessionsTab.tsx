@@ -68,8 +68,6 @@ export function SessionsTab(props: {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
-  const archivedCount = rows.filter((row) => row.archived).length
-  const subagentCount = rows.filter((row) => row.origin === 'subagent' || (row.parentSessionId ?? null) !== null).length
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   // 换了筛选 / 搜索 / 排序就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
@@ -221,16 +219,6 @@ export function SessionsTab(props: {
         <div className={styles.statExtra}>
           {t('s.parentFocusNote')}·
           <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>{t('p.clearFilter')}</button>
-        </div>
-      )}
-      {subagentFilter !== 'only' && subagentCount > 0 && (
-        <div className={styles.statExtra}>
-          {t('s.subagentOther', { count: subagentCount })}{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}{t('s.subagentNote')}
-        </div>
-      )}
-      {archiveFilter === 'hide' && archivedCount > 0 && (
-        <div className={styles.statExtra}>
-          {t('s.archivedOther', { count: archivedCount })}
         </div>
       )}
 
@@ -394,7 +382,6 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
           <div>{row.lastTime === null ? '—' : dayLabelOf(row.lastTime, options.nowMs) + ' ' + fmtTime(row.lastTime)}</div>
           <div className={listStyles.listSub}>
             {t('d.duration')} {fmtDuration(durationOf(row))}
-            {row.crossDays >= 1 && <span className={listStyles.crossDayTag}>{t('s.crossDaysTag', { count: row.crossDays })}</span>}
           </div>
         </td>
         <td>{fmtTokens(row.tokens)}</td>

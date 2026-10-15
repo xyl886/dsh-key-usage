@@ -19,7 +19,7 @@ type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'callsDesc'
 
 /** 导出列：成本与命中率都给原始数值，方便在表格里继续算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
-  { key: 'workspace', labelKey: 'p.path', value: (row) => row.workspace },
+  { key: 'workspace', labelKey: 'p.path', value: (row) => row.workspace === '' ? (row.paths ?? []).join(' / ') : row.workspace },
   { key: 'dominantProvider', labelKey: 'p.mainChannel', value: (row) => row.dominantProvider },
   { key: 'calls', labelKey: 'common.calls', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
@@ -50,9 +50,14 @@ export function ProjectsTab(props: {
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
-      const matchesQuery = keyword === '' || row.workspace.toLowerCase().includes(keyword)
+      const paths = row.paths ?? [row.workspace]
+      const matchesQuery = keyword === ''
+        || row.workspace.toLowerCase().includes(keyword)
+        || (row.workspaceTitle ?? '').toLowerCase().includes(keyword)
+        || paths.some((path) => path.toLowerCase().includes(keyword))
       const matchesChannel = channelFilter === 'ALL' || row.providers[channelFilter] !== undefined
-      const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace
+      // 联动筛选按**目录**命中：合并行（未归入工作区）也要能被它覆盖的目录筛出来
+      const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace || paths.includes(focusWorkspace)
       return matchesQuery && matchesChannel && matchesFocus
     })
     const sorters: Record<SortKey, (first: ProjectRow, second: ProjectRow) => number> = {
@@ -121,14 +126,16 @@ export function ProjectsTab(props: {
             const dominant = row.dominantProvider
             const channel = channelOf(props.channels, dominant)
             const costCell = costCellOf(channel, row)
+            const paths = row.paths ?? [row.workspace]
+            const isOrphan = row.registered === false
             return (
-              <tr key={row.workspace}>
+              <tr key={row.workspace === '' ? 'orphan' : row.workspace}>
                 <td>
                   <div className={listStyles.listTitle}>
                     <div>
-                      <div className={listStyles.listMain}>{baseNameOf(row.workspace)}</div>
-                      <div className={listStyles.listSub}>
-                        {row.workspace} · {row.sessionCount}{t('common.sessionSuffix')}
+                      <div className={listStyles.listMain}>{row.workspaceTitle ?? (isOrphan ? t('p.orphan') : baseNameOf(row.workspace))}</div>
+                      <div className={listStyles.listSub} title={paths.join('\n')}>
+                        {isOrphan ? t('p.orphanHint', { count: paths.length }) : row.workspace} · {row.sessionCount}{t('common.sessionSuffix')}
                         {row.archivedSessionCount > 0 ? t('p.archivePrefix') + row.archivedSessionCount + t('p.archiveSuffix') : ''}
                       </div>
                     </div>

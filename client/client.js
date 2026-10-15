@@ -59,10 +59,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.first": "首次",
 			"s.last": "最近",
 			"s.crossDays": "跨天",
-			"s.crossDaysTag": "跨 {count} 天",
 			"s.subagentTag": "子代理",
 			"s.parentFocusNote": "只看该会话及其子会话（含父会话行）",
-			"s.subagentNote": "：子会话各自计入统计，不并入父会话",
 			"s.loadMore": "加载更多（+{count}）",
 			"s.shownCount": "已显示 {shown} / {total} 个会话",
 			"s.footnote": "会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
@@ -99,10 +97,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.subagentHide": "只显示主会话",
 			"s.subagentAll": "含子会话",
 			"s.subagentOnly": "仅子会话",
-			"s.subagentOther": "另有 {count} 个子代理会话",
-			"s.archivedOther": "另有 {count} 个已归档会话未显示",
-			"s.subagentHidden": "未显示",
-			"s.subagentShown": "（已显示）",
 			"s.noCost": "无台账成本",
 			"s.expandModels": "展开模型",
 			"s.collapseModels": "收起模型",
@@ -119,7 +113,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.partial": "会话用量不完整",
 			"d.costMode": "计费模式",
 			"d.activeDays": "活跃天数",
-			"d.crossDays": "（跨 {count} 天）",
 			"d.hitRate": "命中率",
 			"d.cacheWrite": "缓存写",
 			"d.ioNote": "输入 + 输出 + 缓存读",
@@ -198,6 +191,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.archivedSessions": "已归档",
 			"p.search": "搜索项目路径",
 			"p.focusPrefix": "仅看项目：",
+			"p.orphan": "未归入工作区",
+			"p.orphanHint": "{count} 个目录不在工作区里",
 			"p.clearFilter": "清除筛选",
 			"p.archivePrefix": "（ ",
 			"p.archiveSuffix": " 个已归档）",
@@ -240,8 +235,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"m.others": "其它",
 			"m.footnote": "模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
 			"m.hitNote": "；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）",
-			"fx.live": "实时上游",
-			"fx.cache": "服务端缓存",
+			"fx.live": "刚刚取到",
+			"fx.cache": "缓存",
 			"fx.default": "默认值",
 			"fx.missing": "还没取到汇率，跨币种按原币种显示",
 			"fx.stale": "已过期",
@@ -296,10 +291,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"q.snapshotPrefix": "，快照 ",
 			"q.stalePrefix": "，",
 			"q.daysStaleSuffix": " 天未更新",
-			"q.modelRatesPrefix": " 个模型单价 · ",
+			"q.modelRatesCount": " 个模型",
 			"q.aggregateSuffix": " · LiteLLM 聚合）",
 			"q.convertedPrefix": "（≈ 为折算值：",
-			"q.rangePrefix": " · 区间 ",
+			"q.ratesRange": " · 近 30 天",
 			"q.partialPrefix": "其中部分 ",
 			"q.priceEntriesSuffix": " 条价目",
 			"q.entriesClose": " 条）",
@@ -371,7 +366,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.timeDuration": "时间 / 时长",
 			"s.empty": "无匹配会话",
 			"s.sessionCost": "会话成本",
-			"q.offPeak": "错峰中",
+			"q.offPeakNow": " · 当前空闲价",
 			"q.catalogPrefix": " 条厂商官方价目，",
 			"q.catalogAuto": "自动生效，不需要维护",
 			"q.aggregateRefreshOnly": "只有点刷新价目时才联网",
@@ -389,7 +384,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
 			"balance.balance": "余额",
-			"balance.currency": "币种",
+			"balance.totalInline": "合计 {value}",
 			"window.5h": "5 小时窗口",
 			"w.5h": "5 小时",
 			"w.week": "本周",
@@ -452,9 +447,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.minutesAgo": "{count} 分钟前",
 			"quota.hoursAgo": "{count} 小时前",
 			"quota.priceUnit": "单价",
-			"quota.displayCurrency": "显示币种",
 			"quota.catalogStale": "价目最近抓取距今 {days} 天，厂商调价后需人工更新",
-			"quota.liveAt": "实时查询于 {time}",
+			"quota.tokensColumn": "用量",
 			"quota.liveFailed": "实时查询未成功（{reason}）",
 			"quota.liveFailedShort": "实时查询未成功",
 			"quota.snapshotAt": "数据时间 {time} · 本机快照 · ",
@@ -525,10 +519,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.first": "First",
 			"s.last": "Last",
 			"s.crossDays": "Days",
-			"s.crossDaysTag": "spanning {count} days",
 			"s.subagentTag": "Subagent",
 			"s.parentFocusNote": "Showing this session and its subagents (parent row included)",
-			"s.subagentNote": ": subagent sessions are counted separately, not merged into the parent",
 			"s.loadMore": "Load more (+{count})",
 			"s.shownCount": "Showing {shown} / {total} sessions",
 			"s.footnote": "Session usage folds host session events (one call per billing sample); cost estimated from the three price layers",
@@ -565,10 +557,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.subagentHide": "Main only",
 			"s.subagentAll": "With sub-sessions",
 			"s.subagentOnly": "Sub-sessions only",
-			"s.subagentOther": "{count} more subagent sessions",
-			"s.archivedOther": "{count} archived sessions hidden",
-			"s.subagentHidden": "hidden",
-			"s.subagentShown": "(shown)",
 			"s.noCost": "No ledger cost",
 			"s.expandModels": "Show models",
 			"s.collapseModels": "Hide models",
@@ -585,7 +573,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.partial": "Session usage incomplete",
 			"d.costMode": "Billing",
 			"d.activeDays": "Active days",
-			"d.crossDays": "(crosses {count} days)",
 			"d.hitRate": "Hit %",
 			"d.cacheWrite": "Cache write",
 			"d.ioNote": "input + output + cache read",
@@ -664,6 +651,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.archivedSessions": "Archived",
 			"p.search": "Search project path",
 			"p.focusPrefix": "Project only: ",
+			"p.orphan": "Outside workspaces",
+			"p.orphanHint": "{count} folders outside workspaces",
 			"p.clearFilter": "Clear filter",
 			"p.archivePrefix": "(",
 			"p.archiveSuffix": " archived included)",
@@ -706,8 +695,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"m.others": "Others",
 			"m.footnote": "Model usage folds host session events (one call per billing sample); cost estimated from the three price layers",
 			"m.hitNote": "; hit rate = cache read ÷ (input + output + cache read)",
-			"fx.live": "Live",
-			"fx.cache": "Cached",
+			"fx.live": "fetched now",
+			"fx.cache": "cached",
 			"fx.default": "Default",
 			"fx.missing": "No FX rate yet, showing original currencies",
 			"fx.stale": "Stale",
@@ -762,10 +751,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"q.snapshotPrefix": ", snapshot ",
 			"q.stalePrefix": ", ",
 			"q.daysStaleSuffix": " days old",
-			"q.modelRatesPrefix": " model rates · ",
+			"q.modelRatesCount": " models",
 			"q.aggregateSuffix": " · LiteLLM)",
 			"q.convertedPrefix": "(≈ converted: ",
-			"q.rangePrefix": " · range ",
+			"q.ratesRange": " · last 30 days",
 			"q.partialPrefix": "partial ",
 			"q.priceEntriesSuffix": " price entries",
 			"q.entriesClose": " entries)",
@@ -837,7 +826,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.timeDuration": "Time / duration",
 			"s.empty": "No matches",
 			"s.sessionCost": "Session cost",
-			"q.offPeak": "Off-peak",
+			"q.offPeakNow": " · off-peak now",
 			"q.catalogPrefix": " vendor catalog entries, ",
 			"q.catalogAuto": "applied automatically",
 			"q.aggregateRefreshOnly": "online only when you refresh prices",
@@ -855,7 +844,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
 			"balance.balance": "Balance",
-			"balance.currency": "Currency",
+			"balance.totalInline": "Total {value}",
 			"window.5h": "5-hour",
 			"w.5h": "5h",
 			"w.week": "Weekly",
@@ -918,9 +907,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.minutesAgo": "{count} min ago",
 			"quota.hoursAgo": "{count} h ago",
 			"quota.priceUnit": "Rates",
-			"quota.displayCurrency": "Currency",
 			"quota.catalogStale": "catalog last fetched {days} days ago; update it when vendors change prices",
-			"quota.liveAt": "live query at {time}",
+			"quota.tokensColumn": "Tokens",
 			"quota.liveFailed": "live query failed ({reason})",
 			"quota.liveFailedShort": "Live query failed",
 			"quota.snapshotAt": "Snapshot {time} · local cache · ",
@@ -4047,7 +4035,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/lists.module.css.mjs
-		const css$2 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);background:0 0;border-radius:9px;flex:1;height:30px;padding:6px 12px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f);height:30px}.ysq2ha_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;border-radius:9px;padding:6px 10px}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_filterSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);text-align:left!important;padding:7px 10px!important}.ysq2ha_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-left:8px}.ysq2ha_rowArchived td{opacity:.5}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTagBtn{font-family:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .92);cursor:pointer;color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);background:0 0;border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500;display:inline}.ysq2ha_subagentTagBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_sessionMetaBtn{font-family:inherit;font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0}.ysq2ha_sessionMetaBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:5px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable{table-layout:fixed}.ysq2ha_sessionTable th:first-child{width:38%}.ysq2ha_sessionTable th:nth-child(2){width:13%}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_sessionTable th:nth-child(4){width:11%}.ysq2ha_sessionTable th:nth-child(5){width:8%}.ysq2ha_sessionTable th:nth-child(6){width:11%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_crossDayTag,.ysq2ha_sessionMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggle{font:inherit;color:inherit;cursor:pointer;background:0 0;border:0;flex-shrink:0;justify-content:center;align-items:center;gap:0;padding:0;display:inline-flex}.ysq2ha_sessionToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggleArrow{width:11px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}.ysq2ha_sessionTitleBtn{min-width:0;font:inherit;font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;overflow:hidden}.ysq2ha_sessionTitleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_composeCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:4px 10px 10px 30px!important}.ysq2ha_composeRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);grid-template-columns:minmax(120px,1.4fr) minmax(60px,.7fr) minmax(90px,1fr) minmax(70px,.8fr);align-items:center;gap:8px;padding:2px 0;display:grid}.ysq2ha_composeHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_composeName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_composeChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-left:6px}.ysq2ha_composeNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 18px 30px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_shareCell{white-space:nowrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailColumns{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:4px 20px;display:grid}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailColumns .ysq2ha_detailBlock{margin-top:14px}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-fill-l1,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:1px;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_searchInput{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}";
+		const css$2 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);background:0 0;border-radius:9px;flex:1;height:30px;padding:6px 12px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f);height:30px}.ysq2ha_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;border-radius:9px;padding:6px 10px}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_filterSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);text-align:left!important;padding:7px 10px!important}.ysq2ha_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-left:8px}.ysq2ha_rowArchived td{opacity:.5}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTagBtn{font-family:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .92);cursor:pointer;color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);background:0 0;border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500;display:inline}.ysq2ha_subagentTagBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_sessionMetaBtn{font-family:inherit;font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0}.ysq2ha_sessionMetaBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:5px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable{table-layout:fixed}.ysq2ha_sessionTable th:first-child{width:38%}.ysq2ha_sessionTable th:nth-child(2){width:13%}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_sessionTable th:nth-child(4){width:11%}.ysq2ha_sessionTable th:nth-child(5){width:8%}.ysq2ha_sessionTable th:nth-child(6){width:11%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_sessionMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggle{font:inherit;color:inherit;cursor:pointer;background:0 0;border:0;flex-shrink:0;justify-content:center;align-items:center;gap:0;padding:0;display:inline-flex}.ysq2ha_sessionToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggleArrow{width:11px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}.ysq2ha_sessionTitleBtn{min-width:0;font:inherit;font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;overflow:hidden}.ysq2ha_sessionTitleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_composeCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:4px 10px 10px 30px!important}.ysq2ha_composeRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);grid-template-columns:minmax(120px,1.4fr) minmax(60px,.7fr) minmax(90px,1fr) minmax(70px,.8fr);align-items:center;gap:8px;padding:2px 0;display:grid}.ysq2ha_composeHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_composeName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_composeChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-left:6px}.ysq2ha_composeNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 18px 30px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_shareCell{white-space:nowrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailColumns{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:4px 20px;display:grid}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailColumns .ysq2ha_detailBlock{margin-top:14px}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-fill-l1,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:1px;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_searchInput{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}";
 		const tagId$2 = "dsh-key-usage/lists.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4069,7 +4057,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"composeName": "ysq2ha_composeName",
 			"composeNumber": "ysq2ha_composeNumber",
 			"composeRow": "ysq2ha_composeRow",
-			"crossDayTag": "ysq2ha_crossDayTag",
 			"dayCount": "ysq2ha_dayCount",
 			"detailBlock": "ysq2ha_detailBlock",
 			"detailBlockTitle": "ysq2ha_detailBlockTitle",
@@ -4407,7 +4394,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			{
 				key: "workspace",
 				labelKey: "p.path",
-				value: (row) => row.workspace
+				value: (row) => row.workspace === "" ? (row.paths ?? []).join(" / ") : row.workspace
 			},
 			{
 				key: "dominantProvider",
@@ -4467,9 +4454,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const visible = (0, react.useMemo)(() => {
 				const keyword = query.trim().toLowerCase();
 				const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
-					const matchesQuery = keyword === "" || row.workspace.toLowerCase().includes(keyword);
+					const paths = row.paths ?? [row.workspace];
+					const matchesQuery = keyword === "" || row.workspace.toLowerCase().includes(keyword) || (row.workspaceTitle ?? "").toLowerCase().includes(keyword) || paths.some((path) => path.toLowerCase().includes(keyword));
 					const matchesChannel = channelFilter === "ALL" || row.providers[channelFilter] !== void 0;
-					const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace;
+					const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace || paths.includes(focusWorkspace);
 					return matchesQuery && matchesChannel && matchesFocus;
 				});
 				const sorters = {
@@ -4592,16 +4580,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							const dominant = row.dominantProvider;
 							const channel = channelOf(props.channels, dominant);
 							const costCell = costCellOf(channel, row);
+							const paths = row.paths ?? [row.workspace];
+							const isOrphan = row.registered === false;
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: lists_module_css_default.listTitle,
 									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 										className: lists_module_css_default.listMain,
-										children: baseNameOf(row.workspace)
+										children: row.workspaceTitle ?? (isOrphan ? t("p.orphan") : baseNameOf(row.workspace))
 									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: lists_module_css_default.listSub,
+										title: paths.join("\n"),
 										children: [
-											row.workspace,
+											isOrphan ? t("p.orphanHint", { count: paths.length }) : row.workspace,
 											" · ",
 											row.sessionCount,
 											t("common.sessionSuffix"),
@@ -4631,7 +4622,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									partial: row.partial
 								})] }) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
-							] }, row.workspace);
+							] }, row.workspace === "" ? "orphan" : row.workspace);
 						}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 							colSpan: 6,
 							className: shared_module_css_default.empty,
@@ -4693,7 +4684,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
-		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:nowrap}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-radius:999px;padding:1px 7px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-bottom:2px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.47);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.ohwLxW_windowValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:3px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;padding:0;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);cursor:pointer;background:0 0;border:0;padding:2px 0}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-bottom:6px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px}.ohwLxW_rateTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_rateNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:normal;text-align:left;max-width:320px}.ohwLxW_rateSourceNone{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_offPeakChip{font-size:calc(var(--dsh-content-font-size,12px) * .92);border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:6px 0}.ohwLxW_fxHint{font-size:calc(var(--dsh-content-font-size,12px) * .96);margin:0}";
+		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:nowrap}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-radius:999px;padding:1px 7px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-bottom:2px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.47);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.ohwLxW_windowValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:3px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;padding:0;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);cursor:pointer;background:0 0;border:0;padding:2px 0}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-bottom:6px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px}.ohwLxW_rateTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_rateSourceNone{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:6px 0}.ohwLxW_fxHint{font-size:calc(var(--dsh-content-font-size,12px) * .96);margin:0}.ohwLxW_balanceTotal{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);font-variant-numeric:tabular-nums;margin-top:6px}";
 		const tagId$1 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4710,6 +4701,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var quota_module_css_default = {
 			"balanceItem": "ohwLxW_balanceItem",
 			"balanceStrip": "ohwLxW_balanceStrip",
+			"balanceTotal": "ohwLxW_balanceTotal",
 			"bsLabel": "ohwLxW_bsLabel",
 			"bsValue": "ohwLxW_bsValue",
 			"countLine": "ohwLxW_countLine",
@@ -4721,7 +4713,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"infoBtn": "ohwLxW_infoBtn",
 			"infoBtnActive": "ohwLxW_infoBtnActive",
 			"liveChip": "ohwLxW_liveChip",
-			"offPeakChip": "ohwLxW_offPeakChip",
 			"pricingInfo": "ohwLxW_pricingInfo",
 			"pricingInfoBody": "ohwLxW_pricingInfoBody",
 			"pricingInfoToggle": "ohwLxW_pricingInfoToggle",
@@ -4736,7 +4727,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rateEmpty": "ohwLxW_rateEmpty",
 			"rateHead": "ohwLxW_rateHead",
 			"rateModel": "ohwLxW_rateModel",
-			"rateNote": "ohwLxW_rateNote",
 			"rateScroll": "ohwLxW_rateScroll",
 			"rateSourceNone": "ohwLxW_rateSourceNone",
 			"rateTable": "ohwLxW_rateTable",
@@ -4746,7 +4736,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"toolbar": "ohwLxW_toolbar",
 			"toolbarBtn": "ohwLxW_toolbarBtn",
 			"toolbarBtnPrimary": "ohwLxW_toolbarBtnPrimary",
-			"toolbarLabel": "ohwLxW_toolbarLabel",
 			"toolbarSpacer": "ohwLxW_toolbarSpacer",
 			"windowBar": "ohwLxW_windowBar",
 			"windowHead": "ohwLxW_windowHead",
@@ -4774,8 +4763,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			totalBalance: "balance.total",
 			topUpBalance: "balance.credit",
 			giftBalance: "balance.grant",
-			balance: "balance.balance",
-			currency: "balance.currency"
+			balance: "balance.balance"
 		};
 		const WINDOW_ORDER = [
 			"5h",
@@ -4950,10 +4938,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: quota_module_css_default.toolbar,
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: quota_module_css_default.toolbarLabel,
-							children: t("quota.displayCurrency")
-						}),
 						DISPLAY_CURRENCIES.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: quota_module_css_default.toolbarBtn + (display.display === currency ? " " + quota_module_css_default.currencyBtnOn : ""),
@@ -5012,6 +4996,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						const isLive = snapshot?.source === "live";
 						const windows = plan !== null && Array.isArray(plan.windows) ? plan.windows : null;
 						const rateRows = rateRowsOf(channel.provider);
+						const balanceView = balance === null ? null : balanceViewOf(balance);
 						const isOpen = props.onlyProvider !== void 0 || expandedProviders[channel.provider] === true;
 						const drawerId = instanceId + "-rates-" + String(index);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -5036,21 +5021,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											className: quota_module_css_default.quotaTitle,
 											children: channel.displayName
 										}),
-										isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: quota_module_css_default.liveChip,
-											children: t("quota.live")
+											children: [t("quota.live"), " · " + freshTextOf(snapshot?.fetchedAt ?? null)]
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.rateCount,
 											children: rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))
 										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.quotaProvider,
-											children: [
-												channel.provider,
-												" · ",
-												t(COST_MODE_KEYS[channel.costMode] ?? "ch.notQueried")
-											]
+											title: channel.provider,
+											children: t(COST_MODE_KEYS[channel.costMode] ?? "ch.notQueried")
 										}),
 										props.onlyProvider === void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.expandArrow,
@@ -5063,9 +5045,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: quota_module_css_default.staleLine,
 									children: [t("quota.snapshotAt", { time: outcome.capturedAt === null ? t("quota.unknown") : localTimeTextOf(outcome.capturedAt) ?? t("quota.unknown") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, { text: t("quota.liveFailedShort") })]
 								}),
-								balance !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								balanceView !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: quota_module_css_default.balanceStrip,
-									children: orderedBalanceEntries(balance).map(([key, value]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									children: balanceView.cards.map(([key, value]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: quota_module_css_default.balanceItem,
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: quota_module_css_default.bsLabel,
@@ -5075,7 +5057,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											children: String(value)
 										})]
 									}, key))
-								}),
+								}), balanceView.totalText === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: quota_module_css_default.balanceTotal,
+									children: balanceView.totalText
+								})] }),
 								balance === null && windows !== null && windows.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: quota_module_css_default.windowRow,
 									children: orderedWindows(windows).map((window) => {
@@ -5113,10 +5098,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.dim,
 									children: emptyReasonOf(channel, snapshot)
 								}),
-								isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: quota_module_css_default.snapshotHint,
-									children: t("quota.liveAt", { time: freshTextOf(snapshot?.fetchedAt ?? null) })
-								}),
 								snapshot !== null && !isLive && snapshot.supported && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: staleDaysOf(snapshot.updatedAt) >= 1 ? quota_module_css_default.snapshotStale : quota_module_css_default.snapshotHint,
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, { text: t("quota.liveFailedShort") }), snapshot.updatedAt === null ? t("q.retryHint") : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t("q.stalePrefix") + staleDaysOf(snapshot.updatedAt) + t("q.daysStaleSuffix") : "")]
@@ -5145,13 +5126,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})
 			] });
 		}
-		/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层。 */
+		/** 卡片头部的单价摘要：收起时也能看出有多少个模型、来源压在哪一层（默认档不占字）。 */
 		function rateCountTextOf(rows, loading, failed, failureText) {
 			if (rows.length > 0) {
 				const counts = /* @__PURE__ */ new Map();
 				for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1);
 				const mix = [...counts.entries()].filter(([source]) => source !== "catalog" && source !== "official").map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
-				return String(rows.length) + t("q.modelRatesPrefix") + mix;
+				return String(rows.length) + t("q.modelRatesCount") + (mix === "" ? "" : " · " + mix);
 			}
 			if (loading) return t("quota.loadingRates");
 			if (failed) return failureText === null ? t("quota.ratesUnavailable") : t("quota.ratesUnavailable") + "：" + failureText;
@@ -5164,18 +5145,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				children: props.loading ? t("quota.loadingRates") : props.failureText !== null ? t("quota.ratesUnavailable") + "：" + props.failureText : t("quota.ratesEmpty")
 			});
 			const converted = props.rows.some((row) => convertsCurrencyOf(row.currency));
+			const offPeakNow = props.rows.some((row) => row.offPeak === true);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: quota_module_css_default.rateHead,
 				children: [
 					t("quota.priceUnit"),
 					"（",
 					t("unit.perMillion"),
-					"）· ",
-					t("quota.displayCurrency"),
-					" ",
+					" · ",
 					DISPLAY_CURRENCY_LABELS[props.display],
+					"）",
 					converted && props.convertedHint !== null ? t("q.convertedPrefix") + props.convertedHint + "）" : "",
-					props.range === null ? "" : t("q.rangePrefix") + props.range.from + " ~ " + props.range.to
+					offPeakNow ? t("q.offPeakNow") : "",
+					props.range === null ? "" : t("q.ratesRange")
 				]
 			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: quota_module_css_default.rateScroll,
@@ -5190,27 +5172,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("d.cacheWrite") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("c.output") }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("quota.sourceLabel") }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.lastActive") }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.model") })
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("quota.tokensColumn") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: props.rows.map((row) => {
 							const rates = row.rates;
 							const hasRates = rates !== null && typeof rates === "object";
 							const rowConverted = convertsCurrencyOf(row.currency);
+							const showCurrency = typeof row.currency === "string" && row.currency !== "" && row.currency.toUpperCase() !== props.display;
+							const note = noteTextOf(row);
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-										className: quota_module_css_default.rateModel,
-										children: row.model
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: quota_module_css_default.rateConverted,
-										children: [t("q.currencyLabel", { value: typeof row.currency === "string" && row.currency !== "" ? row.currency : "—" }), rowConverted ? " → " + props.display : ""]
-									}),
-									row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: quota_module_css_default.offPeakChip,
-										children: t("q.offPeak")
-									})
-								] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: quota_module_css_default.rateModel,
+									children: row.model
+								}), showCurrency && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: quota_module_css_default.rateConverted,
+									children: [t("q.currencyLabel", { value: row.currency ?? "" }), rowConverted ? " → " + props.display : ""]
+								})] }),
 								hasRates ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.input) }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheRead) }),
@@ -5219,21 +5195,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: quota_module_css_default.rateEmpty,
 									colSpan: 4,
-									children: noteTextOf(row) !== "" ? noteTextOf(row) : noRateTextOf(row.source)
+									children: note !== "" ? note : noRateTextOf(row.source)
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: quota_module_css_default.rateSourceNone,
-									title: costSourceHintOf("none", row.partial),
-									children: t("q.noBasis")
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
-									source: row.source,
-									partial: row.partial
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(typeof row.tokens === "number" && Number.isFinite(row.tokens) ? row.tokens : 0) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: quota_module_css_default.rateNote,
-									children: row.note !== null && row.note !== "" ? row.note : "—"
-								})
+									title: note === "" ? void 0 : note,
+									children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: quota_module_css_default.rateSourceNone,
+										title: costSourceHintOf("none", row.partial),
+										children: t("q.noBasis")
+									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+										source: row.source,
+										partial: row.partial
+									})
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(typeof row.tokens === "number" && Number.isFinite(row.tokens) ? row.tokens : 0) })
 							] }, row.model);
 						}) })]
 					})
@@ -5304,6 +5279,42 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}
 			for (const entry of entries) if (!BALANCE_ORDER.includes(entry[0])) ordered.push(entry);
 			return ordered;
+		}
+		/**
+		* 余额卡片：总余额 = 充值 + 赠送时它是派生值，不再单列一张卡；币种不单独占卡，并进值里。
+		* 拿不到这三项（别的通道返回形状不同）时退回原样，保证任何形状都不会把余额整块吞掉。
+		*/
+		function balanceViewOf(balance) {
+			const entries = orderedBalanceEntries(balance);
+			const valueOf = (key) => {
+				const hit = entries.find(([entryKey]) => entryKey === key);
+				return hit !== void 0 && typeof hit[1] === "number" ? hit[1] : null;
+			};
+			const currency = typeof balance.currency === "string" && balance.currency !== "" ? balance.currency : "";
+			const total = valueOf("totalBalance");
+			const credit = valueOf("topUpBalance");
+			const grant = valueOf("giftBalance");
+			const withoutCurrency = entries.filter(([key]) => key !== "currency");
+			if (withoutCurrency.length === 0) return {
+				cards: entries,
+				totalText: null
+			};
+			const withCurrency = (value) => String(value) + (currency === "" ? "" : " " + currency);
+			if (total !== null && credit !== null && grant !== null && Math.abs(credit + grant - total) <= .02) return {
+				cards: withoutCurrency.filter(([key]) => key !== "totalBalance"),
+				totalText: t("balance.totalInline", { value: withCurrency(total) })
+			};
+			let currencyPlaced = false;
+			return {
+				cards: withoutCurrency.map(([key, value]) => {
+					if (key === "totalBalance" || !currencyPlaced && total === null && !entries.some(([entryKey]) => entryKey === "totalBalance")) {
+						currencyPlaced = true;
+						return [key, withCurrency(value)];
+					}
+					return [key, value];
+				}),
+				totalText: null
+			};
 		}
 		function orderedWindows(windows) {
 			return [...windows].sort((first, second) => {
@@ -5477,7 +5488,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 								label: t("d.duration"),
-								value: fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t("d.crossDays", { count: session.crossDays }) : "")
+								value: fmtDuration(session.durationMs)
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
 								label: t("d.activeDays"),
@@ -5798,8 +5809,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [detailId, setDetailId] = (0, react.useState)(null);
 			const [nowMs] = (0, react.useState)(() => Date.now());
 			const rows = props.data?.rows ?? [];
-			const archivedCount = rows.filter((row) => row.archived).length;
-			const subagentCount = rows.filter((row) => row.origin === "subagent" || (row.parentSessionId ?? null) !== null).length;
 			dropEmptyRows(rows, (row) => row.tokens).hidden;
 			(0, react.useEffect)(() => {
 				setPageSize(PAGE_SIZE);
@@ -6043,18 +6052,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						})
 					]
 				}),
-				subagentFilter !== "only" && subagentCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: shared_module_css_default.statExtra,
-					children: [
-						t("s.subagentOther", { count: subagentCount }),
-						subagentFilter === "hide" ? t("s.subagentHidden") : t("s.subagentShown"),
-						t("s.subagentNote")
-					]
-				}),
-				archiveFilter === "hide" && archivedCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.statExtra,
-					children: t("s.archivedOther", { count: archivedCount })
-				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: ui_module_css_default.tableScroll,
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
@@ -6213,11 +6210,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: [
 							t("d.duration"),
 							" ",
-							fmtDuration(durationOf(row)),
-							row.crossDays >= 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: lists_module_css_default.crossDayTag,
-								children: t("s.crossDaysTag", { count: row.crossDays })
-							})
+							fmtDuration(durationOf(row))
 						]
 					})] }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
