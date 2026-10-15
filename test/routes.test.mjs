@@ -651,7 +651,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
   assert.equal(ratesOpencode.currency, null, '没有任何币种依据')
   assert.equal(ratesOpencode.models.length, 1)
   assert.deepEqual(Object.keys(ratesOpencode.models[0]).sort(), [
-    'calls', 'currency', 'model', 'note', 'offPeak', 'partial', 'rates', 'source', 'tokens',
+    'calls', 'currency', 'model', 'note', 'noteEn', 'offPeak', 'partial', 'rates', 'source', 'tokens',
   ])
   assert.equal(ratesOpencode.models[0].model, 'GLM-5.3-Flash')
   assert.equal(ratesOpencode.models[0].source, 'none')

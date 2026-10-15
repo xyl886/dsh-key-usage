@@ -643,7 +643,9 @@ assert.equal(clockMinutes(900), null)
   assert.ok(entries.length > 0, '内置价目非空')
 
   // 迁移回归基线：YAML 读出来的 18 条与迁移前 lib 导出的条目**逐字段深度相等**（含顺序）
-  assert.deepEqual(entries, GOLDEN_CATALOG, 'pricing-catalog.yml 必须与迁移基线 test/fixtures/pricing-catalog.golden.json 完全一致')
+  // 基线只冻结价目事实：note / noteEn 是文案（随语言与措辞调整），不参与对比
+  const slim = (list) => list.map((entry) => { const copy = { ...entry }; delete copy.note; delete copy.noteEn; return copy })
+  assert.deepEqual(slim(entries), GOLDEN_CATALOG, 'pricing-catalog.yml 必须与迁移基线 test/fixtures/pricing-catalog.golden.json 完全一致（忽略文案字段）')
 
   // 迁移过来的文件本身必须是干净的：一条 issue 都不能有，且文件真的在包根
   assert.deepEqual(catalogIssues(), [], '内置价目文件不该有任何解析 issue')
@@ -781,7 +783,7 @@ assert.equal(clockMinutes(900), null)
   )
   assert.equal(parsed.entries[0].offPeak, undefined, '没有可用窗口 → 按无错峰处理')
   assert.deepEqual(Object.keys(parsed.entries[0]).sort(), [
-    'cacheRead', 'cacheWrite', 'currency', 'fetchedAt', 'input', 'model', 'note', 'output', 'provider', 'source', 'unit',
+    'cacheRead', 'cacheWrite', 'currency', 'fetchedAt', 'input', 'model', 'note', 'noteEn', 'output', 'provider', 'source', 'unit',
   ], '空窗口的条目不该留下 offPeak 键')
   assert.equal(parsed.entries[1].cacheWrite, 1, '打错的 sources 不当成 source')
 

@@ -46,6 +46,8 @@ export interface PricingRule extends PricingRates {
   currency: string
   offPeak: OffPeakPricing | null
   note: string
+  /** 英文口径说明（英文模式渲染用） */
+  noteEn?: string
 }
 
 /** 待计费的一行用量；分桶缺失时用 `tokens` 按输入价兜底。 */

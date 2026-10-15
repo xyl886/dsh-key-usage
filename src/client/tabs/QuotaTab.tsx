@@ -449,7 +449,7 @@ function RateTable(props: {
                     )
                     : (
                       <td className={quotaStyles.rateEmpty} colSpan={4}>
-                        {noteTextOf(row.note) !== '' ? noteTextOf(row.note) : noRateTextOf(row.source)}
+                        {noteTextOf(row) !== '' ? noteTextOf(row) : noRateTextOf(row.source)}
                       </td>
                     )}
                   <td>
@@ -687,10 +687,14 @@ function freshTextOf(fetchedAt: number | null): string {
 }
 
 /** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
-function noteTextOf(note: string | null | undefined): string {
-  if (note === null || note === undefined || note === '') return ''
-  if (isEnglish() && /[\u4e00-\u9fa5]/.test(note)) return t('srv.rateNoteEn')
-  return serverText(note)
+function noteTextOf(row: { note?: string | null; noteEn?: string | null }): string {
+  const note = row.note ?? ''
+  if (isEnglish()) {
+    const english = row.noteEn ?? ''
+    if (english !== '') return english
+    if (/[\u4e00-\u9fa5]/.test(note)) return t('srv.rateNoteEn')
+  }
+  return note === '' ? '' : serverText(note)
 }
 
 function errorTextOf(error: string | null): string {

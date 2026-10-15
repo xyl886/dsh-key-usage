@@ -1110,6 +1110,7 @@ export function mountKeyUsageRoutes(
                 output: effective.rates.output,
               },
               note: ratesNoteOf(hit, average),
+      noteEn: hit === null || hit.rule.noteEn === undefined ? null : hit.rule.noteEn,
             }
           })
         const currencies = new Set(rankedModels.map((row) => row.currency).filter((value): value is string => value !== null))

@@ -35,6 +35,8 @@ export interface CatalogEntry extends Partial<PricingRates> {
   fetchedAt: string
   /** 口径与来源说明（时间段换算依据、缺档原因等）。 */
   note: string
+  /** 英文口径说明（客户端的英文模式用；缺省时客户端回落结构化指引） */
+  noteEn: string | null
 }
 
 /** 内置价目的覆盖摘要（计费面板展示「已内置 N 条，来源见 …」）。 */
@@ -205,6 +207,7 @@ function toPricingRule(entry: CatalogEntry): PricingRule {
       windows: entry.offPeak.windows,
     },
     note: entry.note + '（来源：' + entry.source + '，抓取 ' + entry.fetchedAt + '）',
+    noteEn: (entry.noteEn ?? entry.note) + ' (source: ' + entry.source + ', fetched ' + entry.fetchedAt + ')' ,
   }
 }
 
@@ -213,7 +216,7 @@ function toPricingRule(entry: CatalogEntry): PricingRule {
 const RATE_KEYS = ['input', 'cacheRead', 'cacheWrite', 'output'] as const
 
 /** 条目级 / offPeak 级允许的键；其余键报 issue 但继续解析（手写改价时打错键名不能静默失效）。 */
-const ENTRY_KEYS = ['provider', 'model', 'unit', 'currency', ...RATE_KEYS, 'source', 'fetchedAt', 'note', 'offPeak']
+const ENTRY_KEYS = ['provider', 'model', 'unit', 'currency', ...RATE_KEYS, 'source', 'fetchedAt', 'note', 'noteEn', 'offPeak']
 const OFFPEAK_KEYS = [...RATE_KEYS, 'windows']
 
 function describeNode(node: YamlNode): string {
@@ -307,6 +310,7 @@ function parseCatalogEntry(node: YamlNode, line: number, issues: YamlIssue[]): C
     return null
   }
   const note = yamlText(yamlField(node, 'note'))
+  const noteEn = yamlText(yamlField(node, 'noteEn'))
   if (note === null || note === '') {
     issues.push({ line, message: label + ' 缺少 note（口径说明），整条跳过' })
     return null
@@ -338,6 +342,7 @@ function parseCatalogEntry(node: YamlNode, line: number, issues: YamlIssue[]): C
     source,
     fetchedAt,
     note,
+    noteEn,
   }
   const offPeakNode = yamlField(node, 'offPeak')
   if (offPeakNode !== null) {

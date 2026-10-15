@@ -4545,7 +4545,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: quota_module_css_default.rateEmpty,
 									colSpan: 4,
-									children: noteTextOf(row.note) !== "" ? noteTextOf(row.note) : noRateTextOf(row.source)
+									children: noteTextOf(row) !== "" ? noteTextOf(row) : noRateTextOf(row.source)
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: quota_module_css_default.rateSourceNone,
@@ -4811,10 +4811,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return Math.floor(minutes / 60) + t("q.hoursAgoSuffix");
 		}
 		/** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
-		function noteTextOf(note) {
-			if (note === null || note === void 0 || note === "") return "";
-			if (isEnglish() && /[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
-			return serverText(note);
+		function noteTextOf(row) {
+			const note = row.note ?? "";
+			if (isEnglish()) {
+				const english = row.noteEn ?? "";
+				if (english !== "") return english;
+				if (/[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
+			}
+			return note === "" ? "" : serverText(note);
 		}
 		function errorTextOf(error) {
 			if (error === null) return t("err.noLiveQuery");
