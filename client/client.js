@@ -4354,7 +4354,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [nowMs] = (0, react.useState)(() => Date.now());
 			const rows = props.data?.rows ?? [];
 			const archivedCount = rows.filter((row) => row.archived).length;
-			const subagentCount = rows.filter((row) => row.origin === "subagent").length;
+			const subagentCount = rows.filter((row) => row.origin === "subagent" || (row.parentSessionId ?? null) !== null).length;
 			const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden;
 			(0, react.useEffect)(() => {
 				setPageSize(PAGE_SIZE);
@@ -4376,7 +4376,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					const matchesChannel = channelFilter === "ALL" || row.provider === channelFilter;
 					const matchesAge = maxAgeDays === 0 || row.lastTime === null || nowMs - row.lastTime <= maxAgeDays * 864e5;
 					const matchesArchive = archiveFilter === "all" || (archiveFilter === "only" ? row.archived : !row.archived);
-					const isSubagent = row.origin === "subagent";
+					const isSubagent = row.origin === "subagent" || (row.parentSessionId ?? null) !== null;
 					const matchesSubagent = subagentFilter === "all" || (subagentFilter === "only" ? isSubagent : !isSubagent);
 					const matchesFocus = parentFocus === null || row.id === parentFocus || row.parentSessionId === parentFocus;
 					return matchesQuery && matchesChannel && matchesAge && matchesArchive && matchesSubagent && matchesFocus;
@@ -4563,7 +4563,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 									value: "hide",
-									children: "隐藏子会话"
+									children: "只显示主会话"
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 									value: "all",

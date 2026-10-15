@@ -61,7 +61,7 @@ export function SessionsTab(props: {
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
   const archivedCount = rows.filter((row) => row.archived).length
-  const subagentCount = rows.filter((row) => row.origin === 'subagent').length
+  const subagentCount = rows.filter((row) => row.origin === 'subagent' || (row.parentSessionId ?? null) !== null).length
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
   // 换了筛选 / 搜索 / 排序就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
@@ -78,7 +78,8 @@ export function SessionsTab(props: {
       const matchesAge = maxAgeDays === 0 || row.lastTime === null
         || (nowMs - row.lastTime) <= maxAgeDays * 86400000
       const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'only' ? row.archived : !row.archived)
-      const isSubagent = row.origin === 'subagent'
+      // 判定子会话：origin 优先，缺字段时看父会话 id（服务端旧版本 / header 没带 origin 也要能隐藏）
+      const isSubagent = row.origin === 'subagent' || (row.parentSessionId ?? null) !== null
       const matchesSubagent = subagentFilter === 'all' || (subagentFilter === 'only' ? isSubagent : !isSubagent)
       // 聚焦某个会话时只留它自己和它的子会话（从子会话标签或父行的小计按钮进来）
       const matchesFocus = parentFocus === null || row.id === parentFocus || row.parentSessionId === parentFocus
@@ -190,7 +191,7 @@ export function SessionsTab(props: {
           onChange={(event) => setSubagentFilter(event.target.value as 'hide' | 'all' | 'only')}
           title="子代理跑在自己的子会话里，单独成行会淹没主会话；子会话单独计入统计，不并进父会话"
         >
-          <option value="hide">隐藏子会话</option>
+          <option value="hide">只显示主会话</option>
           <option value="all">显示子会话</option>
           <option value="only">仅显示子会话</option>
         </select>
