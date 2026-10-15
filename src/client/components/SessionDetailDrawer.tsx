@@ -239,7 +239,7 @@ function hourChartSummary(hours: Array<{ calls: number; tokens: number }>): stri
 
 function DetailItem(props: { label: string; value: string; wide?: boolean }): ReactNode {
   return (
-    <div className={props.wide === true ? listStyles.detailItemWide : listStyles.detailItemWide}>
+    <div className={props.wide === true ? listStyles.detailItemWide : undefined}>
       <div className={listStyles.detailItemLabel}>{props.label}</div>
       <div className={listStyles.detailItemValue}>{props.value}</div>
     </div>

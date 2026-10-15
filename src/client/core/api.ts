@@ -17,6 +17,7 @@ import type {
   UsageResponse,
 } from './types.ts'
 import { t } from './i18n.ts'
+import { logError } from './log.ts'
 
 /** 最近一次请求失败的原因，按路径记住（空态文案据此指向「要重启宿主」）。 */
 const failureReasons = new Map<string, string>()

@@ -1,10 +1,11 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll } from './core/api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
-import { useT } from './core/i18n.ts'
+import { t, useT } from './core/i18n.ts'
 import { PLUGIN_VERSION } from './core/version.ts'
+import { clearLog, logEntries, logText, subscribeLog } from './core/log.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
@@ -67,6 +68,7 @@ export function KeyUsageSection() {
   const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
   /** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
   const [showCaliber, setShowCaliber] = useState(false)
+  const [showLog, setShowLog] = useState(false)
   /** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
   const t = useT()
   const lastSnapshotAt = useRef(0)
@@ -200,6 +202,14 @@ export function KeyUsageSection() {
       <div className={styles.title}>
         <span>{t('app.title')}</span>
         <span className={styles.titleActions}>
+          <Button size="sm" ariaLabel={t('log.title')} title={t('log.title')} onClick={() => setShowLog(true)}>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <rect x="1.6" y="2.2" width="12.8" height="11.6" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <rect x="3.6" y="4.6" width="5.2" height="1.4" rx="0.7" fill="currentColor" />
+              <rect x="3.6" y="7.4" width="8.8" height="1.4" rx="0.7" fill="currentColor" />
+              <rect x="3.6" y="10.2" width="6.6" height="1.4" rx="0.7" fill="currentColor" />
+            </svg>
+          </Button>
           <Button size="sm" onClick={() => setShowCaliber(true)} ariaLabel={t('action.caliber')} title={t('action.caliber')}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
               <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
@@ -306,7 +316,37 @@ export function KeyUsageSection() {
         </ul>
       </Dialog>)}
 
+      {showLog && (
+      <Dialog title={t('log.title')} closeLabel={t('action.close')} onClose={() => setShowLog(false)}>
+        <LogPanel />
+      </Dialog>)}
+
       <TooltipView tooltip={tooltip.tooltip} />
+    </div>
+  )
+}
+
+/** 系统日志面板：内存日志（不落盘），出问题时能看见原因。 */
+function LogPanel(): ReactNode {
+  const [entries, setEntries] = useState(logEntries)
+  useEffect(() => subscribeLog(() => setEntries(logEntries())), [])
+  if (entries.length === 0) return <div className={styles.logEmpty}>—</div>
+  return (
+    <div>
+      <div className={styles.logActions}>
+        <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(logText()) }}>{t('log.copy')}</Button>
+        <Button size="sm" onClick={() => { clearLog() }}>{t('log.clear')}</Button>
+      </div>
+      <ul className={styles.logList}>
+        {[...entries].reverse().map((entry) => (
+          <li key={entry.id} className={styles.logRow}>
+            <span className={styles.logTime}>{new Date(entry.time).toLocaleTimeString('zh-CN', { hour12: false })}</span>
+            <span className={styles.logLevel + ' ' + (entry.level === 'error' ? styles.logError : entry.level === 'warn' ? styles.logWarn : '')}>{entry.level}</span>
+            <span className={styles.logSource}>{entry.source}</span>
+            <span className={styles.logMessage}>{entry.message}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

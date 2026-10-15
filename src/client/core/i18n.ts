@@ -10,6 +10,7 @@
  */
 import { useSyncExternalStore } from 'react'
 import { en, zh } from './copy.ts'
+import { logOnce } from './log.ts'
 
 /** 宿主 locale 服务的形状（只声明我们用到的方法，宿主版本不同也能跑）。 */
 export interface LocaleFace {
@@ -56,6 +57,7 @@ export function t(key: string, params?: Record<string, string | number>): string
   let text = key
   if (bound !== null) {
     const translated = bound(key)
+    if (translated === key && zh[key] === undefined) logOnce('warn', 'i18n', key, '缺词：' + key)
     text = translated === key ? (zh[key] ?? key) : translated
   } else {
     text = zh[key] ?? key

@@ -151,3 +151,15 @@
 
 /* 口径弹窗里的版本号：弱化一行，便于报问题时报出来 */
 .caliberVersion { margin: 0 0 8px; font-size: 11.5px; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
+
+/* 系统日志：时间 / 级别 / 来源 / 内容 四列，等宽数字对齐 */
+.logActions { display: flex; gap: 8px; margin-bottom: 10px; }
+.logEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; }
+.logList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.logRow { display: grid; grid-template-columns: 68px 44px 62px 1fr; gap: 8px; font-size: 11.5px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.logTime { color: var(--dsw-alias-label-tertiary, #67676f); }
+.logLevel { color: var(--dsw-alias-label-tertiary, #67676f); }
+.logWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+.logError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.logSource { color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }

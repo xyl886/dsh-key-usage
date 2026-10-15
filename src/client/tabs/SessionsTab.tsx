@@ -78,7 +78,8 @@ export function SessionsTab(props: {
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     const maxAgeDays = Number(daysFilter)
-    const filtered = rows.filter((row) => {
+    // 没有人类提问的会话（标题与首条提问都空）不显示：那是 teammate / 系统会话，列出来只是噪音
+    const filtered = rows.filter((row) => (row.title ?? '') !== '' || (row.prompt ?? '') !== '').filter((row) => {
       // 首条提问正文也参与搜索：系统注入文本已在服务端被跳过，这里拿到的是真实提问
       const haystack = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '') + ' ' + (row.prompt ?? '')
       const matchesQuery = keyword === '' || haystack.toLowerCase().includes(keyword)
