@@ -555,7 +555,7 @@ function PricingInfoBlock(props: {
                 <span className={pricingStyles.issueWhere}>
                   内置价目{issue.line === null ? '' : t('q.rowPrefix') + String(issue.line) + t('q.rowSuffix')}
                 </span>
-                {issue.message}
+                {issueTextOf(issue)}
               </li>
             ))}
           </ul>
@@ -606,7 +606,7 @@ function PricingInfoBlock(props: {
               {aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => (
                 <li key={issue.kind + '|' + String(index)}>
                   <span className={pricingStyles.issueWhere}>{issue.kind}</span>
-                  {issue.message}
+                  {issueTextOf(issue)}
                 </li>
               ))}
             </ul>
@@ -695,6 +695,13 @@ function noteTextOf(row: { note?: string | null; noteEn?: string | null }): stri
     if (/[\u4e00-\u9fa5]/.test(note)) return t('srv.rateNoteEn')
   }
   return note === '' ? '' : serverText(note)
+}
+
+/** 快照 issue：kind 机器可读，英文模式按 kind 渲染；中文模式保留服务端原文（含路径与数字）。 */
+function issueTextOf(issue: { kind?: string; message: string }): string {
+  if (!isEnglish() || issue.kind === undefined) return issue.message
+  const english = t('issue.' + issue.kind)
+  return english === 'issue.' + issue.kind ? issue.message : english
 }
 
 function errorTextOf(error: string | null): string {

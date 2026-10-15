@@ -183,6 +183,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.noData": "暂无数据",
 			"sh.morePrefix": "，等 ",
 			"sh.moreSuffix": " 项",
+			"issue.build-failed": "快照构建失败，沿用上一份",
+			"issue.build-duration": "构建耗时偏长",
+			"issue.quota-failed": "配额查询失败",
+			"issue.write-failed": "快照写入失败",
 			"srv.rateNoteEn": "价目细节见下方费率与来源",
 			"srv.ratesAverage": "按台账均价估算",
 			"srv.ratesNone": "暂无价格依据",
@@ -585,6 +589,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.noData": "No data",
 			"sh.morePrefix": ", +",
 			"sh.moreSuffix": " more",
+			"issue.build-failed": "Snapshot build failed; keeping the previous one",
+			"issue.build-duration": "Build is slow",
+			"issue.quota-failed": "Quota query failed",
+			"issue.write-failed": "Snapshot write failed",
 			"srv.rateNoteEn": "see rates, source and date below",
 			"srv.ratesAverage": "ledger average estimate",
 			"srv.ratesNone": "no price basis",
@@ -4651,7 +4659,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: pricing_module_css_default.issueWhere,
 								children: ["内置价目", issue.line === null ? "" : t("q.rowPrefix") + String(issue.line) + t("q.rowSuffix")]
-							}), issue.message] }, String(issue.file) + "|" + String(issue.line) + "|" + String(index)))
+							}), issueTextOf(issue)] }, String(issue.file) + "|" + String(issue.line) + "|" + String(index)))
 						}),
 						issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: pricing_module_css_default.issueNote,
@@ -4720,7 +4728,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: pricing_module_css_default.issueWhere,
 									children: issue.kind
-								}), issue.message] }, issue.kind + "|" + String(index)))
+								}), issueTextOf(issue)] }, issue.kind + "|" + String(index)))
 							})]
 						})
 					]
@@ -4819,6 +4827,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (/[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
 			}
 			return note === "" ? "" : serverText(note);
+		}
+		/** 快照 issue：kind 机器可读，英文模式按 kind 渲染；中文模式保留服务端原文（含路径与数字）。 */
+		function issueTextOf(issue) {
+			if (!isEnglish() || issue.kind === void 0) return issue.message;
+			const english = t("issue." + issue.kind);
+			return english === "issue." + issue.kind ? issue.message : english;
 		}
 		function errorTextOf(error) {
 			if (error === null) return t("err.noLiveQuery");
