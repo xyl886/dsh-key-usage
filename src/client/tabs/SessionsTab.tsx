@@ -225,12 +225,12 @@ export function SessionsTab(props: {
       )}
       {subagentFilter !== 'only' && subagentCount > 0 && (
         <div className={styles.statExtra}>
-          另有 {subagentCount} 个子代理会话{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}：子会话各自计入统计，不并入父会话
+          {t('s.subagentOther', { count: subagentCount })}{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}：子会话各自计入统计，不并入父会话
         </div>
       )}
       {archiveFilter === 'hide' && archivedCount > 0 && (
         <div className={styles.statExtra}>
-          另有 {archivedCount} 个已归档会话未显示（归档只是标记，用量仍计入上方统计）
+          {t('s.archivedOther', { count: archivedCount })}
         </div>
       )}
 

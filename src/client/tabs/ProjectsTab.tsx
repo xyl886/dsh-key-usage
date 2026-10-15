@@ -155,7 +155,7 @@ export function ProjectsTab(props: {
       </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        成本按三层价目自动估算{props.data.priced ? '' : t('s.noCost')}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
+        {t('p.costHint')}{props.data.priced ? '' : t('s.noCost')}{t('p.hitHint')}
       </div>
     </div>
   )

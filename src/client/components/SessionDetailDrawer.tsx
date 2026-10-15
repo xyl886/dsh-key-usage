@@ -99,7 +99,7 @@ export function SessionDetailDrawer(props: {
         {props.subagents.length > 0 && (
           <div className={listStyles.subagentBlock}>
             <div className={listStyles.subagentBlockTitle}>
-              子会话 {props.subagents.length} 个（子代理各自计入统计，不并入本会话）
+              {t('d.subagentCount', { count: props.subagents.length })}
             </div>
             {props.subagents.map((child) => (
               <button
@@ -117,6 +117,12 @@ export function SessionDetailDrawer(props: {
       </div>
     </div>
   )
+}
+
+/** teammate / 系统会话的标题是运行时注入的长句，列表里只显示「系统会话」，细节看时间与目录。 */
+function systemTitleOf(title: string | null): string {
+  if (title === null || title.trim() === '') return t('d.systemSession')
+  return /^(Current runtime context|no prompt)/i.test(title.trim()) ? t('d.systemSession') : title
 }
 
 function SessionDetailBody(props: { session: SessionDetail; channels: Channel[]; priced: boolean }): ReactNode {

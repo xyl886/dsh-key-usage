@@ -225,7 +225,7 @@ export function DetailTab(props: {
         <div className={detailStyles.rangeLeft}>
           <div className={detailStyles.rangeTabs}>
             {RANGE_TABS.map(([key, label]) => (
-              <button key={key} className={props.range === key ? detailStyles.active : ''} onClick={() => props.onRange(key)}>{label}</button>
+              <button key={key} className={props.range === key ? detailStyles.active : ''} onClick={() => props.onRange(key)}>{t(label)}</button>
             ))}
           </div>
           {props.range === 'custom' && (

@@ -12,6 +12,13 @@ const KEYS: Record<string, string> = {
   '当前注入的会话数据源不支持单会话查询': 'srv.noSingleSession',
   '会话详情不可用': 'srv.sessionDetailUnavailable',
   '宿主没有会话服务': 'srv.noSessionService',
+  // 配额查询的失败码（服务端只发机器码，这里翻成可读文案）
+  'no-snapshot': 'srv.code.noSnapshot',
+  'no-credential': 'srv.code.noCredential',
+  'unsupported': 'srv.code.unsupported',
+  'host-unavailable': 'srv.code.hostUnavailable',
+  'fetch-failed': 'srv.code.fetchFailed',
+  'timeout': 'srv.code.timeout',
 }
 
 export function serverText(text: string | null | undefined): string {

@@ -69,7 +69,10 @@ export function fmtDuration(milliseconds: number | null): string {
   if (milliseconds === null || milliseconds <= 0) return '—'
   const minutes = Math.max(1, Math.round(milliseconds / 60000))
   if (minutes < 60) return `${minutes}m`
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+  const hours = Math.floor(minutes / 60)
+  // 跨天会话（例如 243h）显示成「10 天 3h」，否则一列都读不出量级
+  if (hours >= 24) return t('fmt.dayHour', { days: Math.floor(hours / 24), hours: hours % 24 })
+  return `${hours}h ${minutes % 60}m`
 }
 
 /** 最近活跃：刚刚 / N 分钟前 / N 小时前 / N 天前。 */

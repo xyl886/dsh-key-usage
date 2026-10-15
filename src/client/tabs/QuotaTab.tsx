@@ -242,7 +242,7 @@ export function QuotaTab(props: {
 
       {catalogStale !== null && (
         <div className={quotaStyles.staleLine}>
-          价目最新一次抓取距今 {String(catalogStale)} 天，建议按官方文档复核价目（价目是静态数据，厂商调价后要人工更新）。
+          {t('quota.catalogStale', { days: catalogStale })}
         </div>
       )}
 
@@ -335,12 +335,12 @@ export function QuotaTab(props: {
 
               {isLive && (
                 <div className={quotaStyles.snapshotHint}>
-                  实时查询于 {freshTextOf(snapshot?.fetchedAt ?? null)}（来自官方接口，最多缓存 1 分钟）
+                  {t('quota.liveAt', { time: freshTextOf(snapshot?.fetchedAt ?? null) })}
                 </div>
               )}
               {snapshot !== null && !isLive && snapshot.supported && (
                 <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
-                  实时查询未成功（{errorTextOf(snapshot.error)}）
+                  {t('quota.liveFailed', { reason: errorTextOf(snapshot.error) })}
                   {snapshot.updatedAt === null
                     ? t('q.retryHint')
                     : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t('q.stalePrefix') + staleDaysOf(snapshot.updatedAt) + t('q.daysStaleSuffix') : '')}
