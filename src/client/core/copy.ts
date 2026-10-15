@@ -184,6 +184,7 @@ export const zh: Record<string, string> = {
   'h.tip': '每格一天 Tokens，颜色越深用量越高',
   'h.noUsage': '当日无用量',
   'h.noLedger': '台账未覆盖',
+  'sh.shareAll': '全部占比',
   'sh.channels': '通道占比',
   'sh.models': '模型占比',
   'sh.noData': '暂无数据',

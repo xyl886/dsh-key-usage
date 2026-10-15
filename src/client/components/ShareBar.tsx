@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../core/channels.ts'
 import { fmtTokens } from '../core/format.ts'
 import type { Channel, UsageResponse } from '../core/types.ts'
-import type { TooltipApi } from '../core/tooltip.tsx'
+import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
 import { t, useT } from '../core/i18n.ts'
@@ -70,7 +70,27 @@ export function ShareBar(props: {
   return (
     <div className={styles.card}>
       <div className={styles.statLabel}>{title}</div>
-      <div className={detailStyles.shareBar} role="img" aria-label={shareSummary}>
+      <div
+        className={detailStyles.shareBar}
+        role="img"
+        aria-label={shareSummary}
+        onMouseMove={(event) => props.tooltip.show(event, (
+          <>
+            <TipTitle>{title}</TipTitle>
+            <TipSub>{t('sh.shareAll')}</TipSub>
+            {rows.map((row) => (
+              <TipRow
+                key={row.key}
+                color={row.color}
+                label={row.label}
+                amount={fmtTokens(row.tokens)}
+                rate={(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + '%'}
+              />
+            ))}
+          </>
+        ))}
+        onMouseLeave={props.tooltip.hide}
+      >
         {rows.map((row) => {
           const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0
           return (

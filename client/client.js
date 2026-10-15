@@ -185,6 +185,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"h.tip": "每格一天 Tokens，颜色越深用量越高",
 			"h.noUsage": "当日无用量",
 			"h.noLedger": "台账未覆盖",
+			"sh.shareAll": "全部占比",
 			"sh.channels": "通道占比",
 			"sh.models": "模型占比",
 			"sh.noData": "暂无数据",
@@ -2524,6 +2525,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: detail_module_css_default.shareBar,
 					role: "img",
 					"aria-label": shareSummary,
+					onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: title }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("sh.shareAll") }),
+						rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
+							color: row.color,
+							label: row.label,
+							amount: fmtTokens(row.tokens),
+							rate: (totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%"
+						}, row.key))
+					] })),
+					onMouseLeave: props.tooltip.hide,
 					children: rows.map((row) => {
 						totalTokens > 0 && Math.round(row.tokens / totalTokens * 100);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
