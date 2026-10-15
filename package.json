@@ -28,11 +28,13 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "docs/images/usage-overview.png",
-    "docs/images/usage-daily.png",
-    "docs/images/按模型.png",
-    "docs/images/项目总量.png",
-    "docs/images/usage-quota.png"
+    "docs/images/overview.png",
+    "docs/images/daily.png",
+    "docs/images/projects.png",
+    "docs/images/models.png",
+    "docs/images/sessions.png",
+    "docs/images/session-detail.png",
+    "docs/images/quota.png"
   ],
   "repository": {
     "type": "git",
@@ -88,4 +90,3 @@
     "typescript": "7.0.2"
   }
 }
-

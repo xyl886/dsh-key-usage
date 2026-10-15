@@ -11,37 +11,13 @@
 [![topic](https://img.shields.io/badge/topic-dsh--plugin-0e7490?style=flat-square)](https://github.com/topics/dsh-plugin)
 [![Listed on dsh-plugin.org](https://img.shields.io/badge/listed-dsh--plugin.org-4d9fff?style=flat-square)](https://dsh-plugin.org/plugins/xyl886/dsh-key-usage)
 
-[界面预览](#界面预览) · [安装](#安装) · [数据与权限](#数据权限与联网) · [功能](#功能) · [成本与价目](#成本与价目) · [常见问题](#常见问题) · [更新记录](./CHANGELOG.md) · [开发](#开发)
+[安装](#安装) · [界面预览](#界面预览) · [数据与权限](#数据权限与联网) · [功能](#功能) · [成本与价目](#成本与价目) · [常见问题](#常见问题) · [更新记录](./docs/CHANGELOG.md) · [开发](#开发)
 
 </div>
 
 ---
 
-装上之后，左侧边栏会多一项「使用情况」，点开就是整页用量面板：**总览（Key 清单 + 活跃热力图）、使用明细、项目用量、按模型、会话用量、余额与配额**。数据全部来自你自己的机器，**默认不联网**。
-
-## 界面预览
-
-> 截图为**早期版本**，当前界面以实际页面为准；本批未重拍。设计意图与更早的原型见 [`docs/prototype/`](./docs/prototype/)（不代表当前界面）。
-
-<p align="center">
-  <img src="./docs/images/usage-overview.png" alt="总览：Key 清单与活跃热力图" width="820" />
-</p>
-
-<p align="center">
-  <img src="./docs/images/usage-daily.png" alt="使用明细：统计卡、环比趋势、通道占比与每日细目" width="820" />
-</p>
-
-<p align="center">
-  <img src="./docs/images/按模型.png" alt="按模型：按通道 + 模型聚合，成本带来源角标" width="820" />
-</p>
-
-<p align="center">
-  <img src="./docs/images/项目总量.png" alt="项目用量：按工作目录聚合" width="820" />
-</p>
-
-<p align="center">
-  <img src="./docs/images/usage-quota.png" alt="余额与配额：官方余额、订阅窗口与通道单价表" width="820" />
-</p>
+侧边栏「使用情况」：**总览（通道清单 + 活跃热力图）、使用明细、项目用量、按模型、会话用量、余额与配额**。数据全部来自你自己的机器，**默认不联网**；界面**中英双语**（跟随宿主语言设置），字号跟随宿主通用设置。
 
 ## 安装
 
@@ -50,7 +26,42 @@ dsh plugin --profile web add dsh-key-usage
 dsh plugin --profile desktop add dsh-key-usage
 ```
 
-> 桌面端 profile 受应用保护，部分版本会拒绝该命令（本机实测报 `profile "desktop" is managed exclusively by the Electron application`），此时改用应用内 **设置 → 插件 → 添加插件**。装完都要**退出并重新打开 DSH** 才生效。
+## 界面预览
+
+<p align="center">
+  <img src="./docs/images/overview.png" alt="总览：通道清单与活跃热力图" width="880" /><br />
+  <sub><b>总览</b> —— 每通道一行（今日 / 近 30 天 / 余额或窗口 / 30 天成本），下方是近 9 个月活跃热力图</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/daily.png" alt="使用明细：十张统计卡（含环比角标）、占比条与按天图表" width="880" /><br />
+  <sub><b>使用明细</b> —— 十张统计卡（每张带上期值与环比角标）、通道下拉筛选、占比一次列全、按天 / 按小时图表</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/projects.png" alt="项目用量：按工作目录聚合" width="880" /><br />
+  <sub><b>项目用量</b> —— 按工作目录聚合，含会话数与归档标记；支持搜索、按通道筛选与排序</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/models.png" alt="按模型：通道 + 模型聚合，成本带来源角标" width="880" /><br />
+  <sub><b>按模型</b> —— 按通道 + 模型聚合，成本带「官方价 / 聚合 / 估算」来源角标</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/sessions.png" alt="会话用量：按会话聚合，可按成本 / 命中率 / 调用数排序" width="880" /><br />
+  <sub><b>会话用量</b> —— 按会话聚合、按日期分组，支持搜索与四种排序；没有人类提问的会话不显示</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/session-detail.png" alt="会话详情：首条提问、四类 tokens、逐模型占比与 24 小时分布" width="880" /><br />
+  <sub><b>会话详情</b> —— 首条提问全文、四类 tokens 与命中率、逐模型占比、一天里的分布；有子代理时列出子会话</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/images/quota.png" alt="余额与配额：官方余额、订阅窗口与通道单价表" width="880" /><br />
+  <sub><b>余额与配额</b> —— 官方余额或订阅窗口占用、¥ / $ 折算、可展开的通道单价表</sub>
+</p>
 
 ## 数据、权限与联网
 
@@ -83,28 +94,37 @@ dsh plugin --profile desktop add dsh-key-usage
 
 **不做开机拉取、不做定时轮询、不在其它端点里隐式联网**。
 
+**界面语言与字号**：文案全部走词典（中 / 英），语言**只跟宿主设置**（设置 → 通用 → 语言），插件内不加语言开关；字号按宿主注入的 `--dsh-content-font-size` 缩放，**通用设置里改字号，插件整页跟着变**。
+
 ## 功能
 
 **总览**
 
-- **Key 清单** —— 每通道一行：类型、今日与近 30 天调用量、余额或订阅窗口占用、30 天成本（带来源角标）；
-- **活跃热力图** —— 近 9 个月按日 Tokens，格子按可见区间的**活跃日五分位**分档（p20 / p40 / p60 / p80）。
+- **通道清单** —— 每通道一行：类型、今日与近 30 天调用量、余额或订阅窗口占用、30 天成本（带来源角标）；
+- **活跃热力图** —— 近 9 个月按日 Tokens，五档深浅递进，格子按可见区间的**活跃日五分位**分档（p20 / p40 / p60 / p80）；横向滚动时星期列固定在左侧。
 
 **使用明细**
 
-- 今日 / 周 / 月 / 总计 / 自定义范围 + 按通道筛选，全页联动；
-- 六张统计卡（调用次数、Tokens、缓存读、缓存命中率、日均 Tokens、成本）+ 环比趋势对比；
-- 通道占比条、按天 / 按小时图表（单日范围自动切 24 小时）、可排序可展开的每日细目。
+- 今日 / 周 / 月 / 总计 / 自定义范围 + **通道下拉**（在「自定义」右侧），全页联动；
+- **十张统计卡**：调用次数、Tokens、输入、输出、缓存读、缓存命中率、日均 Tokens、通道数、使用天数、成本；
+- 每张卡带**上期值（缩小淡化）与环比角标**：命中率按百分点（`pp`）记，成本上升用提示色；没有可比基数或持平时不显示角标，「总计」范围整组不显示；
+- **通道占比**：条下方一次列全每段（色块 / 名称 / 占比 / Tokens），悬停条上任意位置弹**一个** tip 列出全部段；
+- 按天 / 按小时图表（单日范围自动切 24 小时），悬停柱子看当日调用数、四类 tokens、命中率、成本与模型构成。
 
 **项目用量 · 按模型 · 会话用量**
 
-- 分别按工作目录、通道 + 模型、单个会话聚合，支持搜索、按通道筛选与排序；会话按日期分组，可切换显示已归档会话；
+- 分别按工作目录、通道 + 模型、单个会话聚合，支持搜索、按通道筛选与排序；会话按日期分组，可切换显示已归档会话，**没有人类提问的会话不再显示**；
 - **会话详情抽屉**：首条真实提问全文、工作区、通道、时长、四类 tokens 与命中率、成本与来源角标、逐模型占比，有结算样本时给 24 小时迷你图；
 - 会话列表可按成本 / 命中率 / 调用数排序，标「跨 N 天」，可展开看模型构成；首屏 50 条 + 「加载更多」；点行内工作目录跳到「项目用量」并只看该项目。
 
 **导出**
 
 - 上面四处都能把**当前筛选后**的数据导出为 CSV 或 JSON（CSV 带 UTF-8 BOM）。
+
+**系统日志**
+
+- 页头右侧的日志图标：弹窗列出**时间 / 级别 / 来源 / 内容**，可复制、可清空；
+- 自动记录 **i18n 缺词**（界面文案没翻译全时）与**端点请求失败**，同一问题只记一次；日志只存在内存、不落盘、不新增写入文件。
 
 **余额与配额**
 
@@ -216,7 +236,7 @@ dsh plugin --profile desktop add dsh-key-usage
 pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
 pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
 pnpm run typecheck    # 客户端 + 服务端类型检查
-pnpm run test         # 14 个离线测试
+pnpm run test         # 15 个离线测试
 pnpm run check        # lib/*.js 语法检查
 pnpm run verify       # 上面全套（CI 跑的就是这条）
 pnpm run pack:dry     # 发布清单自检
@@ -224,7 +244,7 @@ pnpm run pack:dry     # 发布清单自检
 
 > 本目录的 `node_modules` 是 pnpm 10.32.1 装的；用**不同大版本**的 pnpm 执行 `pnpm run` 会触发「清空 modules 目录」而中止，改用 `npm run <script>` 即可。
 >
-> 随包体积：`npm pack --dry-run` 实测 **31 个文件**、打包 **891.9 kB**、未压缩 **4.3 MB**（其中聚合价目快照未压缩 2.7 MB）。
+> 随包体积：`npm pack --dry-run` 实测 **48 个文件**、打包 **1.4 MB**、未压缩 **4.6 MB**（其中聚合价目快照未压缩 2.7 MB、7 张截图约 1 MB）。
 
 **改动生效条件**（最容易踩的坑）：
 
@@ -245,7 +265,9 @@ curl -s http://127.0.0.1:19387/dsh-key-usage/fx         # 汇率（USD → CNY�
 
 ## 延伸文档
 
-[架构与数据契约](./docs/01-架构与数据契约.md) · [原型差异清单](./docs/02-原型差异与优化清单.md) · [按 Tab 重构方案](./docs/03-按Tab拆分重构方案.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/05-后续版本计划.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./CHANGELOG.md) · [AGENTS.md](./AGENTS.md)
+[架构与数据契约](./docs/01-架构与数据契约.md) · [归档会话的影响与对策](./docs/04-归档会话的影响与对策.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./docs/CHANGELOG.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/process/v0.1.7.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./docs/CHANGELOG.md) · [AGENTS.md](./AGENTS.md)
+
+过程记录按版本分卷：[v0.1.0-0.1.5](./docs/process/v0.1.0-0.1.5.md) · [v0.1.6](./docs/process/v0.1.6.md) · [v0.1.7](./docs/process/v0.1.7.md)
 
 ## 许可证
 
