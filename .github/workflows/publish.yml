@@ -5,6 +5,12 @@ name: Publish
 # 需要仓库 Secret：NPM_TOKEN（Settings → Secrets and variables → Actions）。
 #   - Granular token：Packages 只勾 dsh-key-usage、Permissions Read and write、勾 Bypass 2FA（否则要 OTP）
 #   - 本机不再需要放 token；撤销本机 token 后仍可从 CI 发布
+#
+# ⚠️ dry_run 的取值陷阱（2026-10-15 真实踩到）：
+# workflow_dispatch 的 `type: boolean` 输入，在网页上勾选是布尔值，但 `gh workflow run -f dry_run=false`
+# 传进来是**字符串** "false"。直接写 `if: inputs.dry_run == false` 时，字符串既不等于 false 也不等于 true
+# → 两个步骤全被跳过，**工作流却报 success**（看着发布成功、其实什么都没干）。
+# 因此：先归一化成 'true' / 'false' 字符串，再用它做条件；末尾再加一条兜底断言，二者必有其一执行。
 
 on:
   workflow_dispatch:
@@ -30,6 +36,17 @@ jobs:
       - name: 检出
         uses: actions/checkout@v4
 
+      - name: 归一化 dry_run（兼容布尔与字符串）
+        id: mode
+        run: |
+          raw="${{ inputs.dry_run }}"
+          case "$raw" in
+            true|True|TRUE|1) echo "dry_run=true" >> "$GITHUB_OUTPUT" ;;
+            false|False|FALSE|0) echo "dry_run=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::dry_run 取值无法识别：'$raw'（应为 true / false）"; exit 1 ;;
+          esac
+          echo "本次 dry_run=$raw"
+
       - name: 安装 pnpm（版本取自 package.json 的 packageManager）
         uses: pnpm/action-setup@v4
 
@@ -54,7 +71,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "当前版本：dsh-key-usage@$VERSION"
           if npm view "dsh-key-usage@$VERSION" version >/dev/null 2>&1; then
-            if [ "${{ inputs.dry_run }}" = "true" ]; then
+            if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then
               echo "::warning::dsh-key-usage@$VERSION 已经发布过；dry_run 不中断，但真正发布前必须先升版本"
             else
               echo "::error::dsh-key-usage@$VERSION 已经发布过；npm 版本号不可复用，请先改 package.json"
@@ -68,11 +85,22 @@ jobs:
         run: npm pack --dry-run
 
       - name: 发布到 npm
-        if: ${{ inputs.dry_run == false }}
+        id: release
+        if: ${{ steps.mode.outputs.dry_run == 'false' }}
         run: pnpm publish --access public --provenance --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 干跑提示
-        if: ${{ inputs.dry_run == true }}
+        id: dry
+        if: ${{ steps.mode.outputs.dry_run == 'true' }}
         run: echo "dry_run=true：已完成校验，未发布。把 dry_run 设为 false 再跑一次即可发布。"
+
+      - name: 兜底断言（防「假成功」）
+        if: ${{ success() }}
+        run: |
+          if [ "${{ steps.release.outcome }}" = "skipped" ] && [ "${{ steps.dry.outcome }}" = "skipped" ]; then
+            echo "::error::既没有发布、也没有走 dry_run —— 条件判断失效，不能报成功。请检查 dry_run 归一化。"
+            exit 1
+          fi
+          echo "分支执行正常（发布或 dry_run 恰好其一）"
