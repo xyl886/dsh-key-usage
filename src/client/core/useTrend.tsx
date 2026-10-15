@@ -105,7 +105,8 @@ function pointBadge(current: number | null, previous: number | null): ReactNode 
   if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
   const arrow = delta > 0 ? '↑' : '↓'
   const sign = delta > 0 ? '+' : ''
-  return <span>{arrow} {sign}{delta}</span>
+  // 命中率是比值，涨跌按百分点（pp）计，避免「96.2% 比 94.0% 涨 2.3%」这类误读（沿用旧 TrendPanel 的写法）
+  return <span>{arrow} {sign}{delta}pp</span>
 }
 
 export function useTrend(props: {

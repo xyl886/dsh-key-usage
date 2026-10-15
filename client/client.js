@@ -2701,7 +2701,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				delta > 0 ? "↑" : "↓",
 				" ",
 				delta > 0 ? "+" : "",
-				delta
+				delta,
+				"pp"
 			] });
 		}
 		function useTrend(props) {
