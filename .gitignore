@@ -10,3 +10,6 @@ node_modules/
 # 注意：lib/ 与 client/ 是**发布产物，必须提交**。
 # 宿主安装 git 来源的插件时会直接读 package.json 的 main（lib/index.js）
 # 与 exports["./client"]（client/client.js），仓库里没有它们插件就加载不起来。
+
+# 用户本地的需求草稿，不进仓库
+/需求.txt
