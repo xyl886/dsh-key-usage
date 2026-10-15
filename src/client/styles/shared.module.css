@@ -26,6 +26,11 @@
 }
 .refreshBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 .refreshBtn:disabled { opacity: .6; cursor: default; }
+/* 刷新按钮只留图标：加载时原地转圈，读屏靠 aria-label 说明 */
+.refreshIcon, .refreshIconSpin { display: inline-block; }
+.refreshIconSpin { animation: refreshSpin 900ms linear infinite; }
+@keyframes refreshSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refreshIconSpin { animation: none; } }
 
 .tabBar { display: flex; gap: 2px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); margin-bottom: 18px; flex-wrap: wrap; }
 .tabBar button {
