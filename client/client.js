@@ -301,7 +301,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.shareByTokens": "占比 · 按 Tokens",
 			"sh.shareLabel": "占比",
 			"t.noPrevRange": "无可对比上一段",
-			"t.incomparable": "不可比",
 			"t.metric": "指标",
 			"t.currentCol": "本期",
 			"t.previousCol": "上期",
@@ -728,7 +727,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.shareByTokens": "share · by tokens",
 			"sh.shareLabel": "share",
 			"t.noPrevRange": "No previous range",
-			"t.incomparable": "Not comparable",
 			"t.metric": "Metric",
 			"t.currentCol": "Now",
 			"t.previousCol": "Prev",
@@ -2676,7 +2674,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 百分比涨跌角标。 */
 		function percentBadge(current, previous, warnOnUp) {
-			if (previous === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") });
+			if (previous === 0) return null;
 			const delta = Math.round((current - previous) / previous * 1e3) / 10;
 			if (Math.abs(delta) < FLAT_EPSILON) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.flat") });
 			const arrow = delta > 0 ? "↑" : "↓";
@@ -2694,7 +2692,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 百分点变化角标（命中率这类比率指标）。 */
 		function pointBadge(current, previous) {
-			if (current === null || previous === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") });
+			if (current === null || previous === null) return null;
 			const delta = Math.round((current - previous) * 1e3) / 10;
 			if (Math.abs(delta) < FLAT_EPSILON) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.flat") });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
@@ -2736,23 +2734,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return {
 					calls: {
 						above: aboveOf(previous === null ? "—" : fmtCalls(previous.calls)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.calls, previous.calls, false)
+						badge: previous === null ? null : percentBadge(current.calls, previous.calls, false)
 					},
 					tokens: {
 						above: aboveOf(previous === null ? "—" : fmtTokens(previous.tokens)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.tokens, previous.tokens, false)
+						badge: previous === null ? null : percentBadge(current.tokens, previous.tokens, false)
 					},
 					input: {
 						above: aboveOf(previous === null ? "—" : fmtTokens(previous.input)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.input, previous.input, false)
+						badge: previous === null ? null : percentBadge(current.input, previous.input, false)
 					},
 					output: {
 						above: aboveOf(previous === null ? "—" : fmtTokens(previous.output)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.output, previous.output, false)
+						badge: previous === null ? null : percentBadge(current.output, previous.output, false)
 					},
 					cacheRead: {
 						above: aboveOf(previous === null ? "—" : fmtTokens(previous.cacheRead)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.cacheRead, previous.cacheRead, false)
+						badge: previous === null ? null : percentBadge(current.cacheRead, previous.cacheRead, false)
 					},
 					hitRate: {
 						above: aboveOf(points(previous === null ? null : previous.hitRate)),
@@ -2760,19 +2758,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					},
 					dailyAvg: {
 						above: aboveOf(previous === null ? "—" : fmtTokens(Math.round(previous.dailyAvg))),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.dailyAvg, previous.dailyAvg, false)
+						badge: previous === null ? null : percentBadge(current.dailyAvg, previous.dailyAvg, false)
 					},
 					channels: {
 						above: aboveOf(previous === null ? "—" : String(previous.channels)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.channels, previous.channels, false)
+						badge: previous === null ? null : percentBadge(current.channels, previous.channels, false)
 					},
 					activeDays: {
 						above: aboveOf(previous === null ? "—" : String(previous.activeDays)),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.activeDays, previous.activeDays, false)
+						badge: previous === null ? null : percentBadge(current.activeDays, previous.activeDays, false)
 					},
 					cost: {
 						above: aboveOf(previous === null ? "—" : rowMoneyViewOf({ cost: previous.cost }).text),
-						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.cost, previous.cost, true)
+						badge: previous === null ? null : percentBadge(current.cost, previous.cost, true)
 					}
 				};
 			}, [

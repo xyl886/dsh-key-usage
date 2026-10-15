@@ -90,7 +90,7 @@ function metricsOf(usage: UsageResponse | null): Metrics | null {
 
 /** 百分比涨跌角标。 */
 function percentBadge(current: number, previous: number, warnOnUp: boolean): ReactNode {
-  if (previous === 0) return <span>{t('t.incomparable')}</span>
+  if (previous === 0) return null
   const delta = Math.round((current - previous) / previous * 1000) / 10
   if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
   const arrow = delta > 0 ? '↑' : '↓'
@@ -100,7 +100,7 @@ function percentBadge(current: number, previous: number, warnOnUp: boolean): Rea
 
 /** 百分点变化角标（命中率这类比率指标）。 */
 function pointBadge(current: number | null, previous: number | null): ReactNode {
-  if (current === null || previous === null) return <span>{t('t.incomparable')}</span>
+  if (current === null || previous === null) return null
   const delta = Math.round((current - previous) * 1000) / 10
   if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
   const arrow = delta > 0 ? '↑' : '↓'
@@ -140,18 +140,18 @@ export function useTrend(props: {
     const aboveOf = (node: ReactNode): ReactNode => previous === null ? undefined : node
     const points = (value: number | null): string => value === null ? '—' : (value * 100).toFixed(1) + '%'
     return {
-      calls: { above: aboveOf(previous === null ? '—' : fmtCalls(previous.calls)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.calls, previous.calls, false) },
-      tokens: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.tokens)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.tokens, previous.tokens, false) },
-      input: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.input)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.input, previous.input, false) },
-      output: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.output)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.output, previous.output, false) },
-      cacheRead: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.cacheRead)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.cacheRead, previous.cacheRead, false) },
+      calls: { above: aboveOf(previous === null ? '—' : fmtCalls(previous.calls)), badge: previous === null ? null : percentBadge(current.calls, previous.calls, false) },
+      tokens: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.tokens)), badge: previous === null ? null : percentBadge(current.tokens, previous.tokens, false) },
+      input: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.input)), badge: previous === null ? null : percentBadge(current.input, previous.input, false) },
+      output: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.output)), badge: previous === null ? null : percentBadge(current.output, previous.output, false) },
+      cacheRead: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.cacheRead)), badge: previous === null ? null : percentBadge(current.cacheRead, previous.cacheRead, false) },
       hitRate: { above: aboveOf(points(previous === null ? null : previous.hitRate)), badge: pointBadge(current.hitRate, previous === null ? null : previous.hitRate) },
-      dailyAvg: { above: aboveOf(previous === null ? '—' : fmtTokens(Math.round(previous.dailyAvg))), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.dailyAvg, previous.dailyAvg, false) },
-      channels: { above: aboveOf(previous === null ? '—' : String(previous.channels)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.channels, previous.channels, false) },
-      activeDays: { above: aboveOf(previous === null ? '—' : String(previous.activeDays)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.activeDays, previous.activeDays, false) },
+      dailyAvg: { above: aboveOf(previous === null ? '—' : fmtTokens(Math.round(previous.dailyAvg))), badge: previous === null ? null : percentBadge(current.dailyAvg, previous.dailyAvg, false) },
+      channels: { above: aboveOf(previous === null ? '—' : String(previous.channels)), badge: previous === null ? null : percentBadge(current.channels, previous.channels, false) },
+      activeDays: { above: aboveOf(previous === null ? '—' : String(previous.activeDays)), badge: previous === null ? null : percentBadge(current.activeDays, previous.activeDays, false) },
       cost: {
         above: aboveOf(previous === null ? '—' : rowMoneyViewOf({ cost: previous.cost }).text),
-        badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.cost, previous.cost, true),
+        badge: previous === null ? null : percentBadge(current.cost, previous.cost, true),
       },
     }
   }, [comparable, usage, previousUsage])
