@@ -20,6 +20,8 @@ export interface LocaleFace {
 
 const NS = 'dsh-key-usage'
 let bound: ((key: string) => string) | null = null
+/** 宿主当前生效的语言（register/subscribe 时同步；宿主无 locale 服务时按中文） */
+let active = 'zh'
 let revision = 0
 const listeners = new Set<() => void>()
 
@@ -29,7 +31,13 @@ export function installI18n(locale: LocaleFace | undefined): void {
   try {
     locale.register?.(NS, { zh, en })
     if (typeof locale.bind === 'function') bound = locale.bind(NS)
+    const readActive = (): void => {
+      const snapshot = (locale as { getSnapshot?: () => { active?: unknown } }).getSnapshot?.()
+      if (snapshot !== undefined && typeof snapshot.active === 'string') active = snapshot.active
+    }
+    readActive()
     locale.subscribe?.(() => {
+      readActive()
       revision += 1
       for (const listener of listeners) listener()
     })
@@ -39,6 +47,11 @@ export function installI18n(locale: LocaleFace | undefined): void {
 }
 
 /** 取词：`{name}` 占位用 params 替换；缺键回落中文词典，再缺则回显键名（便于发现漏词）。 */
+/** 当前语言是否英文（用于决定「服务端中文长文」要不要换成结构化指引）。 */
+export function isEnglish(): boolean {
+  return active.toLowerCase().startsWith('en')
+}
+
 export function t(key: string, params?: Record<string, string | number>): string {
   let text = key
   if (bound !== null) {

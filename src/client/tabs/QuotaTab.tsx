@@ -12,7 +12,8 @@ import {
   setFxRate, useCurrencyDisplay, DISPLAY_CURRENCIES, DISPLAY_CURRENCY_LABELS, type DisplayCurrency,
 } from '../core/currency.ts'
 import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
-import { t, useT } from '../core/i18n.ts'
+import { isEnglish, t, useT } from '../core/i18n.ts'
+import { serverText } from '../core/serverText.ts'
 import {
   LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
   megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
@@ -448,7 +449,7 @@ function RateTable(props: {
                     )
                     : (
                       <td className={quotaStyles.rateEmpty} colSpan={4}>
-                        {row.note !== null && row.note !== '' ? row.note : noRateTextOf(row.source)}
+                        {noteTextOf(row.note) !== '' ? noteTextOf(row.note) : noRateTextOf(row.source)}
                       </td>
                     )}
                   <td>
@@ -683,6 +684,13 @@ function freshTextOf(fetchedAt: number | null): string {
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return minutes + t('q.minutesAgoSuffix')
   return Math.floor(minutes / 60) + t('q.hoursAgoSuffix')
+}
+
+/** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
+function noteTextOf(note: string | null | undefined): string {
+  if (note === null || note === undefined || note === '') return ''
+  if (isEnglish() && /[\u4e00-\u9fa5]/.test(note)) return t('srv.rateNoteEn')
+  return serverText(note)
 }
 
 function errorTextOf(error: string | null): string {

@@ -183,6 +183,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.noData": "暂无数据",
 			"sh.morePrefix": "，等 ",
 			"sh.moreSuffix": " 项",
+			"srv.rateNoteEn": "价目细节见下方费率与来源",
+			"srv.ratesAverage": "按台账均价估算",
+			"srv.ratesNone": "暂无价格依据",
+			"srv.noSessionService": "宿主没有会话服务",
+			"srv.noSingleSession": "不支持单会话查询",
+			"srv.sessionDetailUnavailable": "会话详情不可用",
 			"srv.fxCache": "缓存汇率（{hours} 小时内）",
 			"srv.fxLive": "实时汇率来自 {host}",
 			"srv.fxFailedCache": "上游失败，回落缓存",
@@ -579,6 +585,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sh.noData": "No data",
 			"sh.morePrefix": ", +",
 			"sh.moreSuffix": " more",
+			"srv.rateNoteEn": "see rates, source and date below",
+			"srv.ratesAverage": "ledger average estimate",
+			"srv.ratesNone": "no price basis",
+			"srv.noSessionService": "host has no session service",
+			"srv.noSingleSession": "single-session query unsupported",
+			"srv.sessionDetailUnavailable": "session detail unavailable",
 			"srv.fxCache": "cached FX (within {hours}h)",
 			"srv.fxLive": "live FX from {host}",
 			"srv.fxFailedCache": "upstream failed, using cache",
@@ -818,6 +830,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		*/
 		const NS$1 = "dsh-key-usage";
 		let bound = null;
+		/** 宿主当前生效的语言（register/subscribe 时同步；宿主无 locale 服务时按中文） */
+		let active = "zh";
 		let revision = 0;
 		const listeners$1 = /* @__PURE__ */ new Set();
 		/** 由客户端入口在 apply 时调用；任何一步失败都不抛错（界面继续用内置中文）。 */
@@ -829,7 +843,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					en
 				});
 				if (typeof locale.bind === "function") bound = locale.bind(NS$1);
+				const readActive = () => {
+					const snapshot = locale.getSnapshot?.();
+					if (snapshot !== void 0 && typeof snapshot.active === "string") active = snapshot.active;
+				};
+				readActive();
 				locale.subscribe?.(() => {
+					readActive();
 					revision += 1;
 					for (const listener of listeners$1) listener();
 				});
@@ -838,6 +858,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}
 		}
 		/** 取词：`{name}` 占位用 params 替换；缺键回落中文词典，再缺则回显键名（便于发现漏词）。 */
+		/** 当前语言是否英文（用于决定「服务端中文长文」要不要换成结构化指引）。 */
+		function isEnglish() {
+			return active.toLowerCase().startsWith("en");
+		}
 		function t(key, params) {
 			let text = key;
 			if (bound !== null) {
@@ -3969,6 +3993,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return parts[parts.length - 1] === "" ? path : parts[parts.length - 1];
 		}
 		//#endregion
+		//#region src/client/core/serverText.ts
+		/**
+		* 服务端下发的中文说明 → 词典键（双语）。
+		* 只收录**固定句子**（价目依据、会话服务降级原因等）；服务端将来改发 code 时这里会自然退化。
+		* 未收录的串原样返回，不会把界面变成空白。
+		*/
+		const KEYS = {
+			"按台账反推均价估算": "srv.ratesAverage",
+			"暂无价格依据": "srv.ratesNone",
+			"宿主未提供会话服务，无法读取该会话": "srv.noSessionService",
+			"当前注入的会话数据源不支持单会话查询": "srv.noSingleSession",
+			"会话详情不可用": "srv.sessionDetailUnavailable",
+			"宿主没有会话服务": "srv.noSessionService"
+		};
+		function serverText(text) {
+			if (text === null || text === void 0 || text === "") return "";
+			const key = KEYS[text];
+			return key === void 0 ? text : t(key);
+		}
+		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
 		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:11.5px}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;font-size:10.5px}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10px}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);border-radius:999px;padding:1px 7px;font-size:10px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:2px;font-size:11px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:16px;font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.ohwLxW_windowValue{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:12px;font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:3px;font-size:10.5px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:10px;font-size:10.5px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin-top:10px;font-size:10.5px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px;font-size:11.5px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10.5px}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:10.5px}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:0;font-size:12px;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:11px}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);margin:6px 0;font-size:11.5px;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);margin:6px 0;font-size:11.5px;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:6px;font-size:10.5px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px;font-size:10.5px;font-weight:500}.ohwLxW_rateTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px;font-size:11.5px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:11px}.ohwLxW_rateNote{color:var(--dsw-alias-label-tertiary,#67676f);white-space:normal;text-align:left;max-width:320px;font-size:10.5px}.ohwLxW_rateSourceNone{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.ohwLxW_offPeakChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;font-size:10px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:10px}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);padding:6px 0;font-size:11.5px}";
 		const tagId$1 = "dsh-key-usage/quota.module.css";
@@ -4501,7 +4545,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: quota_module_css_default.rateEmpty,
 									colSpan: 4,
-									children: row.note !== null && row.note !== "" ? row.note : noRateTextOf(row.source)
+									children: noteTextOf(row.note) !== "" ? noteTextOf(row.note) : noRateTextOf(row.source)
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: quota_module_css_default.rateSourceNone,
@@ -4766,6 +4810,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (minutes < 60) return minutes + t("q.minutesAgoSuffix");
 			return Math.floor(minutes / 60) + t("q.hoursAgoSuffix");
 		}
+		/** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
+		function noteTextOf(note) {
+			if (note === null || note === void 0 || note === "") return "";
+			if (isEnglish() && /[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
+			return serverText(note);
+		}
 		function errorTextOf(error) {
 			if (error === null) return t("err.noLiveQuery");
 			if (error === "no-key") return t("err.noApiKey");
@@ -4884,7 +4934,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						data !== null && data.coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: shared_module_css_default.warning,
-							children: [data.coverage.status === "unavailable" ? t("d.unavailable") : t("d.partial"), data.coverage.reason === null ? "" : "：" + data.coverage.reason]
+							children: [data.coverage.status === "unavailable" ? t("d.unavailable") : t("d.partial"), data.coverage.reason === null ? "" : "：" + serverText(data.coverage.reason)]
 						}),
 						data !== null && session !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionDetailBody, {
 							session,

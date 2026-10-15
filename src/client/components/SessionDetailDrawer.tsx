@@ -5,6 +5,7 @@ import { COST_MODE_KEYS, channelOf, costCellOf, displayNameOf } from '../core/ch
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../core/format.ts'
 import { costSourceHintOf } from '../core/pricing.ts'
 import { t, useT } from '../core/i18n.ts'
+import { serverText } from '../core/serverText.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
 import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
@@ -86,7 +87,7 @@ export function SessionDetailDrawer(props: {
         {data !== null && data.coverage.status !== 'complete' && (
           <div className={styles.warning}>
             {data.coverage.status === 'unavailable' ? t('d.unavailable') : t('d.partial')}
-            {data.coverage.reason === null ? '' : '：' + data.coverage.reason}
+            {data.coverage.reason === null ? '' : '：' + serverText(data.coverage.reason)}
           </div>
         )}
 
