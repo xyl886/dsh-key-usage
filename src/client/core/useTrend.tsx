@@ -105,7 +105,7 @@ function pointBadge(current: number | null, previous: number | null): ReactNode 
   if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
   const arrow = delta > 0 ? '↑' : '↓'
   const sign = delta > 0 ? '+' : ''
-  return <span>{arrow} {sign}{delta}{t('t.pp')}</span>
+  return <span>{arrow} {sign}{delta}</span>
 }
 
 export function useTrend(props: {

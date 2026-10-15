@@ -140,7 +140,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.hitRateShort": "缓存命中率",
 			"d.dailyAvg": "日均 Tokens",
 			"d.daysWithUsageSuffix": " 天有用量",
-			"t.pp": " 个百分点",
 			"t.flat": "持平",
 			"t.title": "环比对比",
 			"t.titleNote": "与上一段等长范围",
@@ -567,7 +566,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.hitRateShort": "Cache hit rate",
 			"d.dailyAvg": "Daily avg tokens",
 			"d.daysWithUsageSuffix": " days with usage",
-			"t.pp": "pp",
 			"t.flat": "Flat",
 			"t.title": "Comparison",
 			"t.titleNote": "same-length previous range",
@@ -2703,8 +2701,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				delta > 0 ? "↑" : "↓",
 				" ",
 				delta > 0 ? "+" : "",
-				delta,
-				t("t.pp")
+				delta
 			] });
 		}
 		function useTrend(props) {
