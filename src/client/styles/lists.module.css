@@ -50,6 +50,13 @@
 }
 .sessionMetaBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); text-decoration: underline; }
 /* 详情弹窗里的子会话清单：主会话点开后才看得到（列表默认隐藏子会话） */
+.drawerBack {
+  display: inline-flex; align-items: center; margin: 4px 0 10px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: none; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: 12px; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.drawerBack:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
+.drawerBack:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
 .subagentBlock { margin-top: 14px; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); padding-top: 10px; }
 .subagentBlockTitle { font-size: 12px; color: var(--dsw-alias-label-secondary, #9a9aa6); margin-bottom: 6px; }
 .subagentRow {

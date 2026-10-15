@@ -18,6 +18,9 @@ export function SessionDetailDrawer(props: {
   subagents: SessionRow[]
   /** 切到某个子会话的详情（弹窗内容随之替换）。 */
   onOpenSession: (id: string) => void
+  /** 当前看的是子会话时给出返回入口（列表里不显示子会话，只能从这里回去）。 */
+  parentId: string | null
+  parentTitle: string | null
   onClose: () => void
 }): ReactNode {
   const [data, setData] = useState<SessionDetailResponse | null>(null)
@@ -60,6 +63,16 @@ export function SessionDetailDrawer(props: {
           <button type="button" className={listStyles.drawerClose} onClick={props.onClose} aria-label="关闭会话详情">✕</button>
         </div>
         <div className={listStyles.drawerId}>{props.sessionId}</div>
+
+        {props.parentId !== null && (
+          <button
+            type="button"
+            className={listStyles.drawerBack}
+            onClick={() => props.onOpenSession(props.parentId as string)}
+          >
+            ← 返回主会话{props.parentTitle === null ? '' : '：' + props.parentTitle}
+          </button>
+        )}
 
         {data === null && !failed && <div className={styles.empty}>会话详情读取中…</div>}
         {failed && (
