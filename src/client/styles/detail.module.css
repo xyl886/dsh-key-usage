@@ -72,3 +72,11 @@
 .subChannel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subNumber { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .toggleArrow { display: inline-block; width: 13px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.83); }
+
+/* 占比明细：一次性列全（小占比段也能看清，不用悬停） */
+.shareLegend { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 16px; }
+.shareLegend li { display: grid; grid-template-columns: 8px 1fr auto auto; align-items: center; gap: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); }
+.shareDot { width: 8px; height: 8px; border-radius: 2px; }
+.shareName { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sharePercent { color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; }
+.shareTokens { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }

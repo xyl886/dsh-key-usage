@@ -46,9 +46,9 @@
 .cardGridAuto { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
-.cardGrid6 { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
-@media (max-width: 1180px) { .cardGrid6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .cardGrid6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 18px; }
+
+
 @media (max-width: 720px) { .cardGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 6px; }
@@ -163,3 +163,8 @@
 .logError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
 .logSource { color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }
+
+/* 卡片右上角标（环比涨跌）与数值上方的小字（上期值） */
+.cardWithBadge { position: relative; }
+.statBadge { position: absolute; top: 8px; right: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); }
+.statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); margin-top: 2px; }

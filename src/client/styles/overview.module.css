@@ -46,7 +46,7 @@
    超过页面内容宽度上限（1192px），因此默认就会出现横向滚动条 */
 .heatmapScroll { overflow-x: auto; padding-bottom: 4px; }
 .heatmapBody { display: flex; gap: 6px; width: max-content; }
-.heatWeekdays { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+.heatWeekdays { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; position: sticky; left: 0; z-index: 2; background: var(--dsw-alias-bg-layer-2, #1d1d22); padding-right: 4px; }
 .heatWeekdays span { font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); width: 13px; height: 28px; line-height: 28px; text-align: right; }
 .heatGridCol { display: flex; flex-direction: column; }
 .heatGrid { display: flex; gap: 3px; }

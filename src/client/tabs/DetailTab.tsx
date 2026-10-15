@@ -10,7 +10,7 @@ import { ShareBar } from '../components/ShareBar.tsx'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
 import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
-import { TrendPanel } from '../components/TrendPanel.tsx'
+import { useCostTrend } from '../core/useCostTrend.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
 import exportStyles from '../styles/export.module.css'
@@ -101,6 +101,8 @@ export function DetailTab(props: {
   const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(channels, channelFilter)
   const costCell = costCellOf(singleChannel, safeTotals)
+  // 环比：只取角标与上期值（需求 3）
+  const trendSummary = useCostTrend({ usage, from: bounds.from, to: bounds.to, range: props.range, channelFilter, channels, pricingRevision: props.pricingRevision })
   const singleDay = bounds.from === bounds.to
   const rangeDays = Math.min(daysBetween(bounds.from, bounds.to), MAX_AXIS_DAYS)
 
@@ -249,39 +251,24 @@ export function DetailTab(props: {
       </div>
 
       <div className={styles.cardGrid6}>
-        <StatCard label={t('d.callCount')} value={fmtCalls(safeTotals.calls)} extra={activeProviders.size + t('d.channelsWithUsageSuffix')} />
-        <StatCard
-          label="Tokens"
-          value={fmtTokens(totalTokens)}
-          extra={t('c.input') + ' ' + fmtTokens(safeTotals.inputTokens) + t('c.output') + ' ' + fmtTokens(safeTotals.outputTokens)}
-        />
-        <StatCard
-          label={t('c.cacheRead')}
-          value={fmtTokens(safeTotals.cacheReadTokens)}
-          extra={cacheReadShare === null ? t('d.sameCaliber') : t('d.shareOfTokensPrefix') + cacheReadShare}
-        />
+        <StatCard label={t('d.callCount')} value={fmtCalls(safeTotals.calls)} />
+        <StatCard label="Tokens" value={fmtTokens(totalTokens)} />
+        <StatCard label={t('c.input')} value={fmtTokens(safeTotals.inputTokens)} />
+        <StatCard label={t('c.output')} value={fmtTokens(safeTotals.outputTokens)} />
+        <StatCard label={t('c.cacheRead')} value={fmtTokens(safeTotals.cacheReadTokens)} extra={t('d.sameCaliber')} />
         <StatCard label={t('d.hitRateShort')} value={hitRate} />
-        <StatCard
-          label={t('d.dailyAvg')}
-          value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))}
-          extra={String(activeDays) + t('d.daysWithUsageSuffix')}
-        />
+        <StatCard label={t('d.dailyAvg')} value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))} />
+        <StatCard label={t('d.channelCount')} value={String(activeProviders.size)} />
+        <StatCard label={t('d.activeDayCount')} value={String(activeDays)} />
         <StatCard
           label={t('c.cost')}
+          badge={trendSummary === null ? undefined : trendSummary.badge}
+          above={trendSummary === null ? undefined : trendSummary.above}
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
             : <>{costCell.text}{costCell.amount && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
         />
       </div>
-
-      <TrendPanel
-        usage={usage}
-        channels={channels}
-        range={props.range}
-        bounds={bounds}
-        channelFilter={channelFilter}
-        pricingRevision={props.pricingRevision}
-      />
 
       <ShareBar usage={usage} totalTokens={totalTokens} channelFilter={channelFilter} channels={channels} tooltip={tooltip} />
 
