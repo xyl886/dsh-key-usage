@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { localTimeTextOf } from './format.ts'
+import { t } from './i18n.ts'
 
 export type DisplayCurrency = 'CNY' | 'USD'
 
@@ -23,9 +24,9 @@ export const DEFAULT_DISPLAY_CURRENCY: DisplayCurrency = 'CNY'
 export type FxSource = 'upstream' | 'cache' | 'default'
 
 export const FX_SOURCE_LABELS: Record<FxSource, string> = {
-  upstream: '实时上游',
-  cache: '服务端缓存',
-  default: '默认值',
+  upstream: t('fx.live'),
+  cache: t('fx.cache'),
+  default: t('fx.default'),
 }
 
 export interface FxRate {
@@ -249,12 +250,12 @@ export function comparableMoneyAmountOf(row: CostRowLike): number {
 
 /** 汇率说明：`1 USD = 7.10 CNY · 实时上游 · 08-14 10:22`；没取到时说明为什么。 */
 export function fxSummaryTextOf(fx: FxRate | null): string {
-  if (fx === null) return '还没取到汇率：跨币种金额按原币种显示'
+  if (fx === null) return t('fx.missing')
   const parts = ['1 ' + fx.base + ' = ' + rateValueTextOf(fx.rate) + ' ' + fx.quote]
   parts.push(FX_SOURCE_LABELS[fx.source] ?? fx.source)
   const time = localTimeTextOf(fx.fetchedAt)
   if (time !== null) parts.push(time)
-  if (fx.stale) parts.push('已过期')
+  if (fx.stale) parts.push(t('fx.stale'))
   return parts.join(' · ')
 }
 
@@ -282,6 +283,6 @@ export function normalizeFxRate(raw: unknown): FxRate | null {
 /** 服务端兜底汇率时的显式提示：`source: 'default'` 必须让人看出「这不是联网拿到的」。 */
 export function fxFallbackWarningOf(fx: FxRate | null): string | null {
   if (fx === null || fx.source !== 'default') return null
-  return '用默认汇率 ' + rateValueTextOf(fx.rate) + '，未能联网取实时值'
+  return t('fx.defaultPrefix') + rateValueTextOf(fx.rate) + t('fx.defaultSuffix')
     + (fx.note === null ? '' : '（' + fx.note + '）')
 }

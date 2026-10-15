@@ -6,6 +6,7 @@ import { hiddenEmptyRowsText } from '../rows.ts'
 import type { Channel, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
+import { t, useT } from '../i18n.ts'
 
 export interface DetailSortState {
   key: string
@@ -69,6 +70,8 @@ export function DailyDetailTable(props: {
   sort: DetailSortState
   onSort: (sort: DetailSortState) => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const { usage, channels, channelFilter, expandedPeriods, onTogglePeriod, sort, onSort } = props
   const modelRows: ModelRow[] = []
   for (const day of usage.days) {
@@ -142,13 +145,13 @@ export function DailyDetailTable(props: {
       <table className={styles.table}>
         <thead>
           <tr>
-            {header('period', '日期')}
-            {header('total', '总计')}
-            {header('calls', '调用')}
-            {header('input', '输入')}
-            {header('output', '输出')}
-            {header('cacheRead', '缓存读')}
-            {header('hit', '命中率')}
+            {header('period', t('c.date'))}
+            {header('total', t('r.total'))}
+            {header('calls', t('common.calls'))}
+            {header('input', t('c.input'))}
+            {header('output', t('c.output'))}
+            {header('cacheRead', t('c.cacheRead'))}
+            {header('hit', t('d.hitRate'))}
           </tr>
         </thead>
         <tbody>

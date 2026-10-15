@@ -9,6 +9,7 @@ import type { Channel, HeatmapDay } from '../types.ts'
 import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import styles from '../styles/overview.module.css'
 import shared from '../styles/shared.module.css'
+import { t, useT } from '../i18n.ts'
 
 /** 9 个月 ≈ 39 周；配合 18px 方形格子，窄窗口下横向滚动。 */
 const WEEK_COUNT = 39
@@ -47,6 +48,8 @@ const LEVEL_COLORS = [
 ]
 
 export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; tooltip: TooltipApi }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const { days, channels, tooltip } = props
   const heatmapByDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   const thresholds = useMemo(() => levelThresholds(days), [days])
@@ -83,7 +86,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
     let previousMonth = -1
     for (const week of weeks) {
       const month = Number(week[0].date.slice(5, 7))
-      labels.push(month !== previousMonth ? month + '月' : '')
+      labels.push(month !== previousMonth ? month + t('h.month') : '')
       previousMonth = month
     }
     return { columns: weeks, monthLabels: labels }
@@ -106,8 +109,8 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
       className={styles.heatmapCard}
       role="img"
       aria-label={
-        '活跃热力图：近 9 个月，共 ' + String(activeDays) + ' 个活跃日；每格代表一天的 Tokens 总量，颜色越深用量越高。'
-        + '逐格明细请查看「使用明细」页的按天图表与每日细目。'
+        t('h.summaryPrefix') + String(activeDays) + String(activeDays) + t('h.summarySuffix')
+        + ''
       }
     >
       <div className={styles.heatmapHead}>
@@ -164,7 +167,7 @@ function tipOf(cell: HeatCell, day: HeatmapDay | undefined, channels: Channel[])
     return (
       <>
         <TipTitle>{cell.date}</TipTitle>
-        <TipSub>{cell.state === 'idle' ? '当日无用量记录' : '台账尚未覆盖'}</TipSub>
+        <TipSub>{cell.state === 'idle' ? t('h.noUsage') : t('h.noLedger')}</TipSub>
       </>
     )
   }

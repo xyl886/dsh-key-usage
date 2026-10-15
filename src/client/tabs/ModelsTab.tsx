@@ -11,6 +11,7 @@ import type { Channel, ModelAggregateRow, ModelsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import exportStyles from '../styles/export.module.css'
+import { t, useT } from '../i18n.ts'
 
 const MODELS_PATH = '/dsh-key-usage/models'
 
@@ -18,23 +19,25 @@ type SortKey = 'tokensDesc' | 'callsDesc' | 'costDesc' | 'recent'
 
 /** 导出列：取原始数值（金额、命中率不带单位），方便直接进表格做计算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ModelAggregateRow>> = [
-  { key: 'provider', label: '通道 id', value: (row) => row.provider },
-  { key: 'providerLabel', label: '通道', value: (row) => row.providerLabel },
-  { key: 'model', label: '模型', value: (row) => row.model },
-  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'provider', label: t('m.channelId'), value: (row) => row.provider },
+  { key: 'providerLabel', label: t('common.channel'), value: (row) => row.providerLabel },
+  { key: 'model', label: t('m.model'), value: (row) => row.model },
+  { key: 'calls', label: t('common.calls'), value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'inputTokens', label: '输入', value: (row) => row.buckets.inputTokens },
-  { key: 'outputTokens', label: '输出', value: (row) => row.buckets.outputTokens },
-  { key: 'cacheReadTokens', label: '缓存读', value: (row) => row.buckets.cacheReadTokens },
-  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
-  { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
-  { key: 'costMode', label: '计费模式', value: (row) => row.costMode },
-  { key: 'sessionCount', label: '会话数', value: (row) => row.sessionCount },
-  { key: 'lastTime', label: '最近活跃', value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'inputTokens', label: t('c.input'), value: (row) => row.buckets.inputTokens },
+  { key: 'outputTokens', label: t('c.output'), value: (row) => row.buckets.outputTokens },
+  { key: 'cacheReadTokens', label: t('c.cacheRead'), value: (row) => row.buckets.cacheReadTokens },
+  { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
+  { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
+  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'costMode', label: t('d.costMode'), value: (row) => row.costMode },
+  { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
+  { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },
 ]
 
 export function ModelsTab(props: { data: ModelsResponse | null; channels: Channel[] }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('tokensDesc')
@@ -69,7 +72,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
 
   if (props.data === null) {
     const reason = failureReasonOf(MODELS_PATH)
-    return <div className={styles.empty}>{reason === null ? '按模型数据读取中…' : '按模型数据不可用：' + reason}</div>
+    return <div className={styles.empty}>{reason === null ? t('m.loading') : t('m.unavailable') + reason}</div>
   }
 
   return (
@@ -78,7 +81,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
         <div className={styles.warning}>{coverageText(props.data.coverage.status, props.data.coverage.skippedSessions)}</div>
       )}
       <div className={listStyles.filterBar}>
-        <input className={listStyles.searchInput} placeholder="搜索模型名、通道…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className={listStyles.searchInput} placeholder={t('m.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
         <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
           <option value="ALL">全部通道</option>
           {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
@@ -141,13 +144,13 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算
-        {props.data.priced ? '' : '（台账无成本数据，暂不可估）'}；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）
+        {props.data.priced ? '' : t('s.noCost')}；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）
       </div>
     </div>
   )
 }
 
 function coverageText(status: string, skipped: number): string {
-  if (status === 'unavailable') return '会话数据不可用（宿主未提供会话服务或全部读取失败）'
-  return '会话数据不完整：' + String(skipped) + ' 个会话读取失败，未计入统计'
+  if (status === 'unavailable') return t('s.unavailable')
+  return t('s.partial') + String(skipped) + t('s.partialTail')
 }

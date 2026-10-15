@@ -16,6 +16,7 @@ import type {
   SummaryResponse,
   UsageResponse,
 } from './types.ts'
+import { t } from './i18n.ts'
 
 /** 最近一次请求失败的原因，按路径记住（空态文案据此指向「要重启宿主」）。 */
 const failureReasons = new Map<string, string>()
@@ -27,7 +28,7 @@ export function failureReasonOf(path: string): string | null {
 /** 404 单独说清「要重启宿主」：刷新页面不会让服务端新端点出现。 */
 function failureTextOf(status: number): string {
   return status === 404
-    ? 'HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）'
+    ? t('api.notFound')
     : 'HTTP ' + String(status)
 }
 
@@ -41,7 +42,7 @@ async function fetchJson<T>(path: string, failureKey: string = path): Promise<T 
     failureReasons.delete(failureKey)
     return await response.json() as T
   } catch (error) {
-    failureReasons.set(failureKey, '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    failureReasons.set(failureKey, t('api.requestFailed') + (error instanceof Error ? error.message : String(error)))
     return null
   }
 }
@@ -140,8 +141,8 @@ export async function refreshModelPrices(): Promise<PricingRefreshResult | null>
     return await response.json() as PricingRefreshResult
   } catch (error) {
     failureReasons.set(MODEL_PRICE_REFRESH_PATH, controller.signal.aborted
-      ? '刷新超时：' + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1000) + ' 秒内没拿到服务端结果（上游可能不可达）'
-      : '请求失败：' + (error instanceof Error ? error.message : String(error)))
+      ? t('api.refreshTimeout') + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1000) + t('api.refreshTimeoutTail')
+      : t('api.requestFailed') + (error instanceof Error ? error.message : String(error)))
     return null
   } finally {
     clearTimeout(timer)
@@ -169,12 +170,12 @@ export async function refreshAll(): Promise<SnapshotResponse | null> {
     failureReasons.delete(REFRESH_PATH)
     const result = await response.json() as SnapshotResponse & { ok?: boolean; error?: string }
     if (result.ok !== true) {
-      failureReasons.set(REFRESH_PATH, typeof result.error === 'string' ? result.error : '刷新被服务端拒绝')
+      failureReasons.set(REFRESH_PATH, typeof result.error === 'string' ? result.error : t('api.refreshRejected'))
       return null
     }
     return result
   } catch (error) {
-    failureReasons.set(REFRESH_PATH, '请求失败：' + (error instanceof Error ? error.message : String(error)))
+    failureReasons.set(REFRESH_PATH, t('api.requestFailed') + (error instanceof Error ? error.message : String(error)))
     return null
   }
 }

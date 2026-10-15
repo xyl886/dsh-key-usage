@@ -10,21 +10,22 @@ import type { Channel, ProjectRow, ProjectsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import exportStyles from '../styles/export.module.css'
+import { t, useT } from '../i18n.ts'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'callsDesc'
 
 /** 导出列：成本与命中率都给原始数值，方便在表格里继续算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
-  { key: 'workspace', label: '项目路径', value: (row) => row.workspace },
-  { key: 'dominantProvider', label: '主要通道', value: (row) => row.dominantProvider },
-  { key: 'calls', label: '调用', value: (row) => row.calls },
+  { key: 'workspace', label: t('p.path'), value: (row) => row.workspace },
+  { key: 'dominantProvider', label: t('p.mainChannel'), value: (row) => row.dominantProvider },
+  { key: 'calls', label: t('common.calls'), value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'cacheHitRate', label: '命中率(%)', value: (row) => row.cacheHitRate },
-  { key: 'cost', label: '成本(原币种合计)', value: (row) => row.cost },
-  { key: 'costSource', label: '成本来源', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
-  { key: 'sessionCount', label: '会话数', value: (row) => row.sessionCount },
-  { key: 'archivedSessionCount', label: '已归档会话数', value: (row) => row.archivedSessionCount },
-  { key: 'lastTime', label: '最近活跃', value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
+  { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
+  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
+  { key: 'archivedSessionCount', label: t('p.archivedSessions'), value: (row) => row.archivedSessionCount },
+  { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },
 ]
 
 export function ProjectsTab(props: {
@@ -34,6 +35,8 @@ export function ProjectsTab(props: {
   focusWorkspace?: string | null
   onClearFocus?: () => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
@@ -75,7 +78,7 @@ export function ProjectsTab(props: {
         <div className={styles.warning}>{coverageText(props.data.coverage.status, props.data.coverage.skippedSessions)}</div>
       )}
       <div className={listStyles.filterBar}>
-        <input className={listStyles.searchInput} placeholder="搜索项目路径…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className={listStyles.searchInput} placeholder={t('p.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
         <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
           <option value="ALL">全部通道</option>
           {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
@@ -95,7 +98,7 @@ export function ProjectsTab(props: {
       {focusWorkspace !== null && (
         <div className={listStyles.focusChip}>
           仅看项目：{focusWorkspace}
-          <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label="清除项目筛选">✕</button>
+          <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label={t('p.clearFilter')}>✕</button>
         </div>
       )}
       <table className={styles.table + ' ' + listStyles.projectTable}>
@@ -116,7 +119,7 @@ export function ProjectsTab(props: {
                       <div className={listStyles.listMain}>{baseNameOf(row.workspace)}</div>
                       <div className={listStyles.listSub}>
                         {row.workspace} · {row.sessionCount} 个会话
-                        {row.archivedSessionCount > 0 ? '（含 ' + row.archivedSessionCount + ' 个已归档，仍计入）' : ''}
+                        {row.archivedSessionCount > 0 ? t('p.archivePrefix') + row.archivedSessionCount + t('p.archiveSuffix') : ''}
                       </div>
                     </div>
                   </div>
@@ -136,21 +139,21 @@ export function ProjectsTab(props: {
             )
           })}
           {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>
-            {focusWorkspace === null ? '没有符合条件的项目' : '这个项目没有可展示的用量（可能只有失败的调用）'}
+            {focusWorkspace === null ? t('p.empty') : t('p.noUsage')}
           </td></tr>}
         </tbody>
       </table>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        成本按三层价目自动估算{props.data.priced ? '' : '（台账无成本数据，暂不可估）'}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
+        成本按三层价目自动估算{props.data.priced ? '' : t('s.noCost')}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）
       </div>
     </div>
   )
 }
 
 function coverageText(status: string, skipped: number): string {
-  if (status === 'unavailable') return '会话数据不可用（宿主未提供会话服务或全部读取失败）'
-  return '会话数据不完整：' + String(skipped) + ' 个会话读取失败，未计入统计'
+  if (status === 'unavailable') return t('s.unavailable')
+  return t('s.partial') + String(skipped) + t('s.partialTail')
 }
 
 export function baseNameOf(path: string): string {

@@ -155,6 +155,48 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"fmt.minutesAgo": "{count} 分钟前",
 			"fmt.hoursAgo": "{count} 小时前",
 			"fmt.daysAgo": "{count} 天前",
+			"m.channelId": "通道 id",
+			"m.model": "模型",
+			"m.sessions": "会话数",
+			"m.lastActive": "最近活跃",
+			"m.loading": "按模型数据读取中",
+			"m.unavailable": "按模型数据不可用",
+			"m.search": "搜索模型名、通道",
+			"p.path": "项目路径",
+			"p.mainChannel": "主要通道",
+			"p.archivedSessions": "已归档",
+			"p.search": "搜索项目路径",
+			"p.clearFilter": "清除筛选",
+			"p.archivePrefix": "（含 ",
+			"p.archiveSuffix": " 个已归档，仍计入）",
+			"p.empty": "没有符合条件的项目",
+			"p.noUsage": "没有可展示的用量",
+			"h.month": "月",
+			"h.summaryPrefix": "近 9 个月 · ",
+			"h.summarySuffix": " 个活跃日",
+			"h.tip": "每格一天 Tokens，颜色越深用量越高",
+			"h.noUsage": "当日无用量",
+			"h.noLedger": "台账未覆盖",
+			"sh.channels": "通道占比",
+			"sh.models": "模型占比",
+			"sh.noData": "暂无数据",
+			"sh.morePrefix": "，等 ",
+			"sh.moreSuffix": " 项",
+			"fx.live": "实时上游",
+			"fx.cache": "服务端缓存",
+			"fx.default": "默认值",
+			"fx.missing": "还没取到汇率，跨币种按原币种显示",
+			"fx.stale": "已过期",
+			"fx.defaultPrefix": "用默认汇率 ",
+			"fx.defaultSuffix": "，未联网",
+			"api.notFound": "HTTP 404：端点不存在",
+			"api.restartHint": "服务端改动需退出重开 DSH",
+			"api.requestFailed": "请求失败",
+			"api.refreshTimeout": "刷新超时",
+			"api.refreshTimeoutTail": " 秒内没有响应",
+			"api.refreshRejected": "刷新被服务端拒绝",
+			"rows.hiddenPrefix": "已隐藏 ",
+			"rows.hiddenSuffix": " 行无 Token 记录",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -379,6 +421,48 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"fmt.minutesAgo": "{count} min ago",
 			"fmt.hoursAgo": "{count} h ago",
 			"fmt.daysAgo": "{count} d ago",
+			"m.channelId": "Channel id",
+			"m.model": "Model",
+			"m.sessions": "Sessions",
+			"m.lastActive": "Last active",
+			"m.loading": "Loading models",
+			"m.unavailable": "Models unavailable",
+			"m.search": "Search model, channel",
+			"p.path": "Project",
+			"p.mainChannel": "Main channel",
+			"p.archivedSessions": "Archived",
+			"p.search": "Search project path",
+			"p.clearFilter": "Clear filter",
+			"p.archivePrefix": "(",
+			"p.archiveSuffix": " archived included)",
+			"p.empty": "No matching projects",
+			"p.noUsage": "No usage to show",
+			"h.month": "Month",
+			"h.summaryPrefix": "Last 9 months · ",
+			"h.summarySuffix": " active days",
+			"h.tip": "One cell = one day of tokens; darker means more",
+			"h.noUsage": "No usage",
+			"h.noLedger": "Not in ledger",
+			"sh.channels": "Channels",
+			"sh.models": "Models",
+			"sh.noData": "No data",
+			"sh.morePrefix": ", +",
+			"sh.moreSuffix": " more",
+			"fx.live": "Live",
+			"fx.cache": "Cached",
+			"fx.default": "Default",
+			"fx.missing": "No FX rate yet, showing original currencies",
+			"fx.stale": "Stale",
+			"fx.defaultPrefix": "Using default rate ",
+			"fx.defaultSuffix": ", offline",
+			"api.notFound": "HTTP 404: endpoint missing",
+			"api.restartHint": "restart DSH after server changes",
+			"api.requestFailed": "Request failed",
+			"api.refreshTimeout": "Refresh timeout",
+			"api.refreshTimeoutTail": " s without a response",
+			"api.refreshRejected": "Refresh rejected by server",
+			"rows.hiddenPrefix": "",
+			"rows.hiddenSuffix": " rows without tokens hidden",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -565,7 +649,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 404 单独说清「要重启宿主」：刷新页面不会让服务端新端点出现。 */
 		function failureTextOf(status) {
-			return status === 404 ? "HTTP 404：宿主没有这个端点 —— 服务端改动需要退出重开 DSH（刷新页面不够）" : "HTTP " + String(status);
+			return status === 404 ? t("api.notFound") : "HTTP " + String(status);
 		}
 		async function fetchJson(path, failureKey = path) {
 			try {
@@ -577,7 +661,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				failureReasons.delete(failureKey);
 				return await response.json();
 			} catch (error) {
-				failureReasons.set(failureKey, "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				failureReasons.set(failureKey, t("api.requestFailed") + (error instanceof Error ? error.message : String(error)));
 				return null;
 			}
 		}
@@ -661,7 +745,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				failureReasons.delete(MODEL_PRICE_REFRESH_PATH);
 				return await response.json();
 			} catch (error) {
-				failureReasons.set(MODEL_PRICE_REFRESH_PATH, controller.signal.aborted ? "刷新超时：" + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1e3) + " 秒内没拿到服务端结果（上游可能不可达）" : "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				failureReasons.set(MODEL_PRICE_REFRESH_PATH, controller.signal.aborted ? t("api.refreshTimeout") + String(MODEL_PRICE_REFRESH_TIMEOUT_MS / 1e3) + t("api.refreshTimeoutTail") : t("api.requestFailed") + (error instanceof Error ? error.message : String(error)));
 				return null;
 			} finally {
 				clearTimeout(timer);
@@ -688,12 +772,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				failureReasons.delete(REFRESH_PATH);
 				const result = await response.json();
 				if (result.ok !== true) {
-					failureReasons.set(REFRESH_PATH, typeof result.error === "string" ? result.error : "刷新被服务端拒绝");
+					failureReasons.set(REFRESH_PATH, typeof result.error === "string" ? result.error : t("api.refreshRejected"));
 					return null;
 				}
 				return result;
 			} catch (error) {
-				failureReasons.set(REFRESH_PATH, "请求失败：" + (error instanceof Error ? error.message : String(error)));
+				failureReasons.set(REFRESH_PATH, t("api.requestFailed") + (error instanceof Error ? error.message : String(error)));
 				return null;
 			}
 		}
@@ -787,9 +871,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			USD: "$ USD"
 		};
 		const FX_SOURCE_LABELS = {
-			upstream: "实时上游",
-			cache: "服务端缓存",
-			default: "默认值"
+			upstream: t("fx.live"),
+			cache: t("fx.cache"),
+			default: t("fx.default")
 		};
 		/** 显示币种与汇率都在这里；`fx: null` = 还没取到汇率（跨币种金额按原币种显示）。 */
 		let state = {
@@ -980,12 +1064,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 汇率说明：`1 USD = 7.10 CNY · 实时上游 · 08-14 10:22`；没取到时说明为什么。 */
 		function fxSummaryTextOf(fx) {
-			if (fx === null) return "还没取到汇率：跨币种金额按原币种显示";
+			if (fx === null) return t("fx.missing");
 			const parts = ["1 " + fx.base + " = " + rateValueTextOf(fx.rate) + " " + fx.quote];
 			parts.push(FX_SOURCE_LABELS[fx.source] ?? fx.source);
 			const time = localTimeTextOf(fx.fetchedAt);
 			if (time !== null) parts.push(time);
-			if (fx.stale) parts.push("已过期");
+			if (fx.stale) parts.push(t("fx.stale"));
 			return parts.join(" · ");
 		}
 		/** 把服务端 `/fx` 的响应归一化成内部结构；rate 非法时返回 null（宁可不算也不猜）。 */
@@ -1009,7 +1093,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 服务端兜底汇率时的显式提示：`source: 'default'` 必须让人看出「这不是联网拿到的」。 */
 		function fxFallbackWarningOf(fx) {
 			if (fx === null || fx.source !== "default") return null;
-			return "用默认汇率 " + rateValueTextOf(fx.rate) + "，未能联网取实时值" + (fx.note === null ? "" : "（" + fx.note + "）");
+			return t("fx.defaultPrefix") + rateValueTextOf(fx.rate) + t("fx.defaultSuffix") + (fx.note === null ? "" : "（" + fx.note + "）");
 		}
 		//#endregion
 		//#region src/client/pricing.ts
@@ -1508,6 +1592,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"#5b8cff"
 		];
 		function Heatmap(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { days, channels, tooltip } = props;
 			const heatmapByDate = (0, react.useMemo)(() => new Map(days.map((day) => [day.date, day])), [days]);
 			const thresholds = (0, react.useMemo)(() => levelThresholds(days), [days]);
@@ -1558,7 +1644,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				let previousMonth = -1;
 				for (const week of weeks) {
 					const month = Number(week[0].date.slice(5, 7));
-					labels.push(month !== previousMonth ? month + "月" : "");
+					labels.push(month !== previousMonth ? month + t("h.month") : "");
 					previousMonth = month;
 				}
 				return {
@@ -1576,7 +1662,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: overview_module_css_default.heatmapCard,
 				role: "img",
-				"aria-label": "活跃热力图：近 9 个月，共 " + String(activeDays) + " 个活跃日；每格代表一天的 Tokens 总量，颜色越深用量越高。逐格明细请查看「使用明细」页的按天图表与每日细目。",
+				"aria-label": t("h.summaryPrefix") + String(activeDays) + String(activeDays) + t("h.summarySuffix") + "",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: overview_module_css_default.heatmapHead,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -1637,7 +1723,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		function tipOf(cell, day, channels) {
-			if (cell.state !== "active" || day === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: cell.date }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: cell.state === "idle" ? "当日无用量记录" : "台账尚未覆盖" })] });
+			if (cell.state !== "active" || day === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: cell.date }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: cell.state === "idle" ? t("h.noUsage") : t("h.noLedger") })] });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: cell.date }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
@@ -1952,6 +2038,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/ShareBar.tsx
 		function ShareBar(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { usage, totalTokens, channels } = props;
 			if (usage === null || totalTokens <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
@@ -1965,7 +2053,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})]
 			});
 			let rows = [];
-			let title = "通道占比 · 按 Tokens";
+			let title = t("sh.channels");
 			if (props.channelFilter === "ALL") {
 				const byProvider = /* @__PURE__ */ new Map();
 				for (const day of usage.days) for (const model of day.models) byProvider.set(model.provider, (byProvider.get(model.provider) ?? 0) + model.inputTokens + model.outputTokens + model.cacheReadTokens);
@@ -1976,7 +2064,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					color: channelColorOf(channels, provider)
 				}));
 			} else {
-				title = "模型占比 · 按 Tokens";
+				title = t("sh.models");
 				const byModel = /* @__PURE__ */ new Map();
 				for (const day of usage.days) for (const model of day.models) {
 					const bucket = byModel.get(model.model);
@@ -1995,7 +2083,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}));
 			}
 			rows.sort((first, second) => second.tokens - first.tokens);
-			const shareSummary = rows.length === 0 ? title + "：暂无数据" : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? "，等 " + String(rows.length) + " 项" : "");
+			const shareSummary = rows.length === 0 ? title + t("sh.noData") : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? t("sh.morePrefix") + String(rows.length) + t("sh.moreSuffix") : "");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -2437,6 +2525,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/rows.ts
+		/**
+		* 零 Token 行的统一处理：只有调用次数、Token 全 0 的行基本都是调用失败（本机实测 key 失效的模型
+		* 就是这样），留在表里全是噪音；四处列表统一用它过滤，并把隐藏条数如实告诉用户。
+		*/
 		function dropEmptyRows(rows, tokensOf) {
 			const kept = rows.filter((row) => tokensOf(row) > 0);
 			return {
@@ -2446,7 +2538,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 列表底部的一行小字：说明隐藏了什么、为什么。 */
 		function hiddenEmptyRowsText(hidden) {
-			return "已隐藏 " + String(hidden) + " 行无 Token 记录（调用失败或未产生用量；调用次数仍计入合计）";
+			return t("rows.hiddenPrefix") + String(hidden) + t("rows.hiddenSuffix");
 		}
 		//#endregion
 		//#region src/client/components/DailyDetailTable.tsx
@@ -2478,6 +2570,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			cost: (first, second) => first.cost - second.cost
 		};
 		function DailyDetailTable(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const { usage, channels, channelFilter, expandedPeriods, onTogglePeriod, sort, onSort } = props;
 			const modelRows = [];
 			for (const day of usage.days) for (const model of day.models) {
@@ -2562,13 +2656,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
 					className: shared_module_css_default.table,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						header("period", "日期"),
-						header("total", "总计"),
-						header("calls", "调用"),
-						header("input", "输入"),
-						header("output", "输出"),
-						header("cacheRead", "缓存读"),
-						header("hit", "命中率")
+						header("period", t("c.date")),
+						header("total", t("r.total")),
+						header("calls", t("common.calls")),
+						header("input", t("c.input")),
+						header("output", t("c.output")),
+						header("cacheRead", t("c.cacheRead")),
+						header("hit", t("d.hitRate"))
 					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [ordered.map((period) => {
 						const modelsInPeriod = modelRows.filter((row) => row.period === period.period).filter((row) => row.totalTokens > 0).sort((first, second) => second.totalTokens - first.totalTokens);
 						const expandable = modelsInPeriod.length > 1;
@@ -3196,22 +3290,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$2 = [
 			{
 				key: "provider",
-				label: "通道 id",
+				label: t("m.channelId"),
 				value: (row) => row.provider
 			},
 			{
 				key: "providerLabel",
-				label: "通道",
+				label: t("common.channel"),
 				value: (row) => row.providerLabel
 			},
 			{
 				key: "model",
-				label: "模型",
+				label: t("m.model"),
 				value: (row) => row.model
 			},
 			{
 				key: "calls",
-				label: "调用",
+				label: t("common.calls"),
 				value: (row) => row.calls
 			},
 			{
@@ -3221,51 +3315,53 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "inputTokens",
-				label: "输入",
+				label: t("c.input"),
 				value: (row) => row.buckets.inputTokens
 			},
 			{
 				key: "outputTokens",
-				label: "输出",
+				label: t("c.output"),
 				value: (row) => row.buckets.outputTokens
 			},
 			{
 				key: "cacheReadTokens",
-				label: "缓存读",
+				label: t("c.cacheRead"),
 				value: (row) => row.buckets.cacheReadTokens
 			},
 			{
 				key: "cacheHitRate",
-				label: "命中率(%)",
+				label: t("c.hitRate"),
 				value: (row) => row.cacheHitRate
 			},
 			{
 				key: "cost",
-				label: "成本(原币种合计)",
+				label: t("c.costNative"),
 				value: (row) => row.cost
 			},
 			{
 				key: "costSource",
-				label: "成本来源",
+				label: t("s.costSource"),
 				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
 			},
 			{
 				key: "costMode",
-				label: "计费模式",
+				label: t("d.costMode"),
 				value: (row) => row.costMode
 			},
 			{
 				key: "sessionCount",
-				label: "会话数",
+				label: t("m.sessions"),
 				value: (row) => row.sessionCount
 			},
 			{
 				key: "lastTime",
-				label: "最近活跃",
+				label: t("m.lastActive"),
 				value: (row) => fmtDateTime(row.lastTime)
 			}
 		];
 		function ModelsTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const [query, setQuery] = (0, react.useState)("");
 			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
 			const [sortKey, setSortKey] = (0, react.useState)("tokensDesc");
@@ -3303,7 +3399,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const reason = failureReasonOf(MODELS_PATH);
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.empty,
-					children: reason === null ? "按模型数据读取中…" : "按模型数据不可用：" + reason
+					children: reason === null ? t("m.loading") : t("m.unavailable") + reason
 				});
 			}
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
@@ -3316,7 +3412,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 							className: lists_module_css_default.searchInput,
-							placeholder: "搜索模型名、通道…",
+							placeholder: t("m.search"),
 							value: query,
 							onChange: (event) => setQuery(event.target.value)
 						}),
@@ -3446,15 +3542,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: shared_module_css_default.statExtra,
 					children: [
 						"模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
-						props.data.priced ? "" : "（台账无成本数据，暂不可估）",
+						props.data.priced ? "" : t("s.noCost"),
 						"；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）"
 					]
 				})
 			] });
 		}
 		function coverageText$1(status, skipped) {
-			if (status === "unavailable") return "会话数据不可用（宿主未提供会话服务或全部读取失败）";
-			return "会话数据不完整：" + String(skipped) + " 个会话读取失败，未计入统计";
+			if (status === "unavailable") return t("s.unavailable");
+			return t("s.partial") + String(skipped) + t("s.partialTail");
 		}
 		//#endregion
 		//#region src/client/tabs/ProjectsTab.tsx
@@ -3463,17 +3559,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$1 = [
 			{
 				key: "workspace",
-				label: "项目路径",
+				label: t("p.path"),
 				value: (row) => row.workspace
 			},
 			{
 				key: "dominantProvider",
-				label: "主要通道",
+				label: t("p.mainChannel"),
 				value: (row) => row.dominantProvider
 			},
 			{
 				key: "calls",
-				label: "调用",
+				label: t("common.calls"),
 				value: (row) => row.calls
 			},
 			{
@@ -3483,36 +3579,38 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cacheHitRate",
-				label: "命中率(%)",
+				label: t("c.hitRate"),
 				value: (row) => row.cacheHitRate
 			},
 			{
 				key: "cost",
-				label: "成本(原币种合计)",
+				label: t("c.costNative"),
 				value: (row) => row.cost
 			},
 			{
 				key: "costSource",
-				label: "成本来源",
+				label: t("s.costSource"),
 				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
 			},
 			{
 				key: "sessionCount",
-				label: "会话数",
+				label: t("m.sessions"),
 				value: (row) => row.sessionCount
 			},
 			{
 				key: "archivedSessionCount",
-				label: "已归档会话数",
+				label: t("p.archivedSessions"),
 				value: (row) => row.archivedSessionCount
 			},
 			{
 				key: "lastTime",
-				label: "最近活跃",
+				label: t("m.lastActive"),
 				value: (row) => fmtDateTime(row.lastTime)
 			}
 		];
 		function ProjectsTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
 			const [query, setQuery] = (0, react.useState)("");
 			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
 			const [sortKey, setSortKey] = (0, react.useState)("recent");
@@ -3562,7 +3660,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 							className: lists_module_css_default.searchInput,
-							placeholder: "搜索项目路径…",
+							placeholder: t("p.search"),
 							value: query,
 							onChange: (event) => setQuery(event.target.value)
 						}),
@@ -3626,7 +3724,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							type: "button",
 							className: lists_module_css_default.focusClear,
 							onClick: () => props.onClearFocus?.(),
-							"aria-label": "清除项目筛选",
+							"aria-label": t("p.clearFilter"),
 							children: "✕"
 						})
 					]
@@ -3658,7 +3756,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										" · ",
 										row.sessionCount,
 										" 个会话",
-										row.archivedSessionCount > 0 ? "（含 " + row.archivedSessionCount + " 个已归档，仍计入）" : ""
+										row.archivedSessionCount > 0 ? t("p.archivePrefix") + row.archivedSessionCount + t("p.archiveSuffix") : ""
 									]
 								})] })
 							}) }),
@@ -3688,7 +3786,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 						colSpan: 6,
 						className: shared_module_css_default.empty,
-						children: focusWorkspace === null ? "没有符合条件的项目" : "这个项目没有可展示的用量（可能只有失败的调用）"
+						children: focusWorkspace === null ? t("p.empty") : t("p.noUsage")
 					}) })] })]
 				}),
 				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -3699,15 +3797,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: shared_module_css_default.statExtra,
 					children: [
 						"成本按三层价目自动估算",
-						props.data.priced ? "" : "（台账无成本数据，暂不可估）",
+						props.data.priced ? "" : t("s.noCost"),
 						"；命中率 = 缓存读 /（输入 + 输出 + 缓存读）"
 					]
 				})
 			] });
 		}
 		function coverageText(status, skipped) {
-			if (status === "unavailable") return "会话数据不可用（宿主未提供会话服务或全部读取失败）";
-			return "会话数据不完整：" + String(skipped) + " 个会话读取失败，未计入统计";
+			if (status === "unavailable") return t("s.unavailable");
+			return t("s.partial") + String(skipped) + t("s.partialTail");
 		}
 		function baseNameOf(path) {
 			const parts = path.replace(/[\\/]+$/, "").split(/[\\/]/);

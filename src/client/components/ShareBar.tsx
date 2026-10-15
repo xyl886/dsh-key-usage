@@ -6,6 +6,7 @@ import type { Channel, UsageResponse } from '../types.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
+import { t, useT } from '../i18n.ts'
 
 interface ShareRow {
   key: string
@@ -21,6 +22,8 @@ export function ShareBar(props: {
   channels: Channel[]
   tooltip: TooltipApi
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染 */
+  const t = useT()
   const { usage, totalTokens, channels } = props
   if (usage === null || totalTokens <= 0) {
     return (
@@ -31,7 +34,7 @@ export function ShareBar(props: {
     )
   }
   let rows: ShareRow[] = []
-  let title = '通道占比 · 按 Tokens'
+  let title = t('sh.channels')
   if (props.channelFilter === 'ALL') {
     const byProvider = new Map<string, number>()
     for (const day of usage.days) {
@@ -43,7 +46,7 @@ export function ShareBar(props: {
       key: provider, label: displayNameOf(channels, provider), tokens, color: channelColorOf(channels, provider),
     }))
   } else {
-    title = '模型占比 · 按 Tokens'
+    title = t('sh.models')
     const byModel = new Map<string, { tokens: number; provider: string }>()
     for (const day of usage.days) {
       for (const model of day.models) {
@@ -60,10 +63,10 @@ export function ShareBar(props: {
   rows.sort((first, second) => second.tokens - first.tokens)
   // 每段的数值只有悬停才看得到，读屏用户拿不到；这里给出前几名的文本概述
   const shareSummary = rows.length === 0
-    ? title + '：暂无数据'
+    ? title + t('sh.noData')
     : title + '：' + rows.slice(0, 3)
       .map((row) => row.label + ' ' + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + '%')
-      .join('、') + (rows.length > 3 ? '，等 ' + String(rows.length) + ' 项' : '')
+      .join('、') + (rows.length > 3 ? t('sh.morePrefix') + String(rows.length) + t('sh.moreSuffix') : '')
   return (
     <div className={styles.card}>
       <div className={styles.statLabel}>{title}</div>
