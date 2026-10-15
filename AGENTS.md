@@ -63,6 +63,13 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 
 ## 发版与推送（2026-10-13 用户明确要求）
 
+### 开发流程（2026-10-15 用户重新定义，优先级最高）
+
+1. **本地提交随意**：每批改动跑完 `npm run verify`（绿）即可直接本地 commit，不需要先征求同意；不要把半成品提交进去。
+2. **改完就装本地最新版**：`desktop` profile 用 `link:D:/EasyJob/.plugin/dsh-key-usage` 指向本仓库，构建产物（`lib/`、`client/client.js`）就是用户界面上的东西 —— 改完 build 完即可让用户验收，**不必等推送**；服务端改动仍需用户退出重开 DSH。
+3. **推送 GitHub、CI 发布必须经用户明确授意 + 二次确认**：`git push`、`gh workflow run`（含 `publish.yml` 的 `dry_run`）都要先问一次、得到确认后再执行；「已验证 / 已验收」不等于授权。
+4. **版本号仍只由用户的发布指令推动**（见本节的版本号规则），CI 发布同样要单独确认。
+
 - **不要自动 push / npm publish**：远端动作只在你明确说「推送」「发版」时才做。本地 commit 可以自行做（见下一条）。
 - **本地 vs 远端（2026-10-13 用户明确）**：
   - **本地 commit 可以自行做**（用于留可回退基线），但仍要选在**验证通过、没有并行写入者**的时点，不要把半成品提交进去。
