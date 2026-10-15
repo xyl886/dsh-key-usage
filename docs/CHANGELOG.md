@@ -29,10 +29,15 @@
 
 ### 移除
 
-- 冗余文案与死键：占 Tokens 比例、与上方 Tokens 同口径、环比对比标题、持平 / 不可比 / 个百分点等占位词；词典 424 键**零死键**（`d.sameCaliber`、`d.shareOfTokensPrefix`、`t.flat`、`t.incomparable`、`t.pp`、`d.hitRateFormula`、`d.rangeAggregate` 等已清理）。
+- 冗余文案与死键：占 Tokens 比例、与上方 Tokens 同口径、环比对比标题、持平 / 不可比 / 个百分点等占位词；词典 424 键**零死键**（`d.sameCaliber`、`d.shareOfTokensPrefix`、`t.flat`、`t.incomparable`、`t.pp`、`d.hitRateFormula`、`d.rangeAggregate` 等已清理）；
+- 通道详情里的重复表达：悬空的「N 个模型单价 ·」、写死的「区间 2026-09-16 ~ …」（改「近 30 天」）、每行的「币种 CNY」（与显示币种一致时不写）、每行的「错峰中」（提到表头「当前空闲价」）、通道头重复的通道 id（挪到 hover）、「总余额 = 充值 + 赠送」的派生卡片（降级成一行「合计 x CNY」）、表头重复的「显示币种」与工具条的「显示币种」标签、错位的「最近活跃」（实际是 tokens，改「用量」）与重复的「模型」表头（备注列删除、长口径进 hover）；
+- 会话列表的「另有 N 个子代理会话未显示：…」与「另有 N 个已归档会话未显示」两行，以及「时长」旁重复的「跨 N 天」（`crossDays` 只留在导出里）。
 
 ### 修复
 
+- **会话名与侧边栏对不上**：宿主已把会话投影拆成「一会话一文件」（`storages/session_projcache/sessions/<id>.json` → `record.rows.title.val` 就是侧边栏显示名），插件此前只读旧的聚合文件 `session_projcache.json`（只剩少量历史条目），绝大多数会话退化成「首条提问的截断文本」—— 现在按 id 惰性读新投影、按文件 mtime 缓存（首次全量 331 ms，之后每次只 stat 约 16 ms），旧文件降级为兜底；
+- **被 seed 续接的会话被误判成子代理**：宿主也给续接会话写了父会话链接，插件据此推断成子代理并在默认视图里隐藏，而侧边栏把它当独立会话显示 —— 改以投影的 `record.rows.subagent.val.identity` 为准（存在才是真子代理），续接会话的 `origin` / `parentSessionId` 清空；
+- **项目数量与名字对不上**：项目页改以宿主工作区为骨架（名字用工作区 `title`），不在工作区表里的历史目录合并成一行「未归入工作区」，不再各占一行（本机实测 9 行 → 5 行，与侧边栏的 4 个工作区对齐）；
 - **热力图后三档同色**：色阶此前直接写 `var(--dsw-alias-state-business-primary, rgba(...))`，令牌取到的是实心色、兜底 alpha 永不生效，五档看不出层次 —— 改用 `color-mix` 按 18 / 36 / 56 / 76 / 100% 递进；星期列改 `position: sticky`，横向滚动后仍可见；修掉活跃日数被拼接两遍；
 - **会话详情弹窗字段每行只剩一个**：`DetailItem` 的 `wide` 三元表达式两个分支返回同一个类名，所有字段都占满整行 —— 修正后字段按多列排布，弹窗加宽到 880px；
 - **统计卡数值折行与角标位置漂移**：数值加 `white-space: nowrap`，角标改为数值右上角绝对定位（数值右侧预留位），不再出现「角标有时在右、有时掉到第二行」；
