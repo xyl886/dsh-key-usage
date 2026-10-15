@@ -578,8 +578,6 @@ export const en: Record<string, string> = {
   'd.channelCount': 'Channels',
   'd.activeDayCount': 'Days with usage',
   'd.channelsWithUsageSuffix': ' channels',
-  'd.sameCaliber': 'same basis as tokens above',
-  'd.shareOfTokensPrefix': 'of tokens: ',
   'd.hitRateShort': 'Cache hit rate',
   'd.dailyAvg': 'Daily avg tokens',
   'd.daysWithUsageSuffix': ' days with usage',

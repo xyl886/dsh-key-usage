@@ -96,7 +96,6 @@ export function DetailTab(props: {
   const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens
   const hitRate = hitRateOf(safeTotals.cacheReadTokens, safeTotals.inputTokens, safeTotals.outputTokens)
   /** 缓存读在展示口径 Tokens 里的占比；分母为 0 时不给数字（避免显示 0% 误导）。 */
-  const cacheReadShare = totalTokens > 0 ? (safeTotals.cacheReadTokens / totalTokens * 100).toFixed(1) + '%' : null
   /** 范围内「有用量」的天数：日均 Tokens 的分母（拿日历天数去除会把空闲日算成用量偏低）。 */
   const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(channels, channelFilter)

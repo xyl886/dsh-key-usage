@@ -565,8 +565,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.channelCount": "Channels",
 			"d.activeDayCount": "Days with usage",
 			"d.channelsWithUsageSuffix": " channels",
-			"d.sameCaliber": "same basis as tokens above",
-			"d.shareOfTokensPrefix": "of tokens: ",
 			"d.hitRateShort": "Cache hit rate",
 			"d.dailyAvg": "Daily avg tokens",
 			"d.daysWithUsageSuffix": " days with usage",
@@ -2901,7 +2899,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens;
 			const hitRate = hitRateOf(safeTotals.cacheReadTokens, safeTotals.inputTokens, safeTotals.outputTokens);
-			totalTokens > 0 && (safeTotals.cacheReadTokens / totalTokens * 100).toFixed(1) + "";
+			/** 缓存读在展示口径 Tokens 里的占比；分母为 0 时不给数字（避免显示 0% 误导）。 */
 			/** 范围内「有用量」的天数：日均 Tokens 的分母（拿日历天数去除会把空闲日算成用量偏低）。 */
 			const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length;
 			const singleChannel = channelFilter === "ALL" ? null : channelOf(channels, channelFilter);
