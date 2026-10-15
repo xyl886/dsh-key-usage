@@ -23,8 +23,7 @@ export function OverviewTab(props: {
   const { channels, summary } = props
   return (
     <div>
-      <div className={styles.groupLabel}>{t('o.keyList')}</div>
-      <div className={uiStyles.tableScroll}><table className={overviewStyles.keyTable}>
+            <div className={uiStyles.tableScroll}><table className={overviewStyles.keyTable}>
         <thead>
           <tr>
             <th>{t('common.channel')}</th><th>{t('o.type')}</th><th>{t('r.today')}</th><th>{t('s.days30')}</th><th>{t('o.balanceWindow')}</th><th>{t('o.cost30')}</th><th></th>

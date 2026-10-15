@@ -109,7 +109,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
       className={styles.heatmapCard}
       role="img"
       aria-label={
-        t('h.summaryPrefix') + String(activeDays) + String(activeDays) + t('h.summarySuffix')
+        t('h.summaryPrefix') + String(activeDays) + t('h.summarySuffix')
         + ''
       }
     >

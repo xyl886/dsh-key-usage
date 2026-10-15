@@ -77,7 +77,7 @@ export function SessionsTab(props: {
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     const maxAgeDays = Number(daysFilter)
-    const filtered = dropEmptyRows(rows, (row) => row.tokens).rows.filter((row) => {
+    const filtered = rows.filter((row) => {
       // 首条提问正文也参与搜索：系统注入文本已在服务端被跳过，这里拿到的是真实提问
       const haystack = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '') + ' ' + (row.prompt ?? '')
       const matchesQuery = keyword === '' || haystack.toLowerCase().includes(keyword)
