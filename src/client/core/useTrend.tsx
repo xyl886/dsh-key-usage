@@ -136,7 +136,7 @@ export function useTrend(props: {
     const current = metricsOf(usage)
     const previous = metricsOf(previousUsage)
     if (current === null) return null
-    const aboveOf = (node: ReactNode): ReactNode => previous === null ? undefined : <>{t('t.previousShort')}{node}</>
+    const aboveOf = (node: ReactNode): ReactNode => previous === null ? undefined : node
     const points = (value: number | null): string => value === null ? '—' : (value * 100).toFixed(1) + '%'
     return {
       calls: { above: aboveOf(previous === null ? '—' : fmtCalls(previous.calls)), badge: previous === null ? <span>{t('t.incomparable')}</span> : percentBadge(current.calls, previous.calls, false) },

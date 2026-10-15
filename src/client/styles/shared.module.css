@@ -164,9 +164,9 @@
 .logSource { color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }
 
-/* 卡片右上角标（环比涨跌）与数值上方的小字（上期值） */
-.cardWithBadge { position: relative; }
-.statBadge { position: absolute; top: 8px; right: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); }
+/* 角标贴在当期数值的右上角：数值行两端对齐 */
+.statValueRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.statBadge { font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; align-self: flex-start; }
 .statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); margin-top: 2px; }
 
 /* 成本上升的角标用提示色（中性语义，不是错误） */

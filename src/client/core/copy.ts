@@ -137,7 +137,6 @@ export const zh: Record<string, string> = {
   'd.hitRateShort': '缓存命中率',
   'd.dailyAvg': '日均 Tokens',
   'd.daysWithUsageSuffix': ' 天有用量',
-  't.previousShort': '上期 ', 
   't.pp': ' 个百分点',
 
   't.flat': '持平',
@@ -581,7 +580,6 @@ export const en: Record<string, string> = {
   'd.hitRateShort': 'Cache hit rate',
   'd.dailyAvg': 'Daily avg tokens',
   'd.daysWithUsageSuffix': ' days with usage',
-  't.previousShort': 'prev ', 
   't.pp': 'pp',
 
   't.flat': 'Flat',
