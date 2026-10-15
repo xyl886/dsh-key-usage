@@ -3561,6 +3561,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return "重置于 " + fmtDateTime(time.getTime());
 		}
 		function QuotaTab(props) {
+			/** 取词：宿主切语言时重渲染（模块级辅助函数直接用 import 的 t） */
+			const t = useT();
 			const instanceId = (0, react.useId)();
 			const pricingInfoId = instanceId + "-pricing-info";
 			const display = useCurrencyDisplay();

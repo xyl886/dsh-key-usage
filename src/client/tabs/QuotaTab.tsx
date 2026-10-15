@@ -68,6 +68,8 @@ export function QuotaTab(props: {
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本整体重算）。 */
   onPricingReload: () => void
 }): ReactNode {
+  /** 取词：宿主切语言时重渲染（模块级辅助函数直接用 import 的 t） */
+  const t = useT()
   // 抽屉 / 信息块的 id 逐实例唯一：同一页渲染两份时写死字符串会撞 id，aria-controls 会指到别处
   const instanceId = useId()
   const pricingInfoId = instanceId + '-pricing-info'
