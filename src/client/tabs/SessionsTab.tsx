@@ -7,11 +7,15 @@ import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type 
 import { dropEmptyRows, hiddenEmptyRowsText } from '../rows.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
+import { Button } from '../components/ui/Button.tsx'
+import { EmptyState } from '../components/ui/EmptyState.tsx'
+import { Select } from '../components/ui/Select.tsx'
 import { COST_SOURCE_LABELS, costSourceHintOf } from '../pricing.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../tooltip.tsx'
 import type { Channel, SessionRow, SessionsResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
+import uiStyles from '../styles/ui.module.css'
 import exportStyles from '../styles/export.module.css'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'durationDesc' | 'costDesc' | 'hitDesc' | 'callsDesc'
@@ -104,7 +108,7 @@ export function SessionsTab(props: {
     else downloadFile(exportFileName('sessions', 'json'), toJson(visible), JSON_MIME)
   }
 
-  if (props.data === null) return <div className={styles.empty}>会话数据读取中或不可用…</div>
+  if (props.data === null) return <EmptyState title="会话数据读取中或不可用…" />
 
   // 分组在「最新会话」排序下才有意义（其它排序是全局榜单，日期头会重复出现）
   const groups: Array<{ label: string; rows: SessionRow[]; tokens: number }> = []
@@ -157,46 +161,55 @@ export function SessionsTab(props: {
       )}
       <div className={listStyles.filterBar}>
         <input className={listStyles.searchInput} placeholder="搜索会话标题、首条提问、session id、工作区…" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
-          <option value="ALL">全部通道</option>
-          {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
-        </select>
-        <select className={listStyles.filterSelect} value={daysFilter} onChange={(event) => setDaysFilter(event.target.value)}>
-          <option value="7">近 7 天</option>
-          <option value="30">近 30 天</option>
-          <option value="0">全部</option>
-        </select>
-        <select className={listStyles.filterSelect} value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-          <option value="recent">最新会话</option>
-          <option value="tokensDesc">Tokens 最多</option>
-          <option value="tokensAsc">Tokens 最少</option>
-          <option value="durationDesc">时长最长</option>
-          <option value="costDesc">成本最高</option>
-          <option value="hitDesc">命中率最高</option>
-          <option value="callsDesc">调用最多</option>
-        </select>
-        <select
-          className={listStyles.filterSelect}
+        <Select
+          ariaLabel="按通道筛选"
+          value={channelFilter}
+          onChange={setChannelFilter}
+          options={[{ value: 'ALL', label: '全部通道' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+        />
+        <Select
+          ariaLabel="按时间范围筛选"
+          value={daysFilter}
+          onChange={setDaysFilter}
+          options={[{ value: '7', label: '近 7 天' }, { value: '30', label: '近 30 天' }, { value: '0', label: '全部' }]}
+        />
+        <Select
+          ariaLabel="排序方式"
+          value={sortKey}
+          onChange={(value) => setSortKey(value as SortKey)}
+          options={[
+            { value: 'recent', label: '最新会话' },
+            { value: 'tokensDesc', label: 'Tokens 最多' },
+            { value: 'tokensAsc', label: 'Tokens 最少' },
+            { value: 'durationDesc', label: '时长最长' },
+            { value: 'costDesc', label: '成本最高' },
+            { value: 'hitDesc', label: '命中率最高' },
+            { value: 'callsDesc', label: '调用最多' },
+          ]}
+        />
+        <Select
+          ariaLabel="归档会话筛选（归档只做标记，仍然计入统计）"
           value={archiveFilter}
-          onChange={(event) => setArchiveFilter(event.target.value as ArchiveFilter)}
-          title="已归档会话只做标记，仍然计入统计"
-        >
-          <option value="hide">隐藏已归档</option>
-          <option value="all">全部对话（显示已归档）</option>
-          <option value="only">仅显示已归档</option>
-        </select>
-        <select
-          className={listStyles.filterSelect}
+          onChange={(value) => setArchiveFilter(value as ArchiveFilter)}
+          options={[
+            { value: 'hide', label: '隐藏已归档' },
+            { value: 'all', label: '全部对话（显示已归档）' },
+            { value: 'only', label: '仅显示已归档' },
+          ]}
+        />
+        <Select
+          ariaLabel="子会话筛选"
           value={subagentFilter}
-          onChange={(event) => setSubagentFilter(event.target.value as 'hide' | 'all' | 'only')}
-        >
-          <option value="hide">只显示主会话</option>
-          <option value="all">显示子会话</option>
-          <option value="only">仅显示子会话</option>
-        </select>
+          onChange={(value) => setSubagentFilter(value as 'hide' | 'all' | 'only')}
+          options={[
+            { value: 'hide', label: '只显示主会话' },
+            { value: 'all', label: '显示子会话' },
+            { value: 'only', label: '仅显示子会话' },
+          ]}
+        />
         <span className={exportStyles.exportGroup}>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</Button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</Button>
         </span>
       </div>
       {parentFocus !== null && (
@@ -216,7 +229,7 @@ export function SessionsTab(props: {
         </div>
       )}
 
-      <table className={styles.table + ' ' + listStyles.sessionTable}>
+      <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.sessionTable}>
         <thead>
           <tr><th>会话</th><th>通道</th><th>时间 / 时长</th><th>Tokens</th><th>命中率</th><th>成本</th></tr>
         </thead>
@@ -238,7 +251,7 @@ export function SessionsTab(props: {
           {sortKey !== 'recent' && shownRows.map((row) => sessionRowOf(row, rowOptions))}
           {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>没有符合条件的会话</td></tr>}
         </tbody>
-      </table>
+      </table></div>
       {visible.length > shownCount && (
         <div className={listStyles.moreRow}>
           <button type="button" className={listStyles.moreBtn} onClick={() => setPageSize(pageSize + PAGE_SIZE)}>
