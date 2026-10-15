@@ -10,7 +10,7 @@
 
 4. **接下来要做什么**读 [`docs/process/v0.1.7.md`](./docs/process/v0.1.7.md) 的「后续版本计划」一节。
 5. 要改代码时：常用命令与「改了没反应」的坑在 README 的**开发**一节；目录结构、产物契约、CI 与发布、离线自检读 [`docs/06-开发与构建.md`](./docs/06-开发与构建.md)。
-6. 基线核对：重新构建（命令见下）后刷新 `http://127.0.0.1:19387` 页面，确认看到的界面与 `src/` 一致，再改。服务端改动要退出重开 DSH 才生效。
+6. 基线核对：重新构建（命令见下）后刷新 DSH 界面（桌面端建议 `Ctrl+Shift+R`），确认看到的界面与 `src/` 一致，再改。服务端改动要退出重开 DSH 才生效。**不要用 curl / 别的进程去请求桌面端 GUI 的端口**：那个端口带宿主鉴权，外部请求只会拿到 `dsh web authentication required`，看不到插件端点。
 
 ## 入口位置（2026-10-13 起）
 
@@ -21,10 +21,11 @@
 - **默认零外网（三个显式例外，都要用户触发）**：`live-quota.ts` 查各通道官方余额 / 窗口（§3.5）、`model-prices.ts` 的 `refreshModelPrices()` 拉 LiteLLM 上游（§3.15）、`fx-rate.ts` 的 `resolveFxRate()` 拉汇率上游（§3.16）。除这三处外不许加任何外部请求：不开机拉取、不定时轮询、不在别的端点里隐式联网，客户端不许加 CDN 字体或图标库。
 - **价目是四层，谁也不许猜价格**：`官方账单 > 内置官方价目（pricing-catalog.yml，CNY，18 条）> LiteLLM 聚合价（随包快照或本机刷新副本，USD）> 台账反推均价`。聚合价装载优先级是 `$DSH_HOME/dsh-key-usage/model-prices.json` > 随包快照，两份都读不到时**整层失效**、继续回落台账均价，**绝不抛错**；匹配按通道别名表，别名不命中且模型名不唯一时**跳过并记 `match-ambiguous`**；只收录一档缓存价时缺的那档按**未命中价**代并标 `partial`（界面「· 部分」）。
 - **不碰凭据文件**：不读 `.credentials.yaml`、不读 opencode 的 `auth.json`；查余额只许走宿主 `credentials` seam（`resolve(apiKeyEnv)`）或进程环境变量，Key 不落盘、不进日志、不返回给客户端。界面里**不展示** `apiKeyEnv`，禁止出现密钥值、Authorization、cookie。
-- **只写 `$DSH_HOME/dsh-key-usage/` 这个目录**（目录里只有三个文件）：`snapshot.json`（6 个 Tab 的统一数据来源）、`model-prices.json`、`fx-rate.json`。三者都是写目标按文件名 + 绝对路径双重校验、同目录临时文件 + rename 原子写。**不要**写宿主的 `provider-snapshots.json`、不要改 profile 的 `cordis.yml` / `cordis.patch.yml`、不要写其它任何数据文件；快照写失败静默，刷新写失败必须回 `{ok:false,error}` 并让界面显示原因，**失败时不许覆盖已有文件**。
+- **只写 `$DSH_HOME/dsh-key-usage/` 这个目录**（目录里只有五个文件，其中**允许写四个**）：`snapshot.json`（5 个 Tab 的统一数据来源）、`model-prices.json`、`fx-rate.json`、`plugin.log`（系统日志，见下一条）；第五个 `quota-snapshots.json` 是历史遗留（`writeQuotaSnapshots` 已无人调用），**只读一次当种子**，不许再写。四个写目标都是文件名 + 绝对路径双重校验、同目录临时文件 + rename 原子写（日志是追加写 + 超 512 KB 保留后半段）。**不要**写宿主的 `provider-snapshots.json`、不要改 profile 的 `cordis.yml` / `cordis.patch.yml`、不要写其它任何数据文件；快照写失败静默，刷新写失败必须回 `{ok:false,error}` 并让界面显示原因，**失败时不许覆盖已有文件**。
 - **内置价目是随包只读 YAML**（`data/pricing-catalog.yml`，改价 = 改它并同步 `test/fixtures/pricing-catalog.golden.json`），解析走 `yaml-lite.ts` 的受限子集：不支持的写法带行号报 issue 并跳过该条，**绝不静默按 0 算**；该解析器**不用于** `cordis.yml`（那里有 `!!js` 表达式，只做文本提取）。
-- **统一快照是唯一数据来源**：`$DSH_HOME/dsh-key-usage/snapshot.json` 存 6 个 Tab 的数据段（含明细），本地段每 5 分钟重建（不联网）、**配额段只在页面打开（超 10 分钟 TTL，后台补查）与手动刷新时联网**；**不许出现快照之外的独立数据源 / 独立缓存 / 另算一份**（参数化端点必须调用同一批构建器函数，见 `snapshot.ts`）；构建失败**不覆盖**上一份好快照；查不到的通道要带 `capturedAt` / `stale` / `error`，界面标「数据时间 X · 本机快照 · 本次失败：原因」，**不许静默陈旧**。
-- **仅回环**：新增端点必须复用 `requireLoopback`，非回环一律 403。当前共 **15 个端点 = 13 个只读 `GET` + 2 个写 `POST`**（`POST /dsh-key-usage/refresh` 手动刷新快照、`POST /dsh-key-usage/pricing/refresh` 刷新价目）。
+- **统一快照是唯一数据来源**：`$DSH_HOME/dsh-key-usage/snapshot.json` 存 5 个 Tab 的数据段（含明细），本地段每 5 分钟重建（不联网）、**配额段只在页面打开（超 10 分钟 TTL，后台补查）与手动刷新时联网**；**不许出现快照之外的独立数据源 / 独立缓存 / 另算一份**（参数化端点必须调用同一批构建器函数，见 `snapshot.ts`）；构建失败**不覆盖**上一份好快照；查不到的通道要带 `capturedAt` / `stale` / `error`，界面标「数据时间 X · 本机快照 · 实时查询未成功」并可点开系统日志看原因（`LogHint`），**不许静默陈旧**；失败原因不许摊在页面上，只进系统日志。
+- **系统日志落盘 + 原因不进版面**：`$DSH_HOME/dsh-key-usage/plugin.log`（JSONL，`data/log-file.ts`）只记排查信息（上游 URL、HTTP 状态、错误类型），刷新页面后仍可查；页面上的失败一律收成一行「结论 · 查看系统日志」（`components/LogHint.tsx` + `requestOpenLog()`），**禁止**把上游错误、堆栈、长清单直接摊到界面上。日志写失败必须静默（不影响主流程），不许把日志写失败再记一条日志。
+- **仅回环**：新增端点必须复用 `requireLoopback`，非回环一律 403。当前共 **17 个端点 = 14 个只读 `GET` + 3 个写 `POST`**（`POST /dsh-key-usage/refresh` 手动刷新快照、`POST /dsh-key-usage/pricing/refresh` 刷新价目、`GET|POST /dsh-key-usage/log` 读回 / 追加 / 清空系统日志）。
 - **会话数据只走官方 read handle**：`sessionPersistence.open(id, "read") → read(0) → close`。**不要**自行解压 `~/.dsh/sessions/**/session.v4.jsonl.zstd`（多帧 zstd，Node 内置 zlib 逐帧解不出来），也不要读写/修复历史日志。服务缺失或读失败一律降级为 `coverage.status = "unavailable" | "partial"`，不许抛错、不许影响台账类端点。
 - **两套数据源不许混算**：台账（天 × 通道 × 模型）负责总览 / 使用明细 / 热力图；会话事件负责项目 / 会话 / 单日按小时。界面必须标注来源，页脚口径说明要同步更新。
 - **产物契约不能破**：客户端入口固定 `src/client/index.tsx` → 产物 `client/client.js`，必须是单文件 CJS + `window.__ModuleLoader__.load({ id, factory })` 头（`scripts/normalize-client-banner.mjs` 会校验）。不要改 entry、产物名或加载方式。
@@ -45,7 +46,7 @@
 - 改了计费口径 / 价目：跑 `test/pricing.test.mjs`、`test/yaml-lite.test.mjs`、`test/model-prices.test.mjs`、`test/routes.test.mjs`；改 `data/pricing-catalog.yml` 还要同步 `test/fixtures/pricing-catalog.golden.json`；改随包聚合价目快照要同步 `data/README.md` 的字节数 / sha256 / commit / 抓取日期四行。
 - **改了 `src/client/**` 必须重新构建**（否则运行的还是旧 `client/client.js`），构建后刷新页面生效。
 - **改了 `src/server/**` 必须重新编译 `lib/` 并退出重开 DSH**：服务端模块在宿主启动时进入 ESM 缓存，Hub `/restart` 在桌面端不可用，无热重载途径。
-- 需要真实网络、浏览器实测、重启宿主、批量导出时：先向用户确认，不要自行执行（重启宿主会中断当前会话）。
+- **改完默认只跑 `npm run verify`**（2026-10-15 用户明确）：**不要**自动起浏览器 / 无头浏览器做自检，**不要**重截 `docs/images/` 的图 —— 太耗时；浏览器实测、截图、重启宿主都要用户明说再做。`docs/images/` 里的图由用户自己截、自己更新，不要代劳。
 
 ## 插件安装方式
 
