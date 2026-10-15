@@ -108,7 +108,7 @@ export function SessionDetailDrawer(props: {
                 className={listStyles.subagentRow}
                 onClick={() => props.onOpenSession(child.id)}
               >
-                <span className={listStyles.subagentRowTitle}>{child.title ?? t('s.noPrompt') + ' · ' + shortIdOf(child.id)}</span>
+                <span className={listStyles.subagentRowTitle}>{systemTitleOf(child.title) + ' · ' + shortIdOf(child.id)}</span>
                 <span className={listStyles.subagentRowMeta}>{fmtTokens(child.tokens)} · {fmtCalls(child.calls)} · {fmtDateTime(child.lastTime)}</span>
               </button>
             ))}

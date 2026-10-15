@@ -5085,7 +5085,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								onClick: () => props.onOpenSession(child.id),
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: lists_module_css_default.subagentRowTitle,
-									children: child.title ?? t("s.noPrompt") + " · " + shortIdOf$1(child.id)
+									children: systemTitleOf(child.title) + " · " + shortIdOf$1(child.id)
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 									className: lists_module_css_default.subagentRowMeta,
 									children: [
@@ -5101,6 +5101,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					]
 				})
 			});
+		}
+		/** teammate / 系统会话的标题是运行时注入的长句，列表里只显示「系统会话」，细节看时间与目录。 */
+		function systemTitleOf(title) {
+			if (title === null || title.trim() === "") return t("d.systemSession");
+			return /^(Current runtime context|no prompt)/i.test(title.trim()) ? t("d.systemSession") : title;
 		}
 		function SessionDetailBody(props) {
 			const session = props.session;
