@@ -155,7 +155,7 @@ export function ProjectsTab(props: {
       </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        {t('p.costHint')}{props.data.priced ? '' : t('s.noCost')}{t('p.hitHint')}
+        {t('p.costHint')}{props.data.priced ? '' : t('s.noCost')}
       </div>
     </div>
   )

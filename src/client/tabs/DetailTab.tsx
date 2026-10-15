@@ -260,18 +260,17 @@ export function DetailTab(props: {
           value={fmtTokens(safeTotals.cacheReadTokens)}
           extra={cacheReadShare === null ? t('d.sameCaliber') : t('d.shareOfTokensPrefix') + cacheReadShare}
         />
-        <StatCard label={t('d.hitRateShort')} value={hitRate} extra={t('d.hitRateFormula')} />
+        <StatCard label={t('d.hitRateShort')} value={hitRate} />
         <StatCard
           label={t('d.dailyAvg')}
           value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))}
-          extra={t('d.daysWithUsagePrefix') + String(activeDays) + t('d.daysWithUsageSuffix')}
+          extra={String(activeDays) + t('d.daysWithUsageSuffix')}
         />
         <StatCard
           label={t('c.cost')}
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
             : <>{costCell.text}{costCell.amount && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
-          extra={t('d.rangeAggregate')}
         />
       </div>
 

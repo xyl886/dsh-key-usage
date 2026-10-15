@@ -134,15 +134,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.chartDayAriaPrefix": "按天 Tokens 柱状图，共 ",
 			"d.chartDayAriaSuffix": " 天（含无用量日），含输入 / 输出 / 缓存读",
 			"d.callCount": "调用次数",
-			"d.channelsWithUsageSuffix": " 个通道有用量",
+			"d.channelsWithUsageSuffix": " 个通道",
 			"d.sameCaliber": "与上方 Tokens 同口径",
 			"d.shareOfTokensPrefix": "占 Tokens 的 ",
 			"d.hitRateShort": "缓存命中率",
-			"d.hitRateFormula": "缓存读 ÷（输入 + 输出 + 缓存读）",
 			"d.dailyAvg": "日均 Tokens",
-			"d.daysWithUsagePrefix": "范围内 ",
 			"d.daysWithUsageSuffix": " 天有用量",
-			"d.rangeAggregate": "按所选范围与筛选聚合",
 			"t.flat": "持平",
 			"t.title": "环比对比",
 			"t.titleNote": "与上一段等长范围",
@@ -178,8 +175,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.archivedSessions": "已归档",
 			"p.search": "搜索项目路径",
 			"p.clearFilter": "清除筛选",
-			"p.archivePrefix": "（含 ",
-			"p.archiveSuffix": " 个已归档，仍计入）",
+			"p.archivePrefix": "（ ",
+			"p.archiveSuffix": " 个已归档）",
 			"p.empty": "无匹配项目",
 			"p.noUsage": "没有可展示的用量",
 			"h.month": "月",
@@ -205,7 +202,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"srv.code.fetchFailed": "查询失败",
 			"srv.code.timeout": "查询超时",
 			"p.costHint": "成本按价目自动估算",
-			"p.hitHint": "；命中率 = 缓存读 /（输入 + 输出 + 缓存读）",
 			"fmt.dayHour": "{days} 天 {hours}h",
 			"srv.ratesAverage": "按台账均价估算",
 			"srv.ratesNone": "暂无价格依据",
@@ -564,15 +560,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.chartDayAriaPrefix": "Daily token bars, ",
 			"d.chartDayAriaSuffix": " days (including empty days), input / output / cache read",
 			"d.callCount": "Calls",
-			"d.channelsWithUsageSuffix": " channels with usage",
+			"d.channelsWithUsageSuffix": " channels",
 			"d.sameCaliber": "same basis as tokens above",
 			"d.shareOfTokensPrefix": "of tokens: ",
 			"d.hitRateShort": "Cache hit rate",
-			"d.hitRateFormula": "cache read ÷ (input + output + cache read)",
 			"d.dailyAvg": "Daily avg tokens",
-			"d.daysWithUsagePrefix": "",
 			"d.daysWithUsageSuffix": " days with usage",
-			"d.rangeAggregate": "Aggregated over the selected range",
 			"t.flat": "Flat",
 			"t.title": "Comparison",
 			"t.titleNote": "same-length previous range",
@@ -3270,13 +3263,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.hitRateShort"),
-							value: hitRate,
-							extra: t("d.hitRateFormula")
+							value: hitRate
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.dailyAvg"),
 							value: activeDays === 0 ? "—" : fmtTokens(Math.round(totalTokens / activeDays)),
-							extra: t("d.daysWithUsagePrefix") + String(activeDays) + t("d.daysWithUsageSuffix")
+							extra: String(activeDays) + t("d.daysWithUsageSuffix")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("c.cost"),
@@ -3286,8 +3278,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
 								source: safeTotals.costSource,
 								partial: safeTotals.partial
-							})] }),
-							extra: t("d.rangeAggregate")
+							})] })
 						})
 					]
 				}),
@@ -4102,11 +4093,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
-					children: [
-						t("p.costHint"),
-						props.data.priced ? "" : t("s.noCost"),
-						t("p.hitHint")
-					]
+					children: [t("p.costHint"), props.data.priced ? "" : t("s.noCost")]
 				})
 			] });
 		}
