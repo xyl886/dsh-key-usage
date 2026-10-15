@@ -25,10 +25,10 @@
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
 .tag.free { color: var(--dsw-alias-state-success-primary, #3fb96f); border-color: rgba(63,185,111,.35); }
-.tag.sub { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.35); }
+.tag.sub { color: var(--dsw-alias-state-business-primary, #5b8cff); border-color: rgba(91,140,255,.35); }
 .tag.off { color: var(--dsw-alias-label-tertiary, #67676f); }
 .rowLink { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
-.keyTable tbody tr.clickable:hover .rowLink { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.keyTable tbody tr.clickable:hover .rowLink { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 
 .quotaCell { display: inline-flex; align-items: center; gap: 8px; }
 .miniBar { width: 64px; height: 5px; border-radius: 3px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; flex-shrink: 0; }

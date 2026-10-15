@@ -12,7 +12,7 @@
 /* 搜索框与下拉是筛选用的主要控件，键盘聚焦时给出与按钮一致的焦点环 */
 .searchInput:focus-visible,
 .filterSelect:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
 }
 .listTitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -35,12 +35,12 @@
 /* 子代理会话的标记：与「已归档」同尺寸，用主色区分（它是来源，不是状态）；可点 → 跳到父会话 */
 .subagentTag {
   margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 500;
-  color: var(--dsw-alias-state-accent-primary, #5b8cff); border: 1px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  color: var(--dsw-alias-state-business-primary, #5b8cff); border: 1px solid var(--dsw-alias-state-business-primary, #5b8cff);
 }
 .subagentTagBtn {
   display: inline; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-family: inherit; font-size: 10px;
-  font-weight: 500; cursor: pointer; color: var(--dsw-alias-state-accent-primary, #5b8cff);
-  border: 1px solid var(--dsw-alias-state-accent-primary, #5b8cff); background: none;
+  font-weight: 500; cursor: pointer; color: var(--dsw-alias-state-business-primary, #5b8cff);
+  border: 1px solid var(--dsw-alias-state-business-primary, #5b8cff); background: none;
 }
 .subagentTagBtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
 /* 父行上的「N 个子会话」：看起来是元信息，但可点（只看父会话 + 子会话） */
@@ -48,7 +48,7 @@
   margin-left: 6px; padding: 0; border: 0; background: none; font-family: inherit; font-size: inherit;
   color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer;
 }
-.sessionMetaBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); text-decoration: underline; }
+.sessionMetaBtn:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); text-decoration: underline; }
 /* 详情弹窗里的子会话清单：主会话点开后才看得到（列表默认隐藏子会话） */
 .drawerBack {
   display: inline-flex; align-items: center; margin: 4px 0 10px; padding: 3px 10px; border-radius: 999px;
@@ -56,7 +56,7 @@
   font: inherit; font-size: 12px; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drawerBack:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
-.drawerBack:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.drawerBack:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .subagentBlock { margin-top: 14px; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); padding-top: 10px; }
 .subagentBlockTitle { font-size: 12px; color: var(--dsw-alias-label-secondary, #9a9aa6); margin-bottom: 6px; }
 .subagentRow {
@@ -64,7 +64,7 @@
   border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-size: 12px; cursor: pointer;
 }
 .subagentRow:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
-.subagentRow:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: -2px; }
+.subagentRow:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: -2px; }
 .subagentRowTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subagentRowMeta { flex: none; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
 
@@ -106,8 +106,8 @@
   color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.linkBtn:hover { color: var(--dsw-alias-state-accent-primary, #5b8cff); text-decoration: underline; }
-.linkBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.linkBtn:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); text-decoration: underline; }
+.linkBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 /* 跨 Tab 筛选的提示条：说明当前只看了哪个项目，可一键清掉 */
 .focusChip {
   display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 3px 10px;
@@ -115,14 +115,14 @@
   color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11px;
 }
 .focusClear { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
-.focusClear:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.focusClear:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
 /* 会话行内展开：箭头按钮与「每日细目」的展开按钮同款观感 */
 .sessionToggle {
   display: inline-flex; align-items: center; justify-content: center; gap: 0; flex-shrink: 0;
   background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
-.sessionToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.sessionToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .sessionToggleArrow { display: inline-block; width: 11px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 9px; }
 /* 标题本身就是「打开详情」的按钮：可 Tab 聚焦，鼠标点整行也行 */
 .sessionTitleBtn {
@@ -130,7 +130,7 @@
   font-size: 12.5px; color: var(--dsw-alias-label-primary, #e8e8ec); cursor: pointer; text-align: left;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sessionTitleBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.sessionTitleBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .composeCell { padding: 4px 10px 10px 30px !important; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.05)); text-align: left !important; }
 .composeRow {
   display: grid; align-items: center; gap: 8px; padding: 2px 0; font-size: 11.5px;
@@ -149,7 +149,7 @@
   font: inherit; font-size: 11.5px; cursor: pointer;
 }
 .moreBtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
-.moreBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.moreBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .moreText { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
 
 .drawerMask {
@@ -168,7 +168,7 @@
   border-radius: 8px; width: 26px; height: 26px; font: inherit; font-size: 12px; line-height: 1; cursor: pointer; flex-shrink: 0;
 }
 .drawerClose:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
-.drawerClose:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.drawerClose:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .drawerId { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--dsw-alias-label-tertiary, #67676f); margin: 2px 0 12px; overflow-wrap: anywhere; }
 
 .detailGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 14px; }
@@ -199,5 +199,5 @@
 /* 24 小时迷你图：柱高按该会话的小时峰值归一 */
 .hourChart { display: flex; align-items: flex-end; gap: 2px; height: 84px; margin-top: 6px; }
 .hourBar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
-.hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-accent-primary, #5b8cff); border-radius: 2px 2px 0 0; }
+.hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 2px 2px 0 0; }
 .hourBarTick { text-align: center; font-size: 9px; color: var(--dsw-alias-label-tertiary, #67676f); }

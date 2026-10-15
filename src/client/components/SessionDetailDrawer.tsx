@@ -184,7 +184,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                       <td>{fmtTokens(model.tokens)}</td>
                       <td>
                         <span className={listStyles.listBar}>
-                          <i style={{ width: Math.max(2, model.sharePercent) + '%', background: 'var(--dsw-alias-state-accent-primary, #5b8cff)' }} />
+                          <i style={{ width: Math.max(2, model.sharePercent) + '%', background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />
                         </span> {model.sharePercent}%
                       </td>
                       <td>
@@ -235,7 +235,7 @@ function hourChartSummary(hours: Array<{ calls: number; tokens: number }>): stri
 
 function DetailItem(props: { label: string; value: string; wide?: boolean }): ReactNode {
   return (
-    <div className={props.wide === true ? listStyles.detailItemWide : listStyles.detailItem}>
+    <div className={props.wide === true ? listStyles.detailItemWide : listStyles.detailItemWide}>
       <div className={listStyles.detailItemLabel}>{props.label}</div>
       <div className={listStyles.detailItemValue}>{props.value}</div>
     </div>
@@ -244,7 +244,7 @@ function DetailItem(props: { label: string; value: string; wide?: boolean }): Re
 
 function StripItem(props: { label: string; value: string; note?: string }): ReactNode {
   return (
-    <div className={listStyles.detailStripItem}>
+    <div className={listStyles.detailStrip}>
       <div className={listStyles.detailItemLabel}>{props.label}</div>
       <div className={listStyles.detailItemValue}>{props.value}</div>
       {props.note !== undefined && <div className={listStyles.detailItemNote}>{props.note}</div>}

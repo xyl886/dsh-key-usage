@@ -137,10 +137,10 @@ export function DetailTab(props: {
               : (
                 <>
                   <TipSub>调用 <b>{fmtCalls(slot.calls)}</b> · Tokens <b>{fmtTokens(slotTokens)}</b></TipSub>
-                  <TipRow color="var(--dsw-alias-state-accent-primary, #5b8cff)" label="输入" amount={fmtTokens(slot.buckets.inputTokens)} />
+                  <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label="输入" amount={fmtTokens(slot.buckets.inputTokens)} />
                   <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label="输出" amount={fmtTokens(slot.buckets.outputTokens)} />
                   <TipRow
-                    color="var(--dsw-alias-state-accent-tertiary, rgba(91,140,255,.28))"
+                    color="var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))"
                     label="缓存读"
                     amount={fmtTokens(slot.buckets.cacheReadTokens)}
                     rate={hitRateOf(slot.buckets.cacheReadTokens, slot.buckets.inputTokens, slot.buckets.outputTokens)}
@@ -188,10 +188,10 @@ export function DetailTab(props: {
         <>
           <TipTitle>{day.date}</TipTitle>
           <TipSub>调用 <b>{fmtCalls(day.calls)}</b> · Tokens <b>{fmtTokens(dayTotal)}</b></TipSub>
-          <TipRow color="var(--dsw-alias-state-accent-primary, #5b8cff)" label="输入" amount={fmtTokens(day.inputTokens)} />
+          <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label="输入" amount={fmtTokens(day.inputTokens)} />
           <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label="输出" amount={fmtTokens(day.outputTokens)} />
           <TipRow
-            color="var(--dsw-alias-state-accent-tertiary, rgba(91,140,255,.28))"
+            color="var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))"
             label="缓存读"
             amount={fmtTokens(day.cacheReadTokens)}
             rate={hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)}
@@ -290,7 +290,7 @@ export function DetailTab(props: {
 
       <div className={styles.chipRow} style={{ marginTop: 14 }}>
         <button className={channelFilter === 'ALL' ? styles.chip + ' ' + styles.active : styles.chip} onClick={() => props.onChannelFilter('ALL')}>
-          <span className={styles.statusDot} style={{ background: 'var(--dsw-alias-state-accent-primary, #5b8cff)' }} />全部通道
+          <span className={styles.statusDot} style={{ background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />全部通道
         </button>
         {channels.map((channel) => (
           <button
@@ -321,7 +321,7 @@ export function DetailTab(props: {
           <span className={styles.statLabel}>{chartTitle}</span>
           <span className={styles.legend}>
             <span><i style={{ background: 'rgba(91,140,255,.28)' }} />缓存读</span>
-            <span><i style={{ background: 'var(--dsw-alias-state-accent-primary, #5b8cff)' }} />输入</span>
+            <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />输入</span>
             <span><i style={{ background: 'var(--dsw-alias-state-business-primary, #9a7bff)' }} />输出</span>
           </span>
         </div>

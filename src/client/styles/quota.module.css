@@ -9,7 +9,7 @@
   color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 8px;
 }
 .quotaToggle:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
-.quotaToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.quotaToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .quotaTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .quotaProvider { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-left: auto; }
 /* 折叠提示：收起时告诉用户「这里有 N 个模型的单价」 */
@@ -43,11 +43,11 @@
 }
 .toolbarBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 .toolbarBtn:disabled { opacity: .5; cursor: default; }
-.toolbarBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
-.toolbarBtnPrimary { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.toolbarBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+.toolbarBtnPrimary { border-color: rgba(91,140,255,.45); color: var(--dsw-alias-state-business-primary, #5b8cff); }
 /* 币种切换：选中态要一眼看出来（边框 + 主色 + 实底），不能只靠颜色深浅 */
 .currencyBtnOn {
-  border-color: var(--dsw-alias-state-accent-primary, #5b8cff);
+  border-color: var(--dsw-alias-state-business-primary, #5b8cff);
   color: var(--dsw-alias-label-primary, #e8e8ec);
   background: var(--dsw-alias-interactive-bg-active, rgba(91,140,255,.14));
   font-weight: 600;
@@ -60,8 +60,8 @@
   color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
 }
-.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
-.infoBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-business-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
+.infoBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
 /* 价目信息块：默认折叠，只留一行摘要 */
 .pricingInfo { margin-bottom: 12px; }
@@ -70,7 +70,7 @@
   cursor: pointer; padding: 2px 0;
 }
 .pricingInfoToggle:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.pricingInfoToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.pricingInfoToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .pricingInfoBody {
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
   padding: 4px 14px 12px; margin-top: 6px;

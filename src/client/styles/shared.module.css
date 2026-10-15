@@ -18,7 +18,7 @@
   padding: 4px 8px; text-decoration: none; line-height: 0;
 }
 .ghLink:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
-.ghLink:focus-visible { outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff); outline-offset: 2px; }
+.ghLink:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .refreshBtn {
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
@@ -38,7 +38,7 @@
   padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .tabBar button:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.tabBar button.active { color: var(--dsw-alias-state-accent-primary, #5b8cff); border-bottom-color: var(--dsw-alias-state-accent-primary, #5b8cff); font-weight: 600; }
+.tabBar button.active { color: var(--dsw-alias-state-business-primary, #5b8cff); border-bottom-color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 
 .card { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; }
 .cardGrid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
@@ -80,14 +80,14 @@
 }
 .sortBtn:hover { color: var(--dsw-alias-label-secondary, #9a9aa6); }
 /* 两段选择器是为了压过上面的 :hover：当前排序列悬停时仍保持主色，与改造前一致 */
-.sortBtn.sortActiveBtn { color: var(--dsw-alias-state-accent-primary, #5b8cff); }
+.sortBtn.sortActiveBtn { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 
 /* 焦点必须可见：去掉 outline 又不给替代样式，键盘用户会彻底失去位置感 */
 .refreshBtn:focus-visible,
 .chip:focus-visible,
 .sortBtn:focus-visible,
 .tabBar button:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-accent-primary, #5b8cff);
+  outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
 }
 .sortArrow { font-size: 8px; margin-left: 3px; opacity: .8; }
@@ -103,7 +103,7 @@
   display: inline-flex; align-items: center; gap: 6px;
 }
 .chip:hover { color: var(--dsw-alias-label-primary, #e8e8ec); border-color: var(--dsw-alias-label-tertiary, #67676f); }
-.chip.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); border-color: rgba(91,140,255,.4); color: var(--dsw-alias-state-accent-primary, #5b8cff); font-weight: 600; }
+.chip.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); border-color: rgba(91,140,255,.4); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 
 .statusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }
@@ -145,3 +145,6 @@
   border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); margin-top: 6px; padding-top: 6px;
   font-size: 11px; color: var(--dsw-alias-label-secondary, #9a9aa6);
 }
+
+/* 图例里的「无数据」色块：CSS Modules 需要独立类才能被引用（原来写成裸 className="ghost" 永不生效） */
+.ghost { background: var(--dsw-alias-fill-l2, rgba(128, 128, 140, .10)); border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 140, .28)); }

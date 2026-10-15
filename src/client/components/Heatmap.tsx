@@ -113,7 +113,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
       <div className={styles.heatmapHead}>
         <span className={styles.heatmapTitle}>活跃热力图 · 近 9 个月 · 按当日 Tokens 总量 · 悬停查看当日各模型占比</span>
         <span className={shared.legend}>
-          <span><i className="ghost" />无数据</span>
+          <span><i className={styles.ghost} />无数据</span>
           <span><i style={{ background: LEVEL_COLORS[0] }} />无用量</span>
           <span><i style={{ background: LEVEL_COLORS[1] }} />少</span>
           <span><i style={{ background: LEVEL_COLORS[2] }} />较少</span>
