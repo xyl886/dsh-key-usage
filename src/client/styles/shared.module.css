@@ -168,3 +168,6 @@
 .cardWithBadge { position: relative; }
 .statBadge { position: absolute; top: 8px; right: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); }
 .statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); margin-top: 2px; }
+
+/* 成本上升的角标用提示色（中性语义，不是错误） */
+.badgeWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }

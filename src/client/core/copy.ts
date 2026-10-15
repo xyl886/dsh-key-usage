@@ -140,6 +140,8 @@ export const zh: Record<string, string> = {
   'd.dailyAvg': '日均 Tokens',
   'd.daysWithUsageSuffix': ' 天有用量',
   't.previousShort': '上期 ', 
+  't.pp': ' 个百分点',
+
   't.flat': '持平',
   't.title': '环比对比',
   't.titleNote': '与上一段等长范围',
@@ -584,6 +586,8 @@ export const en: Record<string, string> = {
   'd.dailyAvg': 'Daily avg tokens',
   'd.daysWithUsageSuffix': ' days with usage',
   't.previousShort': 'prev ', 
+  't.pp': 'pp',
+
   't.flat': 'Flat',
   't.title': 'Comparison',
   't.titleNote': 'same-length previous range',

@@ -143,6 +143,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.dailyAvg": "日均 Tokens",
 			"d.daysWithUsageSuffix": " 天有用量",
 			"t.previousShort": "上期 ",
+			"t.pp": " 个百分点",
 			"t.flat": "持平",
 			"t.title": "环比对比",
 			"t.titleNote": "与上一段等长范围",
@@ -572,6 +573,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.dailyAvg": "Daily avg tokens",
 			"d.daysWithUsageSuffix": " days with usage",
 			"t.previousShort": "prev ",
+			"t.pp": "pp",
 			"t.flat": "Flat",
 			"t.title": "Comparison",
 			"t.titleNote": "same-length previous range",
@@ -1591,7 +1593,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.24);padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:calc(var(--dsh-content-font-size,12px) * 1.65);justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:720px){.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px}.d29QNW_statValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.83);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:4px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.15);margin:4px 0 10px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:18px 0 4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{font-size:calc(var(--dsh-content-font-size,12px) * .73);opacity:.8;margin-left:3px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:10px}.d29QNW_legend{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:26px;padding-top:14px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_ghost{background:var(--dsw-alias-fill-l2,#80808c1a);border:1px solid var(--dsw-alias-border-l2,#80808c47)}.d29QNW_caliberVersion{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_logActions{gap:8px;margin-bottom:10px;display:flex}.d29QNW_logEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.1)}.d29QNW_logList{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.d29QNW_logRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;grid-template-columns:68px 44px 62px 1fr;gap:8px;line-height:1.5;display:grid}.d29QNW_logTime,.d29QNW_logLevel{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_logWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_logError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_logSource{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_logMessage{color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-all}.d29QNW_cardWithBadge{position:relative}.d29QNW_statBadge{font-size:calc(var(--dsh-content-font-size,12px) * .92);position:absolute;top:8px;right:10px}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .87);margin-top:2px}";
+		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.24);padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:calc(var(--dsh-content-font-size,12px) * 1.65);justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:720px){.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px}.d29QNW_statValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.83);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:4px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.15);margin:4px 0 10px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:18px 0 4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{font-size:calc(var(--dsh-content-font-size,12px) * .73);opacity:.8;margin-left:3px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:10px}.d29QNW_legend{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:26px;padding-top:14px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_ghost{background:var(--dsw-alias-fill-l2,#80808c1a);border:1px solid var(--dsw-alias-border-l2,#80808c47)}.d29QNW_caliberVersion{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_logActions{gap:8px;margin-bottom:10px;display:flex}.d29QNW_logEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.1)}.d29QNW_logList{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.d29QNW_logRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;grid-template-columns:68px 44px 62px 1fr;gap:8px;line-height:1.5;display:grid}.d29QNW_logTime,.d29QNW_logLevel{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_logWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_logError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_logSource{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_logMessage{color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-all}.d29QNW_cardWithBadge{position:relative}.d29QNW_statBadge{font-size:calc(var(--dsh-content-font-size,12px) * .92);position:absolute;top:8px;right:10px}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .87);margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}";
 		const tagId$8 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1607,6 +1609,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		});
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
+			"badgeWarn": "d29QNW_badgeWarn",
 			"blockLabel": "d29QNW_blockLabel",
 			"caliberVersion": "d29QNW_caliberVersion",
 			"card": "d29QNW_card",
@@ -2624,13 +2627,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/core/useCostTrend.tsx
+		//#region src/client/core/useTrend.tsx
 		/**
-		* 上期成本环比：只给「卡片右上角涨跌 + 数值上方上期值」两个数据，不再渲染单独的对比区块。
+		* 统计卡的上期对比：每张卡右上角给涨跌角标、数值上方给上期值（缩小淡化）。
 		*
-		* 复用 /usage 按上一段等长范围再请求一次（纯客户端，无新端点）；「累计」范围没有上一段，返回 null。
+		* 复用 /usage 按上一段等长范围再请求一次（纯客户端，无新端点）；「累计」范围没有上一段，整组返回 null。
+		* 涨跌只用中性色 + 箭头（成本上升沿用提示色），不引入对错语义。
 		*/
 		const DAY_MS = 864e5;
+		/** 小于这个幅度算持平（百分比 / 百分点通用）。 */
+		const FLAT_EPSILON = .05;
 		/** 闭区间天数，至少 1。 */
 		function spanDaysOf(from, to) {
 			return Math.max(1, Math.round(((/* @__PURE__ */ new Date(to + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime()) / DAY_MS) + 1);
@@ -2643,8 +2649,70 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				to: isoDate(/* @__PURE__ */ new Date(startTime - DAY_MS))
 			};
 		}
-		function useCostTrend(props) {
-			const { usage, from, to, channelFilter, channels } = props;
+		function metricsOf(usage) {
+			if (usage === null) return null;
+			let calls = 0;
+			let input = 0;
+			let output = 0;
+			let cacheRead = 0;
+			let activeDays = 0;
+			const channels = /* @__PURE__ */ new Set();
+			for (const day of usage.days) {
+				const dayTokens = day.inputTokens + day.outputTokens + day.cacheReadTokens;
+				calls += day.calls;
+				input += day.inputTokens;
+				output += day.outputTokens;
+				cacheRead += day.cacheReadTokens;
+				if (dayTokens > 0) activeDays += 1;
+				for (const model of day.models) if (model.inputTokens + model.outputTokens + model.cacheReadTokens > 0) channels.add(model.provider);
+			}
+			const tokens = input + output + cacheRead;
+			return {
+				calls,
+				tokens,
+				input,
+				output,
+				cacheRead,
+				hitRate: tokens === 0 ? null : cacheRead / tokens,
+				dailyAvg: activeDays === 0 ? 0 : tokens / activeDays,
+				channels: channels.size,
+				activeDays,
+				cost: usage.totals === null ? 0 : comparableMoneyAmountOf(usage.totals)
+			};
+		}
+		/** 百分比涨跌角标。 */
+		function percentBadge(current, previous, warnOnUp) {
+			if (previous === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") });
+			const delta = Math.round((current - previous) / previous * 1e3) / 10;
+			if (Math.abs(delta) < FLAT_EPSILON) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.flat") });
+			const arrow = delta > 0 ? "↑" : "↓";
+			const sign = delta > 0 ? "+" : "";
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: warnOnUp && delta > 0 ? shared_module_css_default.badgeWarn : void 0,
+				children: [
+					arrow,
+					" ",
+					sign,
+					delta,
+					"%"
+				]
+			});
+		}
+		/** 百分点变化角标（命中率这类比率指标）。 */
+		function pointBadge(current, previous) {
+			if (current === null || previous === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") });
+			const delta = Math.round((current - previous) * 1e3) / 10;
+			if (Math.abs(delta) < FLAT_EPSILON) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.flat") });
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+				delta > 0 ? "↑" : "↓",
+				" ",
+				delta > 0 ? "+" : "",
+				delta,
+				t("t.pp")
+			] });
+		}
+		function useTrend(props) {
+			const { usage, from, to, channelFilter } = props;
 			const previousWindow = (0, react.useMemo)(() => previousWindowOf(from, to), [from, to]);
 			const comparable = props.range !== "total";
 			const [previousUsage, setPreviousUsage] = (0, react.useState)(null);
@@ -2665,32 +2733,53 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				props.pricingRevision
 			]);
 			return (0, react.useMemo)(() => {
-				if (!comparable || usage === null) return null;
-				const totals = usage.totals;
-				if (totals === null) return null;
-				const previousTotals = previousUsage?.totals ?? null;
-				const currentAmount = comparableMoneyAmountOf(totals);
-				const previousAmount = previousTotals === null ? null : comparableMoneyAmountOf(previousTotals);
-				const previousView = previousAmount === null ? null : rowMoneyViewOf({ cost: previousAmount });
-				const above = previousAmount === null || previousView === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [t("t.previousShort"), previousView.text] });
-				if (previousAmount === null || previousAmount === 0) return {
-					badge: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }),
-					above
-				};
-				const delta = Math.round((currentAmount - previousAmount) / previousAmount * 1e3) / 10;
-				if (Math.abs(delta) < .05) return {
-					badge: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.flat") }),
-					above
-				};
+				if (!comparable) return null;
+				const current = metricsOf(usage);
+				const previous = metricsOf(previousUsage);
+				if (current === null) return null;
+				const aboveOf = (node) => previous === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [t("t.previousShort"), node] });
+				const points = (value) => value === null ? "—" : (value * 100).toFixed(1) + "%";
 				return {
-					badge: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						delta > 0 ? "↑" : "↓",
-						" ",
-						delta > 0 ? "+" : "",
-						delta,
-						"%"
-					] }),
-					above
+					calls: {
+						above: aboveOf(previous === null ? "—" : fmtCalls(previous.calls)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.calls, previous.calls, false)
+					},
+					tokens: {
+						above: aboveOf(previous === null ? "—" : fmtTokens(previous.tokens)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.tokens, previous.tokens, false)
+					},
+					input: {
+						above: aboveOf(previous === null ? "—" : fmtTokens(previous.input)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.input, previous.input, false)
+					},
+					output: {
+						above: aboveOf(previous === null ? "—" : fmtTokens(previous.output)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.output, previous.output, false)
+					},
+					cacheRead: {
+						above: aboveOf(previous === null ? "—" : fmtTokens(previous.cacheRead)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.cacheRead, previous.cacheRead, false)
+					},
+					hitRate: {
+						above: aboveOf(points(previous === null ? null : previous.hitRate)),
+						badge: pointBadge(current.hitRate, previous === null ? null : previous.hitRate)
+					},
+					dailyAvg: {
+						above: aboveOf(previous === null ? "—" : fmtTokens(Math.round(previous.dailyAvg))),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.dailyAvg, previous.dailyAvg, false)
+					},
+					channels: {
+						above: aboveOf(previous === null ? "—" : String(previous.channels)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.channels, previous.channels, false)
+					},
+					activeDays: {
+						above: aboveOf(previous === null ? "—" : String(previous.activeDays)),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.activeDays, previous.activeDays, false)
+					},
+					cost: {
+						above: aboveOf(previous === null ? "—" : rowMoneyViewOf({ cost: previous.cost }).text),
+						badge: previous === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("t.incomparable") }) : percentBadge(current.cost, previous.cost, true)
+					}
 				};
 			}, [
 				comparable,
@@ -2819,7 +2908,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length;
 			const singleChannel = channelFilter === "ALL" ? null : channelOf(channels, channelFilter);
 			const costCell = costCellOf(singleChannel, safeTotals);
-			const trendSummary = useCostTrend({
+			const trend = useTrend({
 				usage,
 				from: bounds.from,
 				to: bounds.to,
@@ -3000,45 +3089,62 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.callCount"),
-							value: fmtCalls(safeTotals.calls)
+							value: fmtCalls(safeTotals.calls),
+							badge: trend?.calls.badge,
+							above: trend?.calls.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: "Tokens",
-							value: fmtTokens(totalTokens)
+							value: fmtTokens(totalTokens),
+							badge: trend?.tokens.badge,
+							above: trend?.tokens.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("c.input"),
-							value: fmtTokens(safeTotals.inputTokens)
+							value: fmtTokens(safeTotals.inputTokens),
+							badge: trend?.input.badge,
+							above: trend?.input.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("c.output"),
-							value: fmtTokens(safeTotals.outputTokens)
+							value: fmtTokens(safeTotals.outputTokens),
+							badge: trend?.output.badge,
+							above: trend?.output.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("c.cacheRead"),
 							value: fmtTokens(safeTotals.cacheReadTokens),
-							extra: t("d.sameCaliber")
+							badge: trend?.cacheRead.badge,
+							above: trend?.cacheRead.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.hitRateShort"),
-							value: hitRate
+							value: hitRate,
+							badge: trend?.hitRate.badge,
+							above: trend?.hitRate.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.dailyAvg"),
-							value: activeDays === 0 ? "—" : fmtTokens(Math.round(totalTokens / activeDays))
+							value: activeDays === 0 ? "—" : fmtTokens(Math.round(totalTokens / activeDays)),
+							badge: trend?.dailyAvg.badge,
+							above: trend?.dailyAvg.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.channelCount"),
-							value: String(activeProviders.size)
+							value: String(activeProviders.size),
+							badge: trend?.channels.badge,
+							above: trend?.channels.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.activeDayCount"),
-							value: String(activeDays)
+							value: String(activeDays),
+							badge: trend?.activeDays.badge,
+							above: trend?.activeDays.above
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("c.cost"),
-							badge: trendSummary === null ? void 0 : trendSummary.badge,
-							above: trendSummary === null ? void 0 : trendSummary.above,
+							badge: trend?.cost.badge,
+							above: trend?.cost.above,
 							value: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
