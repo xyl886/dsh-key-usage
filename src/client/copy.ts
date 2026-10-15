@@ -254,6 +254,10 @@ export const zh: Record<string, string> = {
   'q.countSuffix': ' 个',
   'q.noBasis': '无依据',
 
+  'export.csv': '导出 CSV',
+  'export.json': '导出 JSON',
+  'd.hourUnit': ' 时 · ',
+  'd.callUnit': ' 次',
   'balance.total': '总余额',
   'balance.credit': '充值余额',
   'balance.grant': '赠送余额',
@@ -589,6 +593,10 @@ export const en: Record<string, string> = {
   'q.countSuffix': '',
   'q.noBasis': 'None',
 
+  'export.csv': 'CSV',
+  'export.json': 'JSON',
+  'd.hourUnit': 'h · ',
+  'd.callUnit': ' calls',
   'balance.total': 'Total',
   'balance.credit': 'Credit',
   'balance.grant': 'Granted',

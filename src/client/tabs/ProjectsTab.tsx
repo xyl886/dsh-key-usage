@@ -11,6 +11,9 @@ import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import exportStyles from '../styles/export.module.css'
 import { t, useT } from '../i18n.ts'
+import { Select } from '../components/ui/Select.tsx'
+import { Button } from '../components/ui/Button.tsx'
+import uiStyles from '../styles/ui.module.css'
 
 type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'callsDesc'
 
@@ -79,19 +82,26 @@ export function ProjectsTab(props: {
       )}
       <div className={listStyles.filterBar}>
         <input className={listStyles.searchInput} placeholder={t('p.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
-          <option value="ALL">全部通道</option>
-          {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
-        </select>
-        <select className={listStyles.filterSelect} value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-          <option value="recent">最近活跃</option>
-          <option value="tokensDesc">Tokens 最多</option>
-          <option value="tokensAsc">Tokens 最少</option>
-          <option value="callsDesc">调用最多</option>
-        </select>
+        <Select
+          ariaLabel={t('s.filterChannel')}
+          value={channelFilter}
+          onChange={setChannelFilter}
+          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+        />
+        <Select
+          ariaLabel={t('s.sort')}
+          value={sortKey}
+          onChange={(next) => setSortKey(next as SortKey)}
+          options={[
+            { value: 'recent', label: t('m.lastActive') },
+            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
+            { value: 'tokensAsc', label: t('s.sortTokensAsc') },
+            { value: 'callsDesc', label: t('s.sortCalls') },
+          ]}
+        />
         <span className={exportStyles.exportGroup}>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>{t('export.csv')}</Button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>{t('export.json')}</Button>
         </span>
       </div>
 
@@ -101,7 +111,7 @@ export function ProjectsTab(props: {
           <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label={t('p.clearFilter')}>✕</button>
         </div>
       )}
-      <table className={styles.table + ' ' + listStyles.projectTable}>
+      <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.projectTable}>
         <thead>
           <tr><th>项目</th><th>调用</th><th>Tokens</th><th>占比</th><th>成本</th><th>最近活跃</th></tr>
         </thead>
@@ -142,7 +152,7 @@ export function ProjectsTab(props: {
             {focusWorkspace === null ? t('p.empty') : t('p.noUsage')}
           </td></tr>}
         </tbody>
-      </table>
+      </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         成本按三层价目自动估算{props.data.priced ? '' : t('s.noCost')}；命中率 = 缓存读 /（输入 + 输出 + 缓存读）

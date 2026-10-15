@@ -3,7 +3,14 @@ import { rowMoneyViewOf, zeroMoneyTextOf, type CostRowLike } from './currency.ts
 import type { Channel, ChannelCostMode, ChannelStatus } from './types.ts'
 import { t } from './i18n.ts'
 
-const CHANNEL_COLORS = ['#5b8cff', '#9a7bff', '#3fb96f', '#e0a13c', '#e05a5a', '#38bdc8']
+const CHANNEL_COLORS = [
+  'var(--dsw-alias-state-business-primary, #5b8cff)',
+  'var(--dsw-alias-state-business-secondary, #9a7bff)',
+  'var(--dsw-alias-state-success-primary, #3fb96f)',
+  'var(--dsw-alias-state-warn-primary, #e0a13c)',
+  'var(--dsw-alias-state-error-primary, #e05a5a)',
+  'var(--dsw-alias-state-idle-primary, #38bdc8)',
+]
 
 export const STATUS_LABELS: Record<ChannelStatus, string> = {
   ok: 'ch.ok',

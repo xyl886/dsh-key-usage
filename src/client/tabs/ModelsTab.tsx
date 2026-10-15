@@ -12,6 +12,9 @@ import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import exportStyles from '../styles/export.module.css'
 import { t, useT } from '../i18n.ts'
+import { Select } from '../components/ui/Select.tsx'
+import { Button } from '../components/ui/Button.tsx'
+import uiStyles from '../styles/ui.module.css'
 
 const MODELS_PATH = '/dsh-key-usage/models'
 
@@ -82,23 +85,30 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
       )}
       <div className={listStyles.filterBar}>
         <input className={listStyles.searchInput} placeholder={t('m.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select className={listStyles.filterSelect} value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)}>
-          <option value="ALL">全部通道</option>
-          {props.channels.map((channel) => <option key={channel.provider} value={channel.provider}>{channel.displayName}</option>)}
-        </select>
-        <select className={listStyles.filterSelect} value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-          <option value="tokensDesc">Tokens 最多</option>
-          <option value="callsDesc">调用最多</option>
-          <option value="costDesc">成本最高</option>
-          <option value="recent">最近活跃</option>
-        </select>
+        <Select
+          ariaLabel={t('s.filterChannel')}
+          value={channelFilter}
+          onChange={setChannelFilter}
+          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+        />
+        <Select
+          ariaLabel={t('s.sort')}
+          value={sortKey}
+          onChange={(next) => setSortKey(next as SortKey)}
+          options={[
+            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
+            { value: 'callsDesc', label: t('s.sortCalls') },
+            { value: 'costDesc', label: t('s.sortCost') },
+            { value: 'recent', label: t('m.lastActive') },
+          ]}
+        />
         <span className={exportStyles.exportGroup}>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('csv')}>导出 CSV</button>
-          <button className={exportStyles.exportBtn} disabled={visible.length === 0} onClick={() => exportRows('json')}>导出 JSON</button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>{t('export.csv')}</Button>
+          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>{t('export.json')}</Button>
         </span>
       </div>
 
-      <table className={styles.table + ' ' + listStyles.modelTable}>
+      <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.modelTable}>
         <thead>
           <tr><th>模型</th><th>调用</th><th>Tokens</th><th>占比</th><th>命中率</th><th>成本</th><th>最近活跃</th></tr>
         </thead>
@@ -140,7 +150,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
           })}
           {visible.length === 0 && <tr><td colSpan={7} className={styles.empty}>没有符合条件的模型</td></tr>}
         </tbody>
-      </table>
+      </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
         模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算

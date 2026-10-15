@@ -253,6 +253,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"q.daySuffix": " 天",
 			"q.countSuffix": " 个",
 			"q.noBasis": "无依据",
+			"export.csv": "导出 CSV",
+			"export.json": "导出 JSON",
+			"d.hourUnit": " 时 · ",
+			"d.callUnit": " 次",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -575,6 +579,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"q.daySuffix": " d",
 			"q.countSuffix": "",
 			"q.noBasis": "None",
+			"export.csv": "CSV",
+			"export.json": "JSON",
+			"d.hourUnit": "h · ",
+			"d.callUnit": " calls",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -1550,12 +1558,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/channels.ts
 		/** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
 		const CHANNEL_COLORS = [
-			"#5b8cff",
-			"#9a7bff",
-			"#3fb96f",
-			"#e0a13c",
-			"#e05a5a",
-			"#38bdc8"
+			"var(--dsw-alias-state-business-primary, #5b8cff)",
+			"var(--dsw-alias-state-business-secondary, #9a7bff)",
+			"var(--dsw-alias-state-success-primary, #3fb96f)",
+			"var(--dsw-alias-state-warn-primary, #e0a13c)",
+			"var(--dsw-alias-state-error-primary, #e05a5a)",
+			"var(--dsw-alias-state-idle-primary, #38bdc8)"
 		];
 		function channelIndexOf(channels, provider) {
 			return channels.findIndex((channel) => channel.provider === provider);
@@ -1704,12 +1712,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** 五档由浅到深（首档为「无用量」的灰）。 */
 		const LEVEL_COLORS = [
-			"rgba(128,128,140,.22)",
-			"rgba(91,140,255,.18)",
-			"rgba(91,140,255,.36)",
-			"rgba(91,140,255,.56)",
-			"rgba(91,140,255,.78)",
-			"#5b8cff"
+			"var(--dsw-alias-fill-l2, rgba(128,128,140,.22))",
+			"var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.24))",
+			"var(--dsw-alias-state-business-secondary, rgba(91,140,255,.42))",
+			"var(--dsw-alias-state-business-primary, rgba(91,140,255,.66))",
+			"var(--dsw-alias-state-business-primary, rgba(91,140,255,.85))",
+			"var(--dsw-alias-state-business-primary, #5b8cff)"
 		];
 		function Heatmap(props) {
 			/** 取词：宿主切语言时重渲染 */
@@ -1945,67 +1953,70 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: shared_module_css_default.groupLabel,
 					children: "Key 清单"
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-					className: overview_module_css_default.keyTable,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "类型" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "今日" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "余额 / 窗口" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "30 天成本" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {})
-					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [channels.map((channel) => {
-						const row = summary?.channels.find((item) => item.provider === channel.provider) ?? null;
-						const todayTokens = row === null ? 0 : row.today.tokens;
-						const monthTokens = row === null ? 0 : row.month.tokens;
-						const costCell = costCellOf(channel, row?.month ?? {});
-						const disabled = channel.status === "off";
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-							className: disabled ? overview_module_css_default.disabledRow : overview_module_css_default.clickable,
-							onClick: disabled ? void 0 : () => props.onOpenDetail(channel.provider),
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: overview_module_css_default.cellKey,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: shared_module_css_default.statusDot,
-										style: { background: statusColorOf(channel.status) }
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-										className: overview_module_css_default.keyDisplay,
-										children: channel.displayName
-									})]
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: tagClassOf(channel),
-									children: channel.status === "off" ? t("err.noApiKey") : channel.costLabel
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: todayTokens > 0 ? fmtTokens(todayTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: shared_module_css_default.dim,
-									children: "—"
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: monthTokens > 0 ? fmtTokens(monthTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: shared_module_css_default.dim,
-									children: "—"
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: quotaCellOf(channel) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: shared_module_css_default.dim,
-									children: costCell.text
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
-									source: row?.month.costSource,
-									partial: row?.month.partial
-								})] }) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.rowLink,
-									children: "明细 →"
-								}) })
-							]
-						}, channel.provider);
-					}), channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-						colSpan: 7,
-						className: shared_module_css_default.empty,
-						children: "未读取到通道配置"
-					}) })] })]
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ui_module_css_default.tableScroll,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+						className: overview_module_css_default.keyTable,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "通道" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "类型" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "今日" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "余额 / 窗口" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "30 天成本" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {})
+						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [channels.map((channel) => {
+							const row = summary?.channels.find((item) => item.provider === channel.provider) ?? null;
+							const todayTokens = row === null ? 0 : row.today.tokens;
+							const monthTokens = row === null ? 0 : row.month.tokens;
+							const costCell = costCellOf(channel, row?.month ?? {});
+							const disabled = channel.status === "off";
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+								className: disabled ? overview_module_css_default.disabledRow : overview_module_css_default.clickable,
+								onClick: disabled ? void 0 : () => props.onOpenDetail(channel.provider),
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: overview_module_css_default.cellKey,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: shared_module_css_default.statusDot,
+											style: { background: statusColorOf(channel.status) }
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: overview_module_css_default.keyDisplay,
+											children: channel.displayName
+										})]
+									}) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tagClassOf(channel),
+										children: channel.status === "off" ? t("err.noApiKey") : channel.costLabel
+									}) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: todayTokens > 0 ? fmtTokens(todayTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: shared_module_css_default.dim,
+										children: "—"
+									}) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: monthTokens > 0 ? fmtTokens(monthTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: shared_module_css_default.dim,
+										children: "—"
+									}) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: quotaCellOf(channel) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: shared_module_css_default.dim,
+										children: costCell.text
+									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+										source: row?.month.costSource,
+										partial: row?.month.partial
+									})] }) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: overview_module_css_default.rowLink,
+										children: "明细 →"
+									}) })
+								]
+							}, channel.provider);
+						}), channels.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+							colSpan: 7,
+							className: shared_module_css_default.empty,
+							children: "未读取到通道配置"
+						}) })] })]
+					})
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Heatmap, {
 					days: props.heatmap,
@@ -2620,19 +2631,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					id: bodyId,
 					className: trend_module_css_default.body,
-					children: expanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-						className: shared_module_css_default.table,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "指标" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "本期" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "上期" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "变化" })
-						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.label }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.current }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.previous }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.change })
-						] }, row.key)) })]
+					children: expanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: ui_module_css_default.tableScroll,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+							className: shared_module_css_default.table,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "指标" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "本期" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "上期" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "变化" })
+							] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.label }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.current }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.previous }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.change })
+							] }, row.key)) })]
+						})
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: trend_module_css_default.notes,
 						children: notes.map((note) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -2773,121 +2787,124 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: shared_module_css_default.blockLabel,
 					children: "每日细目"
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-					className: shared_module_css_default.table,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						header("period", t("c.date")),
-						header("total", t("r.total")),
-						header("calls", t("common.calls")),
-						header("input", t("c.input")),
-						header("output", t("c.output")),
-						header("cacheRead", t("c.cacheRead")),
-						header("hit", t("d.hitRate"))
-					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [ordered.map((period) => {
-						const modelsInPeriod = modelRows.filter((row) => row.period === period.period).filter((row) => row.totalTokens > 0).sort((first, second) => second.totalTokens - first.totalTokens);
-						const expandable = modelsInPeriod.length > 1;
-						const isOpen = expandable && expandedPeriods[period.period] === true;
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-							className: expandable ? shared_module_css_default.clickable : "",
-							onClick: expandable ? () => onTogglePeriod(period.period) : void 0,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: expandable ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-									type: "button",
-									className: detail_module_css_default.rowToggle,
-									"aria-expanded": isOpen,
-									onClick: (event) => {
-										event.stopPropagation();
-										onTogglePeriod(period.period);
-									},
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.toggleArrow,
-										"aria-hidden": "true",
-										children: isOpen ? "▼" : "▶"
-									}), period.period]
-								}) : period.period }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(period.totalTokens) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(period.calls) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: tokenCellOf(period.inputTokens) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: tokenCellOf(period.outputTokens) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(period.cacheReadTokens) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: hitRateOf$1(period.cacheReadTokens, period.inputTokens, period.outputTokens) })
-							]
-						}), isOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
-							className: detail_module_css_default.subRowCell,
-							colSpan: 7,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: detail_module_css_default.subHead,
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ui_module_css_default.tableScroll,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+						className: shared_module_css_default.table,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							header("period", t("c.date")),
+							header("total", t("r.total")),
+							header("calls", t("common.calls")),
+							header("input", t("c.input")),
+							header("output", t("c.output")),
+							header("cacheRead", t("c.cacheRead")),
+							header("hit", t("d.hitRate"))
+						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [ordered.map((period) => {
+							const modelsInPeriod = modelRows.filter((row) => row.period === period.period).filter((row) => row.totalTokens > 0).sort((first, second) => second.totalTokens - first.totalTokens);
+							const expandable = modelsInPeriod.length > 1;
+							const isOpen = expandable && expandedPeriods[period.period] === true;
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+								className: expandable ? shared_module_css_default.clickable : "",
+								onClick: expandable ? () => onTogglePeriod(period.period) : void 0,
 								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: "调用"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: "输入"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: "输出"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: "缓存读"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: "命中率"
-									})
-								]
-							}), modelsInPeriod.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: detail_module_css_default.subRow,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: detail_module_css_default.subName,
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: expandable ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: detail_module_css_default.rowToggle,
+										"aria-expanded": isOpen,
+										onClick: (event) => {
+											event.stopPropagation();
+											onTogglePeriod(period.period);
+										},
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: detail_module_css_default.subModel,
-											children: row.model
-										}), channelFilter === "ALL" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: detail_module_css_default.subChannel,
-											children: displayNameOf(channels, row.provider)
-										})]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: fmtCalls(row.calls)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: tokenCellOf(row.inputTokens)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: tokenCellOf(row.outputTokens)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: fmtTokens(row.cacheReadTokens)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.subNumber,
-										children: hitRateOf$1(row.cacheReadTokens, row.inputTokens, row.outputTokens)
-									})
+											className: detail_module_css_default.toggleArrow,
+											"aria-hidden": "true",
+											children: isOpen ? "▼" : "▶"
+										}), period.period]
+									}) : period.period }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(period.totalTokens) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(period.calls) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: tokenCellOf(period.inputTokens) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: tokenCellOf(period.outputTokens) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(period.cacheReadTokens) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: hitRateOf$1(period.cacheReadTokens, period.inputTokens, period.outputTokens) })
 								]
-							}, row.period + "|" + row.model + "|" + row.provider))]
-						}) })] }, period.period);
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-						className: shared_module_css_default.total,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: "合计" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totalTokens) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(totals?.calls ?? 0) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.inputTokens ?? 0) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.outputTokens ?? 0) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.cacheReadTokens ?? 0) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: hitRateOf$1(totals?.cacheReadTokens ?? 0, totals?.inputTokens ?? 0, totals?.outputTokens ?? 0) })
-						]
-					})] })]
+							}), isOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
+								className: detail_module_css_default.subRowCell,
+								colSpan: 7,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: detail_module_css_default.subHead,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: "调用"
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: "输入"
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: "输出"
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: "缓存读"
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: "命中率"
+										})
+									]
+								}), modelsInPeriod.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: detail_module_css_default.subRow,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: detail_module_css_default.subName,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: detail_module_css_default.subModel,
+												children: row.model
+											}), channelFilter === "ALL" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: detail_module_css_default.subChannel,
+												children: displayNameOf(channels, row.provider)
+											})]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: fmtCalls(row.calls)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: tokenCellOf(row.inputTokens)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: tokenCellOf(row.outputTokens)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: fmtTokens(row.cacheReadTokens)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.subNumber,
+											children: hitRateOf$1(row.cacheReadTokens, row.inputTokens, row.outputTokens)
+										})
+									]
+								}, row.period + "|" + row.model + "|" + row.provider))]
+							}) })] }, period.period);
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+							className: shared_module_css_default.total,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: "合计" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totalTokens) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(totals?.calls ?? 0) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.inputTokens ?? 0) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.outputTokens ?? 0) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(totals?.cacheReadTokens ?? 0) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: hitRateOf$1(totals?.cacheReadTokens ?? 0, totals?.inputTokens ?? 0, totals?.outputTokens ?? 0) })
+							]
+						})] })]
+					})
 				}),
 				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.statExtra,
@@ -3203,7 +3220,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.hitRateShort"),
 							value: hitRate,
-							extra: "缓存读 ÷（输入 + 输出 + 缓存读）"
+							extra: t("d.hitRateFormula")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
 							label: t("d.dailyAvg"),
@@ -3219,7 +3236,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								source: safeTotals.costSource,
 								partial: safeTotals.partial
 							})] }),
-							extra: "按所选范围与筛选聚合"
+							extra: t("d.rangeAggregate")
 						})
 					]
 				}),
@@ -3403,6 +3420,101 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"subagentTagBtn": "ysq2ha_subagentTagBtn"
 		};
 		//#endregion
+		//#region src/client/components/ui/Select.tsx
+		/** 通用下拉：原生 `select` 的外观改不动（各系统长相不一，与宿主主题脱节），这里自建 listbox。
+		*  键盘：↑↓ 移动、Enter 选中、Esc 关闭；点外部关闭；role=listbox/option 供读屏。 */
+		function Select(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [activeIndex, setActiveIndex] = (0, react.useState)(0);
+			const wrapRef = (0, react.useRef)(null);
+			const current = props.options.find((option) => option.value === props.value) ?? props.options[0];
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onPointerDown = (event) => {
+					const target = event.target;
+					if (wrapRef.current !== null && !wrapRef.current.contains(target)) setOpen(false);
+				};
+				document.addEventListener("mousedown", onPointerDown);
+				return () => document.removeEventListener("mousedown", onPointerDown);
+			}, [open]);
+			const step = (delta) => {
+				setActiveIndex((previous) => Math.min(props.options.length - 1, Math.max(0, previous + delta)));
+			};
+			const commit = (index) => {
+				const option = props.options[index];
+				if (option !== void 0) props.onChange(option.value);
+				setOpen(false);
+			};
+			const toggle = () => {
+				const index = props.options.findIndex((option) => option.value === props.value);
+				setActiveIndex(index < 0 ? 0 : index);
+				setOpen((previous) => !previous);
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: ui_module_css_default.selectWrap,
+				ref: wrapRef,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: ui_module_css_default.selectBtn,
+					"aria-label": props.ariaLabel,
+					"aria-haspopup": "listbox",
+					"aria-expanded": open,
+					onClick: toggle,
+					onKeyDown: (event) => {
+						if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+							event.preventDefault();
+							if (!open) {
+								setOpen(true);
+								return;
+							}
+							step(event.key === "ArrowDown" ? 1 : -1);
+						}
+					},
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: ui_module_css_default.selectValue,
+						children: current?.label ?? ""
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: ui_module_css_default.selectCaret,
+						"aria-hidden": "true",
+						children: "▼"
+					})]
+				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+					className: ui_module_css_default.selectList,
+					role: "listbox",
+					"aria-label": props.ariaLabel,
+					tabIndex: -1,
+					autoFocus: true,
+					onKeyDown: (event) => {
+						if (event.key === "Escape") {
+							setOpen(false);
+							return;
+						}
+						if (event.key === "Enter") {
+							event.preventDefault();
+							commit(activeIndex);
+							return;
+						}
+						if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+							event.preventDefault();
+							step(event.key === "ArrowDown" ? 1 : -1);
+						}
+					},
+					children: props.options.map((option, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+						role: "option",
+						"aria-selected": option.value === props.value,
+						className: ui_module_css_default.selectOption + (index === activeIndex ? " " + ui_module_css_default.selectOptionActive : ""),
+						onMouseEnter: () => setActiveIndex(index),
+						onClick: () => commit(index),
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: option.label }), option.value === props.value && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ui_module_css_default.selectCheck,
+							"aria-hidden": "true",
+							children: "✓"
+						})]
+					}, option.value))
+				})]
+			});
+		}
+		//#endregion
 		//#region src/client/tabs/ModelsTab.tsx
 		/** 按模型：`provider + model` 聚合的用量与估算成本（数据来自宿主会话事件折叠）。 */
 		const MODELS_PATH = "/dsh-key-usage/models";
@@ -3536,123 +3648,126 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: query,
 							onChange: (event) => setQuery(event.target.value)
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-							className: lists_module_css_default.filterSelect,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+							ariaLabel: t("s.filterChannel"),
 							value: channelFilter,
-							onChange: (event) => setChannelFilter(event.target.value),
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+							onChange: setChannelFilter,
+							options: [{
 								value: "ALL",
-								children: "全部通道"
-							}), props.channels.map((channel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								label: t("s.allChannels")
+							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
-								children: channel.displayName
-							}, channel.provider))]
+								label: channel.displayName
+							}))]
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-							className: lists_module_css_default.filterSelect,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+							ariaLabel: t("s.sort"),
 							value: sortKey,
-							onChange: (event) => setSortKey(event.target.value),
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+							onChange: (next) => setSortKey(next),
+							options: [
+								{
 									value: "tokensDesc",
-									children: "Tokens 最多"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("s.sortTokensDesc")
+								},
+								{
 									value: "callsDesc",
-									children: "调用最多"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("s.sortCalls")
+								},
+								{
 									value: "costDesc",
-									children: "成本最高"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("s.sortCost")
+								},
+								{
 									value: "recent",
-									children: "最近活跃"
-								})
+									label: t("m.lastActive")
+								}
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: export_module_css_default.exportGroup,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: export_module_css_default.exportBtn,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("csv"),
-								children: "导出 CSV"
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: export_module_css_default.exportBtn,
+								children: t("export.csv")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("json"),
-								children: "导出 JSON"
+								children: t("export.json")
 							})]
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-					className: shared_module_css_default.table + " " + lists_module_css_default.modelTable,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "命中率" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
-					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
-						const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
-						const channel = channelOf(props.channels, row.provider);
-						const costCell = costCellOf(channel, row);
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: lists_module_css_default.listTitle,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: lists_module_css_default.listMain,
-									children: row.model
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: lists_module_css_default.listSub,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: shared_module_css_default.statusDot,
-											style: {
-												background: channelColorOf(props.channels, row.provider),
-												marginRight: 4
-											}
-										}),
-										row.providerLabel,
-										" · ",
-										row.sessionCount,
-										" 个会话"
-									]
-								})] })
-							}) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(row.calls) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: lists_module_css_default.listBar,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
-										width: Math.max(2, percent) + "%",
-										background: channelColorOf(props.channels, row.provider)
-									} })
-								}),
-								" ",
-								percent,
-								"%"
-							] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: shared_module_css_default.dim,
-								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
-								source: row.costSource,
-								partial: row.partial
-							})] }) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
-						] }, row.provider + "|" + row.model);
-					}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-						colSpan: 7,
-						className: shared_module_css_default.empty,
-						children: "没有符合条件的模型"
-					}) })] })]
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ui_module_css_default.tableScroll,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+						className: shared_module_css_default.table + " " + lists_module_css_default.modelTable,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "命中率" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
+						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
+							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
+							const channel = channelOf(props.channels, row.provider);
+							const costCell = costCellOf(channel, row);
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: lists_module_css_default.listTitle,
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: lists_module_css_default.listMain,
+										children: row.model
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: lists_module_css_default.listSub,
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: shared_module_css_default.statusDot,
+												style: {
+													background: channelColorOf(props.channels, row.provider),
+													marginRight: 4
+												}
+											}),
+											row.providerLabel,
+											" · ",
+											row.sessionCount,
+											" 个会话"
+										]
+									})] })
+								}) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(row.calls) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: lists_module_css_default.listBar,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+											width: Math.max(2, percent) + "%",
+											background: channelColorOf(props.channels, row.provider)
+										} })
+									}),
+									" ",
+									percent,
+									"%"
+								] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%" }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: shared_module_css_default.dim,
+									children: costCell.text
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: row.costSource,
+									partial: row.partial
+								})] }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
+							] }, row.provider + "|" + row.model);
+						}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+							colSpan: 7,
+							className: shared_module_css_default.empty,
+							children: "没有符合条件的模型"
+						}) })] })]
+					})
 				}),
 				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.statExtra,
@@ -3784,53 +3899,53 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: query,
 							onChange: (event) => setQuery(event.target.value)
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-							className: lists_module_css_default.filterSelect,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+							ariaLabel: t("s.filterChannel"),
 							value: channelFilter,
-							onChange: (event) => setChannelFilter(event.target.value),
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+							onChange: setChannelFilter,
+							options: [{
 								value: "ALL",
-								children: "全部通道"
-							}), props.channels.map((channel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								label: t("s.allChannels")
+							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
-								children: channel.displayName
-							}, channel.provider))]
+								label: channel.displayName
+							}))]
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-							className: lists_module_css_default.filterSelect,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+							ariaLabel: t("s.sort"),
 							value: sortKey,
-							onChange: (event) => setSortKey(event.target.value),
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+							onChange: (next) => setSortKey(next),
+							options: [
+								{
 									value: "recent",
-									children: "最近活跃"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("m.lastActive")
+								},
+								{
 									value: "tokensDesc",
-									children: "Tokens 最多"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("s.sortTokensDesc")
+								},
+								{
 									value: "tokensAsc",
-									children: "Tokens 最少"
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									label: t("s.sortTokensAsc")
+								},
+								{
 									value: "callsDesc",
-									children: "调用最多"
-								})
+									label: t("s.sortCalls")
+								}
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: export_module_css_default.exportGroup,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: export_module_css_default.exportBtn,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("csv"),
-								children: "导出 CSV"
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: export_module_css_default.exportBtn,
+								children: t("export.csv")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+								size: "sm",
 								disabled: visible.length === 0,
 								onClick: () => exportRows("json"),
-								children: "导出 JSON"
+								children: t("export.json")
 							})]
 						})
 					]
@@ -3849,65 +3964,68 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-					className: shared_module_css_default.table + " " + lists_module_css_default.projectTable,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "项目" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
-					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
-						const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
-						const dominant = row.dominantProvider;
-						const channel = channelOf(props.channels, dominant);
-						const costCell = costCellOf(channel, row);
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: lists_module_css_default.listTitle,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: lists_module_css_default.listMain,
-									children: baseNameOf(row.workspace)
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: lists_module_css_default.listSub,
-									children: [
-										row.workspace,
-										" · ",
-										row.sessionCount,
-										" 个会话",
-										row.archivedSessionCount > 0 ? t("p.archivePrefix") + row.archivedSessionCount + t("p.archiveSuffix") : ""
-									]
-								})] })
-							}) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(row.calls) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: lists_module_css_default.listBar,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
-										width: Math.max(2, percent) + "%",
-										background: channelColorOf(props.channels, dominant ?? "")
-									} })
-								}),
-								" ",
-								percent,
-								"%"
-							] }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode === "sub" || channel?.costMode === "free" || channel?.costMode === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: shared_module_css_default.dim,
-								children: costCell.text
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
-								source: row.costSource,
-								partial: row.partial
-							})] }) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
-						] }, row.workspace);
-					}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-						colSpan: 6,
-						className: shared_module_css_default.empty,
-						children: focusWorkspace === null ? t("p.empty") : t("p.noUsage")
-					}) })] })]
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ui_module_css_default.tableScroll,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+						className: shared_module_css_default.table + " " + lists_module_css_default.projectTable,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "项目" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "调用" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "Tokens" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "占比" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "成本" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "最近活跃" })
+						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
+							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
+							const dominant = row.dominantProvider;
+							const channel = channelOf(props.channels, dominant);
+							const costCell = costCellOf(channel, row);
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: lists_module_css_default.listTitle,
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: lists_module_css_default.listMain,
+										children: baseNameOf(row.workspace)
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: lists_module_css_default.listSub,
+										children: [
+											row.workspace,
+											" · ",
+											row.sessionCount,
+											" 个会话",
+											row.archivedSessionCount > 0 ? t("p.archivePrefix") + row.archivedSessionCount + t("p.archiveSuffix") : ""
+										]
+									})] })
+								}) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCalls(row.calls) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(row.tokens) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: lists_module_css_default.listBar,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+											width: Math.max(2, percent) + "%",
+											background: channelColorOf(props.channels, dominant ?? "")
+										} })
+									}),
+									" ",
+									percent,
+									"%"
+								] }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode === "sub" || channel?.costMode === "free" || channel?.costMode === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: shared_module_css_default.dim,
+									children: costCell.text
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: row.costSource,
+									partial: row.partial
+								})] }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtRelative(row.lastTime, nowMs) })
+							] }, row.workspace);
+						}), visible.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+							colSpan: 6,
+							className: shared_module_css_default.empty,
+							children: focusWorkspace === null ? t("p.empty") : t("p.noUsage")
+						}) })] })]
+					})
 				}),
 				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: shared_module_css_default.statExtra,
@@ -4420,65 +4538,68 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: quota_module_css_default.rateScroll,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-					className: quota_module_css_default.rateTable,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "来源" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天 tokens" }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "说明" })
-					] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: props.rows.map((row) => {
-						const rates = row.rates;
-						const hasRates = rates !== null && typeof rates === "object";
-						const rowConverted = convertsCurrencyOf(row.currency);
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: quota_module_css_default.rateModel,
-									children: row.model
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ui_module_css_default.tableScroll,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+						className: quota_module_css_default.rateTable,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "模型" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输入" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存读" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "缓存写" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "输出" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "来源" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "近 30 天 tokens" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: "说明" })
+						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: props.rows.map((row) => {
+							const rates = row.rates;
+							const hasRates = rates !== null && typeof rates === "object";
+							const rowConverted = convertsCurrencyOf(row.currency);
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: quota_module_css_default.rateModel,
+										children: row.model
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: quota_module_css_default.rateConverted,
+										children: [
+											"币种 ",
+											typeof row.currency === "string" && row.currency !== "" ? row.currency : "—",
+											rowConverted ? " → " + props.display : ""
+										]
+									}),
+									row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: quota_module_css_default.offPeakChip,
+										children: "错峰中"
+									})
+								] }),
+								hasRates ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.input) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheRead) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheWrite) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.output) })
+								] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+									className: quota_module_css_default.rateEmpty,
+									colSpan: 4,
+									children: row.note !== null && row.note !== "" ? row.note : noRateTextOf(row.source)
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: quota_module_css_default.rateConverted,
-									children: [
-										"币种 ",
-										typeof row.currency === "string" && row.currency !== "" ? row.currency : "—",
-										rowConverted ? " → " + props.display : ""
-									]
-								}),
-								row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: quota_module_css_default.offPeakChip,
-									children: "错峰中"
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: quota_module_css_default.rateSourceNone,
+									title: costSourceHintOf("none", row.partial),
+									children: "无依据"
+								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
+									source: row.source,
+									partial: row.partial
+								}) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(typeof row.tokens === "number" && Number.isFinite(row.tokens) ? row.tokens : 0) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+									className: quota_module_css_default.rateNote,
+									children: row.note !== null && row.note !== "" ? row.note : "—"
 								})
-							] }),
-							hasRates ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.input) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheRead) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.cacheWrite) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: rateCellText(row.currency, rates.output) })
-							] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-								className: quota_module_css_default.rateEmpty,
-								colSpan: 4,
-								children: row.note !== null && row.note !== "" ? row.note : noRateTextOf(row.source)
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.source === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: quota_module_css_default.rateSourceNone,
-								title: costSourceHintOf("none", row.partial),
-								children: "无依据"
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
-								source: row.source,
-								partial: row.partial
-							}) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(typeof row.tokens === "number" && Number.isFinite(row.tokens) ? row.tokens : 0) }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-								className: quota_module_css_default.rateNote,
-								children: row.note !== null && row.note !== "" ? row.note : "—"
-							})
-						] }, row.model);
-					}) })]
+							] }, row.model);
+						}) })]
+					})
 				})
 			})] });
 		}
@@ -5077,7 +5198,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				"aria-label": hourChartSummary(props.hours),
 				children: props.hours.map((hour, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.hourBar,
-					title: String(index) + " 时 · " + fmtTokens(hour.tokens) + " · " + fmtCalls(hour.calls) + " 次",
+					title: String(index) + t("d.hourUnit") + fmtTokens(hour.tokens) + " · " + fmtCalls(hour.calls) + t("d.callUnit"),
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: lists_module_css_default.hourBarFill,
 						style: { height: peak > 0 ? Math.round(hour.tokens / peak * 100) + "%" : "0%" }
@@ -5142,101 +5263,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					props.reason !== void 0 && props.reason !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: props.reason }),
 					props.children
 				]
-			});
-		}
-		//#endregion
-		//#region src/client/components/ui/Select.tsx
-		/** 通用下拉：原生 `select` 的外观改不动（各系统长相不一，与宿主主题脱节），这里自建 listbox。
-		*  键盘：↑↓ 移动、Enter 选中、Esc 关闭；点外部关闭；role=listbox/option 供读屏。 */
-		function Select(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const [activeIndex, setActiveIndex] = (0, react.useState)(0);
-			const wrapRef = (0, react.useRef)(null);
-			const current = props.options.find((option) => option.value === props.value) ?? props.options[0];
-			(0, react.useEffect)(() => {
-				if (!open) return;
-				const onPointerDown = (event) => {
-					const target = event.target;
-					if (wrapRef.current !== null && !wrapRef.current.contains(target)) setOpen(false);
-				};
-				document.addEventListener("mousedown", onPointerDown);
-				return () => document.removeEventListener("mousedown", onPointerDown);
-			}, [open]);
-			const step = (delta) => {
-				setActiveIndex((previous) => Math.min(props.options.length - 1, Math.max(0, previous + delta)));
-			};
-			const commit = (index) => {
-				const option = props.options[index];
-				if (option !== void 0) props.onChange(option.value);
-				setOpen(false);
-			};
-			const toggle = () => {
-				const index = props.options.findIndex((option) => option.value === props.value);
-				setActiveIndex(index < 0 ? 0 : index);
-				setOpen((previous) => !previous);
-			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				className: ui_module_css_default.selectWrap,
-				ref: wrapRef,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					className: ui_module_css_default.selectBtn,
-					"aria-label": props.ariaLabel,
-					"aria-haspopup": "listbox",
-					"aria-expanded": open,
-					onClick: toggle,
-					onKeyDown: (event) => {
-						if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-							event.preventDefault();
-							if (!open) {
-								setOpen(true);
-								return;
-							}
-							step(event.key === "ArrowDown" ? 1 : -1);
-						}
-					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: ui_module_css_default.selectValue,
-						children: current?.label ?? ""
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: ui_module_css_default.selectCaret,
-						"aria-hidden": "true",
-						children: "▼"
-					})]
-				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-					className: ui_module_css_default.selectList,
-					role: "listbox",
-					"aria-label": props.ariaLabel,
-					tabIndex: -1,
-					autoFocus: true,
-					onKeyDown: (event) => {
-						if (event.key === "Escape") {
-							setOpen(false);
-							return;
-						}
-						if (event.key === "Enter") {
-							event.preventDefault();
-							commit(activeIndex);
-							return;
-						}
-						if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-							event.preventDefault();
-							step(event.key === "ArrowDown" ? 1 : -1);
-						}
-					},
-					children: props.options.map((option, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
-						role: "option",
-						"aria-selected": option.value === props.value,
-						className: ui_module_css_default.selectOption + (index === activeIndex ? " " + ui_module_css_default.selectOptionActive : ""),
-						onMouseEnter: () => setActiveIndex(index),
-						onClick: () => commit(index),
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: option.label }), option.value === props.value && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: ui_module_css_default.selectCheck,
-							"aria-hidden": "true",
-							children: "✓"
-						})]
-					}, option.value))
-				})]
 			});
 		}
 		//#endregion

@@ -8,6 +8,7 @@ import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { t, useT } from '../i18n.ts'
 import styles from '../styles/shared.module.css'
 import overviewStyles from '../styles/overview.module.css'
+import uiStyles from '../styles/ui.module.css'
 
 export function OverviewTab(props: {
   channels: Channel[]
@@ -23,7 +24,7 @@ export function OverviewTab(props: {
   return (
     <div>
       <div className={styles.groupLabel}>Key 清单</div>
-      <table className={overviewStyles.keyTable}>
+      <div className={uiStyles.tableScroll}><table className={overviewStyles.keyTable}>
         <thead>
           <tr>
             <th>通道</th><th>类型</th><th>今日</th><th>近 30 天</th><th>余额 / 窗口</th><th>30 天成本</th><th></th>
@@ -59,7 +60,7 @@ export function OverviewTab(props: {
           })}
           {channels.length === 0 && <tr><td colSpan={7} className={styles.empty}>未读取到通道配置</td></tr>}
         </tbody>
-      </table>
+      </table></div>
 
       <Heatmap days={props.heatmap} channels={channels} tooltip={props.tooltip} />
 

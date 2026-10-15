@@ -12,6 +12,7 @@ import type { Channel, DaySummary, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import trendStyles from '../styles/trend.module.css'
 import { t, useT } from '../i18n.ts'
+import uiStyles from '../styles/ui.module.css'
 
 /** 与 DetailTab 的 `RangeKey` 同形：单独声明，避免两个模块互相 import 类型。 */
 export type TrendRangeKey = 'today' | 'week' | 'month' | 'total' | 'custom'
@@ -273,7 +274,7 @@ export function TrendPanel(props: {
       <div id={bodyId} className={trendStyles.body}>
         {expanded && (
           <>
-            <table className={styles.table}>
+            <div className={uiStyles.tableScroll}><table className={styles.table}>
               <thead>
                 <tr>
                   <th>指标</th>
@@ -292,7 +293,7 @@ export function TrendPanel(props: {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             <div className={trendStyles.notes}>
               {notes.map((note) => <div key={note} className={trendStyles.note}>{note}</div>)}
             </div>

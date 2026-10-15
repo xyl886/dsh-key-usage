@@ -265,7 +265,7 @@ export function DetailTab(props: {
           value={fmtTokens(safeTotals.cacheReadTokens)}
           extra={cacheReadShare === null ? t('d.sameCaliber') : t('d.shareOfTokensPrefix') + cacheReadShare}
         />
-        <StatCard label={t('d.hitRateShort')} value={hitRate} extra="缓存读 ÷（输入 + 输出 + 缓存读）" />
+        <StatCard label={t('d.hitRateShort')} value={hitRate} extra={t('d.hitRateFormula')} />
         <StatCard
           label={t('d.dailyAvg')}
           value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))}
@@ -276,7 +276,7 @@ export function DetailTab(props: {
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
             : <>{costCell.text}{costCell.amount && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
-          extra="按所选范围与筛选聚合"
+          extra={t('d.rangeAggregate')}
         />
       </div>
 

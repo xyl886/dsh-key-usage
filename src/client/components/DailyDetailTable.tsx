@@ -7,6 +7,7 @@ import type { Channel, UsageResponse } from '../types.ts'
 import styles from '../styles/shared.module.css'
 import detailStyles from '../styles/detail.module.css'
 import { t, useT } from '../i18n.ts'
+import uiStyles from '../styles/ui.module.css'
 
 export interface DetailSortState {
   key: string
@@ -142,7 +143,7 @@ export function DailyDetailTable(props: {
   return (
     <div>
       <div className={styles.blockLabel}>每日细目</div>
-      <table className={styles.table}>
+      <div className={uiStyles.tableScroll}><table className={styles.table}>
         <thead>
           <tr>
             {header('period', t('c.date'))}
@@ -232,7 +233,7 @@ export function DailyDetailTable(props: {
             <td>{hitRateOf(totals?.cacheReadTokens ?? 0, totals?.inputTokens ?? 0, totals?.outputTokens ?? 0)}</td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
       {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
     </div>
   )

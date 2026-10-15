@@ -39,12 +39,12 @@ function levelOf(tokens: number, thresholds: number[]): number {
 
 /** 五档由浅到深（首档为「无用量」的灰）。 */
 const LEVEL_COLORS = [
-  'rgba(128,128,140,.22)',
-  'rgba(91,140,255,.18)',
-  'rgba(91,140,255,.36)',
-  'rgba(91,140,255,.56)',
-  'rgba(91,140,255,.78)',
-  '#5b8cff',
+  'var(--dsw-alias-fill-l2, rgba(128,128,140,.22))',
+  'var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.24))',
+  'var(--dsw-alias-state-business-secondary, rgba(91,140,255,.42))',
+  'var(--dsw-alias-state-business-primary, rgba(91,140,255,.66))',
+  'var(--dsw-alias-state-business-primary, rgba(91,140,255,.85))',
+  'var(--dsw-alias-state-business-primary, #5b8cff)',
 ]
 
 export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; tooltip: TooltipApi }): ReactNode {

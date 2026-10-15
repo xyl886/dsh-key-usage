@@ -23,6 +23,7 @@ import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
 import pricingStyles from '../styles/pricing.module.css'
+import uiStyles from '../styles/ui.module.css'
 
 /** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
 const BALANCE_ORDER = ['totalBalance', 'topUpBalance', 'giftBalance', 'balance', 'currency']
@@ -414,7 +415,7 @@ function RateTable(props: {
         {props.range === null ? '' : t('q.rangePrefix') + props.range.from + ' ~ ' + props.range.to}
       </div>
       <div className={quotaStyles.rateScroll}>
-        <table className={quotaStyles.rateTable}>
+        <div className={uiStyles.tableScroll}><table className={quotaStyles.rateTable}>
           <thead>
             <tr>
               <th>模型</th><th>输入</th><th>缓存读</th><th>缓存写</th><th>输出</th>
@@ -461,7 +462,7 @@ function RateTable(props: {
               )
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </>
   )

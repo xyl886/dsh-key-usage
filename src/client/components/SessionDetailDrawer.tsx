@@ -219,7 +219,7 @@ function HourMiniChart(props: { hours: Array<{ calls: number; tokens: number }> 
   return (
     <div className={listStyles.hourChart} role="img" aria-label={hourChartSummary(props.hours)}>
       {props.hours.map((hour, index) => (
-        <div className={listStyles.hourBar} key={index} title={String(index) + ' 时 · ' + fmtTokens(hour.tokens) + ' · ' + fmtCalls(hour.calls) + ' 次'}>
+        <div className={listStyles.hourBar} key={index} title={String(index) + t('d.hourUnit') + fmtTokens(hour.tokens) + ' · ' + fmtCalls(hour.calls) + t('d.callUnit')}>
           <span className={listStyles.hourBarFill} style={{ height: peak > 0 ? Math.round(hour.tokens / peak * 100) + '%' : '0%' }} />
           <span className={listStyles.hourBarTick}>{index % 6 === 0 ? String(index) : ''}</span>
         </div>
