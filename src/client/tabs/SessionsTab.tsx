@@ -219,13 +219,13 @@ export function SessionsTab(props: {
       </div>
       {parentFocus !== null && (
         <div className={styles.statExtra}>
-          只看该会话及其子会话（含父会话行）·
+          {t('s.parentFocusNote')}·
           <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>{t('p.clearFilter')}</button>
         </div>
       )}
       {subagentFilter !== 'only' && subagentCount > 0 && (
         <div className={styles.statExtra}>
-          {t('s.subagentOther', { count: subagentCount })}{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}：子会话各自计入统计，不并入父会话
+          {t('s.subagentOther', { count: subagentCount })}{subagentFilter === 'hide' ? t('s.subagentHidden') : t('s.subagentShown')}{t('s.subagentNote')}
         </div>
       )}
       {archiveFilter === 'hide' && archivedCount > 0 && (
@@ -260,14 +260,13 @@ export function SessionsTab(props: {
       {visible.length > shownCount && (
         <div className={listStyles.moreRow}>
           <button type="button" className={listStyles.moreBtn} onClick={() => setPageSize(pageSize + PAGE_SIZE)}>
-            加载更多（+{PAGE_SIZE}）
+            {t('s.loadMore', { count: PAGE_SIZE })}
           </button>
-          <span className={listStyles.moreText}>已显示 {shownCount} / {visible.length} 个会话</span>
+          <span className={listStyles.moreText}>{t('s.shownCount', { shown: shownCount, total: visible.length })}</span>
         </div>
       )}
-      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算
+        {t('s.footnote')}
         {props.data.priced ? '' : t('s.noCost')}
       </div>
 
@@ -351,7 +350,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                   if (row.parentSessionId !== null && row.parentSessionId !== undefined) options.onFocusSession(row.parentSessionId)
                 }}
               >
-                子代理
+                {t('s.subagentTag')}
               </button>
             )}
           </div>
@@ -372,7 +371,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                 </button>
               )}
             {row.modelCount !== undefined && row.modelCount > 1 && (
-              <span className={listStyles.sessionMeta}>{row.modelCount} 个模型</span>
+              <span className={listStyles.sessionMeta}>{row.modelCount}{t('common.modelSuffix')}</span>
             )}
             {row.subagentCount !== undefined && row.subagentCount > 0 && (
               <button
@@ -384,7 +383,7 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
                   options.onFocusSession(row.id)
                 }}
               >
-                {row.subagentCount} 个子会话
+                {row.subagentCount}{t('common.subagentSuffix')}
                 {row.subagentTokens !== undefined && row.subagentTokens > 0 ? ' · ' + fmtTokens(row.subagentTokens) : ''}
               </button>
             )}
@@ -394,8 +393,8 @@ function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
         <td>
           <div>{row.lastTime === null ? '—' : dayLabelOf(row.lastTime, options.nowMs) + ' ' + fmtTime(row.lastTime)}</div>
           <div className={listStyles.listSub}>
-            时长 {fmtDuration(durationOf(row))}
-            {row.crossDays >= 1 && <span className={listStyles.crossDayTag}>跨 {row.crossDays} 天</span>}
+            {t('d.duration')} {fmtDuration(durationOf(row))}
+            {row.crossDays >= 1 && <span className={listStyles.crossDayTag}>{t('s.crossDaysTag', { count: row.crossDays })}</span>}
           </div>
         </td>
         <td>{fmtTokens(row.tokens)}</td>

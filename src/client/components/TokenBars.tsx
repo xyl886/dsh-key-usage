@@ -1,6 +1,7 @@
 /** 堆叠柱状图：按天或按小时，含 x 轴标签与左侧纵轴刻度。 */
 import type { ReactNode } from 'react'
 import { fmtTokens } from '../core/format.ts'
+import { useState } from 'react'
 import type { TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/detail.module.css'
 
@@ -21,6 +22,13 @@ export function TokenBars(props: {
   hidden?: boolean
 }): ReactNode {
   const { rows, tooltip } = props
+  /** 当前悬停的列：给高亮与指示线用（tip 钉在图表右上角，不跟鼠标走）。 */
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  /** 图表列容器的右上角：tip 钉在这里。 */
+  const pinFrom = (node: HTMLElement | null): { right: number; top: number } | undefined => {
+    const box = (node?.parentElement ?? node)?.getBoundingClientRect()
+    return box === undefined ? undefined : { right: box.right - 4, top: box.top + 4 }
+  }
   if (props.hidden === true || rows.length === 0) return null
   const peak = Math.max(1, ...rows.map((row) => row.cacheReadTokens + row.inputTokens + row.outputTokens))
   const heightOf = (value: number): string => (peak > 0 ? Math.max(1, Math.round(value / peak * 100)) : 1) + '%'
@@ -36,14 +44,14 @@ export function TokenBars(props: {
       </div>
       <div className={styles.chartPane}>
         <div className={rows.length > 20 ? styles.bars + ' ' + styles.barsDense : styles.bars} role="img" aria-label={props.ariaLabel}>
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const rowTotal = row.cacheReadTokens + row.inputTokens + row.outputTokens
             return (
               <div
                 key={row.key}
-                className={styles.barColumn}
-                onMouseMove={(event) => tooltip.show(event, row.tip)}
-                onMouseLeave={tooltip.hide}
+                className={index === activeIndex ? styles.barColumn + ' ' + styles.barColumnActive : styles.barColumn}
+                onMouseMove={(event) => { setActiveIndex(index); tooltip.show(event, row.tip, pinFrom(event.currentTarget)) }}
+                onMouseLeave={() => { setActiveIndex(null); tooltip.hide() }}
               >
                 {rowTotal > 0 && (
                   <>

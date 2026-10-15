@@ -7,11 +7,13 @@ import { COST_SOURCE_LABELS, PARTIAL_PRICE_TEXT, costSourceHintOf, type CostSour
 import { t, useT } from '../core/i18n.ts'
 import styles from '../styles/pricing.module.css'
 
+/* 官方账单与官方价覆盖绝大多数金额，不再占版面；角标只标注需要解释的来源：聚合 / 估算 / 其它。 */
 export function CostSourceChip(props: {
   source: CostSource | null | undefined
   compact?: boolean
   partial?: boolean | null
 }): ReactNode {
+  if (props.source === 'official' || props.source === 'catalog') return null
   const source = props.source ?? 'none'
   if (source === 'none') return null
   const partial = props.partial === true

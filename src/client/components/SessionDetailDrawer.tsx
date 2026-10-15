@@ -1,6 +1,8 @@
 /** 会话详情抽屉：数据来自 `/session?id=…`（服务端只折叠这一个会话；读不出来时降级返回头部字段）。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { failureReasonOf, loadSessionDetail, sessionDetailPath } from '../core/api.ts'
+import { logWarn } from '../core/log.ts'
+import { LogHint } from './LogHint.tsx'
 import { COST_MODE_KEYS, channelOf, costCellOf, displayNameOf } from '../core/channels.ts'
 import { fmtCalls, fmtDateTime, fmtDuration, fmtTokens } from '../core/format.ts'
 import { costSourceHintOf } from '../core/pricing.ts'
@@ -38,6 +40,8 @@ export function SessionDetailDrawer(props: {
       if (cancelled) return
       setData(result)
       setFailed(result === null)
+      // 失败原因进系统日志：抽屉里只留一行「读取失败 · 查看系统日志」
+      if (result === null) logWarn('ledger', t('d.loadFailed') + ' · ' + props.sessionId, failureReasonOf(sessionDetailPath(props.sessionId)) ?? t('d.unknownReason'))
     })
     return () => { cancelled = true }
   }, [props.sessionId])
@@ -74,14 +78,14 @@ export function SessionDetailDrawer(props: {
             className={listStyles.drawerBack}
             onClick={() => props.onOpenSession(props.parentId as string)}
           >
-            ← 返回主会话{props.parentTitle === null ? '' : '：' + props.parentTitle}
+            {t('d.backToParent')}{props.parentTitle === null ? '' : '：' + props.parentTitle}
           </button>
         )}
 
         {data === null && !failed && <div className={styles.empty}>{t('d.loading')}</div>}
         {failed && (
           <div className={styles.warning}>
-            会话详情读取失败：{failureReasonOf(sessionDetailPath(props.sessionId)) ?? t('d.unknownReason')}
+            <LogHint text={t('d.loadFailed')} tone="error" />
           </div>
         )}
         {data !== null && data.coverage.status !== 'complete' && (
@@ -189,7 +193,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                     <tr key={model.provider + '|' + model.model}>
                       <td>
                         <div className={listStyles.listMain}>{model.model}</div>
-                        <div className={listStyles.listSub}>{model.providerLabel} · {fmtCalls(model.calls)} 次</div>
+                        <div className={listStyles.listSub}>{model.providerLabel} · {t('d.callTimes', { count: fmtCalls(model.calls) })}</div>
                       </td>
                       <td>{fmtTokens(model.tokens)}</td>
                       <td>

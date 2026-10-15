@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { costCellOf, statusColorOf } from '../core/channels.ts'
+import { COST_MODE_TAG_KEYS, WINDOW_TAG_KEYS, costCellOf, statusColorOf } from '../core/channels.ts'
 import { fmtCalls, fmtTokens } from '../core/format.ts'
 import type { Channel, HeatmapDay, QuotaProvider, SummaryResponse } from '../core/types.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
@@ -17,6 +17,8 @@ export function OverviewTab(props: {
   heatmap: HeatmapDay[]
   tooltip: TooltipApi
   onOpenDetail: (provider: string) => void
+  /** 点通道行：打开该通道的余额/配额详情弹窗 */
+  onOpenChannel: (provider: string) => void
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
@@ -40,7 +42,7 @@ export function OverviewTab(props: {
               <tr
                 key={channel.provider}
                 className={disabled ? overviewStyles.disabledRow : overviewStyles.clickable}
-                onClick={disabled ? undefined : () => props.onOpenDetail(channel.provider)}
+                onClick={disabled ? undefined : () => props.onOpenChannel(channel.provider)}
               >
                 <td>
                   <div className={overviewStyles.cellKey}>
@@ -48,12 +50,16 @@ export function OverviewTab(props: {
                     <div className={overviewStyles.keyDisplay}>{channel.displayName}</div>
                   </div>
                 </td>
-                <td><span className={tagClassOf(channel)}>{channel.status === 'off' ? t('err.noApiKey') : channel.costLabel}</span></td>
+                <td><span className={tagClassOf(channel)}>{channel.status === 'off' ? t('err.noApiKey') : t(COST_MODE_TAG_KEYS[channel.costMode] ?? 'ch.notQueried')}</span></td>
                 <td>{todayTokens > 0 ? fmtTokens(todayTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
                 <td>{costCell.dim ? <span className={styles.dim}>{costCell.text}</span> : <>{costCell.text}{costCell.amount && <CostSourceChip source={row?.month.costSource} partial={row?.month.partial} />}</>}</td>
-                <td>{disabled ? null : <span className={overviewStyles.rowLink}>{t('o.detailArrow')}</span>}</td>
+                <td>{disabled ? null : (
+                <button type="button" className={overviewStyles.rowLink} onClick={(event) => { event.stopPropagation(); props.onOpenDetail(channel.provider) }}>
+                  {t('o.detailArrow')}
+                </button>
+              )}</td>
               </tr>
             )
           })}
@@ -85,7 +91,7 @@ function quotaCellOf(channel: Channel): ReactNode {
   if (channel.costMode === 'sub' && channel.quotaPercent !== null) {
     const percent = channel.quotaPercent
     const levelClass = percent >= 90 ? overviewStyles.danger : percent >= 60 ? overviewStyles.warn : ''
-    const windowLabel = channel.quotaWindowLabel ?? channel.quotaWindowKey ?? ''
+    const windowLabel = channel.quotaWindowKey === null ? '' : t(WINDOW_TAG_KEYS[channel.quotaWindowKey] ?? channel.quotaWindowKey)
     return (
       <span className={overviewStyles.quotaCell}>
         <span className={overviewStyles.miniBar}>

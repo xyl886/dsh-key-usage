@@ -1,11 +1,12 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll } from './core/api.ts'
+import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
 import { PLUGIN_VERSION } from './core/version.ts'
-import { clearLog, logEntries, logText, subscribeLog } from './core/log.ts'
+import { clearLog, hydrateLog, logEntries, logInfo, logText, logWarn, refreshLog, subscribeLog, subscribeOpenLog, type LogEntry } from './core/log.ts'
+import { TEXT_MIME, downloadFile, exportFileName } from './core/export.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
@@ -39,7 +40,6 @@ const TABS: Array<[TabId, string]> = [
   ['projects', 'tab.projects'],
   ['models', 'tab.models'],
   ['sessions', 'tab.sessions'],
-  ['quota', 'tab.quota'],
 ]
 
 export function KeyUsageSection() {
@@ -68,6 +68,8 @@ export function KeyUsageSection() {
   const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
   /** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
   const [showCaliber, setShowCaliber] = useState(false)
+  /** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
+  const [quotaDialog, setQuotaDialog] = useState<string | null>(null)
   const [showLog, setShowLog] = useState(false)
   /** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
   const t = useT()
@@ -99,7 +101,17 @@ export function KeyUsageSection() {
       }
     }
     lastSnapshotAt.current = Date.now()
-  }, [])
+    // 快照问题与「读取不完整」只留一行状态；原因进系统日志，避免页面上摊开一大段
+    for (const issue of snapshot.issues ?? []) {
+      logWarn('snapshot', t('log.issue') + '：' + issue.kind, issue.message)
+    }
+    const partial: string[] = []
+    for (const [name, section] of [['models', sections.models], ['projects', sections.projects], ['sessions', sections.sessions]] as const) {
+      if (section === null || section.coverage.status === 'complete') continue
+      partial.push(name + '(' + section.coverage.status + '：' + String(section.coverage.countedSessions) + '/' + String(section.coverage.totalSessions) + ')')
+    }
+    if (partial.length > 0) logWarn('snapshot', t('log.coveragePartial') + '：' + partial.join('、'))
+  }, [t])
 
   /** 逐端点兜底：服务端还是旧版本（没有 /snapshot）时用，语义与升级前一致。 */
   const reloadFromEndpoints = useCallback(async (includeSessionData: boolean, forceQuota: boolean) => {
@@ -130,6 +142,10 @@ export function KeyUsageSection() {
     })()
     return () => { cancelled = true }
   }, [applySnapshot, reloadFromEndpoints])
+
+  // 磁盘上的历史日志读回内存（刷新页面后还能看到上次为什么失败），并允许页面里任何组件请求打开日志窗
+  useEffect(() => { void hydrateLog() }, [])
+  useEffect(() => subscribeOpenLog(() => setShowLog(true)), [])
 
   // 5 分钟本地刷新：服务端每 5 分钟重建一次快照，这里跟着取最新那份；页面隐藏时暂停，切回且已超期立刻补一次
   useEffect(() => {
@@ -189,13 +205,18 @@ export function KeyUsageSection() {
     setLoading(true)
     void (async () => {
       const snapshot = await refreshAll()
-      if (snapshot !== null) applySnapshot(snapshot)
-      else await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true)
+      if (snapshot !== null) {
+        applySnapshot(snapshot)
+        logInfo('snapshot', t('action.refresh'), t('quota.snapshotAt', { time: snapshot.updatedAt }) + snapshot.buildSource)
+      } else {
+        logWarn('snapshot', t('action.refresh') + ' · ' + t('api.requestFailed'), REFRESH_PATH)
+        await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true)
+      }
       const usageResult = await loadUsage(bounds.from, bounds.to, channelFilter)
       if (usageResult !== null) setUsage(usageResult)
       setLoading(false)
     })()
-  }, [applySnapshot, reloadFromEndpoints, sessions, projects, models, bounds.from, bounds.to, channelFilter])
+  }, [applySnapshot, reloadFromEndpoints, sessions, projects, models, bounds.from, bounds.to, channelFilter, t])
 
   return (
     <div className={styles.section}>
@@ -248,6 +269,7 @@ export function KeyUsageSection() {
           heatmap={heatmap}
           tooltip={tooltip}
           onOpenDetail={(provider) => { setChannelFilter(provider); setActiveTab('detail') }}
+          onOpenChannel={setQuotaDialog}
         />
       )}
       {activeTab === 'detail' && (
@@ -307,6 +329,8 @@ export function KeyUsageSection() {
             })}
           </li>
           <li>{t('caliber.cost')}</li>
+        <li>{t('caliber.costHint')}</li>
+        <li>{t('caliber.pricingInfo')}</li>
           <li>
             {t('caliber.currency', {
               fx: currency.fx === null ? t('caliber.fxMissing') : fxSummaryTextOf(currency.fx),
@@ -321,32 +345,78 @@ export function KeyUsageSection() {
         <LogPanel />
       </Dialog>)}
 
+      {quotaDialog !== null && (
+        <Dialog title={t('nav.quota')} closeLabel={t('action.close')} onClose={() => setQuotaDialog(null)}>
+          <QuotaTab
+            onlyProvider={quotaDialog}
+          channels={channels}
+          quotas={quotas}
+          pricing={pricing}
+          quotaOutcome={quotaOutcome}
+          reloadToken={pricingRevision}
+          onPricingReload={() => setPricingRevision((previous) => previous + 1)}
+        />
+        </Dialog>
+      )}
+
       <TooltipView tooltip={tooltip.tooltip} />
     </div>
   )
 }
 
-/** 系统日志面板：内存日志（不落盘），出问题时能看见原因。 */
+/** 系统日志面板：条目来自内存 + 磁盘（磁盘那份在页面打开时读回），可刷新 / 复制 / 导出 / 清空。 */
 function LogPanel(): ReactNode {
   const [entries, setEntries] = useState(logEntries)
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   useEffect(() => subscribeLog(() => setEntries(logEntries())), [])
-  if (entries.length === 0) return <div className={styles.logEmpty}>—</div>
+  const toggle = (id: number): void => setExpanded((previous) => ({ ...previous, [id]: previous[id] !== true }))
   return (
     <div>
       <div className={styles.logActions}>
-        <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(logText()) }}>{t('log.copy')}</Button>
+        <Button size="sm" onClick={() => { void refreshLog() }}>{t('action.refresh')}</Button>
+        <Button size="sm" disabled={entries.length === 0} onClick={() => {
+          navigator.clipboard?.writeText(logText()).catch(() => logWarn('export', t('log.copyBlocked'), 'clipboard'))
+        }}>{t('log.copy')}</Button>
+        <Button size="sm" disabled={entries.length === 0} onClick={() => {
+          try {
+            downloadFile(exportFileName('log', 'txt'), logText() + '\n', TEXT_MIME)
+          } catch (error) {
+            logWarn('export', t('log.exportBlocked'), error instanceof Error ? error.message : String(error))
+          }
+        }}>{t('log.export')}</Button>
         <Button size="sm" onClick={() => { clearLog() }}>{t('log.clear')}</Button>
       </div>
-      <ul className={styles.logList}>
-        {[...entries].reverse().map((entry) => (
-          <li key={entry.id} className={styles.logRow}>
-            <span className={styles.logTime}>{new Date(entry.time).toLocaleTimeString('zh-CN', { hour12: false })}</span>
-            <span className={styles.logLevel + ' ' + (entry.level === 'error' ? styles.logError : entry.level === 'warn' ? styles.logWarn : '')}>{entry.level}</span>
-            <span className={styles.logSource}>{entry.source}</span>
-            <span className={styles.logMessage}>{entry.message}</span>
-          </li>
-        ))}
-      </ul>
+      {entries.length === 0
+        ? <div className={styles.logEmpty}>{t('log.empty')}</div>
+        : (
+          <ul className={styles.logList}>
+            {[...entries].reverse().map((entry) => (
+              <li key={entry.id} className={styles.logRow}>
+                <span className={styles.logTime}>{new Date(entry.time).toLocaleTimeString('zh-CN', { hour12: false })}</span>
+                <span className={styles.logLevel + ' ' + (entry.level === 'error' ? styles.logError : entry.level === 'warn' ? styles.logWarn : '')}>{entry.level}</span>
+                <span className={styles.logSource}>{entry.source}</span>
+                {entry.detail === undefined
+                  ? <span className={styles.logMessage}>{messageTextOf(entry)}</span>
+                  : (
+                    <button type="button" className={styles.logMessageBtn} aria-expanded={expanded[entry.id] === true} onClick={() => toggle(entry.id)}>
+                      {messageTextOf(entry)}
+                    </button>
+                  )}
+                {entry.retry === undefined ? null : (
+                  <button type="button" className={styles.logRetry} onClick={() => { entry.retry?.() }}>{t('log.retry')}</button>
+                )}
+                {entry.detail !== undefined && expanded[entry.id] === true && (
+                  <div className={styles.logDetail + ' ' + styles.logDetailPad}>{entry.detail}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
     </div>
   )
+}
+
+/** 日志条目正文：重复次数跟在消息后面（去重累加后要能看出「发生过几次」）。 */
+function messageTextOf(entry: LogEntry): string {
+  return entry.message + (entry.count > 1 ? ' ×' + String(entry.count) : '')
 }

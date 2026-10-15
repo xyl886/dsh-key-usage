@@ -14,3 +14,6 @@
   outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
 }
+
+/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
+.exportBtn { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }

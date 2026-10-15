@@ -3,8 +3,8 @@
 .searchInput {
   flex: 1; min-width: 180px; background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
-}
-.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f); }
+ height: 30px;}
+.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f);  height: 30px;}
 .filterSelect {
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); cursor: pointer;
@@ -14,7 +14,7 @@
 .filterSelect:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
-}
+ height: 30px;}
 .listTitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .listMain { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .listSub { font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -211,3 +211,6 @@
 .hourBar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
 .hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 2px 2px 0 0; }
 .hourBarTick { text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.83); color: var(--dsw-alias-label-tertiary, #67676f); }
+
+/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
+.searchInput { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }

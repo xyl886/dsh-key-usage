@@ -622,11 +622,12 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
     assert.ok(source.providers.length > 0 && source.count > 0)
   }
 
-  // 端点表就是这些：新增统一快照 /snapshot 与手动刷新 /refresh，删掉 /pricing/rules
+  // 端点表就是这些：新增统一快照 /snapshot、手动刷新 /refresh 与系统日志 /log，删掉 /pricing/rules
   assert.deepEqual([...contractHandlers.keys()].sort(), [
     '/dsh-key-usage/channels',
     '/dsh-key-usage/fx',
     '/dsh-key-usage/heatmap',
+    '/dsh-key-usage/log',
     '/dsh-key-usage/models',
     '/dsh-key-usage/pricing',
     '/dsh-key-usage/pricing/refresh',
@@ -639,7 +640,26 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
     '/dsh-key-usage/snapshot',
     '/dsh-key-usage/summary',
     '/dsh-key-usage/usage',
-  ], '15 个端点 = 14 个只读 GET + 1 个写 POST（手动刷新）')
+  ], '17 个端点 = 14 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
+
+  // /log：POST 追加 → GET 回读 → POST 清空；坏请求体与非回环都被挡住
+  const logAppend = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({
+    records: [{ time: '2026-10-15T10:00:00.000Z', level: 'error', source: 'pricing', message: '刷新价目失败', detail: 'HTTP 502 · https://example.test/prices.json' }],
+  }))
+  assert.equal(logAppend.status, 200)
+  assert.deepEqual(logAppend.body, { ok: true, written: 1 })
+  const logRead = await priced('/dsh-key-usage/log?limit=10')
+  assert.equal(logRead.status, 200)
+  assert.equal(logRead.body.records.length, 1)
+  assert.equal(logRead.body.records[0].message, '刷新价目失败')
+  assert.equal(logRead.body.records[0].detail, 'HTTP 502 · https://example.test/prices.json')
+  const logBadBody = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', '不是 JSON')
+  assert.equal(logBadBody.body.ok, false, '坏请求体回 {ok:false}，不抛错')
+  const logClear = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({ clear: true }))
+  assert.deepEqual(logClear.body, { ok: true })
+  assert.deepEqual((await priced('/dsh-key-usage/log')).body.records, [], '清空后回读为空')
+  const logOutside = await priced('/dsh-key-usage/log', '10.0.0.7')
+  assert.equal(logOutside.status, 403, '非回环一律 403')
 
   // /rates：夹具里两个模型都没有价格依据 → source = none，rates 为 null
   const rates = await priced('/dsh-key-usage/rates')

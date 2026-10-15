@@ -108,3 +108,6 @@
 }
 .rateConverted { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); }
 .rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 6px 0; }
+
+/* 汇率兜底/不可用那一行：与普通文本同排版，只是整句可点（点开系统日志看原因） */
+.fxHint { margin: 0; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); }

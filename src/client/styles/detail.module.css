@@ -50,7 +50,9 @@
 .bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; margin-top: 8px; }
 .barsDense { gap: 2px; }
 .barColumn { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; height: 100%; cursor: default; }
-.barColumn:hover { filter: brightness(1.2); }
+/* 悬停列：整列淡底 + 一条竖向指示线，柱子本身不变形（tip 钉在右上角，不会盖住它） */
+.barColumn { position: relative; border-radius: 3px; }
+.barColumnActive::before { content: ''; position: absolute; top: -4px; bottom: -4px; left: 50%; width: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); opacity: .45; transform: translateX(-50%); }
 .segCache { background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); border-radius: 2px 2px 0 0; }
 .segIn { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 .segOut { background: var(--dsw-alias-state-business-primary, #9a7bff); border-radius: 0 0 2px 2px; }
@@ -76,3 +78,6 @@
 
 /* 工具栏里的通道下拉：与范围标签同排，紧跟「自定义」右侧 */
 .channelSelect { display: inline-flex; align-items: center; margin-left: 2px; }
+
+/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
+.rangeTabs button { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }

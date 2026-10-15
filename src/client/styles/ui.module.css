@@ -74,3 +74,54 @@
 }
 .dialogClose:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .dialogBody { font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); line-height: 1.75; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+
+/* ---- 统一控件规格（需求 4）：搜索框 / 下拉 / 导出按钮 / 范围按钮都用这一档 ---- */
+.control {
+  box-sizing: border-box; height: 30px; padding: 0 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; line-height: 1;
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border: 1px solid var(--dsw-alias-border-l2, #3a3a44); border-radius: 6px;
+  cursor: pointer;
+}
+.control:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+
+/* ---- 日期范围选择器 ---- */
+.datePicker { position: relative; display: inline-flex; }
+.dateTrigger { min-width: 208px; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.dateTriggerEmpty { color: var(--dsw-alias-label-tertiary, #67676f); }
+.dateTriggerArrow { color: var(--dsw-alias-label-tertiary, #67676f); }
+.datePopover {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  width: 268px; padding: 10px 12px 8px;
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 8px;
+  box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0, 0, 0, .35));
+}
+.dateHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.dateNav { width: 22px; height: 22px; border: none; background: none; cursor: pointer; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 14px; border-radius: 4px; }
+.dateNav:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, .06)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.dateTitle { font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.dateGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
+.dateWeekday { text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); padding-bottom: 2px; }
+.dateCell { height: 28px; border: none; background: none; cursor: pointer; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); font-variant-numeric: tabular-nums; }
+.dateCell:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, .08)); }
+.dateCellMuted { color: var(--dsw-alias-label-tertiary, #67676f); opacity: .6; }
+.dateCellInRange { background: rgba(91, 140, 255, .18); }
+.dateCellEdge { background: var(--dsw-alias-state-business-primary, #5b8cff); color: #fff; font-weight: 600; }
+.dateFoot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); }
+.dateHint { font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }
+.dateClear { border: none; background: none; cursor: pointer; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); }
+.dateClear:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); }
+
+
+/* 统一控件尺寸（需求 4）：下拉触发按钮 */
+.selectBtn { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }
+
+/* 一行状态提示（LogHint）：结论留在页面，原因进系统日志；整句可点，点开日志窗 */
+.logHint { display: inline-flex; align-items: baseline; gap: 6px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+.logHint:hover { text-decoration: underline; }
+.logHintError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.logHintWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+.logHintTail { color: var(--dsw-alias-label-secondary, #9a9aa6); }

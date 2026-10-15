@@ -85,10 +85,17 @@ export const COST_MODE_KEYS: Record<ChannelCostMode, string> = {
   none: 'ch.noBilling',
   unknown: 'ch.notQueried',
 }
-export const COST_MODE_LABELS: Record<ChannelCostMode, string> = {
-  sub: t('ch.subscription'),
+/**
+ * 「类型」列用的短标签：与服务端 `costModeLabel` 的中文一一对应（订阅制 / 按量计费 / 免费额度 / 本地端点 / 未查询）。
+ * 不能直接用服务端下发的 `costLabel`：那是中文字符串，切英文时不会跟着变。
+ */
+export const COST_MODE_TAG_KEYS: Record<ChannelCostMode, string> = {
+  sub: 'ch.subscription',
   perToken: 'ch.metered',
   free: 'ch.free',
-  none: t('ch.local'),
+  none: 'ch.local',
   unknown: 'ch.notQueried',
 }
+
+/** 订阅窗口短标签（与服务端 `WINDOW_LABELS` 对应；`window.*` 那组带「窗口」二字，用在下拉与卡片里）。 */
+export const WINDOW_TAG_KEYS: Record<string, string> = { '5h': 'w.5h', week: 'w.week', month: 'w.month', day: 'w.day' }

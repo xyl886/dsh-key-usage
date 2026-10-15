@@ -9,17 +9,20 @@ export interface TooltipContent {
   /** 悬停目标的左右边界：把它放到目标**外面**，才不会盖住正在看的柱子/行。 */
   anchorLeft: number
   anchorRight: number
+  /** 钉住位置（图表类用）：给出右边界与上边界时，浮层固定在容器右上角，不再跟随鼠标。 */
+  pinRight?: number
+  pinTop?: number
 }
 
 export interface TooltipApi {
   tooltip: TooltipContent | null
-  show: (event: React.MouseEvent, node: ReactNode) => void
+  show: (event: React.MouseEvent, node: ReactNode, pin?: { right: number; top: number }) => void
   hide: () => void
 }
 
 export function useTooltip(): TooltipApi {
   const [tooltip, setTooltip] = useState<TooltipContent | null>(null)
-  const show = useCallback((event: React.MouseEvent, node: ReactNode) => {
+  const show = useCallback((event: React.MouseEvent, node: ReactNode, pin?: { right: number; top: number }) => {
     const target = event.currentTarget as HTMLElement | null
     const rect = target?.getBoundingClientRect()
     setTooltip({
@@ -28,6 +31,8 @@ export function useTooltip(): TooltipApi {
       node,
       anchorLeft: rect === undefined ? event.clientX : rect.left,
       anchorRight: rect === undefined ? event.clientX : rect.right,
+      pinRight: pin?.right,
+      pinTop: pin?.top,
     })
   }, [])
   const hide = useCallback(() => setTooltip(null), [])
@@ -44,11 +49,14 @@ export function TooltipView({ tooltip }: { tooltip: TooltipContent | null }): Re
     const margin = 12
     const gap = 10
     // 横向：放在悬停目标的**右侧**（目标外），右边放不下就放左侧 —— 这样永远不会盖住那一列
-    const left = tooltip.anchorRight + gap + width > window.innerWidth - margin
-      ? tooltip.anchorLeft - width - gap
-      : tooltip.anchorRight + gap
-    // 纵向：跟随光标居中，再夹进视口
-    const top = tooltip.y - height / 2
+    // 钉住模式（图表）：固定贴在容器右上角，柱子与数值同屏可见，也不挡别的柱子
+    const pinRight = tooltip.pinRight
+    const pinTop = tooltip.pinTop
+    const pinned = pinRight !== undefined && pinTop !== undefined
+    const left = pinned
+      ? pinRight - width
+      : (tooltip.anchorRight + gap + width > window.innerWidth - margin ? tooltip.anchorLeft - width - gap : tooltip.anchorRight + gap)
+    const top = pinned ? pinTop : tooltip.y - height / 2
     element.style.left = Math.max(margin, Math.min(left, window.innerWidth - width - margin)) + 'px'
     element.style.top = Math.max(margin, Math.min(top, window.innerHeight - height - margin)) + 'px'
   }, [tooltip])

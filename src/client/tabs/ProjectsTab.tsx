@@ -107,7 +107,7 @@ export function ProjectsTab(props: {
 
       {focusWorkspace !== null && (
         <div className={listStyles.focusChip}>
-          仅看项目：{focusWorkspace}
+          {t('p.focusPrefix')}{focusWorkspace}
           <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label={t('p.clearFilter')}>✕</button>
         </div>
       )}
@@ -128,7 +128,7 @@ export function ProjectsTab(props: {
                     <div>
                       <div className={listStyles.listMain}>{baseNameOf(row.workspace)}</div>
                       <div className={listStyles.listSub}>
-                        {row.workspace} · {row.sessionCount} 个会话
+                        {row.workspace} · {row.sessionCount}{t('common.sessionSuffix')}
                         {row.archivedSessionCount > 0 ? t('p.archivePrefix') + row.archivedSessionCount + t('p.archiveSuffix') : ''}
                       </div>
                     </div>
@@ -153,9 +153,7 @@ export function ProjectsTab(props: {
           </td></tr>}
         </tbody>
       </table></div>
-      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        {t('p.costHint')}{props.data.priced ? '' : t('s.noCost')}
       </div>
     </div>
   )

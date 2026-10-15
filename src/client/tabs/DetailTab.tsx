@@ -11,6 +11,7 @@ import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
 import { CardIcon } from '../components/CardIcons.tsx'
 import { Select } from '../components/ui/Select.tsx'
+import { DateRangePicker } from '../components/ui/DateRangePicker.tsx'
 import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
 import { useTrend } from '../core/useTrend.tsx'
 import styles from '../styles/shared.module.css'
@@ -232,17 +233,12 @@ export function DetailTab(props: {
             ))}
           </div>
           {props.range === 'custom' && (
-            <span className={detailStyles.dateRange}>
-              <label className={detailStyles.dateField}>
-                <span className={detailStyles.dateLabel}>{t('r.from')}</span>
-                <input type="date" className={detailStyles.rangeInput} value={props.customFrom} onChange={(event) => props.onCustomFrom(event.target.value)} />
-              </label>
-              <span className={styles.dim}>–</span>
-              <label className={detailStyles.dateField}>
-                <span className={detailStyles.dateLabel}>{t('r.to')}</span>
-                <input type="date" className={detailStyles.rangeInput} value={props.customTo} onChange={(event) => props.onCustomTo(event.target.value)} />
-              </label>
-            </span>
+            <DateRangePicker
+              from={props.customFrom}
+              to={props.customTo}
+              ariaLabel={t('r.custom')}
+              onChange={(from, to) => { props.onCustomFrom(from); props.onCustomTo(to) }}
+            />
           )}
         </div>
         <span className={detailStyles.channelSelect}>

@@ -128,7 +128,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
                           className={styles.statusDot}
                           style={{ background: channelColorOf(props.channels, row.provider), marginRight: 4 }}
                         />
-                        {row.providerLabel} · {row.sessionCount} 个会话
+                        {row.providerLabel} · {row.sessionCount}{t('common.sessionSuffix')}
                       </div>
                     </div>
                   </div>
@@ -151,10 +151,8 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
           {visible.length === 0 && <tr><td colSpan={7} className={styles.empty}>{t('m.empty')}</td></tr>}
         </tbody>
       </table></div>
-      {hiddenEmpty > 0 && <div className={styles.statExtra}>{hiddenEmptyRowsText(hiddenEmpty)}</div>}
       <div className={styles.statExtra}>
-        模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算
-        {props.data.priced ? '' : t('s.noCost')}；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）
+        {t('m.footnote')}{props.data.priced ? '' : t('s.noCost')}{t('m.hitNote')}
       </div>
     </div>
   )

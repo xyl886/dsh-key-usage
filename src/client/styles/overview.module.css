@@ -58,3 +58,6 @@
 .heatCell.empty { background: rgba(128,128,140,.10); box-shadow: inset 0 0 0 1px rgba(128,128,140,.28); }
 .heatMonths { display: flex; gap: 3px; margin-top: 6px; }
 .heatMonths span { width: 28px; flex-shrink: 0; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); text-align: left; white-space: nowrap; }
+
+/* 「明细 →」现在是按钮：清掉按钮默认外观，保持原 span 样式 */
+button.rowLink { background: none; border: none; padding: 0; font: inherit; cursor: pointer; }

@@ -4,6 +4,7 @@
  */
 import { isoDate } from './format.ts'
 import { t } from './i18n.ts'
+import { logWarn } from './log.ts'
 
 /** 列定义。`value` 取原始值（数字保持数字），避免把界面文本再解析回数字。 */
 export interface ExportColumn<Row> {
@@ -41,15 +42,20 @@ export function exportFileName(topic: string, extension: 'csv' | 'json' | 'yml' 
 }
 
 export function downloadFile(name: string, text: string, mime: string): void {
-  const objectUrl = URL.createObjectURL(new Blob([text], { type: mime }))
-  const anchor = document.createElement('a')
-  anchor.href = objectUrl
-  anchor.download = name
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  // 立刻 revoke 会有浏览器来不及取数据，推到下一轮事件循环再释放
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+  try {
+    const objectUrl = URL.createObjectURL(new Blob([text], { type: mime }))
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = name
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    // 立刻 revoke 会有浏览器来不及取数据，推到下一轮事件循环再释放
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+  } catch (error) {
+    // 浏览器（沙箱 iframe / 权限策略）拦下载时只能进日志：界面没有可展示的位置
+    logWarn('export', t('log.exportBlocked') + ' · ' + name, error instanceof Error ? error.message : String(error))
+  }
 }
 
 /** 逗号、引号、换行都必须包引号并把内部引号翻倍，否则标题里的逗号会撑破列。 */

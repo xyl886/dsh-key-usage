@@ -17,7 +17,7 @@ import type {
   UsageResponse,
 } from './types.ts'
 import { t } from './i18n.ts'
-import { logError } from './log.ts'
+import { logWarn } from './log.ts'
 
 /** 最近一次请求失败的原因，按路径记住（空态文案据此指向「要重启宿主」）。 */
 const failureReasons = new Map<string, string>()
@@ -37,13 +37,18 @@ async function fetchJson<T>(path: string, failureKey: string = path): Promise<T 
   try {
     const response = await fetch(path, { headers: { Accept: 'application/json' } })
     if (!response.ok) {
-      failureReasons.set(failureKey, failureTextOf(response.status))
+      const text = failureTextOf(response.status)
+      failureReasons.set(failureKey, text)
+      // 端点失败一律进系统日志：界面只留空态，原因（路径 + HTTP 状态）要能查
+      logWarn('api', t('api.requestFailed') + ' · ' + failureKey, text)
       return null
     }
     failureReasons.delete(failureKey)
     return await response.json() as T
   } catch (error) {
-    failureReasons.set(failureKey, t('api.requestFailed') + (error instanceof Error ? error.message : String(error)))
+    const text = t('api.requestFailed') + (error instanceof Error ? error.message : String(error))
+    failureReasons.set(failureKey, text)
+    logWarn('api', t('api.requestFailed') + ' · ' + failureKey, text)
     return null
   }
 }

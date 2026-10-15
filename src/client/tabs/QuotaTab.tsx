@@ -13,6 +13,8 @@ import {
 } from '../core/currency.ts'
 import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
 import { isEnglish, t, useT } from '../core/i18n.ts'
+import { logError, logInfo, logWarn } from '../core/log.ts'
+import { LogHint } from '../components/LogHint.tsx'
 import { serverText } from '../core/serverText.ts'
 import {
   LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
@@ -65,6 +67,8 @@ export function QuotaTab(props: {
   pricing: PricingResponse | null
   /** 配额执行结果：哪个通道这次查到实时值、展示值时间与失败原因（用来标「本机快照 + 数据时间」）。 */
   quotaOutcome: SnapshotQuotaOutcome | null
+  /** 只渲染指定通道（总览的行内弹窗用）；不传则渲染全部通道。 */
+  onlyProvider?: string
   /** 价目版本号：刷新价目后单价表与用量口径都要重取。 */
   reloadToken: number
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本整体重算）。 */
@@ -81,7 +85,6 @@ export function QuotaTab(props: {
   const [ratesLoading, setRatesLoading] = useState(true)
   const [fxLoading, setFxLoading] = useState(false)
   const [fxError, setFxError] = useState<string | null>(null)
-  const [showExplanation, setShowExplanation] = useState(false)
   const [showPricingInfo, setShowPricingInfo] = useState(false)
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
   const [refreshingPrices, setRefreshingPrices] = useState(false)
@@ -94,15 +97,23 @@ export function QuotaTab(props: {
     const result = await loadFxRate(force)
     setFxLoading(false)
     if (result === null) {
-      setFxError(failureReasonOf(FX_PATH) ?? t('quota.noResponse'))
+      const reason = failureReasonOf(FX_PATH) ?? t('quota.noResponse')
+      setFxError(reason)
+      logWarn('fx', t('quota.fxUnavailable'), reason + ' · ' + FX_PATH)
       return
     }
     setFxError(null)
     // 归一化返回 null 说明 rate 非法：宁可说「没取到汇率」，也不要拿上一次的值冒充
     const normalized = normalizeFxRate(result)
-    if (normalized === null) setFxError(t('quota.fxBad'))
+    if (normalized === null) {
+      setFxError(t('quota.fxBad'))
+      logWarn('fx', t('quota.fxUnavailable'), t('quota.fxBad') + ' · ' + FX_PATH)
+      setFxRate(null)
+      return
+    }
     setFxRate(normalized)
-  }, [])
+    if (force) logInfo('fx', t('quota.refreshFx'), fxSummaryTextOf(normalized))
+  }, [t])
 
   // 打开「余额与配额」页取一次汇率；价目刷新不影响汇率，所以不挂 reloadToken
   useEffect(() => { void fetchFx(false) }, [fetchFx])
@@ -141,17 +152,50 @@ export function QuotaTab(props: {
     setRefreshStatus(null)
     const outcome = await refreshModelPrices()
     setRefreshingPrices(false)
+    // 失败原因只进系统日志（页面上只留一行「刷新价目失败 · 查看系统日志」）
     if (outcome === null) {
-      setRefreshStatus({ tone: 'bad', text: t('quota.refreshFailed') + '：' + (failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? t('quota.noResponse')) })
+      const reason = failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? t('quota.noResponse')
+      logError('pricing', t('quota.pricingFailedShort'), reason + ' · ' + MODEL_PRICE_REFRESH_PATH, () => { void refreshPrices() })
+      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
       return
     }
     if (!outcome.ok) {
-      setRefreshStatus({ tone: 'bad', text: t('quota.refreshFailed') + '：' + outcome.error })
+      logError('pricing', t('quota.pricingFailedShort'), outcome.error, () => { void refreshPrices() })
+      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
       return
     }
     setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
+    logInfo('pricing', t('quota.refreshPrices'), modelPriceRefreshTextOf(outcome) + '\n' + outcome.url)
     props.onPricingReload()
   }
+
+  /**
+   * 通道级失败原因进系统日志：页面每张卡片只留一行「本机快照 · 数据时间 + 本次查询未成功」，
+   * 上游错误（含未配置 Key）摊在卡片里既挤又没人读，出问题时去日志窗按通道查。
+   */
+  useEffect(() => {
+    for (const channel of props.channels) {
+      if (channel.status === 'off') {
+        logWarn('quota', t('quota.liveFailedShort') + ' · ' + channel.displayName, t('err.noApiKey'))
+        continue
+      }
+      const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null
+      if (snapshot === null || snapshot.source === 'live' || !snapshot.supported || snapshot.error === null || snapshot.error === '') continue
+      const stale = snapshot.updatedAt === null ? '' : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt)
+      logWarn('quota', t('quota.liveFailedShort') + ' · ' + channel.displayName, errorTextOf(snapshot.error) + stale)
+    }
+    for (const provider of props.quotaOutcome?.providers ?? []) {
+      if (provider.ok !== false) continue
+      logWarn('quota', t('quota.liveFailedShort') + ' · ' + provider.provider, provider.error ?? t('quota.notQueried'))
+    }
+  }, [props.channels, props.quotas, props.quotaOutcome, t])
+
+  // 汇率回落默认值：原因进日志（上游地址 + 失败类型），页面上只留那行兜底说明
+  const fxFallback = display.fx === null ? null : fxFallbackWarningOf(display.fx)
+  useEffect(() => {
+    if (fxFallback === null) return
+    logWarn('fx', fxFallback, (display.fx?.note ?? '') + ' · ' + FX_PATH)
+  }, [fxFallback, display.fx?.note])
 
   // 服务端没升级时整块缺省：按「读不到」降级，不影响余额与窗口
   const pricing = props.pricing
@@ -168,9 +212,11 @@ export function QuotaTab(props: {
   }
 
   const fxText = display.fx === null
-    ? (fxError === null ? fxSummaryTextOf(null) : t('quota.fxUnavailable') + '：' + fxError)
-    : (fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx))
+    ? (fxError === null ? fxSummaryTextOf(null) : t('quota.fxUnavailable'))
+    : (fxFallback ?? fxSummaryTextOf(display.fx))
   const fxTone = display.fx === null || display.fx.source === 'default' ? quotaStyles.fxWarn : quotaStyles.fxText
+  /** 汇率不可用 / 回落默认值时整行可点（原因在日志里），正常值就是纯文本。 */
+  const fxClickable = display.fx === null || display.fx.source === 'default'
 
   return (
     <div>
@@ -209,36 +255,14 @@ export function QuotaTab(props: {
             ? t('action.refreshing') + (refreshElapsedSeconds > 0 ? ' ' + String(refreshElapsedSeconds) + 's' : '')
             : t('quota.refreshPrices')}
         </button>
-        <button
-          type="button"
-          className={quotaStyles.infoBtn + (showExplanation ? ' ' + quotaStyles.infoBtnActive : '')}
-          aria-label={t('quota.caliberHint')}
-          aria-expanded={showExplanation}
-          onClick={() => setShowExplanation((previous) => !previous)}
-        >
-          ⓘ
-        </button>
       </div>
 
-      {/* 汇率来源 / 时间 / 兜底原因：`source: 'default'` 必须能看出「没联网，用的是兜底值」 */}
-      <div className={fxTone} title={display.fx?.note ?? undefined}>{fxText}</div>
+      {/* 汇率来源 / 时间 / 兜底原因：`source: 'default'` 必须能看出「没联网，用的是兜底值」；原因在日志里 */}
+      {fxClickable
+        ? <LogHint text={fxText} className={quotaStyles.fxHint} />
+        : <div className={fxTone} title={display.fx?.note ?? undefined}>{fxText}</div>}
 
-      <div className={quotaStyles.pricingInfo}>
-        <button
-          type="button"
-          className={quotaStyles.pricingInfoToggle}
-          aria-expanded={showPricingInfo}
-          aria-controls={pricingInfoId}
-          onClick={() => setShowPricingInfo((previous) => !previous)}
-        >
-          {showPricingInfo ? '▾' : '▸'} 价目数据来源与文件（内置厂商官方价目
-          {catalog !== null && Number.isFinite(catalog.entries) ? ' ' + String(catalog.entries) + t('quota.entriesSuffix') : ''}
-          {t('q.aggregateSuffix')}
-        </button>
-        <div id={pricingInfoId} className={quotaStyles.pricingInfoBody} hidden={!showPricingInfo}>
-          <PricingInfoBlock pricing={pricing} aggregate={aggregate} issues={issues} catalogStale={catalogStale} />
-        </div>
-      </div>
+      {/* 价目来源已并入页头口径弹窗（需求 5/6），这里不再单独占版面 */}
 
       {catalogStale !== null && (
         <div className={quotaStyles.staleLine}>
@@ -246,7 +270,7 @@ export function QuotaTab(props: {
         </div>
       )}
 
-      {showExplanation && <ExplanationBlock />}
+      
 
       <div
         className={pricingStyles.aggregateStatus + (refreshStatus === null ? '' : ' ' + (refreshStatus.tone === 'ok'
@@ -255,11 +279,15 @@ export function QuotaTab(props: {
         role="status"
         aria-live="polite"
       >
-        {refreshStatus === null ? '' : refreshStatus.text}
+        {refreshStatus === null
+          ? ''
+          : refreshStatus.tone === 'ok'
+            ? refreshStatus.text
+            : <LogHint text={refreshStatus.text} tone="error" />}
       </div>
 
       <div className={quotaStyles.quotaList}>
-        {props.channels.map((channel, index) => {
+        {props.channels.filter((channel) => props.onlyProvider === undefined || channel.provider === props.onlyProvider).map((channel, index) => {
           const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null
           const outcome = props.quotaOutcome?.providers.find((item) => item.provider === channel.provider) ?? null
           const balance = snapshot?.balance ?? null
@@ -269,7 +297,8 @@ export function QuotaTab(props: {
             ? (plan as { windows: Array<{ key?: unknown; percent?: unknown; resetsAt?: unknown }> }).windows
             : null
           const rateRows = rateRowsOf(channel.provider)
-          const isOpen = expandedProviders[channel.provider] === true
+          // 弹窗模式（只渲染一个通道）恒展开：详情弹窗里不留任何展开项
+    const isOpen = props.onlyProvider !== undefined || expandedProviders[channel.provider] === true
           const drawerId = instanceId + '-rates-' + String(index)
           return (
             <div className={quotaStyles.quotaCard} key={channel.provider}>
@@ -277,23 +306,23 @@ export function QuotaTab(props: {
               <button
                 type="button"
                 className={quotaStyles.quotaToggle}
-                aria-expanded={isOpen}
+                aria-expanded={props.onlyProvider === undefined ? isOpen : undefined}
                 aria-controls={drawerId}
                 title={t('quota.ratesHint')}
-                onClick={() => setExpandedProviders((previous) => ({ ...previous, [channel.provider]: previous[channel.provider] !== true }))}
+                onClick={props.onlyProvider === undefined ? () => setExpandedProviders((previous) => ({ ...previous, [channel.provider]: previous[channel.provider] !== true })) : undefined}
               >
                 <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
                 <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
                 {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}</span>}
                 <span className={quotaStyles.rateCount}>{rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))}</span>
                 <span className={quotaStyles.quotaProvider}>{channel.provider} · {t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')}</span>
-                <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
+                {props.onlyProvider === undefined && <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>}
               </button>
 
               {outcome !== null && outcome.ok === false && (
                 <div className={quotaStyles.staleLine}>
-                  数据时间 {outcome.capturedAt === null ? t('quota.unknown') : localTimeTextOf(outcome.capturedAt)} · 本机快照 · 本次失败：
-                  {outcome.error ?? t('quota.notQueried')}
+                  {t('quota.snapshotAt', { time: outcome.capturedAt === null ? t('quota.unknown') : (localTimeTextOf(outcome.capturedAt) ?? t('quota.unknown')) })}
+                  <LogHint text={t('quota.liveFailedShort')} />
                 </div>
               )}
 
@@ -340,7 +369,7 @@ export function QuotaTab(props: {
               )}
               {snapshot !== null && !isLive && snapshot.supported && (
                 <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
-                  {t('quota.liveFailed', { reason: errorTextOf(snapshot.error) })}
+                  <LogHint text={t('quota.liveFailedShort')} />
                   {snapshot.updatedAt === null
                     ? t('q.retryHint')
                     : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t('q.stalePrefix') + staleDaysOf(snapshot.updatedAt) + t('q.daysStaleSuffix') : '')}
@@ -377,6 +406,7 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
     const counts = new Map<string, number>()
     for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1)
     const mix = [...counts.entries()]
+      .filter(([source]) => source !== 'catalog' && source !== 'official')
       .map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
       .join(' / ')
     return String(rows.length) + t('q.modelRatesPrefix') + mix
@@ -433,7 +463,7 @@ function RateTable(props: {
                   <td>
                     <div className={quotaStyles.rateModel}>{row.model}</div>
                     <div className={quotaStyles.rateConverted}>
-                      币种 {typeof row.currency === 'string' && row.currency !== '' ? row.currency : '—'}
+                      {t('q.currencyLabel', { value: typeof row.currency === 'string' && row.currency !== '' ? row.currency : '—' })}
                       {rowConverted ? ' → ' + props.display : ''}
                     </div>
                     {row.offPeak === true && <span className={quotaStyles.offPeakChip}>{t('q.offPeak')}</span>}
@@ -645,21 +675,6 @@ function daysBetween(from: string, to: string): number | null {
   const end = new Date(to + 'T00:00:00').getTime()
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null
   return Math.round((end - start) / 86400000) + 1
-}
-
-/** 成本口径说明：点 ⓘ 才展开，只留结论口径（算法细节在 docs/01）。 */
-function ExplanationBlock(): ReactNode {
-  return (
-    <div className={pricingStyles.explanation}>
-      <div className={pricingStyles.explanationTitle}>{t('caliber.title')}</div>
-      <ul className={pricingStyles.explanationList}>
-        <li>{t('caliber.orderPrefix')}<b>{t('quota.officialBill')}</b> &gt; <b>{t('cso.catalog')}</b>{t('caliber.orderCatalog')}<b>{t('cso.aggregate')}</b>{t('caliber.orderAggregate')}<b>{t('cso.estimate')}</b>{t('caliber.orderTail')}</li>
-        <li><b>{t('cso.official')}</b>{t('caliber.officialNote')}<b>{t('cso.estimate')}</b>{t('caliber.estimateNote')}</li>
-        <li>{t('caliber.unitNote')}</li>
-        <li>{t('caliber.nonePrefix')}<b>—</b>{t('caliber.convertNote')}<code>≈</code>。</li>
-      </ul>
-    </div>
-  )
 }
 
 /** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */

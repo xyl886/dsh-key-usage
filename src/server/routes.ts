@@ -1,5 +1,5 @@
 /**
- * HTTP 路由：12 个只读 `GET` + 1 个写 `POST`（价目刷新）；非本机回环一律 403。
+ * HTTP 路由：14 个只读 `GET` + 3 个写 `POST`（快照刷新、价目刷新、系统日志）；非本机回环一律 403。
  * 成本逐格取值：台账官方账单 > 内置价目 > 聚合价 > 台账反推均价 > 无依据（另有 `costSource` / `partial`
  * / `costsByCurrency` 三个并列字段）；台账缺的日期由会话事件补位（见 merge.ts）。
  * 外网只有三处、都由用户动作触发：余额查询（live-quota.ts）、价目刷新（model-prices.ts）、汇率（fx-rate.ts）。
@@ -42,6 +42,7 @@ import {
   type SessionRow,
 } from './data/sessions.js'
 import { createArchiveSource, createTitleSource, normalizeSessionId } from './data/session-meta.js'
+import { appendLogRecords, clearLogFile, readLogRecords } from './data/log-file.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
 import {
   mergeDailySeries,
@@ -394,6 +395,24 @@ function requireLoopback(request: IncomingMessage, response: ServerResponse): bo
 
 function readTextFile(path: string): string | null {
   try { return readFileSync(path, 'utf8') } catch { return null }
+}
+
+/**
+ * 读 POST 请求体并当 JSON 解析：上限 128 KiB（日志批量远小于这个数），
+ * 超限或解析失败一律返回 null —— 端点回 `{ok:false}`，不抛错、不缓冲整个响应体。
+ * 走异步迭代（真实 `IncomingMessage` 与测试夹具都支持），避免依赖事件式读取。
+ */
+async function readJsonBody(request: IncomingMessage, limitBytes = 128 * 1024): Promise<unknown | null> {
+  let text = ''
+  try {
+    for await (const chunk of request) {
+      text += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk)
+      if (text.length > limitBytes) return null
+    }
+    return JSON.parse(text) as unknown
+  } catch {
+    return null
+  }
 }
 
 export function mountKeyUsageRoutes(
@@ -1211,6 +1230,34 @@ export function mountKeyUsageRoutes(
       }
       const result = await refreshModelPrices()
       sendJson(response, 200, result)
+    },
+  })
+
+  /**
+   * 系统日志：`GET` 回读（刷新页面后日志还在）、`POST` 批量追加 / 清空。
+   * 客户端攒约 1 秒发一批；写失败只回 `{ok:false}`，界面不因此报错（日志本身不该打断使用）。
+   */
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/log',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      if (request.method === 'POST') {
+        const body = await readJsonBody(request)
+        if (body === null) {
+          sendJson(response, 200, { ok: false, error: '请求体不是合法 JSON（日志端点只收 {records:[…]} 或 {clear:true}）' })
+          return
+        }
+        if ((body as { clear?: unknown }).clear === true) {
+          sendJson(response, 200, clearLogFile())
+          return
+        }
+        const records = (body as { records?: unknown }).records
+        sendJson(response, 200, appendLogRecords(Array.isArray(records) ? records : []))
+        return
+      }
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      sendJson(response, 200, { ok: true, records: readLogRecords(parseLimit(url.searchParams.get('limit'), 500)) })
     },
   })
 }

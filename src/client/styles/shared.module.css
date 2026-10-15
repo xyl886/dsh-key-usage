@@ -175,3 +175,12 @@
 
 /* 卡片标题行：图标 + 标签 */
 .statLabelRow { display: flex; align-items: center; gap: 6px; }
+
+/* 日志条目：点消息展开详情（只有带 detail 的可点），失败条目右侧给「重试」 */
+.logRow { grid-template-columns: 68px 44px 62px minmax(0, 1fr) auto; }
+.logMessageBtn { background: none; border: 0; padding: 0; font: inherit; text-align: left; color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; cursor: pointer; }
+.logMessageBtn:hover { text-decoration: underline; }
+.logDetail { grid-column: 4 / -1; color: var(--dsw-alias-label-secondary, #9a9aa6); word-break: break-all; white-space: pre-wrap; }
+.logDetailPad { padding-left: 8px; border-left: 2px solid var(--dsw-alias-border-l1, #2c2c34); }
+.logRetry { background: none; border: 0; padding: 0; font: inherit; color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }
+.logRetry:hover { text-decoration: underline; }

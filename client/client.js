@@ -13,6 +13,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 新增键 → 同时补齐两种语言；缺键会回落中文（见 i18n.ts）。
 		*/
 		const zh = {
+			"nav.quota": "通道详情",
 			"nav.usage": "使用情况",
 			"app.title": "使用情况",
 			"tab.overview": "总览",
@@ -28,6 +29,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"log.title": "系统日志",
 			"log.copy": "复制",
 			"log.clear": "清空",
+			"log.export": "导出",
+			"log.empty": "暂无日志",
+			"log.retry": "重试",
+			"log.view": "查看系统日志",
+			"log.issue": "快照问题",
+			"log.coveragePartial": "数据不完整",
+			"log.copyBlocked": "复制被浏览器拦截",
+			"log.exportBlocked": "导出被浏览器拦截",
 			"caliber.title": "口径说明",
 			"caliber.version": "版本 {version}",
 			"caliber.source": "按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充{days}；项目 / 会话 / 按模型 / 按小时来自会话事件，每个样本计一次调用。",
@@ -35,16 +44,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.cost": "成本四层自动生效，不需要填任何价格：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价；角标同此命名，没有依据时显示 —。",
 			"caliber.currency": "金额按所选币种折算（带 ≈），当前{fx}。",
 			"caliber.fxMissing": "还没取到汇率，跨币种按原币种显示",
+			"caliber.costHint": "成本按四层价目自动估算：官方账单 > 内置官方价目 > LiteLLM 聚合价（USD） > 台账反推均价；命中率 = 缓存读 /（输入 + 输出 + 缓存读）",
+			"caliber.pricingInfo": "价目来源与文件：内置厂商官方价目随包发布（data/pricing-catalog.yml，18 条）；聚合价目取自 LiteLLM（MIT），随包快照优先、本机刷新副本更优先；刷新只写本机副本，校验不过不覆盖。",
 			"caliber.refresh": "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。",
 			"common.calls": "调用",
 			"common.channel": "通道",
 			"common.workspace": "工作区",
+			"common.sessionSuffix": " 个会话",
+			"common.modelSuffix": " 个模型",
+			"common.subagentSuffix": " 个子会话",
 			"s.id": "会话 id",
 			"s.title": "标题",
 			"s.prompt": "首条提问",
 			"s.first": "首次",
 			"s.last": "最近",
 			"s.crossDays": "跨天",
+			"s.crossDaysTag": "跨 {count} 天",
+			"s.subagentTag": "子代理",
+			"s.parentFocusNote": "只看该会话及其子会话（含父会话行）",
+			"s.subagentNote": "：子会话各自计入统计，不并入父会话",
+			"s.loadMore": "加载更多（+{count}）",
+			"s.shownCount": "已显示 {shown} / {total} 个会话",
+			"s.footnote": "会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
 			"s.hitRate": "命中率(%)",
 			"s.costNative": "成本(原币合计)",
 			"s.costSource": "成本来源",
@@ -93,6 +114,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.title": "会话详情",
 			"d.close": "关闭会话详情",
 			"d.unknownReason": "未知原因",
+			"d.loadFailed": "会话详情读取失败",
 			"d.unavailable": "会话用量不可用",
 			"d.partial": "会话用量不完整",
 			"d.costMode": "计费模式",
@@ -134,6 +156,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.chartDayAriaPrefix": "按天 Tokens 柱状图，共 ",
 			"d.chartDayAriaSuffix": " 天（含无用量日），含输入 / 输出 / 缓存读",
 			"d.callCount": "调用次数",
+			"d.backToParent": "← 返回主会话",
+			"d.callTimes": "{count} 次",
 			"d.channelCount": "通道数",
 			"d.activeDayCount": "使用天数",
 			"d.channelsWithUsageSuffix": " 个通道",
@@ -173,6 +197,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.mainChannel": "主要通道",
 			"p.archivedSessions": "已归档",
 			"p.search": "搜索项目路径",
+			"p.focusPrefix": "仅看项目：",
 			"p.clearFilter": "清除筛选",
 			"p.archivePrefix": "（ ",
 			"p.archiveSuffix": " 个已归档）",
@@ -213,6 +238,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"srv.fxFailedCache": "上游失败，回落缓存",
 			"srv.fxFailedDefault": "取汇率失败，暂用默认 {rate}",
 			"m.others": "其它",
+			"m.footnote": "模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
+			"m.hitNote": "；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）",
 			"fx.live": "实时上游",
 			"fx.cache": "服务端缓存",
 			"fx.default": "默认值",
@@ -264,6 +291,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"o.callsSuffix": " 次调用",
 			"c.cost": "成本",
 			"q.resetUnknown": "重置于 —",
+			"q.currencyLabel": "币种 {value}",
 			"q.retryHint": "，暂无快照，点刷新重试",
 			"q.snapshotPrefix": "，快照 ",
 			"q.stalePrefix": "，",
@@ -332,6 +360,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.ledgerLoading": "台账读取中或不可用",
 			"d.sourceSession": "来源：会话事件（该日台账无记录）",
 			"d.hourlyNote": "按小时来自会话事件，不含成本",
+			"date.select": "选择日期",
+			"date.startHint": "点击选择开始日期",
+			"date.endHint": "点击选择结束日期",
+			"date.clear": "清除",
+			"date.prevMonth": "上一个月",
+			"date.nextMonth": "下一个月",
 			"r.from": "从",
 			"r.to": "至",
 			"s.timeDuration": "时间 / 时长",
@@ -357,6 +391,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.balance": "余额",
 			"balance.currency": "币种",
 			"window.5h": "5 小时窗口",
+			"w.5h": "5 小时",
+			"w.week": "本周",
+			"w.month": "本月",
+			"w.day": "当日",
 			"window.day": "当日窗口",
 			"window.week": "本周窗口",
 			"window.month": "本月窗口",
@@ -418,6 +456,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.catalogStale": "价目最近抓取距今 {days} 天，厂商调价后需人工更新",
 			"quota.liveAt": "实时查询于 {time}",
 			"quota.liveFailed": "实时查询未成功（{reason}）",
+			"quota.liveFailedShort": "实时查询未成功",
+			"quota.snapshotAt": "数据时间 {time} · 本机快照 · ",
+			"quota.pricingFailedShort": "刷新价目失败",
 			"quota.entriesSuffix": " 条",
 			"quota.ratesEmpty": "近 30 天无模型用量",
 			"quota.live": "实时",
@@ -438,6 +479,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"err.detail.none": "无余额接口"
 		};
 		const en = {
+			"nav.quota": "Channel detail",
 			"nav.usage": "Usage",
 			"app.title": "Usage",
 			"tab.overview": "Overview",
@@ -453,6 +495,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"log.title": "System log",
 			"log.copy": "Copy",
 			"log.clear": "Clear",
+			"log.export": "Export",
+			"log.empty": "No log entries",
+			"log.retry": "Retry",
+			"log.view": "View log",
+			"log.issue": "Snapshot issue",
+			"log.coveragePartial": "Incomplete data",
+			"log.copyBlocked": "Copy blocked by the browser",
+			"log.exportBlocked": "Export blocked by the browser",
 			"caliber.title": "Method",
 			"caliber.version": "Version {version}",
 			"caliber.source": "Daily figures come from the host ledger (official cost included); days missing there fall back to session events{days}. Projects, sessions, models and hourly buckets come from session events, one call per sample.",
@@ -460,16 +510,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.cost": "Cost resolves in four layers: official bill > built-in vendor catalog > LiteLLM aggregate > ledger average. Badges use the same names; — means no basis.",
 			"caliber.currency": "Amounts convert to the selected currency (≈). Currently {fx}.",
 			"caliber.fxMissing": "no FX rate yet, showing original currencies",
+			"caliber.costHint": "Cost comes from four price layers: official bill > bundled vendor catalog > LiteLLM aggregate (USD) > ledger-derived average; hit rate = cache read / (input + output + cache read)",
+			"caliber.pricingInfo": "Price sources and files: the vendor catalog ships with the plugin (data/pricing-catalog.yml, 18 entries); the aggregate comes from LiteLLM (MIT), where the local refreshed copy takes priority over the bundled snapshot; refreshing writes only the local copy and never overwrites it when validation fails.",
 			"caliber.refresh": "Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason.",
 			"common.calls": "Calls",
 			"common.channel": "Channel",
 			"common.workspace": "Workspace",
+			"common.sessionSuffix": " sessions",
+			"common.modelSuffix": " models",
+			"common.subagentSuffix": " subagents",
 			"s.id": "Session",
 			"s.title": "Title",
 			"s.prompt": "First prompt",
 			"s.first": "First",
 			"s.last": "Last",
 			"s.crossDays": "Days",
+			"s.crossDaysTag": "spanning {count} days",
+			"s.subagentTag": "Subagent",
+			"s.parentFocusNote": "Showing this session and its subagents (parent row included)",
+			"s.subagentNote": ": subagent sessions are counted separately, not merged into the parent",
+			"s.loadMore": "Load more (+{count})",
+			"s.shownCount": "Showing {shown} / {total} sessions",
+			"s.footnote": "Session usage folds host session events (one call per billing sample); cost estimated from the three price layers",
 			"s.hitRate": "Hit %",
 			"s.costNative": "Cost (native)",
 			"s.costSource": "Cost source",
@@ -503,8 +565,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.subagentHide": "Main only",
 			"s.subagentAll": "With sub-sessions",
 			"s.subagentOnly": "Sub-sessions only",
-			"s.subagentOther": "另有 {count} 个子代理会话",
-			"s.archivedOther": "另有 {count} 个已归档会话未显示",
+			"s.subagentOther": "{count} more subagent sessions",
+			"s.archivedOther": "{count} archived sessions hidden",
 			"s.subagentHidden": "hidden",
 			"s.subagentShown": "(shown)",
 			"s.noCost": "No ledger cost",
@@ -518,6 +580,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.title": "Session",
 			"d.close": "Close session",
 			"d.unknownReason": "Unknown reason",
+			"d.loadFailed": "Failed to load session detail",
 			"d.unavailable": "Session usage unavailable",
 			"d.partial": "Session usage incomplete",
 			"d.costMode": "Billing",
@@ -559,6 +622,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.chartDayAriaPrefix": "Daily token bars, ",
 			"d.chartDayAriaSuffix": " days (including empty days), input / output / cache read",
 			"d.callCount": "Calls",
+			"d.backToParent": "← Back to parent session",
+			"d.callTimes": "{count} calls",
 			"d.channelCount": "Channels",
 			"d.activeDayCount": "Days used",
 			"d.channelsWithUsageSuffix": " channels",
@@ -598,6 +663,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.mainChannel": "Main channel",
 			"p.archivedSessions": "Archived",
 			"p.search": "Search project path",
+			"p.focusPrefix": "Project only: ",
 			"p.clearFilter": "Clear filter",
 			"p.archivePrefix": "(",
 			"p.archiveSuffix": " archived included)",
@@ -609,6 +675,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"h.tip": "One cell = one day of tokens; darker means more",
 			"h.noUsage": "No usage",
 			"h.noLedger": "Not in ledger",
+			"sh.shareAll": "All shares",
 			"sh.channels": "Channels",
 			"sh.models": "Models",
 			"sh.noData": "No data",
@@ -620,7 +687,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"issue.write-failed": "Snapshot write failed",
 			"srv.rateNoteEn": "see rates, source and date below",
 			"p.costHint": "cost estimated from the price catalog",
-			"p.hitHint": "; hit rate = cache read / (input + output + cache read)",
 			"srv.code.noSnapshot": "no local snapshot yet",
 			"srv.code.noCredential": "no credential available",
 			"srv.code.unsupported": "channel has no API",
@@ -638,6 +704,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"srv.fxFailedCache": "upstream failed, using cache",
 			"srv.fxFailedDefault": "FX unavailable, using default {rate}",
 			"m.others": "Others",
+			"m.footnote": "Model usage folds host session events (one call per billing sample); cost estimated from the three price layers",
+			"m.hitNote": "; hit rate = cache read ÷ (input + output + cache read)",
 			"fx.live": "Live",
 			"fx.cache": "Cached",
 			"fx.default": "Default",
@@ -689,6 +757,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"o.callsSuffix": " calls",
 			"c.cost": "Cost",
 			"q.resetUnknown": "Resets —",
+			"q.currencyLabel": "Currency {value}",
 			"q.retryHint": ", no snapshot — tap refresh",
 			"q.snapshotPrefix": ", snapshot ",
 			"q.stalePrefix": ", ",
@@ -757,6 +826,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.ledgerLoading": "Ledger loading or unavailable",
 			"d.sourceSession": "Source: session events (no ledger entry that day)",
 			"d.hourlyNote": "Hourly data from session events, cost excluded",
+			"date.select": "Select date",
+			"date.startHint": "Pick the start date",
+			"date.endHint": "Pick the end date",
+			"date.clear": "Clear",
+			"date.prevMonth": "Previous month",
+			"date.nextMonth": "Next month",
 			"r.from": "From",
 			"r.to": "To",
 			"s.timeDuration": "Time / duration",
@@ -782,6 +857,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.balance": "Balance",
 			"balance.currency": "Currency",
 			"window.5h": "5-hour",
+			"w.5h": "5h",
+			"w.week": "Weekly",
+			"w.month": "Monthly",
+			"w.day": "Daily",
 			"window.day": "Daily",
 			"window.week": "Weekly",
 			"window.month": "Monthly",
@@ -843,6 +922,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.catalogStale": "catalog last fetched {days} days ago; update it when vendors change prices",
 			"quota.liveAt": "live query at {time}",
 			"quota.liveFailed": "live query failed ({reason})",
+			"quota.liveFailedShort": "Live query failed",
+			"quota.snapshotAt": "Snapshot {time} · local cache · ",
+			"quota.pricingFailedShort": "Price refresh failed",
 			"quota.entriesSuffix": " entries",
 			"quota.ratesEmpty": "no model usage in 30 days",
 			"quota.live": "Live",
@@ -865,10 +947,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/core/log.ts
 		const MAX_ENTRIES = 200;
+		const LOG_PATH = "/dsh-key-usage/log";
+		/** 攒批间隔：1 秒内的连续失败合成一次 POST，避免每条日志一个请求。 */
+		const FLUSH_DELAY_MS = 1e3;
+		const READ_LIMIT = 500;
 		let entries = [];
 		let nextId = 1;
 		let notifyQueued = false;
+		let hydrated = false;
+		let flushTimer = null;
+		/** 本次会话新建 / 累加过的条目：只回写这些（从磁盘读回来的不再写回去，否则越读越多）。 */
+		const pending = /* @__PURE__ */ new Map();
+		/** 已经从磁盘读过的记录（按时间 + 内容去重）：重复读同一份文件不会把次数刷虚。 */
+		const storedKeys = /* @__PURE__ */ new Set();
 		const listeners$2 = /* @__PURE__ */ new Set();
+		const openListeners = /* @__PURE__ */ new Set();
 		function notify() {
 			if (notifyQueued) return;
 			notifyQueued = true;
@@ -877,18 +970,124 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				for (const listener of listeners$2) listener();
 			});
 		}
-		function logPush(level, source, message) {
-			if (message === "") return;
-			entries = [...entries, {
+		function trim() {
+			if (entries.length > MAX_ENTRIES) entries = entries.slice(entries.length - MAX_ENTRIES);
+		}
+		/** 去重累加：同来源 + 同消息 + 同级别合并成一条（重试一次不该刷两屏）。 */
+		function fold(level, source, message, detail, time) {
+			const existing = entries.find((entry) => entry.source === source && entry.message === message && entry.level === level);
+			if (existing !== void 0) {
+				existing.count += 1;
+				if (time > existing.time) existing.time = time;
+				if (detail !== void 0) existing.detail = detail;
+				return existing;
+			}
+			const entry = {
 				id: nextId,
-				time: Date.now(),
+				time,
 				level,
 				source,
-				message
-			}];
+				message,
+				detail,
+				count: 1
+			};
 			nextId += 1;
-			if (entries.length > MAX_ENTRIES) entries = entries.slice(entries.length - MAX_ENTRIES);
+			entries = [...entries, entry];
+			return entry;
+		}
+		function scheduleFlush() {
+			if (flushTimer !== null) return;
+			flushTimer = setTimeout(() => {
+				flushTimer = null;
+				flushLog();
+			}, FLUSH_DELAY_MS);
+		}
+		/** 把待写条目发一批到磁盘；失败就丢掉这一批（内存里还看得到），不重试、不再记日志。 */
+		async function flushLog() {
+			if (pending.size === 0) return;
+			const records = [...pending.values()].map((entry) => ({
+				time: new Date(entry.time).toISOString(),
+				level: entry.level,
+				source: entry.source,
+				message: entry.message,
+				...entry.detail === void 0 ? {} : { detail: entry.detail }
+			}));
+			pending.clear();
+			try {
+				const response = await fetch(LOG_PATH, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json"
+					},
+					body: JSON.stringify({ records }),
+					keepalive: true
+				});
+				if (!response.ok) throw new Error("HTTP " + String(response.status));
+			} catch {}
+		}
+		/** 页面打开时读回磁盘上的历史日志（只做一次）；没有端点或读失败都安静跳过。 */
+		async function hydrateLog() {
+			if (hydrated) return;
+			hydrated = true;
+			await readFromDisk();
+		}
+		/** 日志窗的「刷新」：重新读一遍磁盘（已读过的记录按时间 + 内容去重，不重复计数）。 */
+		async function refreshLog() {
+			hydrated = true;
+			await readFromDisk();
+		}
+		async function readFromDisk() {
+			try {
+				const response = await fetch(LOG_PATH + "?limit=" + String(READ_LIMIT), { headers: { Accept: "application/json" } });
+				if (!response.ok) return;
+				const body = await response.json();
+				if (!Array.isArray(body.records)) return;
+				let changed = false;
+				/**
+				* 同一条内容在文件里可能真的出现多次（同一次失败被记了两遍），所以去重键要带「第几次出现」：
+				* 文件没变时重复读不会虚增，文件里两条一模一样的记录仍各自计入次数。
+				*/
+				const occurrences = /* @__PURE__ */ new Map();
+				for (const raw of body.records) {
+					if (typeof raw !== "object" || raw === null) continue;
+					const record = raw;
+					if (typeof record.message !== "string" || record.message === "") continue;
+					const level = record.level === "error" || record.level === "warn" ? record.level : "info";
+					const time = typeof record.time === "string" && Number.isFinite(Date.parse(record.time)) ? Date.parse(record.time) : Date.now();
+					const source = typeof record.source === "string" ? record.source : "ui";
+					const content = String(time) + "|" + level + "|" + source + "|" + record.message;
+					const nth = (occurrences.get(content) ?? 0) + 1;
+					occurrences.set(content, nth);
+					const key = content + "#" + String(nth);
+					if (storedKeys.has(key)) continue;
+					storedKeys.add(key);
+					fold(level, source, record.message, typeof record.detail === "string" ? record.detail : void 0, time);
+					changed = true;
+				}
+				if (!changed) return;
+				entries = [...entries].sort((first, second) => first.time - second.time);
+				trim();
+				notify();
+			} catch {}
+		}
+		function logPush(level, source, message, detail, retry) {
+			if (message === "") return;
+			const entry = fold(level, source, message, detail, Date.now());
+			if (retry !== void 0) entry.retry = retry;
+			pending.set(entry.id, entry);
+			trim();
 			notify();
+			scheduleFlush();
+		}
+		function logInfo(source, message, detail) {
+			logPush("info", source, message, detail);
+		}
+		function logWarn(source, message, detail) {
+			logPush("warn", source, message, detail);
+		}
+		function logError(source, message, detail, retry) {
+			logPush("error", source, message, detail, retry);
 		}
 		function logEntries() {
 			return entries;
@@ -899,13 +1098,36 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				listeners$2.delete(listener);
 			};
 		}
+		/** 清空：内存与磁盘一起清（磁盘失败就只清内存，界面行为不变）。 */
 		function clearLog() {
 			entries = [];
+			pending.clear();
 			notify();
+			fetch(LOG_PATH, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json"
+				},
+				body: JSON.stringify({ clear: true })
+			}).catch(() => void 0);
 		}
-		/** 导出成纯文本，便于贴到 issue 里。 */
+		/** 页面上的「查看系统日志」入口：任何组件都能请求打开日志窗，不必层层传 prop。 */
+		function requestOpenLog() {
+			for (const listener of openListeners) listener();
+		}
+		function subscribeOpenLog(listener) {
+			openListeners.add(listener);
+			return () => {
+				openListeners.delete(listener);
+			};
+		}
+		/** 导出成纯文本（贴 issue 用）：带日期时间，详情缩进一行跟在条目后面，重复次数标 ×N。 */
 		function logText() {
-			return entries.map((entry) => new Date(entry.time).toLocaleTimeString("zh-CN", { hour12: false }) + " [" + entry.level + "] " + entry.source + ": " + entry.message).join("\n");
+			return entries.flatMap((entry) => {
+				const head = new Date(entry.time).toLocaleString("zh-CN", { hour12: false }) + " [" + entry.level + "] " + entry.source + " · " + entry.message + (entry.count > 1 ? " ×" + String(entry.count) : "");
+				return entry.detail === void 0 ? [head] : [head, "    " + entry.detail];
+			}).join("\n");
 		}
 		/** 同一类问题只记一次，避免刷屏（例如同一次渲染里同一个缺词被问很多遍）。 */
 		const onceKeys = /* @__PURE__ */ new Set();
@@ -914,6 +1136,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (onceKeys.has(dedupe)) return;
 			onceKeys.add(dedupe);
 			logPush(level, source, message);
+		}
+		if (typeof window !== "undefined") {
+			window.addEventListener("pagehide", () => {
+				flushLog();
+			});
+			document.addEventListener("visibilitychange", () => {
+				if (document.visibilityState === "hidden") flushLog();
+			});
 		}
 		//#endregion
 		//#region src/client/core/i18n.ts
@@ -1039,13 +1269,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			try {
 				const response = await fetch(path, { headers: { Accept: "application/json" } });
 				if (!response.ok) {
-					failureReasons.set(failureKey, failureTextOf(response.status));
+					const text = failureTextOf(response.status);
+					failureReasons.set(failureKey, text);
+					logWarn("api", t("api.requestFailed") + " · " + failureKey, text);
 					return null;
 				}
 				failureReasons.delete(failureKey);
 				return await response.json();
 			} catch (error) {
-				failureReasons.set(failureKey, t("api.requestFailed") + (error instanceof Error ? error.message : String(error)));
+				const text = t("api.requestFailed") + (error instanceof Error ? error.message : String(error));
+				failureReasons.set(failureKey, text);
+				logWarn("api", t("api.requestFailed") + " · " + failureKey, text);
 				return null;
 			}
 		}
@@ -1491,27 +1725,50 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return t("fx.defaultPrefix") + rateValueTextOf(fx.rate) + t("fx.defaultSuffix") + (fxNoteTextOf(fx) === null ? "" : "（" + fxNoteTextOf(fx) + "）");
 		}
 		//#endregion
-		//#region src/client/core/pricing.ts
+		//#region src/client/core/export.ts
 		/**
-		* 价目视图模型：只把服务端给的三层价目来源、覆盖度与装载状态翻译成文案，**界面不维护任何价格**。
-		* 金额渲染见 `currency.ts`（显示币种与汇率折算的唯一收口点）。
+		* 导出工具：纯函数生成 CSV / JSON 文本 + Blob 触发下载，导出的是当前筛选后的数据。
+		* CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
 		*/
-		/** 成本来源角标，与服务端 `costSource` 一一对应。 */
-		const AGGREGATE_LOADED_LABELS = {
-			local: t("src.liveFile"),
-			shipped: t("src.bundled"),
-			none: t("src.notLoaded")
-		};
-		/** 装载状态文案；服务端给了没见过的取值时按「未知」显示，不崩。 */
-		function aggregateLoadedLabelOf(loaded) {
-			if (loaded === "local" || loaded === "shipped" || loaded === "none") return AGGREGATE_LOADED_LABELS[loaded];
-			return loaded === void 0 || loaded === null || loaded === "" ? t("src.notLoaded") : t("src.unknown") + "（" + loaded + "）";
+		const UTF8_BOM = "﻿";
+		const CSV_MIME = "text/csv;charset=utf-8";
+		const JSON_MIME = "application/json;charset=utf-8";
+		const TEXT_MIME = "text/plain;charset=utf-8";
+		/** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
+		function toCsv(rows, columns) {
+			const lines = [columns.map((column) => csvCell(column.labelKey === void 0 ? column.label ?? column.key : t(column.labelKey))).join(",")];
+			for (const row of rows) lines.push(columns.map((column) => csvCell(column.value(row))).join(","));
+			return UTF8_BOM + lines.join("\r\n") + "\r\n";
 		}
-		/**
-		* LiteLLM 仓库地址。**不能**写成带协议前缀的完整字面量：构建后处理会把「字母 + 冒号 + 斜杠」误判成
-		* 盘符路径而让构建失败，所以拆段拼（冒号必须在第二段里）。
-		*/
-		const LITELLM_REPO_URL = [
+		function toJson(value) {
+			return JSON.stringify(value, null, 2) + "\n";
+		}
+		/** 下载文件名：`dsh-usage-<主题>-<当天>.<扩展名>`，主题用英文短名避免跨端中文文件名乱码。 */
+		function exportFileName(topic, extension) {
+			return "dsh-usage-" + topic + "-" + isoDate(/* @__PURE__ */ new Date()) + "." + extension;
+		}
+		function downloadFile(name, text, mime) {
+			try {
+				const objectUrl = URL.createObjectURL(new Blob([text], { type: mime }));
+				const anchor = document.createElement("a");
+				anchor.href = objectUrl;
+				anchor.download = name;
+				document.body.appendChild(anchor);
+				anchor.click();
+				anchor.remove();
+				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+			} catch (error) {
+				logWarn("export", t("log.exportBlocked") + " · " + name, error instanceof Error ? error.message : String(error));
+			}
+		}
+		/** 逗号、引号、换行都必须包引号并把内部引号翻倍，否则标题里的逗号会撑破列。 */
+		function csvCell(value) {
+			if (value === null) return "";
+			const text = String(value);
+			return /[",\r\n]/.test(text) ? "\"" + text.replace(/"/g, "\"\"") + "\"" : text;
+		}
+		t("src.liveFile"), t("src.bundled"), t("src.notLoaded");
+		[
 			"https",
 			"://github.com",
 			"/BerriAI/litellm"
@@ -1536,11 +1793,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			} catch {
 				return null;
 			}
-		}
-		/** 上游 commit 的短写法；太短或缺失时返回 null（完整值挂在装载信息的 tooltip 上）。 */
-		function shortCommitOf(commit) {
-			if (typeof commit !== "string" || commit.trim().length < 7) return null;
-			return commit.trim().slice(0, 7);
 		}
 		const COST_SOURCE_LABELS = {
 			official: "cso.official",
@@ -1582,7 +1834,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.24);padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:calc(var(--dsh-content-font-size,12px) * 1.65);justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:720px){.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px}.d29QNW_statValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.83);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:4px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.15);margin:4px 0 10px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:18px 0 4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{font-size:calc(var(--dsh-content-font-size,12px) * .73);opacity:.8;margin-left:3px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:10px}.d29QNW_legend{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:26px;padding-top:14px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_ghost{background:var(--dsw-alias-fill-l2,#80808c1a);border:1px solid var(--dsw-alias-border-l2,#80808c47)}.d29QNW_caliberVersion{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_logActions{gap:8px;margin-bottom:10px;display:flex}.d29QNW_logEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.1)}.d29QNW_logList{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.d29QNW_logRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;grid-template-columns:68px 44px 62px 1fr;gap:8px;line-height:1.5;display:grid}.d29QNW_logTime,.d29QNW_logLevel{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_logWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_logError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_logSource{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_logMessage{color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-all}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .87);margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}";
+		const css$8 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.24);padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:calc(var(--dsh-content-font-size,12px) * 1.65);justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;display:grid}.d29QNW_cardGrid4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGridAuto{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}@media (max-width:720px){.d29QNW_cardGrid4{grid-template-columns:repeat(2,minmax(0,1fr))}}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px}.d29QNW_statValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.83);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:4px}.d29QNW_groupLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.15);margin:4px 0 10px;font-weight:600}.d29QNW_blockLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:18px 0 4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_sortBtn{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;background:0 0;border:0;align-items:center;padding:0;display:inline-flex}.d29QNW_sortBtn:hover{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_sortBtn.d29QNW_sortActiveBtn{color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_chip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_sortArrow{font-size:calc(var(--dsh-content-font-size,12px) * .73);opacity:.8;margin-left:3px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_table tr.d29QNW_total td{color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);font-weight:600}.d29QNW_table tr.d29QNW_disabled{opacity:.55}.d29QNW_chipRow{flex-wrap:wrap;gap:8px;margin-bottom:14px;display:flex}.d29QNW_chip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;align-items:center;gap:6px;padding:5px 13px;display:inline-flex}.d29QNW_chip:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_chip.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff66;font-weight:600}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_mono{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:10px}.d29QNW_legend{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_legend i.d29QNW_ghost{background:#80808c1a;border:1px solid #80808c47}.d29QNW_footnote{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-top:26px;padding-top:14px;line-height:1.8}.d29QNW_footnote b{color:var(--dsw-alias-label-secondary,#9a9aa6);font-weight:500}.d29QNW_footnoteList{margin:4px 0 0;padding-left:18px}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-fill-l1,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_ghost{background:var(--dsw-alias-fill-l2,#80808c1a);border:1px solid var(--dsw-alias-border-l2,#80808c47)}.d29QNW_caliberVersion{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_logActions{gap:8px;margin-bottom:10px;display:flex}.d29QNW_logEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.1)}.d29QNW_logList{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.d29QNW_logRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;grid-template-columns:68px 44px 62px 1fr;gap:8px;line-height:1.5;display:grid}.d29QNW_logTime,.d29QNW_logLevel{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_logWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_logError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.d29QNW_logSource{color:var(--dsw-alias-label-secondary,#9a9aa6)}.d29QNW_logMessage{color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-all}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .87);margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_logRow{grid-template-columns:68px 44px 62px minmax(0,1fr) auto}.d29QNW_logMessageBtn{font:inherit;text-align:left;color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-all;cursor:pointer;background:0 0;border:0;padding:0}.d29QNW_logMessageBtn:hover{text-decoration:underline}.d29QNW_logDetail{color:var(--dsw-alias-label-secondary,#9a9aa6);word-break:break-all;white-space:pre-wrap;grid-column:4/-1}.d29QNW_logDetailPad{border-left:2px solid var(--dsw-alias-border-l1,#2c2c34);padding-left:8px}.d29QNW_logRetry{font:inherit;color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;background:0 0;border:0;padding:0}.d29QNW_logRetry:hover{text-decoration:underline}";
 		const tagId$8 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1619,11 +1871,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"groupLabel": "d29QNW_groupLabel",
 			"legend": "d29QNW_legend",
 			"logActions": "d29QNW_logActions",
+			"logDetail": "d29QNW_logDetail",
+			"logDetailPad": "d29QNW_logDetailPad",
 			"logEmpty": "d29QNW_logEmpty",
 			"logError": "d29QNW_logError",
 			"logLevel": "d29QNW_logLevel",
 			"logList": "d29QNW_logList",
 			"logMessage": "d29QNW_logMessage",
+			"logMessageBtn": "d29QNW_logMessageBtn",
+			"logRetry": "d29QNW_logRetry",
 			"logRow": "d29QNW_logRow",
 			"logSource": "d29QNW_logSource",
 			"logTime": "d29QNW_logTime",
@@ -1668,11 +1924,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [tooltip, setTooltip] = (0, react.useState)(null);
 			return {
 				tooltip,
-				show: (0, react.useCallback)((event, node) => {
+				show: (0, react.useCallback)((event, node, pin) => {
+					const rect = event.currentTarget?.getBoundingClientRect();
 					setTooltip({
 						x: event.clientX,
 						y: event.clientY,
-						node
+						node,
+						anchorLeft: rect === void 0 ? event.clientX : rect.left,
+						anchorRight: rect === void 0 ? event.clientX : rect.right,
+						pinRight: pin?.right,
+						pinTop: pin?.top
 					});
 				}, []),
 				hide: (0, react.useCallback)(() => setTooltip(null), [])
@@ -1683,10 +1944,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			(0, react.useLayoutEffect)(() => {
 				const element = elementRef.current;
 				if (element === null || tooltip === null) return;
-				const maxX = window.innerWidth - element.offsetWidth - 12;
-				const maxY = window.innerHeight - element.offsetHeight - 12;
-				element.style.left = Math.max(8, Math.min(tooltip.x + 14, maxX)) + "px";
-				element.style.top = Math.max(8, Math.min(tooltip.y + 14, maxY)) + "px";
+				const width = element.offsetWidth;
+				const height = element.offsetHeight;
+				const margin = 12;
+				const gap = 10;
+				const pinRight = tooltip.pinRight;
+				const pinTop = tooltip.pinTop;
+				const pinned = pinRight !== void 0 && pinTop !== void 0;
+				const left = pinned ? pinRight - width : tooltip.anchorRight + gap + width > window.innerWidth - margin ? tooltip.anchorLeft - width - gap : tooltip.anchorRight + gap;
+				const top = pinned ? pinTop : tooltip.y - height / 2;
+				element.style.left = Math.max(margin, Math.min(left, window.innerWidth - width - margin)) + "px";
+				element.style.top = Math.max(margin, Math.min(top, window.innerHeight - height - margin)) + "px";
 			}, [tooltip]);
 			if (tooltip === null) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1744,7 +2012,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/ui.module.css.mjs
-		const css$7 = ".eBtFdG_btn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;justify-content:center;align-items:center;gap:6px;padding:6px 12px;line-height:1;display:inline-flex}.eBtFdG_btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.eBtFdG_btn:disabled{opacity:.55;cursor:default}.eBtFdG_btn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.eBtFdG_btnSm{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:4px 9px}.eBtFdG_btnIcon{padding:6px}.eBtFdG_btnPrimary{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_btnPrimary:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_btnActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.eBtFdG_selectWrap{display:inline-block;position:relative}.eBtFdG_selectBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);max-width:240px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:9px;align-items:center;gap:8px;padding:5px 9px;display:inline-flex}.eBtFdG_selectBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.eBtFdG_selectBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.eBtFdG_selectValue{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.eBtFdG_selectCaret{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);flex:none}.eBtFdG_selectList{z-index:40;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#1c1c22);border-radius:10px;min-width:100%;max-height:280px;margin:0;padding:4px;list-style:none;position:absolute;top:calc(100% + 4px);left:0;overflow-y:auto;box-shadow:0 8px 24px #00000047}.eBtFdG_selectOption{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;white-space:nowrap;border-radius:7px;align-items:center;gap:6px;padding:6px 8px;display:flex}.eBtFdG_selectOptionActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_selectCheck{color:var(--dsw-alias-state-business-primary,#5b8cff);margin-left:auto}.eBtFdG_tableScroll{overflow-x:auto}.eBtFdG_emptyState{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-tertiary,#67676f);flex-direction:column;gap:4px;padding:16px 0;display:flex}.eBtFdG_emptyTitle{color:var(--dsw-alias-label-secondary,#9a9aa6)}.eBtFdG_dialogMask{z-index:60;background:var(--dsw-alias-bg-mask,#00000073);justify-content:center;align-items:center;padding:24px;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.eBtFdG_dialog{border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-1,#16161a);border-radius:12px;width:100%;max-width:620px;max-height:78vh;padding:16px;overflow:auto;box-shadow:0 16px 48px #0006}.eBtFdG_dialog:focus-visible{outline:none}.eBtFdG_dialogHead{justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;display:flex}.eBtFdG_dialogTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.28);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.eBtFdG_dialogClose{color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);background:0 0;border:0;padding:4px}.eBtFdG_dialogClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.eBtFdG_dialogBody{font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-secondary,#9a9aa6);line-height:1.75}";
+		const css$7 = ".eBtFdG_btn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;justify-content:center;align-items:center;gap:6px;padding:6px 12px;line-height:1;display:inline-flex}.eBtFdG_btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.eBtFdG_btn:disabled{opacity:.55;cursor:default}.eBtFdG_btn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.eBtFdG_btnSm{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:4px 9px}.eBtFdG_btnIcon{padding:6px}.eBtFdG_btnPrimary{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_btnPrimary:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_btnActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.eBtFdG_selectWrap{display:inline-block;position:relative}.eBtFdG_selectBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);max-width:240px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:9px;align-items:center;gap:8px;padding:5px 9px;display:inline-flex}.eBtFdG_selectBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.eBtFdG_selectBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.eBtFdG_selectValue{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.eBtFdG_selectCaret{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);flex:none}.eBtFdG_selectList{z-index:40;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#1c1c22);border-radius:10px;min-width:100%;max-height:280px;margin:0;padding:4px;list-style:none;position:absolute;top:calc(100% + 4px);left:0;overflow-y:auto;box-shadow:0 8px 24px #00000047}.eBtFdG_selectOption{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;white-space:nowrap;border-radius:7px;align-items:center;gap:6px;padding:6px 8px;display:flex}.eBtFdG_selectOptionActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_selectCheck{color:var(--dsw-alias-state-business-primary,#5b8cff);margin-left:auto}.eBtFdG_tableScroll{overflow-x:auto}.eBtFdG_emptyState{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-tertiary,#67676f);flex-direction:column;gap:4px;padding:16px 0;display:flex}.eBtFdG_emptyTitle{color:var(--dsw-alias-label-secondary,#9a9aa6)}.eBtFdG_dialogMask{z-index:60;background:var(--dsw-alias-bg-mask,#00000073);justify-content:center;align-items:center;padding:24px;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.eBtFdG_dialog{border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-1,#16161a);border-radius:12px;width:100%;max-width:620px;max-height:78vh;padding:16px;overflow:auto;box-shadow:0 16px 48px #0006}.eBtFdG_dialog:focus-visible{outline:none}.eBtFdG_dialogHead{justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;display:flex}.eBtFdG_dialogTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.28);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.eBtFdG_dialogClose{color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.19);background:0 0;border:0;padding:4px}.eBtFdG_dialogClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.eBtFdG_dialogBody{font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-secondary,#9a9aa6);line-height:1.75}.eBtFdG_control{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#3a3a44);cursor:pointer;border-radius:6px;align-items:center;gap:6px;padding:0 10px;font-weight:500;line-height:1;display:inline-flex}.eBtFdG_control:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_datePicker{display:inline-flex;position:relative}.eBtFdG_dateTrigger{font-variant-numeric:tabular-nums;justify-content:space-between;min-width:208px}.eBtFdG_dateTriggerEmpty,.eBtFdG_dateTriggerArrow{color:var(--dsw-alias-label-tertiary,#67676f)}.eBtFdG_datePopover{z-index:40;background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);width:268px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:8px;padding:10px 12px 8px;position:absolute;top:calc(100% + 6px);left:0}.eBtFdG_dateHead{justify-content:space-between;align-items:center;margin-bottom:6px;display:flex}.eBtFdG_dateNav{cursor:pointer;width:22px;height:22px;color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border:none;border-radius:4px;font-size:14px}.eBtFdG_dateNav:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff0f);color:var(--dsw-alias-label-primary,#e8e8ec)}.eBtFdG_dateTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.eBtFdG_dateGrid{grid-template-columns:repeat(7,1fr);gap:2px 0;display:grid}.eBtFdG_dateWeekday{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);padding-bottom:2px}.eBtFdG_dateCell{cursor:pointer;height:28px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * .95);font-variant-numeric:tabular-nums;background:0 0;border:none}.eBtFdG_dateCell:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14)}.eBtFdG_dateCellMuted{color:var(--dsw-alias-label-tertiary,#67676f);opacity:.6}.eBtFdG_dateCellInRange{background:#5b8cff2e}.eBtFdG_dateCellEdge{background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff;font-weight:600}.eBtFdG_dateFoot{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;display:flex}.eBtFdG_dateHint{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f)}.eBtFdG_dateClear{cursor:pointer;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * .95);background:0 0;border:none}.eBtFdG_dateClear:hover{color:var(--dsw-alias-state-business-primary,#5b8cff)}.eBtFdG_selectBtn{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}.eBtFdG_logHint{font:inherit;cursor:pointer;text-align:left;background:0 0;border:0;align-items:baseline;gap:6px;padding:0;display:inline-flex}.eBtFdG_logHint:hover{text-decoration:underline}.eBtFdG_logHintError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.eBtFdG_logHintWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.eBtFdG_logHintTail{color:var(--dsw-alias-label-secondary,#9a9aa6)}";
 		const tagId$7 = "dsh-key-usage/ui.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1764,6 +2032,24 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"btnIcon": "eBtFdG_btnIcon",
 			"btnPrimary": "eBtFdG_btnPrimary",
 			"btnSm": "eBtFdG_btnSm",
+			"control": "eBtFdG_control",
+			"dateCell": "eBtFdG_dateCell",
+			"dateCellEdge": "eBtFdG_dateCellEdge",
+			"dateCellInRange": "eBtFdG_dateCellInRange",
+			"dateCellMuted": "eBtFdG_dateCellMuted",
+			"dateClear": "eBtFdG_dateClear",
+			"dateFoot": "eBtFdG_dateFoot",
+			"dateGrid": "eBtFdG_dateGrid",
+			"dateHead": "eBtFdG_dateHead",
+			"dateHint": "eBtFdG_dateHint",
+			"dateNav": "eBtFdG_dateNav",
+			"datePicker": "eBtFdG_datePicker",
+			"datePopover": "eBtFdG_datePopover",
+			"dateTitle": "eBtFdG_dateTitle",
+			"dateTrigger": "eBtFdG_dateTrigger",
+			"dateTriggerArrow": "eBtFdG_dateTriggerArrow",
+			"dateTriggerEmpty": "eBtFdG_dateTriggerEmpty",
+			"dateWeekday": "eBtFdG_dateWeekday",
 			"dialog": "eBtFdG_dialog",
 			"dialogBody": "eBtFdG_dialogBody",
 			"dialogClose": "eBtFdG_dialogClose",
@@ -1772,6 +2058,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dialogTitle": "eBtFdG_dialogTitle",
 			"emptyState": "eBtFdG_emptyState",
 			"emptyTitle": "eBtFdG_emptyTitle",
+			"logHint": "eBtFdG_logHint",
+			"logHintError": "eBtFdG_logHintError",
+			"logHintTail": "eBtFdG_logHintTail",
+			"logHintWarn": "eBtFdG_logHintWarn",
 			"selectBtn": "eBtFdG_selectBtn",
 			"selectCaret": "eBtFdG_selectCaret",
 			"selectCheck": "eBtFdG_selectCheck",
@@ -1930,10 +2220,27 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			none: "ch.noBilling",
 			unknown: "ch.notQueried"
 		};
-		t("ch.subscription"), t("ch.local");
+		/**
+		* 「类型」列用的短标签：与服务端 `costModeLabel` 的中文一一对应（订阅制 / 按量计费 / 免费额度 / 本地端点 / 未查询）。
+		* 不能直接用服务端下发的 `costLabel`：那是中文字符串，切英文时不会跟着变。
+		*/
+		const COST_MODE_TAG_KEYS = {
+			sub: "ch.subscription",
+			perToken: "ch.metered",
+			free: "ch.free",
+			none: "ch.local",
+			unknown: "ch.notQueried"
+		};
+		/** 订阅窗口短标签（与服务端 `WINDOW_LABELS` 对应；`window.*` 那组带「窗口」二字，用在下拉与卡片里）。 */
+		const WINDOW_TAG_KEYS = {
+			"5h": "w.5h",
+			week: "w.week",
+			month: "w.month",
+			day: "w.day"
+		};
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$6 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_keyEnv{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px}.tXjxsq_tag{font-size:calc(var(--dsh-content-font-size,12px) * .96);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{z-index:2;background:var(--dsw-alias-bg-layer-2,#1d1d22);flex-direction:column;flex-shrink:0;gap:3px;padding-right:4px;display:flex;position:sticky;left:0}.tXjxsq_heatWeekdays span{font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0}";
+		const css$6 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_keyEnv{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px}.tXjxsq_tag{font-size:calc(var(--dsh-content-font-size,12px) * .96);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{z-index:2;background:var(--dsw-alias-bg-layer-2,#1d1d22);flex-direction:column;flex-shrink:0;gap:3px;padding-right:4px;display:flex;position:sticky;left:0}.tXjxsq_heatWeekdays span{font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0}button.tXjxsq_rowLink{font:inherit;cursor:pointer;background:0 0;border:none;padding:0}";
 		const tagId$6 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2223,6 +2530,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/CostSourceChip.tsx
 		function CostSourceChip(props) {
+			if (props.source === "official" || props.source === "catalog") return null;
 			const source = props.source ?? "none";
 			if (source === "none") return null;
 			const partial = props.partial === true;
@@ -2268,7 +2576,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							const disabled = channel.status === "off";
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
 								className: disabled ? overview_module_css_default.disabledRow : overview_module_css_default.clickable,
-								onClick: disabled ? void 0 : () => props.onOpenDetail(channel.provider),
+								onClick: disabled ? void 0 : () => props.onOpenChannel(channel.provider),
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: overview_module_css_default.cellKey,
@@ -2282,7 +2590,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}) }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: tagClassOf(channel),
-										children: channel.status === "off" ? t("err.noApiKey") : channel.costLabel
+										children: channel.status === "off" ? t("err.noApiKey") : t(COST_MODE_TAG_KEYS[channel.costMode] ?? "ch.notQueried")
 									}) }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: todayTokens > 0 ? fmtTokens(todayTokens) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: shared_module_css_default.dim,
@@ -2300,8 +2608,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										source: row?.month.costSource,
 										partial: row?.month.partial
 									})] }) }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: disabled ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
 										className: overview_module_css_default.rowLink,
+										onClick: (event) => {
+											event.stopPropagation();
+											props.onOpenDetail(channel.provider);
+										},
 										children: t("o.detailArrow")
 									}) })
 								]
@@ -2339,7 +2652,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (channel.costMode === "sub" && channel.quotaPercent !== null) {
 				const percent = channel.quotaPercent;
 				const levelClass = percent >= 90 ? overview_module_css_default.danger : percent >= 60 ? overview_module_css_default.warn : "";
-				const windowLabel = channel.quotaWindowLabel ?? channel.quotaWindowKey ?? "";
+				const windowLabel = channel.quotaWindowKey === null ? "" : t(WINDOW_TAG_KEYS[channel.quotaWindowKey] ?? channel.quotaWindowKey);
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 					className: overview_module_css_default.quotaCell,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -2376,46 +2689,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/core/export.ts
-		/**
-		* 导出工具：纯函数生成 CSV / JSON 文本 + Blob 触发下载，导出的是当前筛选后的数据。
-		* CSV 必须带 UTF-8 BOM（否则 Excel 中文乱码），JSON 不能带 BOM（`JSON.parse` 会抛错）。
-		*/
-		const UTF8_BOM = "﻿";
-		const CSV_MIME = "text/csv;charset=utf-8";
-		const JSON_MIME = "application/json;charset=utf-8";
-		/** 表头 + 数据行 → CSV 文本（转义见 `csvCell`，换行用 RFC 4180 的 CRLF）。 */
-		function toCsv(rows, columns) {
-			const lines = [columns.map((column) => csvCell(column.labelKey === void 0 ? column.label ?? column.key : t(column.labelKey))).join(",")];
-			for (const row of rows) lines.push(columns.map((column) => csvCell(column.value(row))).join(","));
-			return UTF8_BOM + lines.join("\r\n") + "\r\n";
-		}
-		function toJson(value) {
-			return JSON.stringify(value, null, 2) + "\n";
-		}
-		/** 下载文件名：`dsh-usage-<主题>-<当天>.<扩展名>`，主题用英文短名避免跨端中文文件名乱码。 */
-		function exportFileName(topic, extension) {
-			return "dsh-usage-" + topic + "-" + isoDate(/* @__PURE__ */ new Date()) + "." + extension;
-		}
-		function downloadFile(name, text, mime) {
-			const objectUrl = URL.createObjectURL(new Blob([text], { type: mime }));
-			const anchor = document.createElement("a");
-			anchor.href = objectUrl;
-			anchor.download = name;
-			document.body.appendChild(anchor);
-			anchor.click();
-			anchor.remove();
-			window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-		}
-		/** 逗号、引号、换行都必须包引号并把内部引号翻倍，否则标题里的逗号会撑破列。 */
-		function csvCell(value) {
-			if (value === null) return "";
-			const text = String(value);
-			return /[",\r\n]/.test(text) ? "\"" + text.replace(/"/g, "\"\"") + "\"" : text;
-		}
-		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
-		const css$4 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}._91PKKq_dateRange{border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#80808c0f);border-radius:9px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex}._91PKKq_dateField{align-items:center;gap:5px;display:inline-flex}._91PKKq_dateLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}._91PKKq_rangeInput{color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;font-variant-numeric:tabular-nums;cursor:text;background:0 0;border:0;padding:4px 2px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeInput::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55}._91PKKq_rangeInput::-webkit-calendar-picker-indicator:hover{opacity:1}._91PKKq_rangeInput:hover{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}._91PKKq_rowToggle{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:inherit;cursor:pointer;font-variant-numeric:tabular-nums;background:0 0;border:0;align-items:center;gap:6px;padding:0;display:inline-flex}._91PKKq_rowToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_chartAxisWrap{gap:6px;display:flex}._91PKKq_chartPane{flex:1;min-width:0}._91PKKq_yAxis{text-align:right;min-width:40px;height:110px;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex-direction:column;justify-content:space-between;margin-top:8px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex}._91PKKq_barColumn:hover{filter:brightness(1.2)}._91PKKq_segCache{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:5px 0}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}._91PKKq_shareLegend{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 16px;margin:8px 0 0;padding:0;list-style:none;display:grid}._91PKKq_shareLegend li{font-size:calc(var(--dsh-content-font-size,12px) * .95);grid-template-columns:8px 1fr auto auto;align-items:center;gap:8px;display:grid}._91PKKq_shareDot{border-radius:2px;width:8px;height:8px}._91PKKq_shareName{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._91PKKq_sharePercent{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums}._91PKKq_shareTokens{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}._91PKKq_channelSelect{align-items:center;margin-left:2px;display:inline-flex}";
+		const css$4 = "._91PKKq_rangeBar{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;display:flex}._91PKKq_rangeLeft{flex-wrap:wrap;align-items:center;gap:10px;display:flex}._91PKKq_rangeTabs{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:9px;gap:2px;padding:2px;display:inline-flex}._91PKKq_rangeTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:7px;padding:4px 13px}._91PKKq_rangeTabs button._91PKKq_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}._91PKKq_dateRange{border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#80808c0f);border-radius:9px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex}._91PKKq_dateField{align-items:center;gap:5px;display:inline-flex}._91PKKq_dateLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}._91PKKq_rangeInput{color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;font-variant-numeric:tabular-nums;cursor:text;background:0 0;border:0;padding:4px 2px}@media (prefers-color-scheme:dark){._91PKKq_rangeInput{--lightningcss-light: ;--lightningcss-dark:initial}}._91PKKq_rangeInput::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55}._91PKKq_rangeInput::-webkit-calendar-picker-indicator:hover{opacity:1}._91PKKq_rangeInput:hover{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_rangeTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:6px}._91PKKq_rangeCaption{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}._91PKKq_rowToggle{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:inherit;cursor:pointer;font-variant-numeric:tabular-nums;background:0 0;border:0;align-items:center;gap:6px;padding:0;display:inline-flex}._91PKKq_rowToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_chartAxisWrap{gap:6px;display:flex}._91PKKq_chartPane{flex:1;min-width:0}._91PKKq_yAxis{text-align:right;min-width:40px;height:110px;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex-direction:column;justify-content:space-between;margin-top:8px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;border-radius:3px;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex;position:relative}._91PKKq_barColumnActive:before{content:\"\";background:var(--dsw-alias-state-business-primary,#5b8cff);opacity:.45;width:1px;position:absolute;top:-4px;bottom:-4px;left:50%;transform:translate(-50%)}._91PKKq_segCache{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1}._91PKKq_subRowCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:2px 10px 10px 30px!important}._91PKKq_subHead,._91PKKq_subRow{grid-template-columns:minmax(150px,1.5fr) minmax(70px,1fr) minmax(70px,1fr) minmax(70px,1fr) minmax(80px,1.1fr) minmax(70px,1fr);align-items:center;gap:8px;display:grid}._91PKKq_subHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-bottom:1px solid var(--dsw-alias-fill-l2,#80808c33);padding:4px 0}._91PKKq_subRow{border-bottom:1px dashed var(--dsw-alias-fill-l1,#80808c24);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:5px 0}._91PKKq_subRow:last-child{border-bottom:0}._91PKKq_subName{flex-direction:column;gap:1px;min-width:0;display:flex}._91PKKq_subModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._91PKKq_subChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92);text-overflow:ellipsis;white-space:nowrap;font-family:inherit;overflow:hidden}._91PKKq_subNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}._91PKKq_toggleArrow{width:13px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}._91PKKq_channelSelect{align-items:center;margin-left:2px;display:inline-flex}._91PKKq_rangeTabs button{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}";
 		const tagId$4 = "dsh-key-usage/detail.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2432,6 +2707,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var detail_module_css_default = {
 			"active": "_91PKKq_active",
 			"barColumn": "_91PKKq_barColumn",
+			"barColumnActive": "_91PKKq_barColumnActive",
 			"barLabels": "_91PKKq_barLabels",
 			"bars": "_91PKKq_bars",
 			"barsDense": "_91PKKq_barsDense",
@@ -2452,11 +2728,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"segIn": "_91PKKq_segIn",
 			"segOut": "_91PKKq_segOut",
 			"shareBar": "_91PKKq_shareBar",
-			"shareDot": "_91PKKq_shareDot",
-			"shareLegend": "_91PKKq_shareLegend",
-			"shareName": "_91PKKq_shareName",
-			"sharePercent": "_91PKKq_sharePercent",
-			"shareTokens": "_91PKKq_shareTokens",
 			"subChannel": "_91PKKq_subChannel",
 			"subHead": "_91PKKq_subHead",
 			"subModel": "_91PKKq_subModel",
@@ -2519,56 +2790,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const shareSummary = rows.length === 0 ? title + t("sh.noData") : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? t("sh.morePrefix") + String(rows.length) + t("sh.moreSuffix") : "");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: shared_module_css_default.statLabel,
-						children: title
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: detail_module_css_default.shareBar,
-						role: "img",
-						"aria-label": shareSummary,
-						onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: title }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("sh.shareAll") }),
-							rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
-								color: row.color,
-								label: row.label,
-								amount: fmtTokens(row.tokens),
-								rate: (totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%"
-							}, row.key))
-						] })),
-						onMouseLeave: props.tooltip.hide,
-						children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
-							width: row.tokens / totalTokens * 100 + "%",
-							background: row.color
-						} }, row.key))
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-						className: detail_module_css_default.shareLegend,
-						children: rows.map((row) => {
-							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
-							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: detail_module_css_default.shareDot,
-									style: { background: row.color }
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: detail_module_css_default.shareName,
-									children: row.label
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: detail_module_css_default.sharePercent,
-									children: [percent, "%"]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: detail_module_css_default.shareTokens,
-									children: fmtTokens(row.tokens)
-								})
-							] }, row.key);
-						})
-					})
-				]
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: shared_module_css_default.statLabel,
+					children: title
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: detail_module_css_default.shareBar,
+					role: "img",
+					"aria-label": shareSummary,
+					onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: title }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: t("sh.shareAll") }),
+						rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
+							color: row.color,
+							label: row.label,
+							amount: fmtTokens(row.tokens),
+							rate: (totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%"
+						}, row.key))
+					] })),
+					onMouseLeave: props.tooltip.hide,
+					children: rows.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+						width: row.tokens / totalTokens * 100 + "%",
+						background: row.color
+					} }, row.key))
+				})]
 			});
 		}
 		//#endregion
@@ -2932,9 +3176,215 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
+		//#region src/client/components/ui/DateRangePicker.tsx
+		/**
+		* 日期范围选择器（自建原语，零依赖）：触发按钮 + 日历弹层。
+		*
+		* 交互对齐 dsh-context 的同类控件：第一次点选开始日、第二次点选结束日并自动关闭；
+		* 重开按已有范围回填；点外部或 Esc 关闭；范围两端实心、区间淡底。
+		* 日期一律用 ISO 字符串（YYYY-MM-DD）在本地日历上计算，避免时区偏移。
+		*/
+		const CELLS = 42;
+		/** ISO 日期 → 当天的本地 0 点（用本地日历，不用 UTC，避免跨时区串日）。 */
+		function parseIso(iso) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+			if (match === null) return null;
+			return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+		}
+		function toIso(date) {
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			const day = String(date.getDate()).padStart(2, "0");
+			return date.getFullYear() + "-" + month + "-" + day;
+		}
+		function addDays(date, days) {
+			return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+		}
+		function sameDay(first, second) {
+			return first.getFullYear() === second.getFullYear() && first.getMonth() === second.getMonth() && first.getDate() === second.getDate();
+		}
+		function DateRangePicker(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
+			const [open, setOpen] = (0, react.useState)(false);
+			const [pendingStart, setPendingStart] = (0, react.useState)(null);
+			const anchorRef = (0, react.useRef)(null);
+			const fromDate = parseIso(props.from);
+			parseIso(props.to);
+			const [viewMonth, setViewMonth] = (0, react.useState)(() => fromDate ?? /* @__PURE__ */ new Date());
+			(0, react.useEffect)(() => {
+				if (open && fromDate !== null) setViewMonth(new Date(fromDate.getFullYear(), fromDate.getMonth(), 1));
+			}, [open]);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onPointerDown = (event) => {
+					if (anchorRef.current !== null && !anchorRef.current.contains(event.target)) setOpen(false);
+				};
+				const onKeyDown = (event) => {
+					if (event.key === "Escape") setOpen(false);
+				};
+				document.addEventListener("mousedown", onPointerDown);
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("mousedown", onPointerDown);
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			const days = (0, react.useMemo)(() => {
+				const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
+				const start = addDays(first, -first.getDay());
+				return Array.from({ length: CELLS }, (_, index) => addDays(start, index));
+			}, [viewMonth]);
+			const weekdays = isEnglish() ? [
+				"S",
+				"M",
+				"T",
+				"W",
+				"T",
+				"F",
+				"S"
+			] : [
+				"日",
+				"一",
+				"二",
+				"三",
+				"四",
+				"五",
+				"六"
+			];
+			const monthTitle = isEnglish() ? viewMonth.toLocaleDateString("en-US", {
+				year: "numeric",
+				month: "long"
+			}) : viewMonth.getFullYear() + "年" + String(viewMonth.getMonth() + 1) + "月";
+			const rangeStart = pendingStart ?? props.from;
+			const rangeEnd = pendingStart === null ? props.to : "";
+			const startDate = parseIso(rangeStart);
+			const endDate = parseIso(rangeEnd);
+			const pick = (day) => {
+				const iso = toIso(day);
+				if (pendingStart === null) {
+					if (startDate !== null && endDate !== null && sameDay(day, startDate)) {
+						setPendingStart(null);
+						return;
+					}
+					setPendingStart(iso);
+					return;
+				}
+				const first = parseIso(pendingStart);
+				if (first === null) {
+					setPendingStart(iso);
+					return;
+				}
+				const [nextFrom, nextTo] = day < first ? [iso, pendingStart] : [pendingStart, iso];
+				setPendingStart(null);
+				setOpen(false);
+				props.onChange(nextFrom, nextTo);
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: ui_module_css_default.datePicker,
+				ref: anchorRef,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: ui_module_css_default.control + " " + ui_module_css_default.dateTrigger,
+					"aria-label": props.ariaLabel,
+					"aria-expanded": open,
+					onClick: () => {
+						setPendingStart(null);
+						setOpen((previous) => !previous);
+					},
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: props.from === "" && props.to === "" ? ui_module_css_default.dateTriggerEmpty : void 0,
+						children: props.from === "" ? t("date.select") : props.from + " → " + (props.to === "" ? t("date.select") : props.to)
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: ui_module_css_default.dateTriggerArrow,
+						"aria-hidden": "true",
+						children: "▾"
+					})]
+				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: ui_module_css_default.datePopover,
+					role: "dialog",
+					"aria-label": props.ariaLabel,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: ui_module_css_default.dateHead,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: ui_module_css_default.dateNav,
+									"aria-label": t("date.prevMonth"),
+									onClick: () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)),
+									children: "‹"
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: ui_module_css_default.dateTitle,
+									children: monthTitle
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: ui_module_css_default.dateNav,
+									"aria-label": t("date.nextMonth"),
+									onClick: () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)),
+									children: "›"
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: ui_module_css_default.dateGrid,
+							children: [weekdays.map((label, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: ui_module_css_default.dateWeekday,
+								children: label
+							}, "w" + String(index))), days.map((day) => {
+								const inMonth = day.getMonth() === viewMonth.getMonth();
+								const isEdge = startDate !== null && sameDay(day, startDate) || endDate !== null && sameDay(day, endDate);
+								const inRange = startDate !== null && endDate !== null && day > startDate && day < endDate;
+								const className = [
+									ui_module_css_default.dateCell,
+									inMonth ? "" : ui_module_css_default.dateCellMuted,
+									inRange ? ui_module_css_default.dateCellInRange : "",
+									isEdge ? ui_module_css_default.dateCellEdge : ""
+								].filter((part) => part !== "").join(" ");
+								return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className,
+									onClick: () => pick(day),
+									tabIndex: -1,
+									children: day.getDate()
+								}, toIso(day));
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: ui_module_css_default.dateFoot,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: ui_module_css_default.dateHint,
+								children: pendingStart === null ? t("date.startHint") : t("date.endHint")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: ui_module_css_default.dateClear,
+								onClick: () => {
+									setPendingStart(null);
+									setOpen(false);
+									props.onChange("", "");
+								},
+								children: t("date.clear")
+							})]
+						})
+					]
+				})]
+			});
+		}
+		//#endregion
 		//#region src/client/components/TokenBars.tsx
 		function TokenBars(props) {
 			const { rows, tooltip } = props;
+			/** 当前悬停的列：给高亮与指示线用（tip 钉在图表右上角，不跟鼠标走）。 */
+			const [activeIndex, setActiveIndex] = (0, react.useState)(null);
+			/** 图表列容器的右上角：tip 钉在这里。 */
+			const pinFrom = (node) => {
+				const box = (node?.parentElement ?? node)?.getBoundingClientRect();
+				return box === void 0 ? void 0 : {
+					right: box.right - 4,
+					top: box.top + 4
+				};
+			};
 			if (props.hidden === true || rows.length === 0) return null;
 			const peak = Math.max(1, ...rows.map((row) => row.cacheReadTokens + row.inputTokens + row.outputTokens));
 			const heightOf = (value) => (peak > 0 ? Math.max(1, Math.round(value / peak * 100)) : 1) + "%";
@@ -2955,12 +3405,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						className: rows.length > 20 ? detail_module_css_default.bars + " " + detail_module_css_default.barsDense : detail_module_css_default.bars,
 						role: "img",
 						"aria-label": props.ariaLabel,
-						children: rows.map((row) => {
+						children: rows.map((row, index) => {
 							const rowTotal = row.cacheReadTokens + row.inputTokens + row.outputTokens;
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: detail_module_css_default.barColumn,
-								onMouseMove: (event) => tooltip.show(event, row.tip),
-								onMouseLeave: tooltip.hide,
+								className: index === activeIndex ? detail_module_css_default.barColumn + " " + detail_module_css_default.barColumnActive : detail_module_css_default.barColumn,
+								onMouseMove: (event) => {
+									setActiveIndex(index);
+									tooltip.show(event, row.tip, pinFrom(event.currentTarget));
+								},
+								onMouseLeave: () => {
+									setActiveIndex(null);
+									tooltip.hide();
+								},
 								children: rowTotal > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: detail_module_css_default.segCache,
@@ -3147,7 +3603,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/export.module.css.mjs
-		const css$3 = ".-\\38 z9vG_exportGroup{align-items:center;gap:6px;margin-left:auto;display:inline-flex}.-\\38 z9vG_exportBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;white-space:nowrap;background:0 0;border-radius:999px;padding:4px 11px}.-\\38 z9vG_exportBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.-\\38 z9vG_exportBtn:disabled{opacity:.5;cursor:default}.-\\38 z9vG_exportBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}";
+		const css$3 = ".-\\38 z9vG_exportGroup{align-items:center;gap:6px;margin-left:auto;display:inline-flex}.-\\38 z9vG_exportBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;white-space:nowrap;background:0 0;border-radius:999px;padding:4px 11px}.-\\38 z9vG_exportBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.-\\38 z9vG_exportBtn:disabled{opacity:.5;cursor:default}.-\\38 z9vG_exportBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.-\\38 z9vG_exportBtn{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}";
 		const tagId$3 = "dsh-key-usage/export.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3228,7 +3684,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const view = rowMoneyViewOf(row);
 			return view.amount > 0 ? view.text : "—";
 		}
-		function daysBetween$1(from, to) {
+		function daysBetween(from, to) {
 			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
 			const toTime = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
 			return Math.max(1, Math.round((toTime - fromTime) / 864e5) + 1);
@@ -3236,7 +3692,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 范围内每一天的日期键（无数据的日子也要出现在横轴上）。 */
 		function dateKeysOfRange(from, to) {
 			const start = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			const total = Math.min(daysBetween$1(from, to), MAX_AXIS_DAYS);
+			const total = Math.min(daysBetween(from, to), MAX_AXIS_DAYS);
 			const keys = [];
 			for (let offset = 0; offset < total; offset += 1) keys.push(isoDate(new Date(start + offset * 864e5)));
 			return keys;
@@ -3276,7 +3732,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				pricingRevision: props.pricingRevision
 			});
 			const singleDay = bounds.from === bounds.to;
-			const rangeDays = Math.min(daysBetween$1(bounds.from, bounds.to), MAX_AXIS_DAYS);
+			const rangeDays = Math.min(daysBetween(bounds.from, bounds.to), MAX_AXIS_DAYS);
 			/** 导出当前范围与通道筛选后的每日明细（按日期升序，不跟随表格排序）。 */
 			const exportDaily = (format) => {
 				if (format === "csv") downloadFile(exportFileName("daily", "csv"), toCsv(usage.days, EXPORT_COLUMNS$3), CSV_MIME);
@@ -3395,38 +3851,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									onClick: () => props.onRange(key),
 									children: t(label)
 								}, key))
-							}), props.range === "custom" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: detail_module_css_default.dateRange,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-										className: detail_module_css_default.dateField,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: detail_module_css_default.dateLabel,
-											children: t("r.from")
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-											type: "date",
-											className: detail_module_css_default.rangeInput,
-											value: props.customFrom,
-											onChange: (event) => props.onCustomFrom(event.target.value)
-										})]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: shared_module_css_default.dim,
-										children: "–"
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-										className: detail_module_css_default.dateField,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: detail_module_css_default.dateLabel,
-											children: t("r.to")
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-											type: "date",
-											className: detail_module_css_default.rangeInput,
-											value: props.customTo,
-											onChange: (event) => props.onCustomTo(event.target.value)
-										})]
-									})
-								]
+							}), props.range === "custom" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DateRangePicker, {
+								from: props.customFrom,
+								to: props.customTo,
+								ariaLabel: t("r.custom"),
+								onChange: (from, to) => {
+									props.onCustomFrom(from);
+									props.onCustomTo(to);
+								}
 							})]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -3606,10 +4038,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/core/rows.ts
-		/**
-		* 零 Token 行的统一处理：只有调用次数、Token 全 0 的行基本都是调用失败（本机实测 key 失效的模型
-		* 就是这样），留在表里全是噪音；四处列表统一用它过滤，并把隐藏条数如实告诉用户。
-		*/
 		function dropEmptyRows(rows, tokensOf) {
 			const kept = rows.filter((row) => tokensOf(row) > 0);
 			return {
@@ -3617,13 +4045,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				hidden: rows.length - kept.length
 			};
 		}
-		/** 列表底部的一行小字：说明隐藏了什么、为什么。 */
-		function hiddenEmptyRowsText(hidden) {
-			return t("rows.hiddenPrefix") + String(hidden) + t("rows.hiddenSuffix");
-		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/lists.module.css.mjs
-		const css$2 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);background:0 0;border-radius:9px;flex:1;padding:6px 12px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;border-radius:9px;padding:6px 10px}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_filterSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);text-align:left!important;padding:7px 10px!important}.ysq2ha_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-left:8px}.ysq2ha_rowArchived td{opacity:.5}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTagBtn{font-family:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .92);cursor:pointer;color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);background:0 0;border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500;display:inline}.ysq2ha_subagentTagBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_sessionMetaBtn{font-family:inherit;font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0}.ysq2ha_sessionMetaBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:5px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable{table-layout:fixed}.ysq2ha_sessionTable th:first-child{width:38%}.ysq2ha_sessionTable th:nth-child(2){width:13%}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_sessionTable th:nth-child(4){width:11%}.ysq2ha_sessionTable th:nth-child(5){width:8%}.ysq2ha_sessionTable th:nth-child(6){width:11%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_crossDayTag,.ysq2ha_sessionMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggle{font:inherit;color:inherit;cursor:pointer;background:0 0;border:0;flex-shrink:0;justify-content:center;align-items:center;gap:0;padding:0;display:inline-flex}.ysq2ha_sessionToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggleArrow{width:11px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}.ysq2ha_sessionTitleBtn{min-width:0;font:inherit;font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;overflow:hidden}.ysq2ha_sessionTitleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_composeCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:4px 10px 10px 30px!important}.ysq2ha_composeRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);grid-template-columns:minmax(120px,1.4fr) minmax(60px,.7fr) minmax(90px,1fr) minmax(70px,.8fr);align-items:center;gap:8px;padding:2px 0;display:grid}.ysq2ha_composeHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_composeName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_composeChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-left:6px}.ysq2ha_composeNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 18px 30px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_shareCell{white-space:nowrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailColumns{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:4px 20px;display:grid}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailColumns .ysq2ha_detailBlock{margin-top:14px}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-fill-l1,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:1px;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}";
+		const css$2 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:180px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);background:0 0;border-radius:9px;flex:1;height:30px;padding:6px 12px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f);height:30px}.ysq2ha_filterSelect{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;border-radius:9px;padding:6px 10px}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_filterSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-fill-l2,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);text-align:left!important;padding:7px 10px!important}.ysq2ha_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-left:8px}.ysq2ha_rowArchived td{opacity:.5}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTagBtn{font-family:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .92);cursor:pointer;color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);background:0 0;border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500;display:inline}.ysq2ha_subagentTagBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_sessionMetaBtn{font-family:inherit;font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0}.ysq2ha_sessionMetaBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:5px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable{table-layout:fixed}.ysq2ha_sessionTable th:first-child{width:38%}.ysq2ha_sessionTable th:nth-child(2){width:13%}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_sessionTable th:nth-child(4){width:11%}.ysq2ha_sessionTable th:nth-child(5){width:8%}.ysq2ha_sessionTable th:nth-child(6){width:11%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_crossDayTag,.ysq2ha_sessionMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggle{font:inherit;color:inherit;cursor:pointer;background:0 0;border:0;flex-shrink:0;justify-content:center;align-items:center;gap:0;padding:0;display:inline-flex}.ysq2ha_sessionToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggleArrow{width:11px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}.ysq2ha_sessionTitleBtn{min-width:0;font:inherit;font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;overflow:hidden}.ysq2ha_sessionTitleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_composeCell{background:var(--dsw-alias-fill-l1,#80808c0d);text-align:left!important;padding:4px 10px 10px 30px!important}.ysq2ha_composeRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);grid-template-columns:minmax(120px,1.4fr) minmax(60px,.7fr) minmax(90px,1fr) minmax(70px,.8fr);align-items:center;gap:8px;padding:2px 0;display:grid}.ysq2ha_composeHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_composeName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_composeChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-left:6px}.ysq2ha_composeNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 18px 30px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_shareCell{white-space:nowrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailColumns{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:4px 20px;display:grid}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailColumns .ysq2ha_detailBlock{margin-top:14px}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-fill-l1,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:1px;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_searchInput{box-sizing:border-box;height:30px;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;padding:0 10px;font-weight:500}";
 		const tagId$2 = "dsh-key-usage/lists.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3813,7 +4237,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				sortKey
 			]);
 			const totalTokens = rows.reduce((total, row) => total + row.tokens, 0);
-			const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden;
+			dropEmptyRows(rows, (row) => row.tokens).hidden;
 			/** 导出当前筛选与排序后的行（JSON 取整行，CSV 按固定列映射）。 */
 			const exportRows = (format) => {
 				if (format === "csv") downloadFile(exportFileName("models", "csv"), toCsv(visible, EXPORT_COLUMNS$2), CSV_MIME);
@@ -3926,7 +4350,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											row.providerLabel,
 											" · ",
 											row.sessionCount,
-											" 个会话"
+											t("common.sessionSuffix")
 										]
 									})] })
 								}) }),
@@ -3961,16 +4385,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}) })] })]
 					})
 				}),
-				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.statExtra,
-					children: hiddenEmptyRowsText(hiddenEmpty)
-				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
 					children: [
-						"模型用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算",
+						t("m.footnote"),
 						props.data.priced ? "" : t("s.noCost"),
-						"；命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）"
+						t("m.hitNote")
 					]
 				})
 			] });
@@ -4067,7 +4487,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				focusWorkspace
 			]);
 			const totalTokens = rows.reduce((total, row) => total + row.tokens, 0);
-			const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden;
+			dropEmptyRows(rows, (row) => row.tokens).hidden;
 			/** 导出当前筛选与排序后的项目行（JSON 取整行，CSV 按固定列映射）。 */
 			const exportRows = (format) => {
 				if (format === "csv") downloadFile(exportFileName("projects", "csv"), toCsv(visible, EXPORT_COLUMNS$1), CSV_MIME);
@@ -4145,7 +4565,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				focusWorkspace !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.focusChip,
 					children: [
-						"仅看项目：",
+						t("p.focusPrefix"),
 						focusWorkspace,
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
@@ -4184,7 +4604,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											row.workspace,
 											" · ",
 											row.sessionCount,
-											" 个会话",
+											t("common.sessionSuffix"),
 											row.archivedSessionCount > 0 ? t("p.archivePrefix") + row.archivedSessionCount + t("p.archiveSuffix") : ""
 										]
 									})] })
@@ -4219,14 +4639,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}) })] })]
 					})
 				}),
-				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.statExtra,
-					children: hiddenEmptyRowsText(hiddenEmpty)
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: shared_module_css_default.statExtra,
-					children: [t("p.costHint"), props.data.priced ? "" : t("s.noCost")]
-				})
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { className: shared_module_css_default.statExtra })
 			] });
 		}
 		function coverageText(status, skipped) {
@@ -4236,6 +4649,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function baseNameOf(path) {
 			const parts = path.replace(/[\\/]+$/, "").split(/[\\/]/);
 			return parts[parts.length - 1] === "" ? path : parts[parts.length - 1];
+		}
+		//#endregion
+		//#region src/client/components/LogHint.tsx
+		function LogHint(props) {
+			const toneClass = (props.tone ?? "warn") === "error" ? ui_module_css_default.logHintError : ui_module_css_default.logHintWarn;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				type: "button",
+				className: ui_module_css_default.logHint + " " + toneClass + (props.className === void 0 ? "" : " " + props.className),
+				title: t("log.view"),
+				onClick: () => requestOpenLog(),
+				children: [props.text, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: ui_module_css_default.logHintTail,
+					children: t("log.view")
+				})]
+			});
 		}
 		//#endregion
 		//#region src/client/core/serverText.ts
@@ -4265,7 +4693,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
-		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:nowrap}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-radius:999px;padding:1px 7px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-bottom:2px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.47);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.ohwLxW_windowValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:3px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;padding:0;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);cursor:pointer;background:0 0;border:0;padding:2px 0}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-bottom:6px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px}.ohwLxW_rateTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_rateNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:normal;text-align:left;max-width:320px}.ohwLxW_rateSourceNone{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_offPeakChip{font-size:calc(var(--dsh-content-font-size,12px) * .92);border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:6px 0}";
+		const css$1 = ".ohwLxW_quotaList{flex-direction:column;gap:12px;display:flex}.ohwLxW_quotaCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:12px 18px 16px}.ohwLxW_quotaToggle{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--dsw-alias-label-primary,#e8e8ec);background:0 0;border:0;border-radius:8px;flex-wrap:wrap;align-items:center;gap:10px;margin:0;padding:4px 0;display:flex}.ohwLxW_quotaToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ohwLxW_quotaToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_quotaTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_quotaProvider{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-left:auto}.ohwLxW_rateCount{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:nowrap}.ohwLxW_expandArrow{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_liveChip{border:1px solid var(--dsw-alias-state-success-primary,#3fb950);color:var(--dsw-alias-state-success-primary,#3fb950);font-size:calc(var(--dsh-content-font-size,12px) * .92);border-radius:999px;padding:1px 7px;line-height:1.6}.ohwLxW_balanceStrip{flex-wrap:wrap;align-items:baseline;gap:10px 44px;margin-top:8px;display:flex}.ohwLxW_balanceItem .ohwLxW_bsLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-bottom:2px}.ohwLxW_balanceItem .ohwLxW_bsValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.47);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:650}.ohwLxW_windowRow{flex-wrap:wrap;gap:18px;margin-top:8px;display:flex}.ohwLxW_windowItem{flex:1;min-width:150px}.ohwLxW_windowHead{justify-content:space-between;align-items:baseline;margin-bottom:5px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05)}.ohwLxW_windowValue{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_windowReset{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:3px}.ohwLxW_windowBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:4px;height:6px;overflow:hidden}.ohwLxW_windowBar>i{border-radius:4px;height:100%;display:block}.ohwLxW_snapshotHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_snapshotStale{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-top:10px}.ohwLxW_toolbar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;display:flex}.ohwLxW_toolbarLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_toolbarBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:6px;padding:4px 11px}.ohwLxW_toolbarBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_toolbarBtn:disabled{opacity:.5;cursor:default}.ohwLxW_toolbarBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_toolbarBtnPrimary{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_currencyBtnOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-active,#5b8cff24);font-weight:600}.ohwLxW_toolbarSpacer{flex:1}.ohwLxW_fxText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_fxWarn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ohwLxW_infoBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);width:22px;height:22px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:999px;padding:0;line-height:1}.ohwLxW_infoBtn:hover,.ohwLxW_infoBtnActive{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff73}.ohwLxW_infoBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfo{margin-bottom:12px}.ohwLxW_pricingInfoToggle{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);cursor:pointer;background:0 0;border:0;padding:2px 0}.ohwLxW_pricingInfoToggle:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_pricingInfoToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_pricingInfoBody{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;margin-top:6px;padding:4px 14px 12px}.ohwLxW_countLine{color:var(--dsw-alias-label-secondary,#9a9aa2);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.8}.ohwLxW_staleLine{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin:6px 0;line-height:1.7}.ohwLxW_rateDrawer:empty{display:none}.ohwLxW_rateDrawer{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);margin-top:10px;padding-top:10px}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-bottom:6px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * .96);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px}.ohwLxW_rateTable td{text-align:right;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ohwLxW_rateNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:normal;text-align:left;max-width:320px}.ohwLxW_rateSourceNone{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_offPeakChip{font-size:calc(var(--dsh-content-font-size,12px) * .92);border:1px solid var(--dsw-alias-state-success-primary,#3fb96f);color:var(--dsw-alias-state-success-primary,#3fb96f);border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateConverted{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:6px 0}.ohwLxW_fxHint{font-size:calc(var(--dsh-content-font-size,12px) * .96);margin:0}";
 		const tagId$1 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4287,6 +4715,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"countLine": "ohwLxW_countLine",
 			"currencyBtnOn": "ohwLxW_currencyBtnOn",
 			"expandArrow": "ohwLxW_expandArrow",
+			"fxHint": "ohwLxW_fxHint",
 			"fxText": "ohwLxW_fxText",
 			"fxWarn": "ohwLxW_fxWarn",
 			"infoBtn": "ohwLxW_infoBtn",
@@ -4360,8 +4789,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			month: "window.month",
 			day: "window.day"
 		};
-		/** 解析问题默认只列几条：一屏列不完的清单没人读。 */
-		const ISSUE_LIMIT = 5;
 		/** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 		const RATE_SOURCE_LABELS = {
 			official: "source.official",
@@ -4380,13 +4807,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 取词：宿主切语言时重渲染（模块级辅助函数直接用 import 的 t） */
 			const t = useT();
 			const instanceId = (0, react.useId)();
-			const pricingInfoId = instanceId + "-pricing-info";
+			instanceId + "";
 			const display = useCurrencyDisplay();
 			const [rates, setRates] = (0, react.useState)(null);
 			const [ratesLoading, setRatesLoading] = (0, react.useState)(true);
 			const [fxLoading, setFxLoading] = (0, react.useState)(false);
 			const [fxError, setFxError] = (0, react.useState)(null);
-			const [showExplanation, setShowExplanation] = (0, react.useState)(false);
 			const [showPricingInfo, setShowPricingInfo] = (0, react.useState)(false);
 			const [expandedProviders, setExpandedProviders] = (0, react.useState)({});
 			const [refreshingPrices, setRefreshingPrices] = (0, react.useState)(false);
@@ -4398,14 +4824,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const result = await loadFxRate(force);
 				setFxLoading(false);
 				if (result === null) {
-					setFxError(failureReasonOf("/dsh-key-usage/fx") ?? t("quota.noResponse"));
+					const reason = failureReasonOf("/dsh-key-usage/fx") ?? t("quota.noResponse");
+					setFxError(reason);
+					logWarn("fx", t("quota.fxUnavailable"), reason + " · /dsh-key-usage/fx");
 					return;
 				}
 				setFxError(null);
 				const normalized = normalizeFxRate(result);
-				if (normalized === null) setFxError(t("quota.fxBad"));
+				if (normalized === null) {
+					setFxError(t("quota.fxBad"));
+					logWarn("fx", t("quota.fxUnavailable"), t("quota.fxBad") + " · /dsh-key-usage/fx");
+					setFxRate(null);
+					return;
+				}
 				setFxRate(normalized);
-			}, []);
+				if (force) logInfo("fx", t("quota.refreshFx"), fxSummaryTextOf(normalized));
+			}, [t]);
 			(0, react.useEffect)(() => {
 				fetchFx(false);
 			}, [fetchFx]);
@@ -4441,16 +4875,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const outcome = await refreshModelPrices();
 				setRefreshingPrices(false);
 				if (outcome === null) {
+					const reason = failureReasonOf("/dsh-key-usage/pricing/refresh") ?? t("quota.noResponse");
+					logError("pricing", t("quota.pricingFailedShort"), reason + " · /dsh-key-usage/pricing/refresh", () => {
+						refreshPrices();
+					});
 					setRefreshStatus({
 						tone: "bad",
-						text: t("quota.refreshFailed") + "：" + (failureReasonOf("/dsh-key-usage/pricing/refresh") ?? t("quota.noResponse"))
+						text: t("quota.pricingFailedShort")
 					});
 					return;
 				}
 				if (!outcome.ok) {
+					logError("pricing", t("quota.pricingFailedShort"), outcome.error, () => {
+						refreshPrices();
+					});
 					setRefreshStatus({
 						tone: "bad",
-						text: t("quota.refreshFailed") + "：" + outcome.error
+						text: t("quota.pricingFailedShort")
 					});
 					return;
 				}
@@ -4458,20 +4899,53 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					tone: "ok",
 					text: modelPriceRefreshTextOf(outcome)
 				});
+				logInfo("pricing", t("quota.refreshPrices"), modelPriceRefreshTextOf(outcome) + "\n" + outcome.url);
 				props.onPricingReload();
 			};
+			/**
+			* 通道级失败原因进系统日志：页面每张卡片只留一行「本机快照 · 数据时间 + 本次查询未成功」，
+			* 上游错误（含未配置 Key）摊在卡片里既挤又没人读，出问题时去日志窗按通道查。
+			*/
+			(0, react.useEffect)(() => {
+				for (const channel of props.channels) {
+					if (channel.status === "off") {
+						logWarn("quota", t("quota.liveFailedShort") + " · " + channel.displayName, t("err.noApiKey"));
+						continue;
+					}
+					const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null;
+					if (snapshot === null || snapshot.source === "live" || !snapshot.supported || snapshot.error === null || snapshot.error === "") continue;
+					const stale = snapshot.updatedAt === null ? "" : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt);
+					logWarn("quota", t("quota.liveFailedShort") + " · " + channel.displayName, errorTextOf(snapshot.error) + stale);
+				}
+				for (const provider of props.quotaOutcome?.providers ?? []) {
+					if (provider.ok !== false) continue;
+					logWarn("quota", t("quota.liveFailedShort") + " · " + provider.provider, provider.error ?? t("quota.notQueried"));
+				}
+			}, [
+				props.channels,
+				props.quotas,
+				props.quotaOutcome,
+				t
+			]);
+			const fxFallback = display.fx === null ? null : fxFallbackWarningOf(display.fx);
+			(0, react.useEffect)(() => {
+				if (fxFallback === null) return;
+				logWarn("fx", fxFallback, (display.fx?.note ?? "") + " · /dsh-key-usage/fx");
+			}, [fxFallback, display.fx?.note]);
 			const pricing = props.pricing;
-			const aggregate = pricing?.aggregate ?? null;
+			pricing?.aggregate;
 			const catalog = pricing?.catalog ?? null;
-			const issues = Array.isArray(pricing?.issues) ? pricing.issues : [];
+			Array.isArray(pricing?.issues) && pricing.issues;
 			const catalogStale = catalog === null ? null : catalogStaleDays(Array.isArray(catalog.sources) ? catalog.sources : []);
 			const rateChannels = Array.isArray(rates?.channels) ? rates.channels : [];
 			const rateRowsOf = (provider) => {
 				const entry = rateChannels.find((item) => item.provider === provider);
 				return entry === void 0 || !Array.isArray(entry.models) ? [] : entry.models;
 			};
-			const fxText = display.fx === null ? fxError === null ? fxSummaryTextOf(null) : t("quota.fxUnavailable") + "：" + fxError : fxFallbackWarningOf(display.fx) ?? fxSummaryTextOf(display.fx);
+			const fxText = display.fx === null ? fxError === null ? fxSummaryTextOf(null) : t("quota.fxUnavailable") : fxFallback ?? fxSummaryTextOf(display.fx);
 			const fxTone = display.fx === null || display.fx.source === "default" ? quota_module_css_default.fxWarn : quota_module_css_default.fxText;
+			/** 汇率不可用 / 回落默认值时整行可点（原因在日志里），正常值就是纯文本。 */
+			const fxClickable = display.fx === null || display.fx.source === "default";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: quota_module_css_default.toolbar,
@@ -4504,62 +4978,33 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							"aria-busy": refreshingPrices,
 							onClick: () => void refreshPrices(),
 							children: refreshingPrices ? t("action.refreshing") + (refreshElapsedSeconds > 0 ? " " + String(refreshElapsedSeconds) + "s" : "") : t("quota.refreshPrices")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							type: "button",
-							className: quota_module_css_default.infoBtn + (showExplanation ? " " + quota_module_css_default.infoBtnActive : ""),
-							"aria-label": t("quota.caliberHint"),
-							"aria-expanded": showExplanation,
-							onClick: () => setShowExplanation((previous) => !previous),
-							children: "ⓘ"
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				fxClickable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, {
+					text: fxText,
+					className: quota_module_css_default.fxHint
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: fxTone,
 					title: display.fx?.note ?? void 0,
 					children: fxText
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: quota_module_css_default.pricingInfo,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-						type: "button",
-						className: quota_module_css_default.pricingInfoToggle,
-						"aria-expanded": showPricingInfo,
-						"aria-controls": pricingInfoId,
-						onClick: () => setShowPricingInfo((previous) => !previous),
-						children: [
-							showPricingInfo ? "▾" : "▸",
-							" 价目数据来源与文件（内置厂商官方价目",
-							catalog !== null && Number.isFinite(catalog.entries) ? " " + String(catalog.entries) + t("quota.entriesSuffix") : "",
-							t("q.aggregateSuffix")
-						]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						id: pricingInfoId,
-						className: quota_module_css_default.pricingInfoBody,
-						hidden: !showPricingInfo,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PricingInfoBlock, {
-							pricing,
-							aggregate,
-							issues,
-							catalogStale
-						})
-					})]
 				}),
 				catalogStale !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: quota_module_css_default.staleLine,
 					children: t("quota.catalogStale", { days: catalogStale })
 				}),
-				showExplanation && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ExplanationBlock, {}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: pricing_module_css_default.aggregateStatus + (refreshStatus === null ? "" : " " + (refreshStatus.tone === "ok" ? pricing_module_css_default.aggregateStatusOk : pricing_module_css_default.aggregateStatusBad)),
 					role: "status",
 					"aria-live": "polite",
-					children: refreshStatus === null ? "" : refreshStatus.text
+					children: refreshStatus === null ? "" : refreshStatus.tone === "ok" ? refreshStatus.text : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, {
+						text: refreshStatus.text,
+						tone: "error"
+					})
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: quota_module_css_default.quotaList,
-					children: [props.channels.map((channel, index) => {
+					children: [props.channels.filter((channel) => props.onlyProvider === void 0 || channel.provider === props.onlyProvider).map((channel, index) => {
 						const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null;
 						const outcome = props.quotaOutcome?.providers.find((item) => item.provider === channel.provider) ?? null;
 						const balance = snapshot?.balance ?? null;
@@ -4567,7 +5012,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						const isLive = snapshot?.source === "live";
 						const windows = plan !== null && Array.isArray(plan.windows) ? plan.windows : null;
 						const rateRows = rateRowsOf(channel.provider);
-						const isOpen = expandedProviders[channel.provider] === true;
+						const isOpen = props.onlyProvider !== void 0 || expandedProviders[channel.provider] === true;
 						const drawerId = instanceId + "-rates-" + String(index);
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: quota_module_css_default.quotaCard,
@@ -4575,13 +5020,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 									type: "button",
 									className: quota_module_css_default.quotaToggle,
-									"aria-expanded": isOpen,
+									"aria-expanded": props.onlyProvider === void 0 ? isOpen : void 0,
 									"aria-controls": drawerId,
 									title: t("quota.ratesHint"),
-									onClick: () => setExpandedProviders((previous) => ({
+									onClick: props.onlyProvider === void 0 ? () => setExpandedProviders((previous) => ({
 										...previous,
 										[channel.provider]: previous[channel.provider] !== true
-									})),
+									})) : void 0,
 									children: [
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: shared_module_css_default.statusDot,
@@ -4607,7 +5052,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												t(COST_MODE_KEYS[channel.costMode] ?? "ch.notQueried")
 											]
 										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										props.onlyProvider === void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.expandArrow,
 											"aria-hidden": "true",
 											children: isOpen ? "▼" : "▶"
@@ -4616,12 +5061,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								}),
 								outcome !== null && outcome.ok === false && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: quota_module_css_default.staleLine,
-									children: [
-										"数据时间 ",
-										outcome.capturedAt === null ? t("quota.unknown") : localTimeTextOf(outcome.capturedAt),
-										" · 本机快照 · 本次失败：",
-										outcome.error ?? t("quota.notQueried")
-									]
+									children: [t("quota.snapshotAt", { time: outcome.capturedAt === null ? t("quota.unknown") : localTimeTextOf(outcome.capturedAt) ?? t("quota.unknown") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, { text: t("quota.liveFailedShort") })]
 								}),
 								balance !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: quota_module_css_default.balanceStrip,
@@ -4679,7 +5119,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								}),
 								snapshot !== null && !isLive && snapshot.supported && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: staleDaysOf(snapshot.updatedAt) >= 1 ? quota_module_css_default.snapshotStale : quota_module_css_default.snapshotHint,
-									children: [t("quota.liveFailed", { reason: errorTextOf(snapshot.error) }), snapshot.updatedAt === null ? t("q.retryHint") : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t("q.stalePrefix") + staleDaysOf(snapshot.updatedAt) + t("q.daysStaleSuffix") : "")]
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, { text: t("quota.liveFailedShort") }), snapshot.updatedAt === null ? t("q.retryHint") : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t("q.stalePrefix") + staleDaysOf(snapshot.updatedAt) + t("q.daysStaleSuffix") : "")]
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									id: drawerId,
@@ -4710,7 +5150,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (rows.length > 0) {
 				const counts = /* @__PURE__ */ new Map();
 				for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1);
-				const mix = [...counts.entries()].map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
+				const mix = [...counts.entries()].filter(([source]) => source !== "catalog" && source !== "official").map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
 				return String(rows.length) + t("q.modelRatesPrefix") + mix;
 			}
 			if (loading) return t("quota.loadingRates");
@@ -4764,11 +5204,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: quota_module_css_default.rateConverted,
-										children: [
-											"币种 ",
-											typeof row.currency === "string" && row.currency !== "" ? row.currency : "—",
-											rowConverted ? " → " + props.display : ""
-										]
+										children: [t("q.currencyLabel", { value: typeof row.currency === "string" && row.currency !== "" ? row.currency : "—" }), rowConverted ? " → " + props.display : ""]
 									}),
 									row.offPeak === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: quota_module_css_default.offPeakChip,
@@ -4812,222 +5248,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function noRateTextOf(source) {
 			return t(COST_SOURCE_HINTS[source] ?? "quota.noFourRates");
 		}
-		/** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
-		function PricingInfoBlock(props) {
-			const { pricing, aggregate } = props;
-			const catalog = pricing?.catalog ?? null;
-			const sources = Array.isArray(catalog?.sources) ? catalog.sources : [];
-			const issues = props.issues ?? [];
-			const shownIssues = issues.slice(0, ISSUE_LIMIT);
-			const coverage = pricing?.coverage ?? null;
-			const files = pricing?.files ?? null;
-			const coverageText = coverageTextOf(coverage);
-			const aggregateIssues = (Array.isArray(aggregate?.issues) ? aggregate.issues : []).filter((issue) => issue !== null && typeof issue === "object");
-			const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt);
-			const pathText = typeof aggregate?.path === "string" && aggregate.path !== "" ? aggregate.path : null;
-			const commitFull = typeof aggregate?.upstreamCommit === "string" && aggregate.upstreamCommit.trim() !== "" ? aggregate.upstreamCommit.trim() : null;
-			const commitShort = commitFull === null ? null : shortCommitOf(commitFull);
-			const licenseText = typeof aggregate?.license === "string" && aggregate.license.trim() !== "" ? aggregate.license : "MIT";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				coverageText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: quota_module_css_default.countLine,
-					children: coverageText
-				}),
-				catalog !== null && Number.isFinite(catalog.entries) && catalog.entries > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: pricing_module_css_default.catalogNote + (props.catalogStale === null ? "" : " " + pricing_module_css_default.catalogStale),
-					children: [
-						"已内置 ",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: String(catalog.entries) }),
-						t("q.catalogPrefix"),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("q.catalogAuto") }),
-						"。来源：",
-						sources.length === 0 ? t("quota.noSourceDetail") : sources.map((entry, index) => {
-							const daysAgo = fetchedDaysAgo(entry.fetchedAt);
-							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-								index > 0 && "；",
-								typeof entry.source === "string" && entry.source !== "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-									className: pricing_module_css_default.linkBtn,
-									href: entry.source,
-									target: "_blank",
-									rel: "noreferrer",
-									children: (entry.providers ?? []).join(" / ")
-								}) : (entry.providers ?? []).join(" / "),
-								"（",
-								String(entry.count),
-								" 条，",
-								entry.fetchedAt,
-								" 抓取",
-								daysAgo === null ? "" : t("q.agoPrefix") + String(daysAgo) + t("q.daySuffix"),
-								"）"
-							] }, entry.source);
-						})
-					]
-				}),
-				files !== null && files.catalog !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: pricing_module_css_default.fileLine,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						"内置价目文件 ",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
-							className: pricing_module_css_default.pathText,
-							children: files.catalog.path
-						}),
-						files.catalog.exists ? "（" + String(files.catalog.entries) + t("q.entriesClose") : "（" + t("quota.unreadable") + "）"
-					] })
-				}),
-				issues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: pricing_module_css_default.issueBlock,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: pricing_module_css_default.issueHead,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(issues.length), " 处价目解析问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: pricing_module_css_default.issueNote,
-								children: "—— 这些问题所在的条目已被跳过，成本按其余层与台账算"
-							})]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-							className: pricing_module_css_default.issueList,
-							children: shownIssues.map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: pricing_module_css_default.issueWhere,
-								children: ["内置价目", issue.line === null ? "" : t("q.rowPrefix") + String(issue.line) + t("q.rowSuffix")]
-							}), issueTextOf(issue)] }, String(issue.file) + "|" + String(issue.line) + "|" + String(index)))
-						}),
-						issues.length > ISSUE_LIMIT && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: pricing_module_css_default.issueNote,
-							children: [
-								"还有 ",
-								String(issues.length - ISSUE_LIMIT),
-								" 条同类问题已折叠。"
-							]
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: pricing_module_css_default.aggregateBlock,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.aggregateHead,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: pricing_module_css_default.aggregateTitle,
-								children: [
-									"聚合价目来源：",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-										className: pricing_module_css_default.linkBtn,
-										href: LITELLM_REPO_URL,
-										target: "_blank",
-										rel: "noreferrer",
-										children: "LiteLLM"
-									}),
-									"（",
-									licenseText,
-									"，第三方聚合价目，美元计价；优先级低于内置官方价目）"
-								]
-							})
-						}),
-						aggregate === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: pricing_module_css_default.aggregateMeta,
-							children: pricing === null ? t("quota.loadingPricing") : t("quota.pricingUnavailable")
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: pricing_module_css_default.aggregateMeta,
-							children: [
-								"当前装载：",
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: aggregateLoadedLabelOf(aggregate.loaded) }),
-								Number.isFinite(aggregate.entries) ? t("quota.entry") + " " + String(aggregate.entries) : "",
-								Number.isFinite(aggregate.models) ? t("quota.modelCount") + " " + String(aggregate.models) : "",
-								fetchedAtText === null ? "" : t("quota.fileTime") + " " + fetchedAtText,
-								commitShort === null ? "" : "　upstream " + commitShort
-							]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: pricing_module_css_default.aggregateMeta,
-							children: [
-								"平时不联网：",
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("q.aggregateRefreshOnly") }),
-								"才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。",
-								pathText === null ? "" : t("quota.currentFile") + "：" + pathText
-							]
-						})] }),
-						aggregateIssues.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: pricing_module_css_default.issueBlock,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: pricing_module_css_default.issueHead,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("b", { children: [String(aggregateIssues.length), " 处聚合价目装载问题"] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: pricing_module_css_default.issueNote,
-									children: t("q.aggregateScope")
-								})]
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-								className: pricing_module_css_default.issueList,
-								children: aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: pricing_module_css_default.issueWhere,
-									children: issue.kind
-								}), issueTextOf(issue)] }, issue.kind + "|" + String(index)))
-							})]
-						})
-					]
-				})
-			] });
-		}
-		/** 覆盖度一行：官方账单天数 + 三层价目各命中多少模型 + 台账兜底与无依据；一个数字都没有就整段省略。 */
-		function coverageTextOf(coverage) {
-			if (coverage === null) return null;
-			const days = coverage.from === void 0 || coverage.to === void 0 ? null : daysBetween(coverage.from, coverage.to);
-			const parts = [];
-			if (days !== null) parts.push(t("quota.officialBill") + " " + String(days) + t("q.daySuffix"));
-			const counts = [
-				[t("cso.catalog"), coverage.catalogModels],
-				[t("cso.aggregate"), coverage.aggregateModels],
-				[t("cso.estimate"), coverage.averagedModels],
-				[t("q.noBasis"), coverage.unpricedModels]
-			];
-			for (const [label, value] of counts) if (typeof value === "number" && Number.isFinite(value)) parts.push(label + " " + String(value) + t("q.modelsSuffix"));
-			if (typeof coverage.partialModels === "number" && coverage.partialModels > 0) parts.push(t("q.partialPrefix") + String(coverage.partialModels) + t("q.countSuffix"));
-			if (parts.length === 0) return null;
-			return t("quota.basis") + "：" + parts.join(" · ") + t("quota.basisAuto");
-		}
-		/** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
-		function daysBetween(from, to) {
-			const start = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			const end = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
-			if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
-			return Math.round((end - start) / 864e5) + 1;
-		}
-		/** 成本口径说明：点 ⓘ 才展开，只留结论口径（算法细节在 docs/01）。 */
-		function ExplanationBlock() {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: pricing_module_css_default.explanation,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: pricing_module_css_default.explanationTitle,
-					children: t("caliber.title")
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
-					className: pricing_module_css_default.explanationList,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							t("caliber.orderPrefix"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("quota.officialBill") }),
-							" > ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.catalog") }),
-							t("caliber.orderCatalog"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.aggregate") }),
-							t("caliber.orderAggregate"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.estimate") }),
-							t("caliber.orderTail")
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.official") }),
-							t("caliber.officialNote"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: t("cso.estimate") }),
-							t("caliber.estimateNote")
-						] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.unitNote") }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-							t("caliber.nonePrefix"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "—" }),
-							t("caliber.convertNote"),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "≈" }),
-							"。"
-						] })
-					]
-				})]
-			});
-		}
 		/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
 		function modelPriceRefreshTextOf(result) {
 			const parts = [];
@@ -5057,12 +5277,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (/[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
 			}
 			return note === "" ? "" : serverText(note);
-		}
-		/** 快照 issue：kind 机器可读，英文模式按 kind 渲染；中文模式保留服务端原文（含路径与数字）。 */
-		function issueTextOf(issue) {
-			if (!isEnglish() || issue.kind === void 0) return issue.message;
-			const english = t("issue." + issue.kind);
-			return english === "issue." + issue.kind ? issue.message : english;
 		}
 		function errorTextOf(error) {
 			if (error === null) return t("err.noLiveQuery");
@@ -5123,6 +5337,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					if (cancelled) return;
 					setData(result);
 					setFailed(result === null);
+					if (result === null) logWarn("ledger", t("d.loadFailed") + " · " + props.sessionId, failureReasonOf(sessionDetailPath(props.sessionId)) ?? t("d.unknownReason"));
 				});
 				return () => {
 					cancelled = true;
@@ -5170,15 +5385,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							type: "button",
 							className: lists_module_css_default.drawerBack,
 							onClick: () => props.onOpenSession(props.parentId),
-							children: ["← 返回主会话", props.parentTitle === null ? "" : "：" + props.parentTitle]
+							children: [t("d.backToParent"), props.parentTitle === null ? "" : "：" + props.parentTitle]
 						}),
 						data === null && !failed && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.empty,
 							children: t("d.loading")
 						}),
-						failed && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						failed && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.warning,
-							children: ["会话详情读取失败：", failureReasonOf(sessionDetailPath(props.sessionId)) ?? t("d.unknownReason")]
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, {
+								text: t("d.loadFailed"),
+								tone: "error"
+							})
 						}),
 						data !== null && data.coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: shared_module_css_default.warning,
@@ -5372,8 +5590,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										children: [
 											model.providerLabel,
 											" · ",
-											fmtCalls(model.calls),
-											" 次"
+											t("d.callTimes", { count: fmtCalls(model.calls) })
 										]
 									})] }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtTokens(model.tokens) }),
@@ -5583,7 +5800,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const rows = props.data?.rows ?? [];
 			const archivedCount = rows.filter((row) => row.archived).length;
 			const subagentCount = rows.filter((row) => row.origin === "subagent" || (row.parentSessionId ?? null) !== null).length;
-			const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden;
+			dropEmptyRows(rows, (row) => row.tokens).hidden;
 			(0, react.useEffect)(() => {
 				setPageSize(PAGE_SIZE);
 			}, [
@@ -5816,18 +6033,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				parentFocus !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
-					children: ["只看该会话及其子会话（含父会话行）·", /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						className: lists_module_css_default.linkBtn,
-						onClick: () => setParentFocus(null),
-						children: t("p.clearFilter")
-					})]
+					children: [
+						t("s.parentFocusNote"),
+						"·",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							className: lists_module_css_default.linkBtn,
+							onClick: () => setParentFocus(null),
+							children: t("p.clearFilter")
+						})
+					]
 				}),
 				subagentFilter !== "only" && subagentCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
 					children: [
 						t("s.subagentOther", { count: subagentCount }),
 						subagentFilter === "hide" ? t("s.subagentHidden") : t("s.subagentShown"),
-						"：子会话各自计入统计，不并入父会话"
+						t("s.subagentNote")
 					]
 				}),
 				archiveFilter === "hide" && archivedCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -5871,33 +6092,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				visible.length > shownCount && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: lists_module_css_default.moreRow,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
 						className: lists_module_css_default.moreBtn,
 						onClick: () => setPageSize(pageSize + PAGE_SIZE),
-						children: [
-							"加载更多（+",
-							PAGE_SIZE,
-							"）"
-						]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						children: t("s.loadMore", { count: PAGE_SIZE })
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: lists_module_css_default.moreText,
-						children: [
-							"已显示 ",
-							shownCount,
-							" / ",
-							visible.length,
-							" 个会话"
-						]
+						children: t("s.shownCount", {
+							shown: shownCount,
+							total: visible.length
+						})
 					})]
-				}),
-				hiddenEmpty > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.statExtra,
-					children: hiddenEmptyRowsText(hiddenEmpty)
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: shared_module_css_default.statExtra,
-					children: ["会话用量按宿主会话事件折叠（每个结算样本计一次调用）；成本按三层价目自动估算", props.data.priced ? "" : t("s.noCost")]
+					children: [t("s.footnote"), props.data.priced ? "" : t("s.noCost")]
 				}),
 				detailId !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionDetailDrawer, {
 					sessionId: detailId,
@@ -5961,7 +6171,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									event.stopPropagation();
 									if (row.parentSessionId !== null && row.parentSessionId !== void 0) options.onFocusSession(row.parentSessionId);
 								},
-								children: "子代理"
+								children: t("s.subagentTag")
 							})
 						]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -5979,7 +6189,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}),
 							row.modelCount !== void 0 && row.modelCount > 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: lists_module_css_default.sessionMeta,
-								children: [row.modelCount, " 个模型"]
+								children: [row.modelCount, t("common.modelSuffix")]
 							}),
 							row.subagentCount !== void 0 && row.subagentCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
@@ -5991,7 +6201,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								},
 								children: [
 									row.subagentCount,
-									" 个子会话",
+									t("common.subagentSuffix"),
 									row.subagentTokens !== void 0 && row.subagentTokens > 0 ? " · " + fmtTokens(row.subagentTokens) : ""
 								]
 							})
@@ -6001,15 +6211,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: row.lastTime === null ? "—" : dayLabelOf(row.lastTime, options.nowMs) + " " + fmtTime(row.lastTime) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: lists_module_css_default.listSub,
 						children: [
-							"时长 ",
+							t("d.duration"),
+							" ",
 							fmtDuration(durationOf(row)),
-							row.crossDays >= 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							row.crossDays >= 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: lists_module_css_default.crossDayTag,
-								children: [
-									"跨 ",
-									row.crossDays,
-									" 天"
-								]
+								children: t("s.crossDaysTag", { count: row.crossDays })
 							})
 						]
 					})] }),
@@ -6136,8 +6343,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			["detail", "tab.detail"],
 			["projects", "tab.projects"],
 			["models", "tab.models"],
-			["sessions", "tab.sessions"],
-			["quota", "tab.quota"]
+			["sessions", "tab.sessions"]
 		];
 		function KeyUsageSection() {
 			const [activeTab, setActiveTab] = (0, react.useState)("overview");
@@ -6164,6 +6370,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [quotaOutcome, setQuotaOutcome] = (0, react.useState)(null);
 			/** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
 			const [showCaliber, setShowCaliber] = (0, react.useState)(false);
+			/** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
+			const [quotaDialog, setQuotaDialog] = (0, react.useState)(null);
 			const [showLog, setShowLog] = (0, react.useState)(false);
 			/** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
 			const t = useT();
@@ -6194,7 +6402,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					});
 				}
 				lastSnapshotAt.current = Date.now();
-			}, []);
+				for (const issue of snapshot.issues ?? []) logWarn("snapshot", t("log.issue") + "：" + issue.kind, issue.message);
+				const partial = [];
+				for (const [name, section] of [
+					["models", sections.models],
+					["projects", sections.projects],
+					["sessions", sections.sessions]
+				]) {
+					if (section === null || section.coverage.status === "complete") continue;
+					partial.push(name + "(" + section.coverage.status + "：" + String(section.coverage.countedSessions) + "/" + String(section.coverage.totalSessions) + ")");
+				}
+				if (partial.length > 0) logWarn("snapshot", t("log.coveragePartial") + "：" + partial.join("、"));
+			}, [t]);
 			/** 逐端点兜底：服务端还是旧版本（没有 /snapshot）时用，语义与升级前一致。 */
 			const reloadFromEndpoints = (0, react.useCallback)(async (includeSessionData, forceQuota) => {
 				const quotaResult = await loadQuota(forceQuota);
@@ -6232,6 +6451,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cancelled = true;
 				};
 			}, [applySnapshot, reloadFromEndpoints]);
+			(0, react.useEffect)(() => {
+				hydrateLog();
+			}, []);
+			(0, react.useEffect)(() => subscribeOpenLog(() => setShowLog(true)), []);
 			(0, react.useEffect)(() => {
 				const pollMs = 3e5;
 				const tick = () => {
@@ -6324,8 +6547,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				setLoading(true);
 				(async () => {
 					const snapshot = await refreshAll();
-					if (snapshot !== null) applySnapshot(snapshot);
-					else await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true);
+					if (snapshot !== null) {
+						applySnapshot(snapshot);
+						logInfo("snapshot", t("action.refresh"), t("quota.snapshotAt", { time: snapshot.updatedAt }) + snapshot.buildSource);
+					} else {
+						logWarn("snapshot", t("action.refresh") + " · " + t("api.requestFailed"), REFRESH_PATH);
+						await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true);
+					}
 					const usageResult = await loadUsage(bounds.from, bounds.to, channelFilter);
 					if (usageResult !== null) setUsage(usageResult);
 					setLoading(false);
@@ -6338,7 +6566,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				models,
 				bounds.from,
 				bounds.to,
-				channelFilter
+				channelFilter,
+				t
 			]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.section,
@@ -6484,7 +6713,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						onOpenDetail: (provider) => {
 							setChannelFilter(provider);
 							setActiveTab("detail");
-						}
+						},
+						onOpenChannel: setQuotaDialog
 					}),
 					activeTab === "detail" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailTab, {
 						usage,
@@ -6540,6 +6770,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.source", { days: summary !== null && summary.todaySource === "session" ? t("caliber.sourceDays", { count: summary.sessionDates.length }) : "" }) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.cost") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.costHint") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.pricingInfo") }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.currency", { fx: currency.fx === null ? t("caliber.fxMissing") : fxSummaryTextOf(currency.fx) }) }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.refresh") })
 							]
@@ -6551,34 +6783,75 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						onClose: () => setShowLog(false),
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogPanel, {})
 					}),
+					quotaDialog !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Dialog, {
+						title: t("nav.quota"),
+						closeLabel: t("action.close"),
+						onClose: () => setQuotaDialog(null),
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(QuotaTab, {
+							onlyProvider: quotaDialog,
+							channels,
+							quotas,
+							pricing,
+							quotaOutcome,
+							reloadToken: pricingRevision,
+							onPricingReload: () => setPricingRevision((previous) => previous + 1)
+						})
+					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TooltipView, { tooltip: tooltip.tooltip })
 				]
 			});
 		}
-		/** 系统日志面板：内存日志（不落盘），出问题时能看见原因。 */
+		/** 系统日志面板：条目来自内存 + 磁盘（磁盘那份在页面打开时读回），可刷新 / 复制 / 导出 / 清空。 */
 		function LogPanel() {
 			const [entries, setEntries] = (0, react.useState)(logEntries);
+			const [expanded, setExpanded] = (0, react.useState)({});
 			(0, react.useEffect)(() => subscribeLog(() => setEntries(logEntries())), []);
-			if (entries.length === 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: shared_module_css_default.logEmpty,
-				children: "—"
-			});
+			const toggle = (id) => setExpanded((previous) => ({
+				...previous,
+				[id]: previous[id] !== true
+			}));
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.logActions,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-					size: "sm",
-					onClick: () => {
-						navigator.clipboard?.writeText(logText());
-					},
-					children: t("log.copy")
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-					size: "sm",
-					onClick: () => {
-						clearLog();
-					},
-					children: t("log.clear")
-				})]
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+						size: "sm",
+						onClick: () => {
+							refreshLog();
+						},
+						children: t("action.refresh")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+						size: "sm",
+						disabled: entries.length === 0,
+						onClick: () => {
+							navigator.clipboard?.writeText(logText()).catch(() => logWarn("export", t("log.copyBlocked"), "clipboard"));
+						},
+						children: t("log.copy")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+						size: "sm",
+						disabled: entries.length === 0,
+						onClick: () => {
+							try {
+								downloadFile(exportFileName("log", "txt"), logText() + "\n", TEXT_MIME);
+							} catch (error) {
+								logWarn("export", t("log.exportBlocked"), error instanceof Error ? error.message : String(error));
+							}
+						},
+						children: t("log.export")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+						size: "sm",
+						onClick: () => {
+							clearLog();
+						},
+						children: t("log.clear")
+					})
+				]
+			}), entries.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: shared_module_css_default.logEmpty,
+				children: t("log.empty")
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 				className: shared_module_css_default.logList,
 				children: [...entries].reverse().map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 					className: shared_module_css_default.logRow,
@@ -6595,13 +6868,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: shared_module_css_default.logSource,
 							children: entry.source
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						entry.detail === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: shared_module_css_default.logMessage,
-							children: entry.message
+							children: messageTextOf(entry)
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: shared_module_css_default.logMessageBtn,
+							"aria-expanded": expanded[entry.id] === true,
+							onClick: () => toggle(entry.id),
+							children: messageTextOf(entry)
+						}),
+						entry.retry === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: shared_module_css_default.logRetry,
+							onClick: () => {
+								entry.retry?.();
+							},
+							children: t("log.retry")
+						}),
+						entry.detail !== void 0 && expanded[entry.id] === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: shared_module_css_default.logDetail + " " + shared_module_css_default.logDetailPad,
+							children: entry.detail
 						})
 					]
 				}, entry.id))
 			})] });
+		}
+		/** 日志条目正文：重复次数跟在消息后面（去重累加后要能看出「发生过几次」）。 */
+		function messageTextOf(entry) {
+			return entry.message + (entry.count > 1 ? " ×" + String(entry.count) : "");
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/page.module.css.mjs
