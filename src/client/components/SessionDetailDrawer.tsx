@@ -55,7 +55,7 @@ export function SessionDetailDrawer(props: {
         className={listStyles.drawerPanel}
         role="dialog"
         aria-modal="true"
-        aria-label="会话详情"
+        aria-label={t('d.title')}
         onClick={(event) => event.stopPropagation()}
       >
         <div className={listStyles.drawerHead}>
@@ -125,13 +125,13 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
   return (
     <div>
       <div className={listStyles.detailGrid}>
-        <DetailItem label="工作区" value={session.workspace ?? t('s.noWorkspace')} wide />
-        <DetailItem label="通道" value={session.provider === null ? '—' : (session.providerLabel ?? displayNameOf(props.channels, session.provider))} />
+        <DetailItem label={t('common.workspace')} value={session.workspace ?? t('s.noWorkspace')} wide />
+        <DetailItem label={t('common.channel')} value={session.provider === null ? '—' : (session.providerLabel ?? displayNameOf(props.channels, session.provider))} />
         <DetailItem label={t('d.costMode')} value={channel === null ? '—' : channel.costLabel} />
-        <DetailItem label="首次" value={fmtDateTime(session.firstTime)} />
-        <DetailItem label="最近" value={fmtDateTime(session.lastTime)} />
+        <DetailItem label={t('d.first')} value={fmtDateTime(session.firstTime)} />
+        <DetailItem label={t('d.last')} value={fmtDateTime(session.lastTime)} />
         <DetailItem
-          label="时长"
+          label={t('d.duration')}
           value={fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t('d.crossDays', { count: session.crossDays }) : '')}
         />
         <DetailItem label={t('d.activeDays')} value={String(session.days)} />
@@ -139,9 +139,9 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
 
       <div className={listStyles.detailStrip}>
         <StripItem label="Tokens" value={fmtTokens(session.tokens)} note={t('d.ioNote')} />
-        <StripItem label="输入" value={fmtTokens(session.buckets.inputTokens)} />
-        <StripItem label="输出" value={fmtTokens(session.buckets.outputTokens)} />
-        <StripItem label="缓存读" value={fmtTokens(session.buckets.cacheReadTokens)} />
+        <StripItem label={t('c.input')} value={fmtTokens(session.buckets.inputTokens)} />
+        <StripItem label={t('c.output')} value={fmtTokens(session.buckets.outputTokens)} />
+        <StripItem label={t('c.cacheRead')} value={fmtTokens(session.buckets.cacheReadTokens)} />
         <StripItem label={t('d.cacheWrite')} value={fmtTokens(session.buckets.cacheWriteTokens)} note={t('d.billingOnly')} />
         <StripItem label={t('d.hitRate')} value={session.cacheHitRate === null ? '—' : session.cacheHitRate.toFixed(1) + '%'} />
         <StripItem label={t('common.calls')} value={fmtCalls(session.calls)} note={t('d.samples')} />

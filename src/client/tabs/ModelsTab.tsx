@@ -29,7 +29,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<ModelAggregateRow>> = [
   { key: 'cacheReadTokens', label: t('c.cacheRead'), value: (row) => row.buckets.cacheReadTokens },
   { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
   { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
-  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
   { key: 'costMode', label: t('d.costMode'), value: (row) => row.costMode },
   { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
   { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },

@@ -22,7 +22,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
   { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
-  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
   { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
   { key: 'archivedSessionCount', label: t('p.archivedSessions'), value: (row) => row.archivedSessionCount },
   { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },

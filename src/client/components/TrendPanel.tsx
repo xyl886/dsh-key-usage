@@ -201,7 +201,7 @@ export function TrendPanel(props: {
     },
     {
       key: 'cost',
-      label: '成本',
+      label: t('c.cost'),
       current: currentCostText.amount
         ? currentValue(currentCostText.text)
         : <span className={trendStyles.muted}>{currentCostText.text}</span>,
@@ -229,7 +229,7 @@ export function TrendPanel(props: {
     const currentSource = currentTotals?.costSource ?? 'none'
     const previousSource = previousTotals?.costSource ?? 'none'
     if (currentSource !== previousSource) {
-      notes.push(t('t.sourceDiffPrefix') + COST_SOURCE_LABELS[currentSource] + t('t.sourceDiffMiddle') + COST_SOURCE_LABELS[previousSource] + t('t.sourceDiffSuffix'))
+      notes.push(t('t.sourceDiffPrefix') + t(COST_SOURCE_LABELS[currentSource]) + t('t.sourceDiffMiddle') + t(COST_SOURCE_LABELS[previousSource]) + t('t.sourceDiffSuffix'))
     }
   }
   if (status === 'ready' && previousUsage === null) notes.push(t('t.prevLoadFailed'))

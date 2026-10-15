@@ -4,6 +4,8 @@
  */
 
 /** 成本来源角标，与服务端 `costSource` 一一对应。 */
+import { t } from './i18n.ts'
+
 export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
 
 export interface CatalogSourceSummary {
@@ -23,15 +25,15 @@ export interface CatalogSummary {
 export type AggregateLoaded = 'local' | 'shipped' | 'none'
 
 export const AGGREGATE_LOADED_LABELS: Record<AggregateLoaded, string> = {
-  local: '本地刷新文件',
-  shipped: '随包快照',
-  none: '未装载',
+  local: t('src.liveFile'),
+  shipped: t('src.bundled'),
+  none: t('src.notLoaded'),
 }
 
 /** 装载状态文案；服务端给了没见过的取值时按「未知」显示，不崩。 */
 export function aggregateLoadedLabelOf(loaded: string | null | undefined): string {
   if (loaded === 'local' || loaded === 'shipped' || loaded === 'none') return AGGREGATE_LOADED_LABELS[loaded]
-  return loaded === undefined || loaded === null || loaded === '' ? '未装载' : '未知（' + loaded + '）'
+  return loaded === undefined || loaded === null || loaded === '' ? t('src.notLoaded') : t('src.unknown') + '（' + loaded + '）'
 }
 
 /** 聚合价目装载 / 刷新过程中出现的问题。 */
@@ -137,31 +139,33 @@ export type PricingRefreshResult =
   | { ok: false; error: string }
 
 export const COST_SOURCE_LABELS: Record<CostSource, string> = {
-  official: '官方',
-  catalog: '官方价',
-  aggregate: '聚合',
-  estimate: '估算',
+  official: 'cso.official',
+  catalog: 'cso.catalog',
+  aggregate: 'cso.aggregate',
+  estimate: 'cso.estimate',
   none: '—',
 }
 
 /** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
 export const COST_SOURCE_HINTS: Record<CostSource, string> = {
-  official: '官方：台账记录的厂商账单金额',
-  catalog: '官方价：按插件内置的厂商官方价目算出（自动生效，界面上可查来源）',
-  aggregate: '聚合：LiteLLM 聚合价目（美元、第三方维护），点「刷新价目」可更新',
-  estimate: '估算：按台账反推的均价推算',
-  none: '暂无价格依据',
+  official: 'csh.official',
+  catalog: 'csh.catalog',
+  aggregate: 'csh.aggregate',
+  estimate: 'csh.estimate',
+  none: 'csh.none',
 }
 
 /** 聚合价目的「部分」标记：缺缓存写入价、按未命中价代 —— 是口径说明不是错误。 */
-export const PARTIAL_PRICE_TEXT = ' · 部分'
-export const PARTIAL_PRICE_HINT = '缓存写入价未收录，按未命中价计'
+export const PARTIAL_PRICE_TEXT = 'part.suffix'
+export const PARTIAL_PRICE_HINT = 'part.hint'
 
 /** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
 export function costSourceHintOf(source: CostSource | null | undefined, partial?: boolean | null): string {
   // 服务端将来加了新档位时，这里不能把 undefined 拼进文案
-  const hint = COST_SOURCE_HINTS[source ?? 'none'] ?? '成本来源未识别：' + String(source ?? '')
-  return partial === true ? hint + '；' + PARTIAL_PRICE_HINT : hint
+  const key = COST_SOURCE_HINTS[source ?? 'none']
+  // 未知档位（服务端将来加了新枚举）不能把 undefined 拼进文案
+  const hint = key === undefined ? t('csh.unknown') + ' ' + String(source ?? '') : t(key)
+  return partial === true ? hint + '；' + t(PARTIAL_PRICE_HINT) : hint
 }
 
 /** 内置价目超过这些天没抓取就提示按官方文档复核（厂商调价后只能人工改价目）。 */

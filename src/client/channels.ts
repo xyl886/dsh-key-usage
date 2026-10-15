@@ -1,14 +1,15 @@
 /** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
 import { rowMoneyViewOf, zeroMoneyTextOf, type CostRowLike } from './currency.ts'
 import type { Channel, ChannelCostMode, ChannelStatus } from './types.ts'
+import { t } from './i18n.ts'
 
 const CHANNEL_COLORS = ['#5b8cff', '#9a7bff', '#3fb96f', '#e0a13c', '#e05a5a', '#38bdc8']
 
 export const STATUS_LABELS: Record<ChannelStatus, string> = {
-  ok: '正常',
-  warn: '偏高',
-  danger: '告警',
-  off: '未配置',
+  ok: 'ch.ok',
+  warn: 'ch.warn',
+  danger: 'ch.danger',
+  off: 'ch.off',
 }
 
 export function channelIndexOf(channels: Channel[], provider: string): number {
@@ -49,9 +50,9 @@ export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell 
     ? { text: view.text, dim: false, amount: true, converted: view.converted, mixed: view.mixed }
     : { text: '—', dim: true, amount: false, converted: false, mixed: false }
   if (channel === null) return money
-  if (channel.costMode === 'sub') return { text: '订阅内', dim: true, amount: false, converted: false, mixed: false }
+  if (channel.costMode === 'sub') return { text: t('ch.inSub'), dim: true, amount: false, converted: false, mixed: false }
   if (channel.costMode === 'free') return { text: zeroMoneyTextOf(), dim: true, amount: false, converted: false, mixed: false }
-  if (channel.costMode === 'none') return { text: '无计费', dim: true, amount: false, converted: false, mixed: false }
+  if (channel.costMode === 'none') return { text: t('ch.noBilling'), dim: true, amount: false, converted: false, mixed: false }
   return money
 }
 
@@ -71,9 +72,9 @@ export function quotaBarColor(percent: number): string {
 }
 
 export const COST_MODE_LABELS: Record<ChannelCostMode, string> = {
-  sub: '订阅制',
-  perToken: '按量计费',
-  free: '免费额度',
-  none: '本地端点',
-  unknown: '未查询',
+  sub: t('ch.subscription'),
+  perToken: 'ch.metered',
+  free: 'ch.free',
+  none: t('ch.local'),
+  unknown: 'ch.notQueried',
 }

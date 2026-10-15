@@ -111,5 +111,5 @@ function quotaCellOf(channel: Channel): ReactNode {
 export function overviewCaptionOf(summary: SummaryResponse | null): string {
   if (summary === null) return t('o.ledgerUnavailable')
   const calls = summary.channels.reduce((total, row) => total + row.month.calls, 0)
-  return fmtCalls(calls) + ' 次调用'
+  return fmtCalls(calls) + t('o.callsSuffix')
 }

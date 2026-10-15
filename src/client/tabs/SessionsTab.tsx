@@ -40,7 +40,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', labelKey: 's.hitRate', value: (row) => row.cacheHitRate },
   { key: 'cost', labelKey: 's.costNative', value: (row) => row.cost },
-  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : COST_SOURCE_LABELS[row.costSource] },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
   { key: 'archived', labelKey: 's.archived', value: (row) => row.archived ? t('s.yes') : t('s.no') },
 ]
 
@@ -243,7 +243,7 @@ export function SessionsTab(props: {
                 <td colSpan={6}>
                   {group.label}
                   <span className={listStyles.dayCount}>
-                    {group.rows.length < group.total ? '显示 ' + String(group.rows.length) + ' / ' + String(group.total) + ' 个会话' : String(group.total) + ' 个会话'}
+                    {group.rows.length < group.total ? t('s.showPrefix') + String(group.rows.length) + ' / ' + String(group.total) + t('s.showSuffix') : String(group.total) + t('s.showSuffix')}
                     {' · '}{fmtTokens(group.tokens)}
                   </span>
                 </td>
@@ -464,9 +464,9 @@ function costTipOf(row: SessionRow): ReactNode {
       <TipTitle>会话成本</TipTitle>
       <TipSub>{costSourceHintOf(source, row.partial)}</TipSub>
       <TipRow
-        label="金额"
+        label={t('s.amount')}
         amount={row.cost === null ? '—' : moneyTotalsTextOf(row)}
-        rate={COST_SOURCE_LABELS[source]}
+        rate={t(COST_SOURCE_LABELS[source])}
       />
     </>
   )
@@ -484,9 +484,9 @@ function shortIdOf(id: string): string {
 }
 
 function dayLabelOf(timeMs: number | null, nowMs: number): string {
-  if (timeMs === null) return '未知日期'
+  if (timeMs === null) return t('s.unknownDate')
   const dateKey = isoDate(new Date(timeMs))
-  if (dateKey === isoDate(new Date(nowMs))) return '今日'
-  if (dateKey === isoDate(new Date(nowMs - 86400000))) return '昨日'
+  if (dateKey === isoDate(new Date(nowMs))) return t('r.today')
+  if (dateKey === isoDate(new Date(nowMs - 86400000))) return t('r.yesterday')
   return dateKey
 }

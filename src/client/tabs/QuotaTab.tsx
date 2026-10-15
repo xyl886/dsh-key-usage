@@ -474,7 +474,7 @@ function rateCellText(currency: string | null, value: unknown): string {
 
 /** `rates` 为 null 时的整段说明：按来源讲清为什么没有四档单价。 */
 function noRateTextOf(source: CostSource): string {
-  return COST_SOURCE_HINTS[source] ?? '没有四档单价'
+  return t(COST_SOURCE_HINTS[source] ?? 'quota.noFourRates')
 }
 
 /** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */

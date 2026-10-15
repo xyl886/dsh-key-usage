@@ -9,6 +9,9 @@
  */
 import assert from 'node:assert/strict'
 
+// 标签/说明已改成 i18n 词典键：这里直接校验词典里的中文文案
+const { zh } = await import('../src/client/copy.ts')
+
 let clientPricing = null
 try {
   clientPricing = await import('../src/client/pricing.ts')
@@ -49,24 +52,27 @@ if (clientPricing !== null) {
     for (const source of sources) {
       assert.equal(typeof COST_SOURCE_LABELS[source], 'string')
       assert.ok(COST_SOURCE_LABELS[source] !== '', source + ' 的标签不能为空')
-      assert.ok(COST_SOURCE_HINTS[source].length > 4, source + ' 的说明要能看懂')
+      // 「none」用语言无关的破折号，其余必须是词典键
+      const label = COST_SOURCE_LABELS[source]
+      assert.ok(label === '—' || zh[label] !== undefined, source + ' 的标签必须是词典键（或语言无关符号）')
+      assert.ok(zh[COST_SOURCE_HINTS[source]].length > 4, source + ' 的说明要能看懂')
     }
-    assert.ok(COST_SOURCE_HINTS.aggregate.includes('美元'), '聚合价要写明是美元价目')
+    assert.ok(zh[COST_SOURCE_HINTS.aggregate].includes('美元'), '聚合价要写明是美元价目')
   }
 
   // ===== 2. 角标悬浮说明：未知档位不拼 undefined，partial 只补口径 =====
   {
-    assert.equal(costSourceHintOf('catalog'), COST_SOURCE_HINTS.catalog)
-    assert.equal(costSourceHintOf(null), COST_SOURCE_HINTS.none, '服务端没给来源时按「无依据」展示')
-    assert.equal(costSourceHintOf(undefined), COST_SOURCE_HINTS.none)
+    assert.equal(costSourceHintOf('catalog'), zh[COST_SOURCE_HINTS.catalog])
+    assert.equal(costSourceHintOf(null), zh[COST_SOURCE_HINTS.none], '服务端没给来源时按「无依据」展示')
+    assert.equal(costSourceHintOf(undefined), zh[COST_SOURCE_HINTS.none])
     assert.ok(costSourceHintOf('unknown-source').includes('unknown-source'), '未知档位要如实写出来，而不是 undefined')
     assert.equal(
       costSourceHintOf('aggregate', true),
-      COST_SOURCE_HINTS.aggregate + '；' + PARTIAL_PRICE_HINT,
+      zh[COST_SOURCE_HINTS.aggregate] + '；' + zh[PARTIAL_PRICE_HINT],
       'partial 只追加口径说明',
     )
-    assert.equal(costSourceHintOf('aggregate', false), COST_SOURCE_HINTS.aggregate)
-    assert.equal(costSourceHintOf('aggregate', null), COST_SOURCE_HINTS.aggregate)
+    assert.equal(costSourceHintOf('aggregate', false), zh[COST_SOURCE_HINTS.aggregate])
+    assert.equal(costSourceHintOf('aggregate', null), zh[COST_SOURCE_HINTS.aggregate])
   }
 
   // ===== 3. 聚合价装载来源标签与仓库地址 =====

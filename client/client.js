@@ -197,6 +197,41 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"api.refreshRejected": "刷新被服务端拒绝",
 			"rows.hiddenPrefix": "已隐藏 ",
 			"rows.hiddenSuffix": " 行无 Token 记录",
+			"ch.ok": "正常",
+			"ch.warn": "偏高",
+			"ch.danger": "告警",
+			"ch.off": "未配置",
+			"ch.inSub": "订阅内",
+			"ch.noBilling": "无计费",
+			"ch.subscription": "订阅制",
+			"ch.metered": "按量计费",
+			"ch.free": "免费额度",
+			"ch.local": "本地端点",
+			"ch.notQueried": "未查询",
+			"src.liveFile": "本地刷新文件",
+			"src.bundled": "随包快照",
+			"src.notLoaded": "未装载",
+			"src.unknown": "未知",
+			"cso.official": "官方",
+			"cso.catalog": "官方价",
+			"cso.aggregate": "聚合",
+			"cso.estimate": "估算",
+			"cso.none": "暂无价格依据",
+			"csh.official": "官方：台账记录的厂商账单金额",
+			"csh.catalog": "官方价：按内置厂商官方价目算出",
+			"csh.aggregate": "聚合：LiteLLM 聚合价目（美元），点刷新价目可更新",
+			"csh.estimate": "估算：按台账反推的均价",
+			"csh.none": "暂无价格依据",
+			"csh.unknown": "成本来源未识别",
+			"part.suffix": " · 部分",
+			"part.hint": "缓存写入价未收录，按未命中价计",
+			"s.showPrefix": "显示 ",
+			"s.showSuffix": " 个会话",
+			"s.amount": "金额",
+			"s.unknownDate": "未知日期",
+			"r.yesterday": "昨日",
+			"o.callsSuffix": " 次调用",
+			"c.cost": "成本",
 			"balance.total": "总余额",
 			"balance.credit": "充值余额",
 			"balance.grant": "赠送余额",
@@ -463,6 +498,41 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"api.refreshRejected": "Refresh rejected by server",
 			"rows.hiddenPrefix": "",
 			"rows.hiddenSuffix": " rows without tokens hidden",
+			"ch.ok": "OK",
+			"ch.warn": "High",
+			"ch.danger": "Alert",
+			"ch.off": "Not set",
+			"ch.inSub": "In plan",
+			"ch.noBilling": "No billing",
+			"ch.subscription": "Subscription",
+			"ch.metered": "Metered",
+			"ch.free": "Free tier",
+			"ch.local": "Local",
+			"ch.notQueried": "Not queried",
+			"src.liveFile": "Local file",
+			"src.bundled": "Bundled",
+			"src.notLoaded": "Not loaded",
+			"src.unknown": "Unknown",
+			"cso.official": "Official",
+			"cso.catalog": "Catalog",
+			"cso.aggregate": "Aggregate",
+			"cso.estimate": "Estimate",
+			"cso.none": "No basis",
+			"csh.official": "Official: vendor bill from the ledger",
+			"csh.catalog": "Catalog: built-in vendor price list",
+			"csh.aggregate": "Aggregate: LiteLLM price list (USD), refreshable",
+			"csh.estimate": "Estimate: derived from the ledger average",
+			"csh.none": "No price basis",
+			"csh.unknown": "Unknown cost source",
+			"part.suffix": " · partial",
+			"part.hint": "cache-write price missing, uses the miss price",
+			"s.showPrefix": "Show ",
+			"s.showSuffix": " sessions",
+			"s.amount": "Amount",
+			"s.unknownDate": "Unknown date",
+			"r.yesterday": "Yesterday",
+			"o.callsSuffix": " calls",
+			"c.cost": "Cost",
 			"balance.total": "Total",
 			"balance.credit": "Credit",
 			"balance.grant": "Granted",
@@ -1097,15 +1167,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region src/client/pricing.ts
+		/**
+		* 价目视图模型：只把服务端给的三层价目来源、覆盖度与装载状态翻译成文案，**界面不维护任何价格**。
+		* 金额渲染见 `currency.ts`（显示币种与汇率折算的唯一收口点）。
+		*/
+		/** 成本来源角标，与服务端 `costSource` 一一对应。 */
 		const AGGREGATE_LOADED_LABELS = {
-			local: "本地刷新文件",
-			shipped: "随包快照",
-			none: "未装载"
+			local: t("src.liveFile"),
+			shipped: t("src.bundled"),
+			none: t("src.notLoaded")
 		};
 		/** 装载状态文案；服务端给了没见过的取值时按「未知」显示，不崩。 */
 		function aggregateLoadedLabelOf(loaded) {
 			if (loaded === "local" || loaded === "shipped" || loaded === "none") return AGGREGATE_LOADED_LABELS[loaded];
-			return loaded === void 0 || loaded === null || loaded === "" ? "未装载" : "未知（" + loaded + "）";
+			return loaded === void 0 || loaded === null || loaded === "" ? t("src.notLoaded") : t("src.unknown") + "（" + loaded + "）";
 		}
 		/**
 		* LiteLLM 仓库地址。**不能**写成带协议前缀的完整字面量：构建后处理会把「字母 + 冒号 + 斜杠」误判成
@@ -1143,24 +1218,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return commit.trim().slice(0, 7);
 		}
 		const COST_SOURCE_LABELS = {
-			official: "官方",
-			catalog: "官方价",
-			aggregate: "聚合",
-			estimate: "估算",
+			official: "cso.official",
+			catalog: "cso.catalog",
+			aggregate: "cso.aggregate",
+			estimate: "cso.estimate",
 			none: "—"
 		};
 		/** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
 		const COST_SOURCE_HINTS = {
-			official: "官方：台账记录的厂商账单金额",
-			catalog: "官方价：按插件内置的厂商官方价目算出（自动生效，界面上可查来源）",
-			aggregate: "聚合：LiteLLM 聚合价目（美元、第三方维护），点「刷新价目」可更新",
-			estimate: "估算：按台账反推的均价推算",
-			none: "暂无价格依据"
+			official: "csh.official",
+			catalog: "csh.catalog",
+			aggregate: "csh.aggregate",
+			estimate: "csh.estimate",
+			none: "csh.none"
 		};
+		const PARTIAL_PRICE_HINT = "part.hint";
 		/** 角标悬浮说明：带 `partial` 时补一句口径，避免「部分」被读成缺数据 / 报错。 */
 		function costSourceHintOf(source, partial) {
-			const hint = COST_SOURCE_HINTS[source ?? "none"] ?? "成本来源未识别：" + String(source ?? "");
-			return partial === true ? hint + "；缓存写入价未收录，按未命中价计" : hint;
+			const key = COST_SOURCE_HINTS[source ?? "none"];
+			const hint = key === void 0 ? t("csh.unknown") + " " + String(source ?? "") : t(key);
+			return partial === true ? hint + "；" + t(PARTIAL_PRICE_HINT) : hint;
 		}
 		/** 抓取日期（`YYYY-MM-DD`，本地日历日）距今天数；解析不出返回 null。 */
 		function fetchedDaysAgo(fetchedAt, now = /* @__PURE__ */ new Date()) {
@@ -1470,7 +1547,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			if (channel === null) return money;
 			if (channel.costMode === "sub") return {
-				text: "订阅内",
+				text: t("ch.inSub"),
 				dim: true,
 				amount: false,
 				converted: false,
@@ -1484,7 +1561,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				mixed: false
 			};
 			if (channel.costMode === "none") return {
-				text: "无计费",
+				text: t("ch.noBilling"),
 				dim: true,
 				amount: false,
 				converted: false,
@@ -1505,6 +1582,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (percent >= 60) return "var(--dsw-alias-state-warning-primary, #e0a13c)";
 			return "var(--dsw-alias-state-success-primary, #3fb96f)";
 		}
+		t("ch.subscription"), t("ch.local");
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
 		const css$7 = ".tXjxsq_keyTable{border-collapse:collapse;width:100%}.tXjxsq_keyTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 10px;font-size:10.5px;font-weight:500}.tXjxsq_keyTable th:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-fill-l1,#80808c1f);white-space:nowrap;padding:10px;font-size:12.5px}.tXjxsq_keyTable td:first-child{text-align:left;padding-left:0}.tXjxsq_keyTable tr:last-child td{border-bottom:0}.tXjxsq_keyTable tbody tr.tXjxsq_clickable{cursor:pointer}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.tXjxsq_keyTable tr.tXjxsq_disabledRow{opacity:.55}.tXjxsq_cellKey{align-items:center;gap:10px;display:flex}.tXjxsq_keyDisplay{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.tXjxsq_keyEnv{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:1px;font-family:ui-monospace,Consolas,monospace;font-size:10px}.tXjxsq_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:5px;padding:1px 7px;font-size:10.5px;display:inline-block}.tXjxsq_tag.tXjxsq_free{color:var(--dsw-alias-state-success-primary,#3fb96f);border-color:#3fb96f59}.tXjxsq_tag.tXjxsq_sub{color:var(--dsw-alias-state-business-primary,#5b8cff);border-color:#5b8cff59}.tXjxsq_tag.tXjxsq_off{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rowLink{color:var(--dsw-alias-label-tertiary,#67676f);font-size:11px}.tXjxsq_keyTable tbody tr.tXjxsq_clickable:hover .tXjxsq_rowLink{color:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_quotaCell{align-items:center;gap:8px;display:inline-flex}.tXjxsq_miniBar{background:var(--dsw-alias-fill-l2,#80808c2e);border-radius:3px;flex-shrink:0;width:64px;height:5px;overflow:hidden}.tXjxsq_miniBar>i{border-radius:3px;height:100%;display:block}.tXjxsq_quotaText{text-align:left;min-width:74px}.tXjxsq_quotaText.tXjxsq_warn{color:var(--dsw-alias-state-warning-primary,#e0a13c);font-weight:600}.tXjxsq_quotaText.tXjxsq_danger{color:var(--dsw-alias-state-danger-primary,#e05a5a);font-weight:600}.tXjxsq_quotaText.tXjxsq_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_heatmapCard{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;margin-top:24px;padding:14px 16px}.tXjxsq_heatmapHead{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:10px;display:flex}.tXjxsq_heatmapTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:11.5px}.tXjxsq_heatmapScroll{padding-bottom:4px;overflow-x:auto}.tXjxsq_heatmapBody{gap:6px;width:max-content;display:flex}.tXjxsq_heatWeekdays{flex-direction:column;flex-shrink:0;gap:3px;display:flex}.tXjxsq_heatWeekdays span{color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:13px;height:28px;font-size:9.5px;line-height:28px}.tXjxsq_heatGridCol{flex-direction:column;display:flex}.tXjxsq_heatGrid{gap:3px;display:flex}.tXjxsq_heatWeek{flex-direction:column;gap:3px;display:flex}.tXjxsq_heatCell{box-sizing:border-box;background:var(--dsw-alias-fill-l1,#80808c2e);cursor:default;border-radius:5px;flex-shrink:0;width:28px;height:28px}.tXjxsq_heatCell.tXjxsq_idle{background:#80808c38}.tXjxsq_heatCell.tXjxsq_empty{background:#80808c1a;box-shadow:inset 0 0 0 1px #80808c47}.tXjxsq_heatMonths{gap:3px;margin-top:6px;display:flex}.tXjxsq_heatMonths span{width:28px;color:var(--dsw-alias-label-tertiary,#67676f);text-align:left;white-space:nowrap;flex-shrink:0;font-size:10px}";
@@ -1802,9 +1880,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				className: pricing_module_css_default.sourceChip + " " + sourceClass(source),
 				title: costSourceHintOf(source, partial),
-				children: [COST_SOURCE_LABELS[source] ?? source, partial && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				children: [t(COST_SOURCE_LABELS[source] ?? source), partial && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 					className: pricing_module_css_default.sourcePartial,
-					children: " · 部分"
+					children: t("part.suffix")
 				})]
 			});
 		}
@@ -2423,7 +2501,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				},
 				{
 					key: "cost",
-					label: "成本",
+					label: t("c.cost"),
 					current: currentCostText.amount ? currentValue(currentCostText.text) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: trend_module_css_default.muted,
 						children: currentCostText.text
@@ -2447,7 +2525,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (previousHasData && costComparable) {
 				const currentSource = currentTotals?.costSource ?? "none";
 				const previousSource = previousTotals?.costSource ?? "none";
-				if (currentSource !== previousSource) notes.push(t("t.sourceDiffPrefix") + COST_SOURCE_LABELS[currentSource] + t("t.sourceDiffMiddle") + COST_SOURCE_LABELS[previousSource] + t("t.sourceDiffSuffix"));
+				if (currentSource !== previousSource) notes.push(t("t.sourceDiffPrefix") + t(COST_SOURCE_LABELS[currentSource]) + t("t.sourceDiffMiddle") + t(COST_SOURCE_LABELS[previousSource]) + t("t.sourceDiffSuffix"));
 			}
 			if (status === "ready" && previousUsage === null) notes.push(t("t.prevLoadFailed"));
 			if (!currentHasData) notes.push(t("t.noUsage"));
@@ -2924,17 +3002,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-primary, #5b8cff)",
-							label: "输入",
+							label: t("c.input"),
 							amount: fmtTokens(slot.buckets.inputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-primary, #9a7bff)",
-							label: "输出",
+							label: t("c.output"),
 							amount: fmtTokens(slot.buckets.outputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))",
-							label: "缓存读",
+							label: t("c.cacheRead"),
 							amount: fmtTokens(slot.buckets.cacheReadTokens),
 							rate: hitRateOf(slot.buckets.cacheReadTokens, slot.buckets.inputTokens, slot.buckets.outputTokens)
 						})
@@ -2972,17 +3050,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						] }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-primary, #5b8cff)",
-							label: "输入",
+							label: t("c.input"),
 							amount: fmtTokens(day.inputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-primary, #9a7bff)",
-							label: "输出",
+							label: t("c.output"),
 							amount: fmtTokens(day.outputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 							color: "var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))",
-							label: "缓存读",
+							label: t("c.cacheRead"),
 							amount: fmtTokens(day.cacheReadTokens),
 							rate: hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)
 						}),
@@ -3066,7 +3144,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: shared_module_css_default.cardGrid6,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
-							label: "调用次数",
+							label: t("d.callCount"),
 							value: fmtCalls(safeTotals.calls),
 							extra: activeProviders.size + t("d.channelsWithUsageSuffix")
 						}),
@@ -3076,22 +3154,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							extra: t("c.input") + " " + fmtTokens(safeTotals.inputTokens) + t("c.output") + " " + fmtTokens(safeTotals.outputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
-							label: "缓存读",
+							label: t("c.cacheRead"),
 							value: fmtTokens(safeTotals.cacheReadTokens),
 							extra: cacheReadShare === null ? t("d.sameCaliber") : t("d.shareOfTokensPrefix") + cacheReadShare
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
-							label: "缓存命中率",
+							label: t("d.hitRateShort"),
 							value: hitRate,
 							extra: "缓存读 ÷（输入 + 输出 + 缓存读）"
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
-							label: "日均 Tokens",
+							label: t("d.dailyAvg"),
 							value: activeDays === 0 ? "—" : fmtTokens(Math.round(totalTokens / activeDays)),
 							extra: t("d.daysWithUsagePrefix") + String(activeDays) + t("d.daysWithUsageSuffix")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatCard, {
-							label: "成本",
+							label: t("c.cost"),
 							value: costCell.dim ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: shared_module_css_default.dim,
 								children: costCell.text
@@ -3341,7 +3419,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			{
 				key: "costSource",
 				label: t("s.costSource"),
-				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
+				value: (row) => row.costSource === void 0 ? null : t(COST_SOURCE_LABELS[row.costSource])
 			},
 			{
 				key: "costMode",
@@ -3590,7 +3668,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			{
 				key: "costSource",
 				label: t("s.costSource"),
-				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
+				value: (row) => row.costSource === void 0 ? null : t(COST_SOURCE_LABELS[row.costSource])
 			},
 			{
 				key: "sessionCount",
@@ -4368,7 +4446,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/** `rates` 为 null 时的整段说明：按来源讲清为什么没有四档单价。 */
 		function noRateTextOf(source) {
-			return COST_SOURCE_HINTS[source] ?? "没有四档单价";
+			return t(COST_SOURCE_HINTS[source] ?? "quota.noFourRates");
 		}
 		/** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
 		function PricingInfoBlock(props) {
@@ -4685,7 +4763,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: lists_module_css_default.drawerPanel,
 					role: "dialog",
 					"aria-modal": "true",
-					"aria-label": "会话详情",
+					"aria-label": t("d.title"),
 					onClick: (event) => event.stopPropagation(),
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -4776,12 +4854,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					className: lists_module_css_default.detailGrid,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "工作区",
+							label: t("common.workspace"),
 							value: session.workspace ?? t("s.noWorkspace"),
 							wide: true
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "通道",
+							label: t("common.channel"),
 							value: session.provider === null ? "—" : session.providerLabel ?? displayNameOf(props.channels, session.provider)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
@@ -4789,15 +4867,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							value: channel === null ? "—" : channel.costLabel
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "首次",
+							label: t("d.first"),
 							value: fmtDateTime(session.firstTime)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "最近",
+							label: t("d.last"),
 							value: fmtDateTime(session.lastTime)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
-							label: "时长",
+							label: t("d.duration"),
 							value: fmtDuration(session.durationMs) + (session.crossDays >= 1 ? t("d.crossDays", { count: session.crossDays }) : "")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailItem, {
@@ -4815,15 +4893,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							note: t("d.ioNote")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "输入",
+							label: t("c.input"),
 							value: fmtTokens(session.buckets.inputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "输出",
+							label: t("c.output"),
 							value: fmtTokens(session.buckets.outputTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
-							label: "缓存读",
+							label: t("c.cacheRead"),
 							value: fmtTokens(session.buckets.cacheReadTokens)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StripItem, {
@@ -5189,7 +5267,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			{
 				key: "costSource",
 				labelKey: "s.costSource",
-				value: (row) => row.costSource === void 0 ? null : COST_SOURCE_LABELS[row.costSource]
+				value: (row) => row.costSource === void 0 ? null : t(COST_SOURCE_LABELS[row.costSource])
 			},
 			{
 				key: "archived",
@@ -5492,7 +5570,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: [group.label, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 										className: lists_module_css_default.dayCount,
 										children: [
-											group.rows.length < group.total ? "显示 " + String(group.rows.length) + " / " + String(group.total) + " 个会话" : String(group.total) + " 个会话",
+											group.rows.length < group.total ? t("s.showPrefix") + String(group.rows.length) + " / " + String(group.total) + t("s.showSuffix") : String(group.total) + t("s.showSuffix"),
 											" · ",
 											fmtTokens(group.tokens)
 										]
@@ -5746,9 +5824,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: "会话成本" }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: costSourceHintOf(source, row.partial) }),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
-					label: "金额",
+					label: t("s.amount"),
 					amount: row.cost === null ? "—" : moneyTotalsTextOf(row),
-					rate: COST_SOURCE_LABELS[source]
+					rate: t(COST_SOURCE_LABELS[source])
 				})
 			] });
 		}
@@ -5761,10 +5839,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return id.replace(/^session-/, "").slice(0, 8);
 		}
 		function dayLabelOf(timeMs, nowMs) {
-			if (timeMs === null) return "未知日期";
+			if (timeMs === null) return t("s.unknownDate");
 			const dateKey = isoDate(new Date(timeMs));
-			if (dateKey === isoDate(new Date(nowMs))) return "今日";
-			if (dateKey === isoDate(/* @__PURE__ */ new Date(nowMs - 864e5))) return "昨日";
+			if (dateKey === isoDate(new Date(nowMs))) return t("r.today");
+			if (dateKey === isoDate(/* @__PURE__ */ new Date(nowMs - 864e5))) return t("r.yesterday");
 			return dateKey;
 		}
 		//#endregion

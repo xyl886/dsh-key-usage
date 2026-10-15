@@ -140,11 +140,11 @@ export function DetailTab(props: {
               : (
                 <>
                   <TipSub>调用 <b>{fmtCalls(slot.calls)}</b> · Tokens <b>{fmtTokens(slotTokens)}</b></TipSub>
-                  <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label="输入" amount={fmtTokens(slot.buckets.inputTokens)} />
-                  <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label="输出" amount={fmtTokens(slot.buckets.outputTokens)} />
+                  <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label={t('c.input')} amount={fmtTokens(slot.buckets.inputTokens)} />
+                  <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label={t('c.output')} amount={fmtTokens(slot.buckets.outputTokens)} />
                   <TipRow
                     color="var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))"
-                    label="缓存读"
+                    label={t('c.cacheRead')}
                     amount={fmtTokens(slot.buckets.cacheReadTokens)}
                     rate={hitRateOf(slot.buckets.cacheReadTokens, slot.buckets.inputTokens, slot.buckets.outputTokens)}
                   />
@@ -191,11 +191,11 @@ export function DetailTab(props: {
         <>
           <TipTitle>{day.date}</TipTitle>
           <TipSub>调用 <b>{fmtCalls(day.calls)}</b> · Tokens <b>{fmtTokens(dayTotal)}</b></TipSub>
-          <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label="输入" amount={fmtTokens(day.inputTokens)} />
-          <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label="输出" amount={fmtTokens(day.outputTokens)} />
+          <TipRow color="var(--dsw-alias-state-business-primary, #5b8cff)" label={t('c.input')} amount={fmtTokens(day.inputTokens)} />
+          <TipRow color="var(--dsw-alias-state-business-primary, #9a7bff)" label={t('c.output')} amount={fmtTokens(day.outputTokens)} />
           <TipRow
             color="var(--dsw-alias-state-business-tertiary, rgba(91,140,255,.28))"
-            label="缓存读"
+            label={t('c.cacheRead')}
             amount={fmtTokens(day.cacheReadTokens)}
             rate={hitRateOf(day.cacheReadTokens, day.inputTokens, day.outputTokens)}
           />
@@ -254,25 +254,25 @@ export function DetailTab(props: {
       </div>
 
       <div className={styles.cardGrid6}>
-        <StatCard label="调用次数" value={fmtCalls(safeTotals.calls)} extra={activeProviders.size + t('d.channelsWithUsageSuffix')} />
+        <StatCard label={t('d.callCount')} value={fmtCalls(safeTotals.calls)} extra={activeProviders.size + t('d.channelsWithUsageSuffix')} />
         <StatCard
           label="Tokens"
           value={fmtTokens(totalTokens)}
           extra={t('c.input') + ' ' + fmtTokens(safeTotals.inputTokens) + t('c.output') + ' ' + fmtTokens(safeTotals.outputTokens)}
         />
         <StatCard
-          label="缓存读"
+          label={t('c.cacheRead')}
           value={fmtTokens(safeTotals.cacheReadTokens)}
           extra={cacheReadShare === null ? t('d.sameCaliber') : t('d.shareOfTokensPrefix') + cacheReadShare}
         />
-        <StatCard label="缓存命中率" value={hitRate} extra="缓存读 ÷（输入 + 输出 + 缓存读）" />
+        <StatCard label={t('d.hitRateShort')} value={hitRate} extra="缓存读 ÷（输入 + 输出 + 缓存读）" />
         <StatCard
-          label="日均 Tokens"
+          label={t('d.dailyAvg')}
           value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))}
           extra={t('d.daysWithUsagePrefix') + String(activeDays) + t('d.daysWithUsageSuffix')}
         />
         <StatCard
-          label="成本"
+          label={t('c.cost')}
           value={costCell.dim
             ? <span className={styles.dim}>{costCell.text}</span>
             : <>{costCell.text}{costCell.amount && <CostSourceChip source={safeTotals.costSource} partial={safeTotals.partial} />}</>}
