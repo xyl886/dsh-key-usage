@@ -61,6 +61,8 @@ export function ShareBar(props: {
     }))
   }
   rows.sort((first, second) => second.tokens - first.tokens)
+  // 用量为 0 的段不显示（例如只在别的时间段用过、或该模型没有 token 的通道）
+  rows = rows.filter((row) => row.tokens > 0)
   // 每段的数值只有悬停才看得到，读屏用户拿不到；这里给出前几名的文本概述
   const shareSummary = rows.length === 0
     ? title + t('sh.noData')

@@ -2515,6 +2515,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}));
 			}
 			rows.sort((first, second) => second.tokens - first.tokens);
+			rows = rows.filter((row) => row.tokens > 0);
 			const shareSummary = rows.length === 0 ? title + t("sh.noData") : title + "：" + rows.slice(0, 3).map((row) => row.label + " " + String(totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0) + "%").join("、") + (rows.length > 3 ? t("sh.morePrefix") + String(rows.length) + t("sh.moreSuffix") : "");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: shared_module_css_default.card,
