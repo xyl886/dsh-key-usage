@@ -137,8 +137,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.channelCount": "通道数",
 			"d.activeDayCount": "有用量天数",
 			"d.channelsWithUsageSuffix": " 个通道",
-			"d.sameCaliber": "与上方 Tokens 同口径",
-			"d.shareOfTokensPrefix": "占 Tokens 的 ",
 			"d.hitRateShort": "缓存命中率",
 			"d.dailyAvg": "日均 Tokens",
 			"d.daysWithUsageSuffix": " 天有用量",
