@@ -2,10 +2,13 @@
 import type { ReactNode } from 'react'
 import styles from '../styles/shared.module.css'
 
-export function StatCard(props: { label: string; value: ReactNode; extra?: ReactNode; badge?: ReactNode; above?: ReactNode }): ReactNode {
+export function StatCard(props: { label: string; value: ReactNode; extra?: ReactNode; badge?: ReactNode; above?: ReactNode; icon?: ReactNode }): ReactNode {
   return (
     <div className={styles.card}>
-      <div className={styles.statLabel}>{props.label}</div>
+      <div className={styles.statLabelRow}>
+        {props.icon}
+        <div className={styles.statLabel}>{props.label}</div>
+      </div>
       {props.above !== undefined && <div className={styles.statAbove}>{props.above}</div>}
       <div className={styles.statValueRow}>
         <div className={styles.statValue}>{props.value}</div>

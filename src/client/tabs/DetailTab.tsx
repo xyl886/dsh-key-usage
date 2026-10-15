@@ -9,6 +9,8 @@ import { TipDivider, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/t
 import { ShareBar } from '../components/ShareBar.tsx'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import { StatCard } from '../components/StatCard.tsx'
+import { CardIcon } from '../components/CardIcons.tsx'
+import { Select } from '../components/ui/Select.tsx'
 import { TokenBars, type TokenBarRow } from '../components/TokenBars.tsx'
 import { useTrend } from '../core/useTrend.tsx'
 import styles from '../styles/shared.module.css'
@@ -243,6 +245,14 @@ export function DetailTab(props: {
             </span>
           )}
         </div>
+        <span className={detailStyles.channelSelect}>
+          <Select
+            value={channelFilter}
+            options={[{ value: 'ALL', label: t('s.allChannels') }, ...channels.map((channel) => ({ value: channel.provider, label: displayNameOf(channels, channel.provider) }))]}
+            onChange={(value) => props.onChannelFilter(value)}
+            ariaLabel={t('common.channel')}
+          />
+        </span>
         <span className={exportStyles.exportGroup}>
           <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('csv')}>{t('export.csv')}</button>
           <button className={exportStyles.exportBtn} disabled={usage.days.length === 0} onClick={() => exportDaily('json')}>{t('export.json')}</button>
@@ -250,16 +260,16 @@ export function DetailTab(props: {
       </div>
 
       <div className={styles.cardGrid6}>
-        <StatCard label={t('d.callCount')} value={fmtCalls(safeTotals.calls)} badge={trend?.calls.badge} above={trend?.calls.above} />
-        <StatCard label="Tokens" value={fmtTokens(totalTokens)} badge={trend?.tokens.badge} above={trend?.tokens.above} />
-        <StatCard label={t('c.input')} value={fmtTokens(safeTotals.inputTokens)} badge={trend?.input.badge} above={trend?.input.above} />
-        <StatCard label={t('c.output')} value={fmtTokens(safeTotals.outputTokens)} badge={trend?.output.badge} above={trend?.output.above} />
-        <StatCard label={t('c.cacheRead')} value={fmtTokens(safeTotals.cacheReadTokens)} badge={trend?.cacheRead.badge} above={trend?.cacheRead.above} />
-        <StatCard label={t('d.hitRateShort')} value={hitRate} badge={trend?.hitRate.badge} above={trend?.hitRate.above} />
-        <StatCard label={t('d.dailyAvg')} value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))} badge={trend?.dailyAvg.badge} above={trend?.dailyAvg.above} />
-        <StatCard label={t('d.channelCount')} value={String(activeProviders.size)} badge={trend?.channels.badge} above={trend?.channels.above} />
-        <StatCard label={t('d.activeDayCount')} value={String(activeDays)} badge={trend?.activeDays.badge} above={trend?.activeDays.above} />
-        <StatCard
+        <StatCard icon={<CardIcon name="calls" />} label={t('d.callCount')} value={fmtCalls(safeTotals.calls)} badge={trend?.calls.badge} above={trend?.calls.above} />
+        <StatCard icon={<CardIcon name="tokens" />} label="Tokens" value={fmtTokens(totalTokens)} badge={trend?.tokens.badge} above={trend?.tokens.above} />
+        <StatCard icon={<CardIcon name="input" />} label={t('c.input')} value={fmtTokens(safeTotals.inputTokens)} badge={trend?.input.badge} above={trend?.input.above} />
+        <StatCard icon={<CardIcon name="output" />} label={t('c.output')} value={fmtTokens(safeTotals.outputTokens)} badge={trend?.output.badge} above={trend?.output.above} />
+        <StatCard icon={<CardIcon name="cacheRead" />} label={t('c.cacheRead')} value={fmtTokens(safeTotals.cacheReadTokens)} badge={trend?.cacheRead.badge} above={trend?.cacheRead.above} />
+        <StatCard icon={<CardIcon name="hitRate" />} label={t('d.hitRateShort')} value={hitRate} badge={trend?.hitRate.badge} above={trend?.hitRate.above} />
+        <StatCard icon={<CardIcon name="dailyAvg" />} label={t('d.dailyAvg')} value={activeDays === 0 ? '—' : fmtTokens(Math.round(totalTokens / activeDays))} badge={trend?.dailyAvg.badge} above={trend?.dailyAvg.above} />
+        <StatCard icon={<CardIcon name="channels" />} label={t('d.channelCount')} value={String(activeProviders.size)} badge={trend?.channels.badge} above={trend?.channels.above} />
+        <StatCard icon={<CardIcon name="days" />} label={t('d.activeDayCount')} value={String(activeDays)} badge={trend?.activeDays.badge} above={trend?.activeDays.above} />
+        <StatCard icon={<CardIcon name="cost" />}
           label={t('c.cost')}
           badge={trend?.cost.badge}
           above={trend?.cost.above}
@@ -270,21 +280,6 @@ export function DetailTab(props: {
       </div>
 
       <ShareBar usage={usage} totalTokens={totalTokens} channelFilter={channelFilter} channels={channels} tooltip={tooltip} />
-
-      <div className={styles.chipRow} style={{ marginTop: 14 }}>
-        <button className={channelFilter === 'ALL' ? styles.chip + ' ' + styles.active : styles.chip} onClick={() => props.onChannelFilter('ALL')}>
-          <span className={styles.statusDot} style={{ background: 'var(--dsw-alias-state-business-primary, #5b8cff)' }} />全部通道
-        </button>
-        {channels.map((channel) => (
-          <button
-            key={channel.provider}
-            className={channelFilter === channel.provider ? styles.chip + ' ' + styles.active : styles.chip}
-            onClick={() => props.onChannelFilter(channel.provider)}
-          >
-            <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />{channel.displayName}
-          </button>
-        ))}
-      </div>
 
       <div className={styles.card}>
         <div className={detailStyles.chartTitle}>

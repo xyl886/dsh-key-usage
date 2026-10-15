@@ -172,3 +172,6 @@
 
 /* 成本上升的角标用提示色（中性语义，不是错误） */
 .badgeWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+
+/* 卡片标题行：图标 + 标签 */
+.statLabelRow { display: flex; align-items: center; gap: 6px; }

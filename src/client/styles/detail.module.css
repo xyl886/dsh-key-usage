@@ -80,3 +80,6 @@
 .shareName { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sharePercent { color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; }
 .shareTokens { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
+
+/* 工具栏里的通道下拉：与范围标签同排，紧跟「自定义」右侧 */
+.channelSelect { display: inline-flex; align-items: center; margin-left: 2px; }
