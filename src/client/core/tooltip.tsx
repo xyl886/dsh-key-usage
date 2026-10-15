@@ -6,6 +6,9 @@ export interface TooltipContent {
   x: number
   y: number
   node: ReactNode
+  /** 悬停目标的左右边界：把它放到目标**外面**，才不会盖住正在看的柱子/行。 */
+  anchorLeft: number
+  anchorRight: number
 }
 
 export interface TooltipApi {
@@ -17,7 +20,15 @@ export interface TooltipApi {
 export function useTooltip(): TooltipApi {
   const [tooltip, setTooltip] = useState<TooltipContent | null>(null)
   const show = useCallback((event: React.MouseEvent, node: ReactNode) => {
-    setTooltip({ x: event.clientX, y: event.clientY, node })
+    const target = event.currentTarget as HTMLElement | null
+    const rect = target?.getBoundingClientRect()
+    setTooltip({
+      x: event.clientX,
+      y: event.clientY,
+      node,
+      anchorLeft: rect === undefined ? event.clientX : rect.left,
+      anchorRight: rect === undefined ? event.clientX : rect.right,
+    })
   }, [])
   const hide = useCallback(() => setTooltip(null), [])
   return { tooltip, show, hide }
@@ -28,10 +39,18 @@ export function TooltipView({ tooltip }: { tooltip: TooltipContent | null }): Re
   useLayoutEffect(() => {
     const element = elementRef.current
     if (element === null || tooltip === null) return
-    const maxX = window.innerWidth - element.offsetWidth - 12
-    const maxY = window.innerHeight - element.offsetHeight - 12
-    element.style.left = Math.max(8, Math.min(tooltip.x + 14, maxX)) + 'px'
-    element.style.top = Math.max(8, Math.min(tooltip.y + 14, maxY)) + 'px'
+    const width = element.offsetWidth
+    const height = element.offsetHeight
+    const margin = 12
+    const gap = 10
+    // 横向：放在悬停目标的**右侧**（目标外），右边放不下就放左侧 —— 这样永远不会盖住那一列
+    const left = tooltip.anchorRight + gap + width > window.innerWidth - margin
+      ? tooltip.anchorLeft - width - gap
+      : tooltip.anchorRight + gap
+    // 纵向：跟随光标居中，再夹进视口
+    const top = tooltip.y - height / 2
+    element.style.left = Math.max(margin, Math.min(left, window.innerWidth - width - margin)) + 'px'
+    element.style.top = Math.max(margin, Math.min(top, window.innerHeight - height - margin)) + 'px'
   }, [tooltip])
   if (tooltip === null) return null
   return <div ref={elementRef} className={styles.tooltip}>{tooltip.node}</div>
