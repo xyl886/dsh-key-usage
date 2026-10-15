@@ -46,13 +46,13 @@
 .cardGridAuto { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
-.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 18px; }
 
 
 @media (max-width: 720px) { .cardGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 6px; }
-.statValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.83); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.statValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.83); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-top: 4px; }
 
 .groupLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); font-weight: 600; margin: 4px 0 10px; }
@@ -165,7 +165,7 @@
 .logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }
 
 /* 角标贴在当期数值的右上角：数值行两端对齐 */
-.statValueRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.statValueRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .statBadge { font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; align-self: flex-start; }
 .statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); margin-top: 2px; }
 

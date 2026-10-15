@@ -92,7 +92,7 @@ function metricsOf(usage: UsageResponse | null): Metrics | null {
 function percentBadge(current: number, previous: number, warnOnUp: boolean): ReactNode {
   if (previous === 0) return null
   const delta = Math.round((current - previous) / previous * 1000) / 10
-  if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
+  if (Math.abs(delta) < FLAT_EPSILON) return null
   const arrow = delta > 0 ? '↑' : '↓'
   const sign = delta > 0 ? '+' : ''
   return <span className={warnOnUp && delta > 0 ? styles.badgeWarn : undefined}>{arrow} {sign}{delta}%</span>
@@ -102,7 +102,7 @@ function percentBadge(current: number, previous: number, warnOnUp: boolean): Rea
 function pointBadge(current: number | null, previous: number | null): ReactNode {
   if (current === null || previous === null) return null
   const delta = Math.round((current - previous) * 1000) / 10
-  if (Math.abs(delta) < FLAT_EPSILON) return <span>{t('t.flat')}</span>
+  if (Math.abs(delta) < FLAT_EPSILON) return null
   const arrow = delta > 0 ? '↑' : '↓'
   const sign = delta > 0 ? '+' : ''
   // 命中率是比值，涨跌按百分点（pp）计，避免「96.2% 比 94.0% 涨 2.3%」这类误读（沿用旧 TrendPanel 的写法）
@@ -151,7 +151,8 @@ export function useTrend(props: {
       activeDays: { above: aboveOf(previous === null ? '—' : String(previous.activeDays)), badge: previous === null ? null : percentBadge(current.activeDays, previous.activeDays, false) },
       cost: {
         above: aboveOf(previous === null ? '—' : rowMoneyViewOf({ cost: previous.cost }).text),
-        badge: previous === null ? null : percentBadge(current.cost, previous.cost, true),
+        // 成本为 0（订阅内 / 无计费 / 无依据）时不给环比：没有可比金额
+        badge: previous === null || current.cost === 0 ? null : percentBadge(current.cost, previous.cost, true),
       },
     }
   }, [comparable, usage, previousUsage])
