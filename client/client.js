@@ -5141,7 +5141,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								href: PLUGIN_REPO_URL,
 								target: "_blank",
 								rel: "noreferrer",
-								title: "在 GitHub 上查看插件源码与更新记录",
 								children: "GitHub"
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								className: shared_module_css_default.refreshBtn,

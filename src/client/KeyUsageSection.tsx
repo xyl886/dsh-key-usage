@@ -195,7 +195,7 @@ export function KeyUsageSection() {
       <div className={styles.title}>
         <span>使用情况</span>
         <span className={styles.titleActions}>
-          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" title="在 GitHub 上查看插件源码与更新记录">GitHub</a>
+          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer">GitHub</a>
           <button className={styles.refreshBtn} disabled={loading} onClick={refresh}>
             {loading ? '刷新中…' : '↻ 刷新'}
           </button>
