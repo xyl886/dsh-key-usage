@@ -52,7 +52,7 @@
 @media (max-width: 720px) { .cardGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 6px; }
-.statValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.83); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; }
+.statValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.83); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; white-space: nowrap; padding-right: 72px; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-top: 4px; }
 
 .groupLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); font-weight: 600; margin: 4px 0 10px; }
@@ -165,8 +165,9 @@
 .logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }
 
 /* 角标贴在当期数值的右上角：数值行两端对齐 */
-.statValueRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.statBadge { font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; align-self: flex-start; }
+/* 角标固定贴在当期数值右上角：数值右侧预留位置，角标绝对定位（不会换行，也不会挤走数值） */
+.statValueRow { position: relative; }
+.statBadge { position: absolute; right: 0; top: 0; white-space: nowrap; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); margin-top: 2px; }
 
 /* 成本上升的角标用提示色（中性语义，不是错误） */
