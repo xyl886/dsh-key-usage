@@ -125,7 +125,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 > 「**· 部分**」是口径提示、不是错误：该条聚合价目缺一档缓存价，缺的那档按**未命中价**代；两档都缺的条目按「不支持缓存计价」处理，不标「部分」。
 
-**内置价目**（18 条，2026-10-13 抓取；随包发布的 `pricing-catalog.yml`，**不要改它**，升级会覆盖）：
+**内置价目**（18 条，2026-10-13 抓取；随包发布的 `data/pricing-catalog.yml`，**不要改它**，升级会覆盖）：
 
 | 通道 | 模型 | 币种 | 来源 |
 | --- | --- | --- | --- |
@@ -208,7 +208,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | Node.js | ≥ 22（宿主内置） |
 | 运行时依赖 | 无。`react` / `react/jsx-runtime` 由宿主注入；服务端只用 Node 内置模块；唯一 peer 是 `@deepseek-ai/cordis`（optional） |
 | 可选服务 | `sessionPersistence`（缺失时项目 / 会话 / 按小时为空态）、`credentials`（缺失时余额只读快照） |
-| 价目文件 | 内置价目 `pricing-catalog.yml` 与聚合价目快照 `data/litellm-model-prices.json` 随包发布、只读；刷新后的副本写在 `$DSH_HOME/dsh-key-usage/` |
+| 价目文件 | 内置价目 `data/pricing-catalog.yml` 与聚合价目快照 `data/litellm-model-prices.json` 随包发布、只读；刷新后的副本写在 `$DSH_HOME/dsh-key-usage/` |
 
 ## 开发
 
