@@ -5,6 +5,7 @@
  */
 import { createElement as h } from 'react'
 import type { SectionContext } from './types.ts'
+import { installI18n, t, type LocaleFace } from './i18n.ts'
 import { UsageIcon } from './UsageIcon.tsx'
 import { UsagePage } from './UsagePage.tsx'
 
@@ -13,9 +14,12 @@ const NS = 'dsh-key-usage'
 const PANEL_ID = NS
 
 export const name = NS
-export const inject = ['slots']
+export const inject = ['slots', 'locale']
 
 export function apply(ctx: SectionContext): void {
+  // 字典注册进宿主 locale 服务：宿主切语言时界面文案跟着切（旧宿主没有该服务则用内置中文）
+  installI18n((ctx as { locale?: LocaleFace }).locale)
+
   ctx.slots.inject('main', () => ctx.slots.register({
     name: 'main',
     key: PANEL_ID,
@@ -25,6 +29,6 @@ export function apply(ctx: SectionContext): void {
     name: 'sidebar.panellist',
     id: PANEL_ID,
     order: 30,
-    label: () => '使用情况',
+    label: () => t('nav.usage'),
   }, (props: { size?: number }) => h(UsageIcon, { size: props.size })))
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import styles from '../../styles/ui.module.css'
 
-export function Dialog(props: { title: string; children: ReactNode; onClose: () => void }): ReactNode {
+export function Dialog(props: { title: string; children: ReactNode; onClose: () => void; /** 关闭按钮的读屏名（走 i18n，调用方传 t('action.close')） */ closeLabel?: string }): ReactNode {
   const boxRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Escape') props.onClose() }
@@ -24,7 +24,7 @@ export function Dialog(props: { title: string; children: ReactNode; onClose: () 
       >
         <div className={styles.dialogHead}>
           <div className={styles.dialogTitle}>{props.title}</div>
-          <button type="button" className={styles.dialogClose} aria-label="关闭" onClick={props.onClose}>✕</button>
+          <button type="button" className={styles.dialogClose} aria-label={props.closeLabel ?? '关闭'} onClick={props.onClose}>✕</button>
         </div>
         <div className={styles.dialogBody}>{props.children}</div>
       </div>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll } from './api.ts'
 import { fxSummaryTextOf, useCurrencyDisplay } from './currency.ts'
 import { isoDate, shiftedIsoDate } from './format.ts'
+import { useT } from './i18n.ts'
 import { PLUGIN_REPO_URL } from './pricing.ts'
 import { TooltipView, useTooltip } from './tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
@@ -32,12 +33,12 @@ import styles from './styles/shared.module.css'
 type TabId = 'overview' | 'detail' | 'projects' | 'models' | 'sessions' | 'quota'
 
 const TABS: Array<[TabId, string]> = [
-  ['overview', '总览'],
-  ['detail', '使用明细'],
-  ['projects', '项目用量'],
-  ['models', '按模型'],
-  ['sessions', '会话用量'],
-  ['quota', '余额与配额'],
+  ['overview', 'tab.overview'],
+  ['detail', 'tab.detail'],
+  ['projects', 'tab.projects'],
+  ['models', 'tab.models'],
+  ['sessions', 'tab.sessions'],
+  ['quota', 'tab.quota'],
 ]
 
 export function KeyUsageSection() {
@@ -68,6 +69,8 @@ export function KeyUsageSection() {
   const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
   /** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
   const [showCaliber, setShowCaliber] = useState(false)
+  /** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
+  const t = useT()
   const lastSnapshotAt = useRef(0)
   const tooltip = useTooltip()
   /** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
@@ -197,9 +200,9 @@ export function KeyUsageSection() {
   return (
     <div className={styles.section}>
       <div className={styles.title}>
-        <span>使用情况</span>
+        <span>{t('app.title')}</span>
         <span className={styles.titleActions}>
-          <Button size="sm" onClick={() => setShowCaliber(true)}>口径</Button>
+          <Button size="sm" onClick={() => setShowCaliber(true)}>{t('action.caliber')}</Button>
           <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
     <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
@@ -209,7 +212,7 @@ export function KeyUsageSection() {
             className={styles.refreshBtn}
             disabled={loading}
             onClick={refresh}
-            aria-label={loading ? '刷新中' : '刷新'}
+            aria-label={loading ? t('action.refreshing') : t('action.refresh')}
             aria-busy={loading}
           >
             <span className={loading ? styles.refreshIconSpin : styles.refreshIcon} aria-hidden="true">↻</span>
@@ -218,8 +221,8 @@ export function KeyUsageSection() {
       </div>
 
       <div className={styles.tabBar}>
-        {TABS.map(([tabId, label]) => (
-          <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => setActiveTab(tabId)}>{label}</button>
+        {TABS.map(([tabId, labelKey]) => (
+          <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => setActiveTab(tabId)}>{t(labelKey)}</button>
         ))}
       </div>
 
@@ -283,22 +286,22 @@ export function KeyUsageSection() {
       )}
 
       {showCaliber && (
-      <Dialog title="口径说明" onClose={() => setShowCaliber(false)}>
+      <Dialog title={t('caliber.title')} closeLabel={t('action.close')} onClose={() => setShowCaliber(false)}>
         <ul className={styles.footnoteList}>
           <li>
-            按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充
-            {summary !== null && summary.todaySource === 'session' ? '（当前有 ' + summary.sessionDates.length + ' 天）' : ''}
-            ，两套来源按天取舍、不相加；项目 / 会话 / 按模型 / 按小时全部来自会话事件，每个样本计一次调用。
+            {t('caliber.source', {
+              days: summary !== null && summary.todaySource === 'session'
+                ? t('caliber.sourceDays', { count: summary.sessionDates.length })
+                : '',
+            })}
           </li>
+          <li>{t('caliber.cost')}</li>
           <li>
-            成本四层自动生效，<b>不需要你填任何价格</b>：官方账单 &gt; 官方价（内置厂商价目）&gt; 聚合（LiteLLM）&gt; 台账反推均价；
-            角标同此命名，没有依据时显示 —。金额按工具条选的币种折算（折算值带 <code>≈</code>），当前
-            {currency.fx === null ? '还没取到汇率，跨币种按原币种显示' : fxSummaryTextOf(currency.fx)}。
+            {t('caliber.currency', {
+              fx: currency.fx === null ? t('caliber.fxMissing') : fxSummaryTextOf(currency.fx),
+            })}
           </li>
-          <li>
-            页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在你打开页面或点「刷新」时联网，
-            查不到就沿用上一份快照并标出数据时间与失败原因。
-          </li>
+          <li>{t('caliber.refresh')}</li>
         </ul>
       </Dialog>)}
 

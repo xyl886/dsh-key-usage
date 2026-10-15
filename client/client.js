@@ -6,6 +6,107 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
+		//#region src/client/i18n.ts
+		/**
+		* i18n：按宿主 `@deepseek-ai/dsh-client-locale` 的契约注册命名空间字典，组件用 `t()` 取词。
+		*
+		* - 注册：`ctx.locale.register('dsh-key-usage', { zh, en })`，两种内置语言必须齐全；
+		* - 取词：优先用宿主 `ctx.locale.bind(ns)` 返回的绑定函数（身份稳定，跟随宿主语言切换）；
+		* - 重渲染：订阅宿主 locale 快照，切语言时 `useT()` 触发组件更新，不需要刷新页面；
+		* - 回落：宿主没有 locale 服务（旧版本）时用本文件的 `zh`，界面不会变空。
+		*
+		* 命名：键用「区域.用途」，界面标签尽量 ≤6 字，解释性长句统一放 `caliber.*`（弹窗里）。
+		*/
+		/** 界面文案（中文）：标签极简，解释性内容只出现在口径弹窗里。 */
+		const zh = {
+			"nav.usage": "使用情况",
+			"app.title": "使用情况",
+			"tab.overview": "总览",
+			"tab.detail": "使用明细",
+			"tab.projects": "项目用量",
+			"tab.models": "按模型",
+			"tab.sessions": "会话用量",
+			"tab.quota": "余额与配额",
+			"action.refresh": "刷新",
+			"action.refreshing": "刷新中",
+			"action.caliber": "口径",
+			"action.close": "关闭",
+			"caliber.title": "口径说明",
+			"caliber.source": "按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充{days}；项目 / 会话 / 按模型 / 按小时来自会话事件，每个样本计一次调用。",
+			"caliber.sourceDays": "（当前有 {count} 天）",
+			"caliber.cost": "成本四层自动生效，不需要填任何价格：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价；角标同此命名，没有依据时显示 —。",
+			"caliber.currency": "金额按所选币种折算（带 ≈），当前{fx}。",
+			"caliber.fxMissing": "还没取到汇率，跨币种按原币种显示",
+			"caliber.refresh": "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。"
+		};
+		/** 界面文案（英文）：只做短词，不写句子；长解释同样只在口径弹窗里。 */
+		const en = {
+			"nav.usage": "Usage",
+			"app.title": "Usage",
+			"tab.overview": "Overview",
+			"tab.detail": "Details",
+			"tab.projects": "Projects",
+			"tab.models": "Models",
+			"tab.sessions": "Sessions",
+			"tab.quota": "Balance",
+			"action.refresh": "Refresh",
+			"action.refreshing": "Refreshing",
+			"action.caliber": "Method",
+			"action.close": "Close",
+			"caliber.title": "Method",
+			"caliber.source": "Daily figures come from the host ledger (official cost included); days missing there fall back to session events{days}. Projects, sessions, models and hourly buckets come from session events, one call per sample.",
+			"caliber.sourceDays": " ({count} days)",
+			"caliber.cost": "Cost resolves in four layers: official bill > built-in vendor catalog > LiteLLM aggregate > ledger average. Badges use the same names; — means no basis.",
+			"caliber.currency": "Amounts convert to the selected currency (≈). Currently {fx}.",
+			"caliber.fxMissing": "no FX rate yet, showing original currencies",
+			"caliber.refresh": "Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason."
+		};
+		const NS$1 = "dsh-key-usage";
+		let bound = null;
+		let revision = 0;
+		const listeners$1 = /* @__PURE__ */ new Set();
+		/** 由客户端入口在 apply 时调用；任何一步失败都不抛错（界面继续用内置中文）。 */
+		function installI18n(locale) {
+			if (locale === void 0) return;
+			try {
+				locale.register?.(NS$1, {
+					zh,
+					en
+				});
+				if (typeof locale.bind === "function") bound = locale.bind(NS$1);
+				locale.subscribe?.(() => {
+					revision += 1;
+					for (const listener of listeners$1) listener();
+				});
+			} catch {
+				bound = null;
+			}
+		}
+		/** 取词：`{name}` 占位用 params 替换；缺键回落中文词典，再缺则回显键名（便于发现漏词）。 */
+		function t(key, params) {
+			let text = key;
+			if (bound !== null) {
+				const translated = bound(key);
+				text = translated === key ? zh[key] ?? key : translated;
+			} else text = zh[key] ?? key;
+			if (params === void 0) return text;
+			return text.replace(/\{(\w+)\}/g, (whole, name) => {
+				const value = params[name];
+				return value === void 0 ? whole : String(value);
+			});
+		}
+		function subscribe(listener) {
+			listeners$1.add(listener);
+			return () => {
+				listeners$1.delete(listener);
+			};
+		}
+		/** 组件里用它拿 t：宿主切语言时自动重渲染。 */
+		function useT() {
+			(0, react.useSyncExternalStore)(subscribe, () => revision);
+			return t;
+		}
+		//#endregion
 		//#region src/client/UsageIcon.tsx
 		function UsageIcon({ size = 18 }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
@@ -806,7 +907,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: ui_module_css_default.dialogClose,
-							"aria-label": "关闭",
+							"aria-label": props.closeLabel ?? "关闭",
 							onClick: props.onClose,
 							children: "✕"
 						})]
@@ -5133,12 +5234,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/KeyUsageSection.tsx
 		/** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 		const TABS = [
-			["overview", "总览"],
-			["detail", "使用明细"],
-			["projects", "项目用量"],
-			["models", "按模型"],
-			["sessions", "会话用量"],
-			["quota", "余额与配额"]
+			["overview", "tab.overview"],
+			["detail", "tab.detail"],
+			["projects", "tab.projects"],
+			["models", "tab.models"],
+			["sessions", "tab.sessions"],
+			["quota", "tab.quota"]
 		];
 		function KeyUsageSection() {
 			const [activeTab, setActiveTab] = (0, react.useState)("overview");
@@ -5170,6 +5271,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [quotaOutcome, setQuotaOutcome] = (0, react.useState)(null);
 			/** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
 			const [showCaliber, setShowCaliber] = (0, react.useState)(false);
+			/** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
+			const t = useT();
 			const lastSnapshotAt = (0, react.useRef)(0);
 			const tooltip = useTooltip();
 			/** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
@@ -5348,13 +5451,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: shared_module_css_default.title,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "使用情况" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("app.title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: shared_module_css_default.titleActions,
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 									size: "sm",
 									onClick: () => setShowCaliber(true),
-									children: "口径"
+									children: t("action.caliber")
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
 									className: shared_module_css_default.ghLink,
@@ -5378,7 +5481,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.refreshBtn,
 									disabled: loading,
 									onClick: refresh,
-									"aria-label": loading ? "刷新中" : "刷新",
+									"aria-label": loading ? t("action.refreshing") : t("action.refresh"),
 									"aria-busy": loading,
 									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: loading ? shared_module_css_default.refreshIconSpin : shared_module_css_default.refreshIcon,
@@ -5391,10 +5494,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.tabBar,
-						children: TABS.map(([tabId, label]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						children: TABS.map(([tabId, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							className: activeTab === tabId ? shared_module_css_default.active : "",
 							onClick: () => setActiveTab(tabId),
-							children: label
+							children: t(labelKey)
 						}, tabId))
 					}),
 					activeTab === "overview" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OverviewTab, {
@@ -5458,26 +5561,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						onPricingReload: () => setPricingRevision((previous) => previous + 1)
 					}),
 					showCaliber && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Dialog, {
-						title: "口径说明",
+						title: t("caliber.title"),
+						closeLabel: t("action.close"),
 						onClose: () => setShowCaliber(false),
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 							className: shared_module_css_default.footnoteList,
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-									"按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充",
-									summary !== null && summary.todaySource === "session" ? "（当前有 " + summary.sessionDates.length + " 天）" : "",
-									"，两套来源按天取舍、不相加；项目 / 会话 / 按模型 / 按小时全部来自会话事件，每个样本计一次调用。"
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-									"成本四层自动生效，",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: "不需要你填任何价格" }),
-									"：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价； 角标同此命名，没有依据时显示 —。金额按工具条选的币种折算（折算值带 ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: "≈" }),
-									"），当前",
-									currency.fx === null ? "还没取到汇率，跨币种按原币种显示" : fxSummaryTextOf(currency.fx),
-									"。"
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在你打开页面或点「刷新」时联网， 查不到就沿用上一份快照并标出数据时间与失败原因。" })
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.source", { days: summary !== null && summary.todaySource === "session" ? t("caliber.sourceDays", { count: summary.sessionDates.length }) : "" }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.cost") }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.currency", { fx: currency.fx === null ? t("caliber.fxMissing") : fxSummaryTextOf(currency.fx) }) }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.refresh") })
 							]
 						})
 					}),
@@ -5528,8 +5621,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 侧边栏条目与 main 页面共用的面板标识（宿主 MainPanelId 域，命名空间化避免撞车）。 */
 		const PANEL_ID = NS;
 		const name = NS;
-		const inject = ["slots"];
+		const inject = ["slots", "locale"];
 		function apply(ctx) {
+			installI18n(ctx.locale);
 			ctx.slots.inject("main", () => ctx.slots.register({
 				name: "main",
 				key: PANEL_ID
@@ -5538,7 +5632,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				name: "sidebar.panellist",
 				id: PANEL_ID,
 				order: 30,
-				label: () => "使用情况"
+				label: () => t("nav.usage")
 			}, (props) => (0, react.createElement)(UsageIcon, { size: props.size })));
 		}
 		//#endregion
