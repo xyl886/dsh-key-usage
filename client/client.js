@@ -2947,37 +2947,37 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$3 = [
 			{
 				key: "date",
-				label: t("c.date"),
+				labelKey: "c.date",
 				value: (row) => row.date
 			},
 			{
 				key: "calls",
-				label: t("c.calls"),
+				labelKey: "c.calls",
 				value: (row) => row.calls
 			},
 			{
 				key: "inputTokens",
-				label: t("c.input"),
+				labelKey: "c.input",
 				value: (row) => row.inputTokens
 			},
 			{
 				key: "outputTokens",
-				label: t("c.output"),
+				labelKey: "c.output",
 				value: (row) => row.outputTokens
 			},
 			{
 				key: "cacheReadTokens",
-				label: t("c.cacheRead"),
+				labelKey: "c.cacheRead",
 				value: (row) => row.cacheReadTokens
 			},
 			{
 				key: "cacheHitRate",
-				label: t("c.hitRate"),
+				labelKey: "c.hitRate",
 				value: (row) => hitRateValueOf(row)
 			},
 			{
 				key: "cost",
-				label: t("c.costNative"),
+				labelKey: "c.costNative",
 				value: (row) => row.cost
 			}
 		];
@@ -3423,6 +3423,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/components/ui/Select.tsx
 		/** 通用下拉：原生 `select` 的外观改不动（各系统长相不一，与宿主主题脱节），这里自建 listbox。
 		*  键盘：↑↓ 移动、Enter 选中、Esc 关闭；点外部关闭；role=listbox/option 供读屏。 */
+		function labelOf(option) {
+			if (option.label !== void 0) return option.label;
+			if (option.labelKey !== void 0) return t(option.labelKey);
+			return option.value;
+		}
 		function Select(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [activeIndex, setActiveIndex] = (0, react.useState)(0);
@@ -3472,7 +3477,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					},
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: ui_module_css_default.selectValue,
-						children: current?.label ?? ""
+						children: current === void 0 ? "" : labelOf(current)
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: ui_module_css_default.selectCaret,
 						"aria-hidden": "true",
@@ -3505,7 +3510,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						className: ui_module_css_default.selectOption + (index === activeIndex ? " " + ui_module_css_default.selectOptionActive : ""),
 						onMouseEnter: () => setActiveIndex(index),
 						onClick: () => commit(index),
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: option.label }), option.value === props.value && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: labelOf(option) }), option.value === props.value && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: ui_module_css_default.selectCheck,
 							"aria-hidden": "true",
 							children: "✓"
@@ -3522,22 +3527,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$2 = [
 			{
 				key: "provider",
-				label: t("m.channelId"),
+				labelKey: "m.channelId",
 				value: (row) => row.provider
 			},
 			{
 				key: "providerLabel",
-				label: t("common.channel"),
+				labelKey: "common.channel",
 				value: (row) => row.providerLabel
 			},
 			{
 				key: "model",
-				label: t("m.model"),
+				labelKey: "m.model",
 				value: (row) => row.model
 			},
 			{
 				key: "calls",
-				label: t("common.calls"),
+				labelKey: "common.calls",
 				value: (row) => row.calls
 			},
 			{
@@ -3547,47 +3552,47 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "inputTokens",
-				label: t("c.input"),
+				labelKey: "c.input",
 				value: (row) => row.buckets.inputTokens
 			},
 			{
 				key: "outputTokens",
-				label: t("c.output"),
+				labelKey: "c.output",
 				value: (row) => row.buckets.outputTokens
 			},
 			{
 				key: "cacheReadTokens",
-				label: t("c.cacheRead"),
+				labelKey: "c.cacheRead",
 				value: (row) => row.buckets.cacheReadTokens
 			},
 			{
 				key: "cacheHitRate",
-				label: t("c.hitRate"),
+				labelKey: "c.hitRate",
 				value: (row) => row.cacheHitRate
 			},
 			{
 				key: "cost",
-				label: t("c.costNative"),
+				labelKey: "c.costNative",
 				value: (row) => row.cost
 			},
 			{
 				key: "costSource",
-				label: t("s.costSource"),
+				labelKey: "s.costSource",
 				value: (row) => row.costSource === void 0 ? null : t(COST_SOURCE_LABELS[row.costSource])
 			},
 			{
 				key: "costMode",
-				label: t("d.costMode"),
+				labelKey: "d.costMode",
 				value: (row) => row.costMode
 			},
 			{
 				key: "sessionCount",
-				label: t("m.sessions"),
+				labelKey: "m.sessions",
 				value: (row) => row.sessionCount
 			},
 			{
 				key: "lastTime",
-				label: t("m.lastActive"),
+				labelKey: "m.lastActive",
 				value: (row) => fmtDateTime(row.lastTime)
 			}
 		];
@@ -3654,7 +3659,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							onChange: setChannelFilter,
 							options: [{
 								value: "ALL",
-								label: t("s.allChannels")
+								labelKey: "s.allChannels"
 							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
 								label: channel.displayName
@@ -3667,19 +3672,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "tokensDesc",
-									label: t("s.sortTokensDesc")
+									labelKey: "s.sortTokensDesc"
 								},
 								{
 									value: "callsDesc",
-									label: t("s.sortCalls")
+									labelKey: "s.sortCalls"
 								},
 								{
 									value: "costDesc",
-									label: t("s.sortCost")
+									labelKey: "s.sortCost"
 								},
 								{
 									value: "recent",
-									label: t("m.lastActive")
+									labelKey: "m.lastActive"
 								}
 							]
 						}),
@@ -3794,17 +3799,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const EXPORT_COLUMNS$1 = [
 			{
 				key: "workspace",
-				label: t("p.path"),
+				labelKey: "p.path",
 				value: (row) => row.workspace
 			},
 			{
 				key: "dominantProvider",
-				label: t("p.mainChannel"),
+				labelKey: "p.mainChannel",
 				value: (row) => row.dominantProvider
 			},
 			{
 				key: "calls",
-				label: t("common.calls"),
+				labelKey: "common.calls",
 				value: (row) => row.calls
 			},
 			{
@@ -3814,32 +3819,32 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			},
 			{
 				key: "cacheHitRate",
-				label: t("c.hitRate"),
+				labelKey: "c.hitRate",
 				value: (row) => row.cacheHitRate
 			},
 			{
 				key: "cost",
-				label: t("c.costNative"),
+				labelKey: "c.costNative",
 				value: (row) => row.cost
 			},
 			{
 				key: "costSource",
-				label: t("s.costSource"),
+				labelKey: "s.costSource",
 				value: (row) => row.costSource === void 0 ? null : t(COST_SOURCE_LABELS[row.costSource])
 			},
 			{
 				key: "sessionCount",
-				label: t("m.sessions"),
+				labelKey: "m.sessions",
 				value: (row) => row.sessionCount
 			},
 			{
 				key: "archivedSessionCount",
-				label: t("p.archivedSessions"),
+				labelKey: "p.archivedSessions",
 				value: (row) => row.archivedSessionCount
 			},
 			{
 				key: "lastTime",
-				label: t("m.lastActive"),
+				labelKey: "m.lastActive",
 				value: (row) => fmtDateTime(row.lastTime)
 			}
 		];
@@ -3905,7 +3910,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							onChange: setChannelFilter,
 							options: [{
 								value: "ALL",
-								label: t("s.allChannels")
+								labelKey: "s.allChannels"
 							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
 								label: channel.displayName
@@ -3918,19 +3923,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "recent",
-									label: t("m.lastActive")
+									labelKey: "m.lastActive"
 								},
 								{
 									value: "tokensDesc",
-									label: t("s.sortTokensDesc")
+									labelKey: "s.sortTokensDesc"
 								},
 								{
 									value: "tokensAsc",
-									label: t("s.sortTokensAsc")
+									labelKey: "s.sortTokensAsc"
 								},
 								{
 									value: "callsDesc",
-									label: t("s.sortCalls")
+									labelKey: "s.sortCalls"
 								}
 							]
 						}),
@@ -5479,7 +5484,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							onChange: setChannelFilter,
 							options: [{
 								value: "ALL",
-								label: t("s.allChannels")
+								labelKey: "s.allChannels"
 							}, ...props.channels.map((channel) => ({
 								value: channel.provider,
 								label: channel.displayName
@@ -5492,15 +5497,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "7",
-									label: t("s.days7")
+									labelKey: "s.days7"
 								},
 								{
 									value: "30",
-									label: t("s.days30")
+									labelKey: "s.days30"
 								},
 								{
 									value: "0",
-									label: t("s.rangeAll")
+									labelKey: "s.rangeAll"
 								}
 							]
 						}),
@@ -5511,31 +5516,31 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "recent",
-									label: t("s.sortRecent")
+									labelKey: "s.sortRecent"
 								},
 								{
 									value: "tokensDesc",
-									label: t("s.sortTokensDesc")
+									labelKey: "s.sortTokensDesc"
 								},
 								{
 									value: "tokensAsc",
-									label: t("s.sortTokensAsc")
+									labelKey: "s.sortTokensAsc"
 								},
 								{
 									value: "durationDesc",
-									label: t("s.sortDuration")
+									labelKey: "s.sortDuration"
 								},
 								{
 									value: "costDesc",
-									label: t("s.sortCost")
+									labelKey: "s.sortCost"
 								},
 								{
 									value: "hitDesc",
-									label: t("s.sortHit")
+									labelKey: "s.sortHit"
 								},
 								{
 									value: "callsDesc",
-									label: t("s.sortCalls")
+									labelKey: "s.sortCalls"
 								}
 							]
 						}),
@@ -5546,15 +5551,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "hide",
-									label: t("s.archiveHide")
+									labelKey: "s.archiveHide"
 								},
 								{
 									value: "all",
-									label: t("s.archiveAll")
+									labelKey: "s.archiveAll"
 								},
 								{
 									value: "only",
-									label: t("s.archiveOnly")
+									labelKey: "s.archiveOnly"
 								}
 							]
 						}),
@@ -5565,15 +5570,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							options: [
 								{
 									value: "hide",
-									label: t("s.subagentHide")
+									labelKey: "s.subagentHide"
 								},
 								{
 									value: "all",
-									label: t("s.subagentAll")
+									labelKey: "s.subagentAll"
 								},
 								{
 									value: "only",
-									label: t("s.subagentOnly")
+									labelKey: "s.subagentOnly"
 								}
 							]
 						}),

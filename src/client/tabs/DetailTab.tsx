@@ -28,13 +28,13 @@ const MAX_AXIS_DAYS = 366
 
 /** 导出列：命中率与成本给数值（不带单位），方便在表格里继续算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ChannelDailySummary>> = [
-  { key: 'date', label: t('c.date'), value: (row) => row.date },
-  { key: 'calls', label: t('c.calls'), value: (row) => row.calls },
-  { key: 'inputTokens', label: t('c.input'), value: (row) => row.inputTokens },
-  { key: 'outputTokens', label: t('c.output'), value: (row) => row.outputTokens },
-  { key: 'cacheReadTokens', label: t('c.cacheRead'), value: (row) => row.cacheReadTokens },
-  { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => hitRateValueOf(row) },
-  { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
+  { key: 'date', labelKey: 'c.date', value: (row) => row.date },
+  { key: 'calls', labelKey: 'c.calls', value: (row) => row.calls },
+  { key: 'inputTokens', labelKey: 'c.input', value: (row) => row.inputTokens },
+  { key: 'outputTokens', labelKey: 'c.output', value: (row) => row.outputTokens },
+  { key: 'cacheReadTokens', labelKey: 'c.cacheRead', value: (row) => row.cacheReadTokens },
+  { key: 'cacheHitRate', labelKey: 'c.hitRate', value: (row) => hitRateValueOf(row) },
+  { key: 'cost', labelKey: 'c.costNative', value: (row) => row.cost },
 ]
 
 /** 命中率数值（导出用；界面上的带 % 文本由 `hitRateOf` 生成）。 */

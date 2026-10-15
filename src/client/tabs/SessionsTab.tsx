@@ -168,26 +168,26 @@ export function SessionsTab(props: {
           ariaLabel={t('s.filterChannel')}
           value={channelFilter}
           onChange={setChannelFilter}
-          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+          options={[{ value: 'ALL', labelKey: 's.allChannels' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
         />
         <Select
           ariaLabel={t('s.filterRange')}
           value={daysFilter}
           onChange={setDaysFilter}
-          options={[{ value: '7', label: t('s.days7') }, { value: '30', label: t('s.days30') }, { value: '0', label: t('s.rangeAll') }]}
+          options={[{ value: '7', labelKey: 's.days7' }, { value: '30', labelKey: 's.days30' }, { value: '0', labelKey: 's.rangeAll' }]}
         />
         <Select
           ariaLabel={t('s.sort')}
           value={sortKey}
           onChange={(value) => setSortKey(value as SortKey)}
           options={[
-            { value: 'recent', label: t('s.sortRecent') },
-            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
-            { value: 'tokensAsc', label: t('s.sortTokensAsc') },
-            { value: 'durationDesc', label: t('s.sortDuration') },
-            { value: 'costDesc', label: t('s.sortCost') },
-            { value: 'hitDesc', label: t('s.sortHit') },
-            { value: 'callsDesc', label: t('s.sortCalls') },
+            { value: 'recent', labelKey: 's.sortRecent' },
+            { value: 'tokensDesc', labelKey: 's.sortTokensDesc' },
+            { value: 'tokensAsc', labelKey: 's.sortTokensAsc' },
+            { value: 'durationDesc', labelKey: 's.sortDuration' },
+            { value: 'costDesc', labelKey: 's.sortCost' },
+            { value: 'hitDesc', labelKey: 's.sortHit' },
+            { value: 'callsDesc', labelKey: 's.sortCalls' },
           ]}
         />
         <Select
@@ -195,9 +195,9 @@ export function SessionsTab(props: {
           value={archiveFilter}
           onChange={(value) => setArchiveFilter(value as ArchiveFilter)}
           options={[
-            { value: 'hide', label: t('s.archiveHide') },
-            { value: 'all', label: t('s.archiveAll') },
-            { value: 'only', label: t('s.archiveOnly') },
+            { value: 'hide', labelKey: 's.archiveHide' },
+            { value: 'all', labelKey: 's.archiveAll' },
+            { value: 'only', labelKey: 's.archiveOnly' },
           ]}
         />
         <Select
@@ -205,9 +205,9 @@ export function SessionsTab(props: {
           value={subagentFilter}
           onChange={(value) => setSubagentFilter(value as 'hide' | 'all' | 'only')}
           options={[
-            { value: 'hide', label: t('s.subagentHide') },
-            { value: 'all', label: t('s.subagentAll') },
-            { value: 'only', label: t('s.subagentOnly') },
+            { value: 'hide', labelKey: 's.subagentHide' },
+            { value: 'all', labelKey: 's.subagentAll' },
+            { value: 'only', labelKey: 's.subagentOnly' },
           ]}
         />
         <span className={exportStyles.exportGroup}>

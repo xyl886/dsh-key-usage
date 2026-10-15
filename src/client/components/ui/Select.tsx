@@ -1,11 +1,21 @@
 /** 通用下拉：原生 `select` 的外观改不动（各系统长相不一，与宿主主题脱节），这里自建 listbox。
  *  键盘：↑↓ 移动、Enter 选中、Esc 关闭；点外部关闭；role=listbox/option 供读屏。 */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { t } from '../../i18n.ts'
 import styles from '../../styles/ui.module.css'
 
 export interface SelectOption {
   value: string
-  label: string
+  /** 直接给的文案（渲染期求值） */
+  label?: string
+  /** 词典键：与 label 二选一，渲染时取词 */
+  labelKey?: string
+}
+
+function labelOf(option: SelectOption): string {
+  if (option.label !== undefined) return option.label
+  if (option.labelKey !== undefined) return t(option.labelKey)
+  return option.value
 }
 
 export function Select(props: {
@@ -63,7 +73,7 @@ export function Select(props: {
           }
         }}
       >
-        <span className={styles.selectValue}>{current?.label ?? ''}</span>
+        <span className={styles.selectValue}>{current === undefined ? '' : labelOf(current)}</span>
         <span className={styles.selectCaret} aria-hidden="true">▼</span>
       </button>
       {open && (
@@ -92,7 +102,7 @@ export function Select(props: {
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => commit(index)}
             >
-              <span>{option.label}</span>
+              <span>{labelOf(option)}</span>
               {option.value === props.value && <span className={styles.selectCheck} aria-hidden="true">✓</span>}
             </li>
           ))}

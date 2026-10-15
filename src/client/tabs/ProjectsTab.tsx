@@ -19,16 +19,16 @@ type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'callsDesc'
 
 /** 导出列：成本与命中率都给原始数值，方便在表格里继续算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
-  { key: 'workspace', label: t('p.path'), value: (row) => row.workspace },
-  { key: 'dominantProvider', label: t('p.mainChannel'), value: (row) => row.dominantProvider },
-  { key: 'calls', label: t('common.calls'), value: (row) => row.calls },
+  { key: 'workspace', labelKey: 'p.path', value: (row) => row.workspace },
+  { key: 'dominantProvider', labelKey: 'p.mainChannel', value: (row) => row.dominantProvider },
+  { key: 'calls', labelKey: 'common.calls', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
-  { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
-  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
-  { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
-  { key: 'archivedSessionCount', label: t('p.archivedSessions'), value: (row) => row.archivedSessionCount },
-  { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'cacheHitRate', labelKey: 'c.hitRate', value: (row) => row.cacheHitRate },
+  { key: 'cost', labelKey: 'c.costNative', value: (row) => row.cost },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
+  { key: 'sessionCount', labelKey: 'm.sessions', value: (row) => row.sessionCount },
+  { key: 'archivedSessionCount', labelKey: 'p.archivedSessions', value: (row) => row.archivedSessionCount },
+  { key: 'lastTime', labelKey: 'm.lastActive', value: (row) => fmtDateTime(row.lastTime) },
 ]
 
 export function ProjectsTab(props: {
@@ -86,17 +86,17 @@ export function ProjectsTab(props: {
           ariaLabel={t('s.filterChannel')}
           value={channelFilter}
           onChange={setChannelFilter}
-          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+          options={[{ value: 'ALL', labelKey: 's.allChannels' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
         />
         <Select
           ariaLabel={t('s.sort')}
           value={sortKey}
           onChange={(next) => setSortKey(next as SortKey)}
           options={[
-            { value: 'recent', label: t('m.lastActive') },
-            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
-            { value: 'tokensAsc', label: t('s.sortTokensAsc') },
-            { value: 'callsDesc', label: t('s.sortCalls') },
+            { value: 'recent', labelKey: 'm.lastActive' },
+            { value: 'tokensDesc', labelKey: 's.sortTokensDesc' },
+            { value: 'tokensAsc', labelKey: 's.sortTokensAsc' },
+            { value: 'callsDesc', labelKey: 's.sortCalls' },
           ]}
         />
         <span className={exportStyles.exportGroup}>

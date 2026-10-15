@@ -22,20 +22,20 @@ type SortKey = 'tokensDesc' | 'callsDesc' | 'costDesc' | 'recent'
 
 /** 导出列：取原始数值（金额、命中率不带单位），方便直接进表格做计算。 */
 const EXPORT_COLUMNS: Array<ExportColumn<ModelAggregateRow>> = [
-  { key: 'provider', label: t('m.channelId'), value: (row) => row.provider },
-  { key: 'providerLabel', label: t('common.channel'), value: (row) => row.providerLabel },
-  { key: 'model', label: t('m.model'), value: (row) => row.model },
-  { key: 'calls', label: t('common.calls'), value: (row) => row.calls },
+  { key: 'provider', labelKey: 'm.channelId', value: (row) => row.provider },
+  { key: 'providerLabel', labelKey: 'common.channel', value: (row) => row.providerLabel },
+  { key: 'model', labelKey: 'm.model', value: (row) => row.model },
+  { key: 'calls', labelKey: 'common.calls', value: (row) => row.calls },
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'inputTokens', label: t('c.input'), value: (row) => row.buckets.inputTokens },
-  { key: 'outputTokens', label: t('c.output'), value: (row) => row.buckets.outputTokens },
-  { key: 'cacheReadTokens', label: t('c.cacheRead'), value: (row) => row.buckets.cacheReadTokens },
-  { key: 'cacheHitRate', label: t('c.hitRate'), value: (row) => row.cacheHitRate },
-  { key: 'cost', label: t('c.costNative'), value: (row) => row.cost },
-  { key: 'costSource', label: t('s.costSource'), value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
-  { key: 'costMode', label: t('d.costMode'), value: (row) => row.costMode },
-  { key: 'sessionCount', label: t('m.sessions'), value: (row) => row.sessionCount },
-  { key: 'lastTime', label: t('m.lastActive'), value: (row) => fmtDateTime(row.lastTime) },
+  { key: 'inputTokens', labelKey: 'c.input', value: (row) => row.buckets.inputTokens },
+  { key: 'outputTokens', labelKey: 'c.output', value: (row) => row.buckets.outputTokens },
+  { key: 'cacheReadTokens', labelKey: 'c.cacheRead', value: (row) => row.buckets.cacheReadTokens },
+  { key: 'cacheHitRate', labelKey: 'c.hitRate', value: (row) => row.cacheHitRate },
+  { key: 'cost', labelKey: 'c.costNative', value: (row) => row.cost },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
+  { key: 'costMode', labelKey: 'd.costMode', value: (row) => row.costMode },
+  { key: 'sessionCount', labelKey: 'm.sessions', value: (row) => row.sessionCount },
+  { key: 'lastTime', labelKey: 'm.lastActive', value: (row) => fmtDateTime(row.lastTime) },
 ]
 
 export function ModelsTab(props: { data: ModelsResponse | null; channels: Channel[] }): ReactNode {
@@ -89,17 +89,17 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
           ariaLabel={t('s.filterChannel')}
           value={channelFilter}
           onChange={setChannelFilter}
-          options={[{ value: 'ALL', label: t('s.allChannels') }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
+          options={[{ value: 'ALL', labelKey: 's.allChannels' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
         />
         <Select
           ariaLabel={t('s.sort')}
           value={sortKey}
           onChange={(next) => setSortKey(next as SortKey)}
           options={[
-            { value: 'tokensDesc', label: t('s.sortTokensDesc') },
-            { value: 'callsDesc', label: t('s.sortCalls') },
-            { value: 'costDesc', label: t('s.sortCost') },
-            { value: 'recent', label: t('m.lastActive') },
+            { value: 'tokensDesc', labelKey: 's.sortTokensDesc' },
+            { value: 'callsDesc', labelKey: 's.sortCalls' },
+            { value: 'costDesc', labelKey: 's.sortCost' },
+            { value: 'recent', labelKey: 'm.lastActive' },
           ]}
         />
         <span className={exportStyles.exportGroup}>
