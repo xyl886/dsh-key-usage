@@ -313,7 +313,7 @@ export function DetailTab(props: {
                 </>
               )}
           </span>
-          <span className={styles.dim} style={{ fontSize: 11.5 }}>{bounds.from} ~ {bounds.to}</span>
+          <span className={styles.dim} style={{ fontSize: 'calc(var(--dsh-content-font-size, 12px) * 1.05)' }}>{bounds.from} ~ {bounds.to}</span>
         </div>
         <div className={detailStyles.chartTitle} style={{ marginTop: 10 }}>
           <span className={styles.statLabel}>{chartTitle}</span>

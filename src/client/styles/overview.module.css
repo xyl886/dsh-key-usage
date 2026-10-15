@@ -1,12 +1,12 @@
 /* 总览：Key 清单表 + 年度热力图。 */
 .keyTable { width: 100%; border-collapse: collapse; }
 .keyTable th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
   padding: 6px 10px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .keyTable th:first-child { text-align: left; padding-left: 0; }
 .keyTable td {
-  text-align: right; padding: 10px 10px; font-size: 12.5px; font-variant-numeric: tabular-nums;
+  text-align: right; padding: 10px 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   border-bottom: 1px solid var(--dsw-alias-fill-l1, rgba(128,128,140,.12)); white-space: nowrap;
 }
@@ -17,17 +17,17 @@
 .keyTable tr.disabledRow { opacity: .55; }
 
 .cellKey { display: flex; align-items: center; gap: 10px; }
-.keyDisplay { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.keyEnv { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; }
+.keyDisplay { font-size: calc(var(--dsh-content-font-size, 12px) * 1.19); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.keyEnv { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; }
 .tag {
-  display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 5px;
+  display: inline-block; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); padding: 1px 7px; border-radius: 5px;
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); color: var(--dsw-alias-label-secondary, #9a9aa6);
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
 .tag.free { color: var(--dsw-alias-state-success-primary, #3fb96f); border-color: rgba(63,185,111,.35); }
 .tag.sub { color: var(--dsw-alias-state-business-primary, #5b8cff); border-color: rgba(91,140,255,.35); }
 .tag.off { color: var(--dsw-alias-label-tertiary, #67676f); }
-.rowLink { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.rowLink { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 .keyTable tbody tr.clickable:hover .rowLink { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 
 .quotaCell { display: inline-flex; align-items: center; gap: 8px; }
@@ -41,13 +41,13 @@
 /* ===== 年度热力图 ===== */
 .heatmapCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; margin-top: 24px; }
 .heatmapHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
-.heatmapTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; }
+.heatmapTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
 /* 热力图：固定 28px 方形格子（三类状态完全等大）；39 周 × 31px ≈ 1233px，
    超过页面内容宽度上限（1192px），因此默认就会出现横向滚动条 */
 .heatmapScroll { overflow-x: auto; padding-bottom: 4px; }
 .heatmapBody { display: flex; gap: 6px; width: max-content; }
 .heatWeekdays { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
-.heatWeekdays span { font-size: 9.5px; color: var(--dsw-alias-label-tertiary, #67676f); width: 13px; height: 28px; line-height: 28px; text-align: right; }
+.heatWeekdays span { font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); width: 13px; height: 28px; line-height: 28px; text-align: right; }
 .heatGridCol { display: flex; flex-direction: column; }
 .heatGrid { display: flex; gap: 3px; }
 .heatWeek { display: flex; flex-direction: column; gap: 3px; }
@@ -57,4 +57,4 @@
 /* 用 inset 描边而不是 border：border 会把格子撑大一圈，导致「无数据」格子比其它格子大 */
 .heatCell.empty { background: rgba(128,128,140,.10); box-shadow: inset 0 0 0 1px rgba(128,128,140,.28); }
 .heatMonths { display: flex; gap: 3px; margin-top: 6px; }
-.heatMonths span { width: 28px; flex-shrink: 0; font-size: 10px; color: var(--dsw-alias-label-tertiary, #67676f); text-align: left; white-space: nowrap; }
+.heatMonths span { width: 28px; flex-shrink: 0; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); text-align: left; white-space: nowrap; }

@@ -2,7 +2,7 @@
 .rangeBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .rangeLeft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .rangeTabs { display: inline-flex; gap: 2px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 9px; padding: 2px; }
-.rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: 12px; padding: 4px 13px; border-radius: 7px; cursor: pointer; }
+.rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); padding: 4px 13px; border-radius: 7px; cursor: pointer; }
 .rangeTabs button.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 /* 自定义范围：两个日期输入合成一组（框内左侧标签），避免两个裸 input 夹一个「至」的粗糙感 */
 .dateRange {
@@ -11,10 +11,10 @@
   background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 140, .06));
 }
 .dateField { display: inline-flex; align-items: center; gap: 5px; }
-.dateLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.dateLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 .rangeInput {
   background: transparent; border: 0; color: var(--dsw-alias-label-primary, #e8e8ec);
-  padding: 4px 2px; font: inherit; font-size: 12px; color-scheme: light dark;
+  padding: 4px 2px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); color-scheme: light dark;
   font-variant-numeric: tabular-nums; cursor: text;
 }
 .rangeInput::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
@@ -26,11 +26,11 @@
   outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px; border-radius: 6px;
 }
-.rangeCaption { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; margin-left: auto; }
+.rangeCaption { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-left: auto; }
 /* 每日细目的展开按钮：外观与纯文本一致（箭头 + 日期），但可 Tab 聚焦、可 Enter/Space 触发展开 */
 .rowToggle {
   display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0;
-  font: inherit; font-size: 12px; color: inherit; cursor: pointer; font-variant-numeric: tabular-nums;
+  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); color: inherit; cursor: pointer; font-variant-numeric: tabular-nums;
 }
 .rowToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
@@ -44,7 +44,7 @@
 .chartPane { flex: 1; min-width: 0; }
 .yAxis {
   display: flex; flex-direction: column; justify-content: space-between; height: 110px; margin-top: 8px;
-  min-width: 40px; text-align: right; font-size: 9.5px; color: var(--dsw-alias-label-tertiary, #67676f);
+  min-width: 40px; text-align: right; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f);
   font-variant-numeric: tabular-nums;
 }
 .bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; margin-top: 8px; }
@@ -55,7 +55,7 @@
 .segIn { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 .segOut { background: var(--dsw-alias-state-business-primary, #9a7bff); border-radius: 0 0 2px 2px; }
 .barLabels { display: flex; margin-top: 6px; }
-.barLabels span { flex: 1; text-align: center; font-size: 9.5px; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
+.barLabels span { flex: 1; text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
 /* 每日细目展开块：原型用子表格（模型 + 调用/输入/输出/缓存读/命中率），不占主表列 */
 .subRowCell { padding: 2px 10px 10px 30px !important; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.05)); text-align: left !important; }
@@ -63,12 +63,12 @@
   display: grid; align-items: center; gap: 8px;
   grid-template-columns: minmax(150px, 1.5fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(80px, 1.1fr) minmax(70px, 1fr);
 }
-.subHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10px; border-bottom: 1px solid var(--dsw-alias-fill-l2, rgba(128,128,140,.2)); padding: 4px 0; }
-.subRow { padding: 5px 0; border-bottom: 1px dashed var(--dsw-alias-fill-l1, rgba(128,128,140,.14)); font-size: 11.5px; }
+.subHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); border-bottom: 1px solid var(--dsw-alias-fill-l2, rgba(128,128,140,.2)); padding: 4px 0; }
+.subRow { padding: 5px 0; border-bottom: 1px dashed var(--dsw-alias-fill-l1, rgba(128,128,140,.14)); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
 .subRow:last-child { border-bottom: 0; }
 /* 模型名与提供商名分两行，避免长模型名被截断 */
 .subName { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.subModel { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subChannel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subModel { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subChannel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subNumber { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); }
-.toggleArrow { display: inline-block; width: 13px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 9px; }
+.toggleArrow { display: inline-block; width: 13px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.83); }

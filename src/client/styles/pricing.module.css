@@ -3,7 +3,7 @@
  * 颜色全部走宿主 --dsw-alias-* 令牌，不硬编码明暗两套色。
  */
 .sourceChip {
-  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; line-height: 1.7;
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); line-height: 1.7;
   border: 1px solid currentColor; margin-left: 5px; vertical-align: baseline; white-space: nowrap;
 }
 .sourceOfficial { color: var(--dsw-alias-label-tertiary, #67676f); }
@@ -22,7 +22,7 @@
 .sourceEstimate { color: var(--dsw-alias-state-warning-primary, #e0a13c); }
 
 .linkBtn {
-  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: 11px;
+  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01);
   cursor: pointer; padding: 0 6px;
 }
 .linkBtn:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); }
@@ -31,7 +31,7 @@
 
 /* 内置官方价目说明：只读信息，不需要用户操作 */
 .catalogNote {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7;
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
@@ -44,33 +44,33 @@
 /* 价目文件位置：改了价目文件之后唯一的自查入口 */
 .fileLine {
   display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 6px 0;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
 }
-.pathText { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; word-break: break-all; }
+.pathText { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); word-break: break-all; }
 
 .issueBlock {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.7;
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7;
   color: var(--dsw-alias-state-warning-primary, #e0a13c);
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border: 1px solid var(--dsw-alias-state-warning-primary, #e0a13c);
 }
 .issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11px; }
+.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 .issueList { margin: 6px 0 0; padding-left: 18px; }
 .issueWhere { color: var(--dsw-alias-label-secondary, #9a9aa6); margin-right: 6px; }
 
 /* ===== 聚合价目（LiteLLM）来源与刷新 ===== */
 .aggregateBlock {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.75;
+  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.75;
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
 .aggregateHead { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
 .aggregateTitle { flex: 1 1 auto; min-width: 0; }
 /* 装载状态 / 条目数 / 时间等：一行小字，不写成大字报 */
-.aggregateMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 10.5px; margin-top: 3px; }
+.aggregateMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
 .aggregateMeta b { color: var(--dsw-alias-label-secondary, #9a9aa2); font-weight: 600; }
-.aggregateStatus { margin-top: 4px; font-size: 11px; }
+.aggregateStatus { margin-top: 4px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 .aggregateStatusOk { color: var(--dsw-alias-state-success-primary, #3fb96f); }
 .aggregateStatusBad { color: var(--dsw-alias-state-danger-primary, #e05a5a); }
 
@@ -79,7 +79,7 @@
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 10px; padding: 10px 14px; margin-top: 8px;
 }
-.explanationTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
-.explanationList { margin: 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 11.5px; line-height: 1.75; }
+.explanationTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 600; margin-bottom: 4px; }
+.explanationList { margin: 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.75; }
 .explanationList b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
-.explanationList code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+.explanationList code { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
