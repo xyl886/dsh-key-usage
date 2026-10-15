@@ -9,58 +9,7 @@
  * 命名：键用「区域.用途」，界面标签尽量 ≤6 字，解释性长句统一放 `caliber.*`（弹窗里）。
  */
 import { useSyncExternalStore } from 'react'
-
-/** 界面文案（中文）：标签极简，解释性内容只出现在口径弹窗里。 */
-const zh: Record<string, string> = {
-  'nav.usage': '使用情况',
-  'app.title': '使用情况',
-
-  'tab.overview': '总览',
-  'tab.detail': '使用明细',
-  'tab.projects': '项目用量',
-  'tab.models': '按模型',
-  'tab.sessions': '会话用量',
-  'tab.quota': '余额与配额',
-
-  'action.refresh': '刷新',
-  'action.refreshing': '刷新中',
-  'action.caliber': '口径',
-  'action.close': '关闭',
-
-  'caliber.title': '口径说明',
-  'caliber.source': '按天数据优先取宿主台账（含官方成本），台账没记录的日子回退会话事件补充{days}；项目 / 会话 / 按模型 / 按小时来自会话事件，每个样本计一次调用。',
-  'caliber.sourceDays': '（当前有 {count} 天）',
-  'caliber.cost': '成本四层自动生效，不需要填任何价格：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价；角标同此命名，没有依据时显示 —。',
-  'caliber.currency': '金额按所选币种折算（带 ≈），当前{fx}。',
-  'caliber.fxMissing': '还没取到汇率，跨币种按原币种显示',
-  'caliber.refresh': '页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。',
-}
-
-/** 界面文案（英文）：只做短词，不写句子；长解释同样只在口径弹窗里。 */
-const en: Record<string, string> = {
-  'nav.usage': 'Usage',
-  'app.title': 'Usage',
-
-  'tab.overview': 'Overview',
-  'tab.detail': 'Details',
-  'tab.projects': 'Projects',
-  'tab.models': 'Models',
-  'tab.sessions': 'Sessions',
-  'tab.quota': 'Balance',
-
-  'action.refresh': 'Refresh',
-  'action.refreshing': 'Refreshing',
-  'action.caliber': 'Method',
-  'action.close': 'Close',
-
-  'caliber.title': 'Method',
-  'caliber.source': 'Daily figures come from the host ledger (official cost included); days missing there fall back to session events{days}. Projects, sessions, models and hourly buckets come from session events, one call per sample.',
-  'caliber.sourceDays': ' ({count} days)',
-  'caliber.cost': 'Cost resolves in four layers: official bill > built-in vendor catalog > LiteLLM aggregate > ledger average. Badges use the same names; — means no basis.',
-  'caliber.currency': 'Amounts convert to the selected currency (≈). Currently {fx}.',
-  'caliber.fxMissing': 'no FX rate yet, showing original currencies',
-  'caliber.refresh': 'Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason.',
-}
+import { en, zh } from './copy.ts'
 
 /** 宿主 locale 服务的形状（只声明我们用到的方法，宿主版本不同也能跑）。 */
 export interface LocaleFace {

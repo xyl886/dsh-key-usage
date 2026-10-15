@@ -6,18 +6,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region src/client/i18n.ts
+		//#region src/client/copy.ts
 		/**
-		* i18n：按宿主 `@deepseek-ai/dsh-client-locale` 的契约注册命名空间字典，组件用 `t()` 取词。
-		*
-		* - 注册：`ctx.locale.register('dsh-key-usage', { zh, en })`，两种内置语言必须齐全；
-		* - 取词：优先用宿主 `ctx.locale.bind(ns)` 返回的绑定函数（身份稳定，跟随宿主语言切换）；
-		* - 重渲染：订阅宿主 locale 快照，切语言时 `useT()` 触发组件更新，不需要刷新页面；
-		* - 回落：宿主没有 locale 服务（旧版本）时用本文件的 `zh`，界面不会变空。
-		*
-		* 命名：键用「区域.用途」，界面标签尽量 ≤6 字，解释性长句统一放 `caliber.*`（弹窗里）。
+		* 界面文案词典（zh / en）。规则：界面标签中文 ≤6 字、提示 ≤8 字、英文 ≤2 词；
+		* 解释性长句只允许出现在口径弹窗或 tooltip 里，且必须给英文。
+		* 新增键 → 同时补齐两种语言；缺键会回落中文（见 i18n.ts）。
 		*/
-		/** 界面文案（中文）：标签极简，解释性内容只出现在口径弹窗里。 */
 		const zh = {
 			"nav.usage": "使用情况",
 			"app.title": "使用情况",
@@ -37,9 +31,88 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.cost": "成本四层自动生效，不需要填任何价格：官方账单 > 官方价（内置厂商价目）> 聚合（LiteLLM）> 台账反推均价；角标同此命名，没有依据时显示 —。",
 			"caliber.currency": "金额按所选币种折算（带 ≈），当前{fx}。",
 			"caliber.fxMissing": "还没取到汇率，跨币种按原币种显示",
-			"caliber.refresh": "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。"
+			"caliber.refresh": "页面数据来自统一快照，本地数据每 5 分钟重建；余额与订阅窗口只在打开页面或点刷新时联网，查不到就沿用上一份快照并标出时间与原因。",
+			"balance.total": "总余额",
+			"balance.credit": "充值余额",
+			"balance.grant": "赠送余额",
+			"balance.balance": "余额",
+			"balance.currency": "币种",
+			"window.5h": "5 小时窗口",
+			"window.day": "当日窗口",
+			"window.week": "本周窗口",
+			"window.month": "本月窗口",
+			"unit.perMillion": "每百万 tokens",
+			"source.official": "官方",
+			"source.catalog": "官方价",
+			"source.aggregate": "聚合",
+			"source.estimate": "估算",
+			"source.none": "无依据",
+			"quota.resetAt": "重置于",
+			"quota.noResponse": "没拿到服务端响应",
+			"quota.fxBad": "汇率无法解析",
+			"quota.refreshFailed": "刷新失败",
+			"quota.fxUnavailable": "汇率不可用",
+			"quota.fxCacheHint": "汇率在服务端缓存 12 小时",
+			"quota.fetchFx": "取汇率",
+			"quota.refreshFx": "刷新汇率",
+			"quota.refreshPrices": "刷新价目",
+			"quota.caliberHint": "成本口径说明",
+			"quota.aggregateLabel": "LiteLLM 聚合价目",
+			"quota.ratesHint": "近 30 天模型单价",
+			"quota.unknown": "未知",
+			"quota.notQueried": "未查询",
+			"quota.snapshotTime": "快照时间",
+			"quota.daysStale": "{count} 天未更新",
+			"quota.modelRates": "{count} 个模型单价",
+			"quota.loadingRates": "读取单价",
+			"quota.ratesUnavailable": "单价表不可用",
+			"quota.noUsage": "近 30 天无用量",
+			"quota.converted": "≈ 为折算值",
+			"quota.range": "统计区间",
+			"quota.noFourRates": "没有四档单价",
+			"quota.noSourceDetail": "没有来源明细",
+			"quota.daysAgo": "距今 {count} 天",
+			"quota.entriesCount": "{count} 条",
+			"quota.unreadable": "读不到，成本会少一层依据",
+			"quota.row": "第 {count} 行",
+			"quota.loadingPricing": "读取价目信息",
+			"quota.pricingUnavailable": "价目信息不可用",
+			"quota.pricingUnavailableDetail": "服务端没有返回聚合价目信息，多半是插件服务端还是旧版本 —— 改了服务端要退出重开 DSH 才生效。",
+			"quota.entry": "条目",
+			"quota.modelCount": "模型",
+			"quota.fileTime": "文件时间",
+			"quota.currentFile": "当前文件",
+			"quota.officialBill": "官方账单",
+			"quota.modelsUnit": "{count} 个模型",
+			"quota.partial": "其中部分 {count} 个",
+			"quota.basis": "近 30 天这一格的依据",
+			"quota.basisAuto": "三层价目自动生效，不需要填价格",
+			"quota.priceEntries": "价目条数",
+			"quota.sourceLabel": "来源",
+			"quota.updated": "已更新",
+			"quota.recomputed": "服务端没返回明细，已按新价目重算",
+			"quota.justNow": "刚刚",
+			"quota.minutesAgo": "{count} 分钟前",
+			"quota.hoursAgo": "{count} 小时前",
+			"quota.priceUnit": "单价",
+			"quota.displayCurrency": "显示币种",
+			"quota.live": "实时",
+			"err.noLiveQuery": "未启用实时查询",
+			"err.noApiKey": "未配置 API Key",
+			"err.noSnapshot": "没有快照可用",
+			"err.network": "网络不可达",
+			"err.timeout": "请求超时",
+			"err.unauthorized": "凭据被拒绝（401/403）",
+			"err.badJson": "响应无法解析",
+			"err.tooLarge": "响应异常大",
+			"err.http": "HTTP {code}",
+			"err.detail.noKey": "该通道未配置 API Key，无法查询余额",
+			"err.detail.rejected": "凭据被通道拒绝，无法查询余额",
+			"err.detail.keyMissing": "凭据引用存在，Key 未填写",
+			"err.detail.local": "本地端点，无余额查询接口",
+			"err.detail.free": "该通道无余额查询接口（免费额度）",
+			"err.detail.none": "该通道暂无可查询的余额 / 配额接口"
 		};
-		/** 界面文案（英文）：只做短词，不写句子；长解释同样只在口径弹窗里。 */
 		const en = {
 			"nav.usage": "Usage",
 			"app.title": "Usage",
@@ -59,8 +132,100 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"caliber.cost": "Cost resolves in four layers: official bill > built-in vendor catalog > LiteLLM aggregate > ledger average. Badges use the same names; — means no basis.",
 			"caliber.currency": "Amounts convert to the selected currency (≈). Currently {fx}.",
 			"caliber.fxMissing": "no FX rate yet, showing original currencies",
-			"caliber.refresh": "Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason."
+			"caliber.refresh": "Page data comes from one snapshot, rebuilt locally every 5 minutes. Balance and quota windows only go online when you open the page or refresh; stale values keep their timestamp and reason.",
+			"balance.total": "Total",
+			"balance.credit": "Credit",
+			"balance.grant": "Granted",
+			"balance.balance": "Balance",
+			"balance.currency": "Currency",
+			"window.5h": "5-hour",
+			"window.day": "Daily",
+			"window.week": "Weekly",
+			"window.month": "Monthly",
+			"unit.perMillion": "per 1M tokens",
+			"source.official": "Official",
+			"source.catalog": "Catalog",
+			"source.aggregate": "Aggregate",
+			"source.estimate": "Estimate",
+			"source.none": "None",
+			"quota.resetAt": "Resets",
+			"quota.noResponse": "No response",
+			"quota.fxBad": "Bad FX data",
+			"quota.refreshFailed": "Refresh failed",
+			"quota.fxUnavailable": "FX unavailable",
+			"quota.fxCacheHint": "FX is cached server-side for 12h",
+			"quota.fetchFx": "Get FX",
+			"quota.refreshFx": "Refresh FX",
+			"quota.refreshPrices": "Refresh prices",
+			"quota.caliberHint": "Cost method",
+			"quota.aggregateLabel": "LiteLLM aggregate",
+			"quota.ratesHint": "Model rates (30d)",
+			"quota.unknown": "Unknown",
+			"quota.notQueried": "Not queried",
+			"quota.snapshotTime": "Snapshot",
+			"quota.daysStale": "{count} days old",
+			"quota.modelRates": "{count} model rates",
+			"quota.loadingRates": "Loading rates",
+			"quota.ratesUnavailable": "Rates unavailable",
+			"quota.noUsage": "No usage in 30d",
+			"quota.converted": "≈ converted",
+			"quota.range": "Range",
+			"quota.noFourRates": "No 4-tier rates",
+			"quota.noSourceDetail": "No source detail",
+			"quota.daysAgo": "{count} days ago",
+			"quota.entriesCount": "{count} entries",
+			"quota.unreadable": "unreadable: cost loses one layer",
+			"quota.row": "Row {count}",
+			"quota.loadingPricing": "Loading pricing",
+			"quota.pricingUnavailable": "Pricing unavailable",
+			"quota.pricingUnavailableDetail": "The server returned no aggregate pricing — the plugin server is probably an older build. Restart DSH after server changes.",
+			"quota.entry": "Entries",
+			"quota.modelCount": "Models",
+			"quota.fileTime": "File time",
+			"quota.currentFile": "Current file",
+			"quota.officialBill": "Official bill",
+			"quota.modelsUnit": "{count} models",
+			"quota.partial": "{count} partial",
+			"quota.basis": "Basis for this cell (30d)",
+			"quota.basisAuto": "three price layers apply automatically",
+			"quota.priceEntries": "Price entries",
+			"quota.sourceLabel": "Source",
+			"quota.updated": "Updated",
+			"quota.recomputed": "No detail from server; recomputed with the new prices",
+			"quota.justNow": "just now",
+			"quota.minutesAgo": "{count} min ago",
+			"quota.hoursAgo": "{count} h ago",
+			"quota.priceUnit": "Rates",
+			"quota.displayCurrency": "Currency",
+			"quota.live": "Live",
+			"err.noLiveQuery": "Live query off",
+			"err.noApiKey": "No API key",
+			"err.noSnapshot": "No snapshot",
+			"err.network": "Network unreachable",
+			"err.timeout": "Timeout",
+			"err.unauthorized": "Credentials rejected (401/403)",
+			"err.badJson": "Bad response",
+			"err.tooLarge": "Response too large",
+			"err.http": "HTTP {code}",
+			"err.detail.noKey": "No API key for this channel, balance unavailable",
+			"err.detail.rejected": "Credentials rejected by the channel",
+			"err.detail.keyMissing": "Credential reference exists but the key is empty",
+			"err.detail.local": "Local endpoint, no balance API",
+			"err.detail.free": "No balance API (free tier)",
+			"err.detail.none": "No balance or quota API for this channel"
 		};
+		//#endregion
+		//#region src/client/i18n.ts
+		/**
+		* i18n：按宿主 `@deepseek-ai/dsh-client-locale` 的契约注册命名空间字典，组件用 `t()` 取词。
+		*
+		* - 注册：`ctx.locale.register('dsh-key-usage', { zh, en })`，两种内置语言必须齐全；
+		* - 取词：优先用宿主 `ctx.locale.bind(ns)` 返回的绑定函数（身份稳定，跟随宿主语言切换）；
+		* - 重渲染：订阅宿主 locale 快照，切语言时 `useT()` 触发组件更新，不需要刷新页面；
+		* - 回落：宿主没有 locale 服务（旧版本）时用本文件的 `zh`，界面不会变空。
+		*
+		* 命名：键用「区域.用途」，界面标签尽量 ≤6 字，解释性长句统一放 `caliber.*`（弹窗里）。
+		*/
 		const NS$1 = "dsh-key-usage";
 		let bound = null;
 		let revision = 0;
@@ -3361,11 +3526,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"currency"
 		];
 		const BALANCE_LABELS = {
-			totalBalance: "总余额",
-			topUpBalance: "充值余额",
-			giftBalance: "赠送余额",
-			balance: "余额",
-			currency: "币种"
+			totalBalance: "balance.total",
+			topUpBalance: "balance.credit",
+			giftBalance: "balance.grant",
+			balance: "balance.balance",
+			currency: "balance.currency"
 		};
 		const WINDOW_ORDER = [
 			"5h",
@@ -3374,21 +3539,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"day"
 		];
 		const WINDOW_LABELS = {
-			"5h": "5 小时窗口",
-			week: "本周窗口",
-			month: "本月窗口",
-			day: "当日窗口"
+			"5h": "window.5h",
+			week: "window.week",
+			month: "window.month",
+			day: "window.day"
 		};
 		/** 解析问题默认只列几条：一屏列不完的清单没人读。 */
 		const ISSUE_LIMIT = 5;
-		const RATE_UNIT_TEXT = "每百万 tokens";
 		/** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 		const RATE_SOURCE_LABELS = {
-			official: "官方",
-			catalog: "官方价",
-			aggregate: "聚合",
-			estimate: "估算",
-			none: "无依据"
+			official: "source.official",
+			catalog: "source.catalog",
+			aggregate: "source.aggregate",
+			estimate: "source.estimate",
+			none: "source.none"
 		};
 		function resetTextOf(value) {
 			if (typeof value !== "string" || value === "") return "重置时间 —";
@@ -3510,9 +3674,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: quota_module_css_default.toolbarBtn,
 							disabled: fxLoading,
 							"aria-busy": fxLoading,
-							title: "汇率在服务端缓存 12 小时",
+							title: t("quota.fxCacheHint"),
 							onClick: () => void fetchFx(true),
-							children: fxLoading ? "取汇率…" : "刷新汇率"
+							children: fxLoading ? t("quota.fetchFx") : t("quota.refreshFx")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: quota_module_css_default.toolbarSpacer }),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -3521,12 +3685,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							disabled: refreshingPrices,
 							"aria-busy": refreshingPrices,
 							onClick: () => void refreshPrices(),
-							children: refreshingPrices ? "刷新中…" + (refreshElapsedSeconds > 0 ? "（已 " + String(refreshElapsedSeconds) + " 秒）" : "") : "刷新价目"
+							children: refreshingPrices ? t("action.refreshing") + (refreshElapsedSeconds > 0 ? " " + String(refreshElapsedSeconds) + "s" : "") : t("quota.refreshPrices")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: quota_module_css_default.infoBtn + (showExplanation ? " " + quota_module_css_default.infoBtnActive : ""),
-							"aria-label": "查看成本口径说明",
+							"aria-label": t("quota.caliberHint"),
 							"aria-expanded": showExplanation,
 							onClick: () => setShowExplanation((previous) => !previous),
 							children: "ⓘ"
@@ -3599,7 +3763,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: quota_module_css_default.quotaToggle,
 									"aria-expanded": isOpen,
 									"aria-controls": drawerId,
-									title: "近 30 天用到的模型单价",
+									title: t("quota.ratesHint"),
 									onClick: () => setExpandedProviders((previous) => ({
 										...previous,
 										[channel.provider]: previous[channel.provider] !== true
@@ -3615,7 +3779,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}),
 										isLive && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.liveChip,
-											children: "实时"
+											children: t("quota.live")
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: quota_module_css_default.rateCount,
@@ -3651,7 +3815,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										className: quota_module_css_default.balanceItem,
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: quota_module_css_default.bsLabel,
-											children: BALANCE_LABELS[key] ?? key
+											children: t(BALANCE_LABELS[key] ?? key)
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: quota_module_css_default.bsValue,
 											children: String(value)
@@ -3670,7 +3834,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 													className: quota_module_css_default.windowHead,
 													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 														className: quota_module_css_default.windowName,
-														children: WINDOW_LABELS[key] ?? key
+														children: t(WINDOW_LABELS[key] ?? key)
 													}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 														className: quota_module_css_default.windowValue,
 														children: [percent, "%"]
@@ -3741,7 +3905,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (rows.length > 0) {
 				const counts = /* @__PURE__ */ new Map();
 				for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1);
-				const mix = [...counts.entries()].map(([source, count]) => (RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
+				const mix = [...counts.entries()].map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + " " + String(count)).join(" / ");
 				return String(rows.length) + " 个模型单价 · " + mix;
 			}
 			if (loading) return "读取单价…";
@@ -3758,9 +3922,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: quota_module_css_default.rateHead,
 				children: [
-					"单价（",
-					RATE_UNIT_TEXT,
-					"）· 显示币种 ",
+					t("quota.priceUnit"),
+					"（",
+					t("unit.perMillion"),
+					"）· ",
+					t("quota.displayCurrency"),
+					" ",
 					DISPLAY_CURRENCY_LABELS[props.display],
 					converted && props.convertedHint !== null ? "（≈ 为折算值：" + props.convertedHint + "）" : "",
 					props.range === null ? "" : " · 统计区间 " + props.range.from + " ~ " + props.range.to
@@ -4074,15 +4241,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return Math.floor(minutes / 60) + " 小时前";
 		}
 		function errorTextOf(error) {
-			if (error === null) return "未启用实时查询";
-			if (error === "no-key") return "该通道未配置 API Key";
-			if (error === "no-snapshot") return "没有快照可用";
-			if (error === "network") return "网络不可达";
-			if (error === "timeout") return "请求超时";
-			if (error === "unauthorized") return "凭据被拒绝（401/403）";
-			if (error === "bad-json") return "接口响应无法解析";
-			if (error === "too-large") return "接口响应异常大";
-			if (error.startsWith("http-")) return "接口返回 HTTP " + error.slice(5);
+			if (error === null) return t("err.noLiveQuery");
+			if (error === "no-key") return t("err.noApiKey");
+			if (error === "no-snapshot") return t("err.noSnapshot");
+			if (error === "network") return t("err.network");
+			if (error === "timeout") return t("err.timeout");
+			if (error === "unauthorized") return t("err.unauthorized");
+			if (error === "bad-json") return t("err.badJson");
+			if (error === "too-large") return t("err.tooLarge");
+			if (error.startsWith("http-")) return t("err.http", { code: error.slice(5) });
 			return error;
 		}
 		/** 快照距今天数（向下取整）；用于把「宿主很久没刷新」显式标出来。 */

@@ -12,6 +12,7 @@ import {
   setFxRate, useCurrencyDisplay, DISPLAY_CURRENCIES, DISPLAY_CURRENCY_LABELS, type DisplayCurrency,
 } from '../currency.ts'
 import { fmtDateTime, fmtTokens, localTimeTextOf } from '../format.ts'
+import { t, useT } from '../i18n.ts'
 import {
   LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
   megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
@@ -26,23 +27,21 @@ import pricingStyles from '../styles/pricing.module.css'
 /** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
 const BALANCE_ORDER = ['totalBalance', 'topUpBalance', 'giftBalance', 'balance', 'currency']
 const BALANCE_LABELS: Record<string, string> = {
-  totalBalance: '总余额', topUpBalance: '充值余额', giftBalance: '赠送余额', balance: '余额', currency: '币种',
+  totalBalance: 'balance.total', topUpBalance: 'balance.credit', giftBalance: 'balance.grant', balance: 'balance.balance', currency: 'balance.currency',
 }
 const WINDOW_ORDER = ['5h', 'week', 'month', 'day']
-const WINDOW_LABELS: Record<string, string> = { '5h': '5 小时窗口', week: '本周窗口', month: '本月窗口', day: '当日窗口' }
+const WINDOW_LABELS: Record<string, string> = { '5h': 'window.5h', week: 'window.week', month: 'window.month', day: 'window.day' }
 
 /** 解析问题默认只列几条：一屏列不完的清单没人读。 */
 const ISSUE_LIMIT = 5
 
-const RATE_UNIT_TEXT = '每百万 tokens'
-
 /** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 const RATE_SOURCE_LABELS: Record<string, string> = {
-  official: '官方',
-  catalog: '官方价',
-  aggregate: '聚合',
-  estimate: '估算',
-  none: '无依据',
+  official: 'source.official',
+  catalog: 'source.catalog',
+  aggregate: 'source.aggregate',
+  estimate: 'source.estimate',
+  none: 'source.none',
 }
 
 /** 刷新价目的结果提示：ok = 成功回执，bad = 服务端原因或请求失败，两种都要留在界面上。 */
@@ -189,10 +188,10 @@ export function QuotaTab(props: {
           className={quotaStyles.toolbarBtn}
           disabled={fxLoading}
           aria-busy={fxLoading}
-          title="汇率在服务端缓存 12 小时"
+          title={t('quota.fxCacheHint')}
           onClick={() => void fetchFx(true)}
         >
-          {fxLoading ? '取汇率…' : '刷新汇率'}
+          {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
         </button>
         <span className={quotaStyles.toolbarSpacer} />
         <button
@@ -203,13 +202,13 @@ export function QuotaTab(props: {
           onClick={() => void refreshPrices()}
         >
           {refreshingPrices
-            ? '刷新中…' + (refreshElapsedSeconds > 0 ? '（已 ' + String(refreshElapsedSeconds) + ' 秒）' : '')
-            : '刷新价目'}
+            ? t('action.refreshing') + (refreshElapsedSeconds > 0 ? ' ' + String(refreshElapsedSeconds) + 's' : '')
+            : t('quota.refreshPrices')}
         </button>
         <button
           type="button"
           className={quotaStyles.infoBtn + (showExplanation ? ' ' + quotaStyles.infoBtnActive : '')}
-          aria-label="查看成本口径说明"
+          aria-label={t('quota.caliberHint')}
           aria-expanded={showExplanation}
           onClick={() => setShowExplanation((previous) => !previous)}
         >
@@ -276,12 +275,12 @@ export function QuotaTab(props: {
                 className={quotaStyles.quotaToggle}
                 aria-expanded={isOpen}
                 aria-controls={drawerId}
-                title="近 30 天用到的模型单价"
+                title={t('quota.ratesHint')}
                 onClick={() => setExpandedProviders((previous) => ({ ...previous, [channel.provider]: previous[channel.provider] !== true }))}
               >
                 <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
                 <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
-                {isLive && <span className={quotaStyles.liveChip}>实时</span>}
+                {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}</span>}
                 <span className={quotaStyles.rateCount}>{rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))}</span>
                 <span className={quotaStyles.quotaProvider}>{channel.provider} · {channel.costLabel}</span>
                 <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
@@ -298,7 +297,7 @@ export function QuotaTab(props: {
                 <div className={quotaStyles.balanceStrip}>
                   {orderedBalanceEntries(balance).map(([key, value]) => (
                     <div className={quotaStyles.balanceItem} key={key}>
-                      <div className={quotaStyles.bsLabel}>{BALANCE_LABELS[key] ?? key}</div>
+                      <div className={quotaStyles.bsLabel}>{t(BALANCE_LABELS[key] ?? key)}</div>
                       <div className={quotaStyles.bsValue}>{String(value)}</div>
                     </div>
                   ))}
@@ -313,7 +312,7 @@ export function QuotaTab(props: {
                     return (
                       <div className={quotaStyles.windowItem} key={key}>
                         <div className={quotaStyles.windowHead}>
-                          <span className={quotaStyles.windowName}>{WINDOW_LABELS[key] ?? key}</span>
+                          <span className={quotaStyles.windowName}>{t(WINDOW_LABELS[key] ?? key)}</span>
                           <span className={quotaStyles.windowValue}>{percent}%</span>
                         </div>
                         <div className={quotaStyles.windowBar}>
@@ -374,7 +373,7 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
     const counts = new Map<string, number>()
     for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1)
     const mix = [...counts.entries()]
-      .map(([source, count]) => (RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
+      .map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
       .join(' / ')
     return String(rows.length) + ' 个模型单价 · ' + mix
   }
@@ -408,7 +407,7 @@ function RateTable(props: {
   return (
     <>
       <div className={quotaStyles.rateHead}>
-        单价（{RATE_UNIT_TEXT}）· 显示币种 {DISPLAY_CURRENCY_LABELS[props.display]}
+        {t('quota.priceUnit')}（{t('unit.perMillion')}）· {t('quota.displayCurrency')} {DISPLAY_CURRENCY_LABELS[props.display]}
         {converted && props.convertedHint !== null ? '（≈ 为折算值：' + props.convertedHint + '）' : ''}
         {props.range === null ? '' : ' · 统计区间 ' + props.range.from + ' ~ ' + props.range.to}
       </div>
@@ -684,15 +683,15 @@ function freshTextOf(fetchedAt: number | null): string {
 }
 
 function errorTextOf(error: string | null): string {
-  if (error === null) return '未启用实时查询'
-  if (error === 'no-key') return '该通道未配置 API Key'
-  if (error === 'no-snapshot') return '没有快照可用'
-  if (error === 'network') return '网络不可达'
-  if (error === 'timeout') return '请求超时'
-  if (error === 'unauthorized') return '凭据被拒绝（401/403）'
-  if (error === 'bad-json') return '接口响应无法解析'
-  if (error === 'too-large') return '接口响应异常大'
-  if (error.startsWith('http-')) return '接口返回 HTTP ' + error.slice(5)
+  if (error === null) return t('err.noLiveQuery')
+  if (error === 'no-key') return t('err.noApiKey')
+  if (error === 'no-snapshot') return t('err.noSnapshot')
+  if (error === 'network') return t('err.network')
+  if (error === 'timeout') return t('err.timeout')
+  if (error === 'unauthorized') return t('err.unauthorized')
+  if (error === 'bad-json') return t('err.badJson')
+  if (error === 'too-large') return t('err.tooLarge')
+  if (error.startsWith('http-')) return t('err.http', { code: error.slice(5) })
   return error
 }
 
