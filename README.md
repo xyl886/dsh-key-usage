@@ -256,13 +256,13 @@ pnpm run pack:dry     # 发布清单自检
 
 装好后点侧边栏「使用情况」能出内容即可 —— **不要用 curl / 别的进程去请求桌面端 GUI 的端口**：那个端口带宿主自身的鉴权，外部请求只会拿到 `dsh web authentication required`，看不到插件端点。要直接验端点，只能用宿主自己打开的页面（浏览器里跑 `fetch('/dsh-key-usage/channels')`），或 `dsh web` 打印出来的带 token 的地址。
 
-**CI**：[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) 在 push / PR 上跑 `pnpm run verify`，另加「构建产物必须与源码同步」与「发布包必须含三件套」两道闸；发布由人工触发 [`publish.yml`](./.github/workflows/publish.yml)（带 provenance 签名）。目录结构、产物契约与离线自检见 [`docs/06-开发与构建.md`](./docs/06-开发与构建.md)。
+**CI**：[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) 在 push / PR 上跑 `pnpm run verify`，另加「构建产物必须与源码同步」与「发布包必须含三件套」两道闸；发布由人工触发 [`publish.yml`](./.github/workflows/publish.yml)（带 provenance 签名）。目录结构、产物契约与离线自检见 [`docs/开发与构建.md`](./docs/开发与构建.md)。
 
 ## 延伸文档
 
-[架构与数据契约](./docs/01-架构与数据契约.md) · [归档会话的影响与对策](./docs/04-归档会话的影响与对策.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./docs/CHANGELOG.md) · [会话归档的影响](./docs/04-归档会话的影响与对策.md) · [后续版本计划](./docs/process/v0.1.7.md) · [开发与构建](./docs/06-开发与构建.md) · [更新记录](./docs/CHANGELOG.md) · [AGENTS.md](./AGENTS.md)
+[架构与数据契约](./docs/架构与数据契约.md) · [开发与构建](./docs/开发与构建.md) · [更新记录](./docs/CHANGELOG.md) · [AGENTS.md](./AGENTS.md)
 
-过程记录按版本分卷：[v0.1.0-0.1.5](./docs/process/v0.1.0-0.1.5.md) · [v0.1.6](./docs/process/v0.1.6.md) · [v0.1.7](./docs/process/v0.1.7.md)
+过程记录按版本分卷：[v0.1.0-0.1.5](./docs/process/v0.1.0-0.1.5.md) · [v0.1.6](./docs/process/v0.1.6.md) · [v0.1.7](./docs/process/v0.1.7.md) · [v0.1.8（未发布）](./docs/process/v0.1.8.md)
 
 ## 许可证
 
