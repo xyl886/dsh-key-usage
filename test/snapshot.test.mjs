@@ -23,6 +23,8 @@ function createBuilders() {
     holdLocal: null,
     quotaOk: true,
     capturedAt: '2026-10-14T10:00:00.000Z',
+    /** 每次配额构建收到的 force（后台补查必须是 false）。 */
+    quotaForce: [],
   }
   const builders = {
     async local({ outcome }) {
@@ -41,8 +43,9 @@ function createBuilders() {
         issues: outcome.providers.length === 0 ? [{ kind: 'note', message: '还没有配额结果' }] : [],
       }
     },
-    async quota() {
+    async quota(input) {
       state.quotaCalls += 1
+      state.quotaForce.push(input?.force)
       const provider = {
         provider: 'opencode-go',
         ok: state.quotaOk,
@@ -242,6 +245,65 @@ function createBuilders() {
   const view = await service.view()
   assert.equal(view.ok, true)
   assert.equal(state.localCalls, 1, '坏文件 → 重新构建一次')
+}
+
+// ===== 9. 打开页面（view({fresh:true})）：本地段按防抖下限阻塞重建 + 配额段后台补查 =====
+{
+  let clock = Date.parse('2026-10-14T12:00:00.000Z')
+  const { state, builders } = createBuilders()
+  // 独立路径：前面的用例在同一个文件里留下了 manual / scheduled 的快照，会干扰本用例的首建断言
+  const openPath = join(home, 'open-home', 'dsh-key-usage', SNAPSHOT_FILE)
+  mkdirSync(join(home, 'open-home', 'dsh-key-usage'), { recursive: true })
+  const service = createSnapshotService({
+    builders,
+    path: openPath,
+    intervalMs: 0,
+    openMinMs: 10 * 1000,
+    quotaTtlMs: 60 * 1000,
+    now: () => clock,
+  })
+  await service.view()
+  const afterFirst = state.localCalls
+
+  // 1) 刚建过（防抖下限内）：不再重算，但配额已过期 → 后台补查
+  state.capturedAt = '2026-10-14T11:59:00.000Z'
+  const quotaBefore = state.quotaCalls
+  const fresh = await service.view({ fresh: true })
+  assert.equal(state.localCalls, afterFirst, '防抖下限内不重复重算本地段')
+  assert.equal(fresh.buildSource, 'initial', '没重算 → 沿用原 buildSource')
+  assert.equal(state.quotaCalls, quotaBefore, '配额段闸门内不补查（此处 refreshedAt 仍是刚写的 12:00）')
+
+  // 2) 过了防抖下限：本地段阻塞重算一次，buildSource 标 open
+  clock += 11 * 1000
+  const reopened = await service.view({ fresh: true })
+  assert.equal(state.localCalls, afterFirst + 1, '超过防抖下限 → 打开页面重算一次本地段')
+  assert.equal(reopened.buildSource, 'open', '打开页面触发的本地段重建标 open')
+  assert.equal(reopened.building, false, '阻塞重算完才返回')
+  assert.equal(reopened.quotaRefreshing, false, '后台配额补查是异步的，返回时已经跑完（夹具是同步的）')
+
+  // 3) 配额超过闸门：后台补查一次，且**不强制**（force: false，交给 live-quota 的 60 秒缓存把关）
+  clock += 61 * 1000
+  state.quotaCalls = 0
+  state.quotaForce = []
+  const withQuota = await service.view({ fresh: true })
+  assert.equal(state.localCalls, afterFirst + 2, '又过了一次防抖下限 → 再重算本地段')
+  assert.equal(state.quotaCalls, 1, '配额超过闸门 → 后台补查一次')
+  assert.deepEqual(state.quotaForce, [false], '后台补查用非强制查询（不绕过 live-quota 缓存）')
+  assert.equal(withQuota.quotaRefreshing, true, '后台补查进行中 → 返回体标 quotaRefreshing（客户端据此追取）')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal((await service.view()).quotaRefreshing, false, '补查完成后标记归位')
+
+  // 4) 构建中打开页面：不排队、不干等，直接给手上这份 + building:true
+  clock += 11 * 1000
+  let release = null
+  state.holdLocal = new Promise((resolve) => { release = resolve })
+  const pending = service.view({ fresh: true })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const during = await service.view({ fresh: true })
+  assert.equal(during.building, true, '构建中不干等：返回上一份并标 building')
+  release()
+  await pending
+  state.holdLocal = null
 }
 
 rmSync(home, { recursive: true, force: true })

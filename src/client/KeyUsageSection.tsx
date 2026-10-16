@@ -134,7 +134,8 @@ export function KeyUsageSection() {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      const snapshot = await loadSnapshot()
+      // 打开页面就要最新：服务端先保证本地段重算过（超过防抖下限才重算），配额段后台补查
+      const snapshot = await loadSnapshot(true)
       if (cancelled) return
       if (snapshot !== null) applySnapshot(snapshot)
       else await reloadFromEndpoints(false, false)
@@ -142,6 +143,27 @@ export function KeyUsageSection() {
     })()
     return () => { cancelled = true }
   }, [applySnapshot, reloadFromEndpoints])
+
+  /**
+   * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
+   * 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。最多追 6 次（约 12 秒）就放弃。
+   */
+  useEffect(() => {
+    let cancelled = false
+    let attempts = 0
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const chase = async (): Promise<void> => {
+      const snapshot = await loadSnapshot()
+      if (cancelled || snapshot === null) return
+      applySnapshot(snapshot)
+      if (snapshot.building === true || snapshot.quotaRefreshing === true) {
+        attempts += 1
+        if (attempts < 6) timer = setTimeout(() => { void chase() }, 2000)
+      }
+    }
+    timer = setTimeout(() => { void chase() }, 1500)
+    return () => { cancelled = true; if (timer !== null) clearTimeout(timer) }
+  }, [applySnapshot])
 
   // 磁盘上的历史日志读回内存（刷新页面后还能看到上次为什么失败），并允许页面里任何组件请求打开日志窗
   useEffect(() => { void hydrateLog() }, [])

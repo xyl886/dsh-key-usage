@@ -26,6 +26,17 @@ export const SNAPSHOT_FILE = 'snapshot.json'
 /** 本地段默认重算周期：5 分钟（只算本地数据，不联网）。 */
 export const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
 /**
+ * 打开页面时本地段的防抖下限：距上次重建不足这么久就复用现值。
+ * 本地重建在会话折叠缓存命中后只要几百毫秒，但 F5 连点会重复算、重复写盘（每次约 400 KB）。
+ */
+export const SNAPSHOT_OPEN_MIN_MS = 10 * 1000
+/**
+ * 打开页面时配额段的闸门：距上次配额查询超过这么久才**后台**补查一次。
+ * 与 `live-quota` 自身的 60 秒缓存同量级，所以同一分钟内反复打开不会重复打上游；
+ * 效果是「打开时余额 / 窗口数据最多旧 60 秒」。
+ */
+export const SNAPSHOT_QUOTA_TTL_MS = 60 * 1000
+/**
  * 构建耗时超过这个值就记一条 issue（便于判断 5 分钟周期是否合适）。
  * 每次构建的**会话读取明细**（列表 / 折叠耗时）都以 info 落进系统日志，所以这里只管「真的慢」：
  * 2026-10-16 把阈值从 2000 ms 提到 4000 ms —— 之前 54 次采样里 42 次超 2000 ms，日志被这条刷满。
@@ -33,10 +44,9 @@ export const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
 export const SNAPSHOT_SLOW_BUILD_MS = 4000
 /** `POST /refresh` 等待正在进行的构建的上限。 */
 export const SNAPSHOT_REFRESH_WAIT_MS = 10000
-/** 配额段的新鲜度：超过这个时间，页面打开时后台补查一次（不阻塞返回）。 */
-export const SNAPSHOT_QUOTA_TTL_MS = 10 * 60 * 1000
 
-export type SnapshotBuildSource = 'scheduled' | 'manual' | 'initial'
+/** 构建来源：定时（`scheduled`）/ 手动刷新（`manual`）/ 首次（`initial`）/ 打开页面触发的本地重建（`open`）。 */
+export type SnapshotBuildSource = 'scheduled' | 'manual' | 'initial' | 'open'
 
 /** 一个通道的配额查询结果（供界面标「实时 / 本机快照 + 数据时间 + 本次失败原因」）。 */
 export interface SnapshotQuotaProvider {
@@ -90,6 +100,8 @@ export interface SnapshotView extends SnapshotDocument {
   ok: true
   /** 此刻是否有一次重建在进行（真时，返回的是上一份**完整**内容，不是半成品）。 */
   building: boolean
+  /** 此刻是否有一次**后台配额补查**在进行（页面打开时触发；客户端据此追取一次）。 */
+  quotaRefreshing: boolean
 }
 
 /** 本地段构建结果（不含依赖配额的 channels，也不含 quota 本身）。 */
@@ -116,7 +128,8 @@ export interface SnapshotBuilders {
    * 联网查一次配额（余额与订阅窗口）。失败通道的第一回落源是**上一份快照的配额段**
    * （`previous`），其次才是旧版 `quota-snapshots.json`（仅首次构建）与宿主快照。
    */
-  quota(input: { seedLegacy: boolean; previous: unknown }): Promise<SnapshotQuotaBuild>
+  /** orce: false（页面打开的后台补查）时交给 live-quota 的 60 秒缓存决定是否真的打上游。 */
+  quota(input: { seedLegacy: boolean; previous: unknown; force?: boolean }): Promise<SnapshotQuotaBuild>
   /** 用**最新**配额结果重建通道清单（定时重建也要跑这一步）。 */
   channels(input: { quota: unknown; outcome: SnapshotQuotaOutcome }): Promise<SnapshotChannelsBuild>
 }
@@ -130,6 +143,8 @@ export interface SnapshotServiceOptions {
   refreshWaitMs?: number
   /** 配额段新鲜度：页面打开时后台补查的阈值（测试可调）。 */
   quotaTtlMs?: number
+  /** 本地段新鲜度：页面打开时阻塞重建的防抖下限（测试可调）。 */
+  openMinMs?: number
   setIntervalImpl?: (handler: () => void, milliseconds: number) => unknown
   clearIntervalImpl?: (handle: unknown) => void
   now?: () => number
@@ -138,9 +153,11 @@ export interface SnapshotServiceOptions {
 export interface SnapshotService {
   /**
    * 读快照：没有就现算一次（`initial`，含配额联网）并写盘；构建中返回上一份 + `building:true`。
-   * `backgroundQuota: true`（只有 `GET /snapshot` 传）时，若配额段超过 TTL 就**后台**补查一次，不阻塞返回。
+   * `fresh: true`（`GET /snapshot?fresh=1`，页面打开时用）时：本地段超过 `SNAPSHOT_OPEN_MIN_MS`
+   * 就**阻塞**重算一次（只算本地、不联网），配额段超过 `SNAPSHOT_QUOTA_TTL_MS` 就**后台**补查
+   * （不阻塞返回，返回体标 `quotaRefreshing: true`，客户端随后自己追取）。
    */
-  view(options?: { backgroundQuota?: boolean }): Promise<SnapshotView>
+  view(options?: { fresh?: boolean }): Promise<SnapshotView>
   /** 手动刷新：本地段 + 配额段全部重算，写盘并返回（同一时刻只允许一个构建）。 */
   refresh(): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }>
   /** 只重查配额（`/quota?fresh=1` 用），本地段沿用现值。 */
@@ -235,6 +252,7 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
   const intervalMs = options.intervalMs ?? SNAPSHOT_INTERVAL_MS
   const refreshWaitMs = options.refreshWaitMs ?? SNAPSHOT_REFRESH_WAIT_MS
   const quotaTtlMs = options.quotaTtlMs ?? SNAPSHOT_QUOTA_TTL_MS
+  const openMinMs = options.openMinMs ?? SNAPSHOT_OPEN_MIN_MS
   const startTimer = options.setIntervalImpl ?? ((handler: () => void, milliseconds: number) => setInterval(handler, milliseconds))
   const stopTimer = options.clearIntervalImpl ?? ((handle: unknown) => { clearInterval(handle as ReturnType<typeof setInterval>) })
 
@@ -260,7 +278,7 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
       quotaOutcome: emptyOutcome(),
       issues: [],
     }
-    return { ok: true, building, ...document }
+    return { ok: true, building, quotaRefreshing: quotaRefreshInFlight, ...document }
   }
 
   const loadFromDisk = (): SnapshotDocument | null => {
@@ -270,10 +288,11 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
   }
 
   /**
-   * 一次重建。`mode`：`initial`（首次，含配额）/ `manual`（手动，含配额）/ `local`（定时，不碰配额）。
+   * 一次重建。`mode`：`initial`（首次，含配额）/ `manual`（手动，含配额）/ `local`（定时，不碰配额）/
+   * `open`（打开页面触发的本地重建，不碰配额 —— 配额走后台补查，不阻塞开页）。
    * 任何一步失败都返回 `{ok:false}`，**磁盘上仍是上一份好快照**（不写半成品）。
    */
-  const rebuild = async (mode: 'initial' | 'manual' | 'local'): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
+  const rebuild = async (mode: 'initial' | 'manual' | 'local' | 'open'): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
     const startedAt = now()
     const previous = current ?? loadFromDisk()
     const previousQuota = previous?.sections.quota ?? null
@@ -286,9 +305,9 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
      * 配额段**先**跑（initial / manual）：本地段（会话 / 项目 / 模型行）要用同一份配额结果判定
      * 通道成本模式（订阅 / 免费 / 无价目），端点又是拿 `snapshot.sections.quota` 现算的 ——
      * 顺序反了就会出现「快照里 costMode=unknown、端点是 sub」这种同源不一致（集成测试抓到过）。
-     * 定时重建（local）不碰配额，沿用上一份。
+     * 定时重建（local）与打开页面（open）不碰配额，沿用上一份 —— 打开页面的配额补查走后台，不阻塞。
      */
-    if (mode !== 'local') {
+    if (mode !== 'local' && mode !== 'open') {
       try {
         const built = await options.builders.quota({ seedLegacy: mode === 'initial', previous: previousQuota })
         quotaSection = built.quota
@@ -346,7 +365,7 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
   }
 
   /** 启动一次构建并同步置位 `building`；调用点必须在第一个 await 之前调用它。 */
-  const beginBuild = (mode: 'initial' | 'manual' | 'local'): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
+  const beginBuild = (mode: 'initial' | 'manual' | 'local' | 'open'): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
     building = true
     return rebuild(mode).finally(() => {
       building = false
@@ -380,13 +399,17 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
 
   /**
    * 只重查配额：本地段沿用现值，用最新配额重建 channels 段，然后把整个快照原子写回。
-   * `extraIssue` 用来记一条可读原因（后台补查用）。
+   * `extraIssue` 用来记一条可读原因（后台补查用）；`force: false`（后台补查）时交给
+   * `live-quota` 自己的 60 秒缓存决定要不要真的打上游，避免同一分钟内反复打开页面重复查询。
    */
-  const applyQuotaRefresh = async (extraIssue: SnapshotIssue | null): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
+  const applyQuotaRefresh = async (
+    extraIssue: SnapshotIssue | null,
+    force = true,
+  ): Promise<{ ok: true; view: SnapshotView } | { ok: false; error: string }> => {
     const local = current ?? loadFromDisk()
     let built: SnapshotQuotaBuild
     try {
-      built = await options.builders.quota({ seedLegacy: false, previous: local?.sections.quota ?? null })
+      built = await options.builders.quota({ seedLegacy: false, previous: local?.sections.quota ?? null, force })
     } catch (error) {
       return { ok: false, error: '配额查询异常：' + (error instanceof Error ? error.message : String(error)) }
     }
@@ -412,8 +435,9 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
   }
 
   /**
-   * 页面打开时的配额补查：配额段超过 TTL 才做，**后台异步**（不阻塞返回、同一时刻只跑一个、失败静默）。
-   * 只有 `GET /snapshot` 会走到这里；定时重建与其它端点都不碰配额。
+   * 打开页面时的配额补查：配额段超过 `SNAPSHOT_QUOTA_TTL_MS` 才做，**后台异步**
+   * （不阻塞返回、同一时刻只跑一个、失败静默）。`force: false` 让 `live-quota` 的
+   * 60 秒缓存做第二道闸门 —— 数据本身不会比这更新，也就没必要重复打上游。
    */
   const maybeRefreshQuotaInBackground = (): void => {
     if (building || quotaRefreshInFlight) return
@@ -421,7 +445,10 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
     const stamp = refreshedAt === null ? Number.NaN : Date.parse(refreshedAt)
     if (Number.isFinite(stamp) && now() - stamp < quotaTtlMs) return
     quotaRefreshInFlight = true
-    void applyQuotaRefresh({ kind: 'quota-refresh', message: '页面打开时配额超过 ' + String(Math.round(quotaTtlMs / 60000)) + ' 分钟，已后台补查一次' })
+    void applyQuotaRefresh({
+      kind: 'quota-refresh',
+      message: '页面打开时配额超过 ' + String(Math.round(quotaTtlMs / 1000)) + ' 秒，已后台补查一次',
+    }, false)
       .then((result) => {
         if (result.ok) return
         // 补查失败静默：只把原因留在上一份快照的 issues 里，不抛错、不影响请求
@@ -433,13 +460,32 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
       .finally(() => { quotaRefreshInFlight = false })
   }
 
+  /**
+   * 打开页面时的刷新（`GET /snapshot?fresh=1`）：
+   * 1. 本地段超过 `openMinMs` 就**阻塞**重算一次（只算本地、不联网；热缓存下几百毫秒）；
+   * 2. 配额段超过 `quotaTtlMs` 就**后台**补查（不阻塞返回，客户端按 `quotaRefreshing` 追取）。
+   * 正在构建时不排队、不干等：直接把手上这份给出去（标 `building`）。
+   */
+  const refreshForOpen = async (): Promise<void> => {
+    if (building) return
+    const snapshot = current ?? loadFromDisk()
+    const stamp = snapshot === null ? Number.NaN : Date.parse(snapshot.updatedAt)
+    if (!Number.isFinite(stamp) || now() - stamp >= openMinMs) {
+      const result = await beginBuild('open')
+      if (!result.ok && current !== null) {
+        current.issues.push({ kind: 'build-failed', message: result.error })
+      }
+    }
+    maybeRefreshQuotaInBackground()
+  }
+
   return {
-    async view(options?: { backgroundQuota?: boolean }): Promise<SnapshotView> {
+    async view(options?: { fresh?: boolean }): Promise<SnapshotView> {
       // 首次没有快照：现算一次（含配额联网）→ 写盘 → 返回，这一次算 initial。
       // 这一段的判断到 beginBuild 之间没有 await，两个并发调用不会都去构建。
       if (current === null && !building) {
         if (loadFromDisk() !== null) {
-          if (options?.backgroundQuota === true) maybeRefreshQuotaInBackground()
+          if (options?.fresh === true) await refreshForOpen()
           return view(false)
         }
         const result = await beginBuild('initial')
@@ -459,7 +505,7 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
         // 以前这里 await 整轮构建，首开要干等 1～14 s（2026-10-16 实测）。
         return view(true)
       }
-      if (options?.backgroundQuota === true) maybeRefreshQuotaInBackground()
+      if (options?.fresh === true) await refreshForOpen()
       return view(false)
     },
     async refresh() {

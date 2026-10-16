@@ -1365,8 +1365,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const SNAPSHOT_PATH = "/dsh-key-usage/snapshot";
 		/** 手动刷新端点：重算全部本地段 + 查配额（联网）+ 写快照。 */
 		const REFRESH_PATH = "/dsh-key-usage/refresh";
-		function loadSnapshot() {
-			return fetchJson(SNAPSHOT_PATH);
+		/**
+		* 读快照。`fresh: true`（页面打开时用）让服务端先保证数据是最新的：
+		* 本地段超过防抖下限就重算一次再返回，配额段超时就**后台**补查（返回体标 `quotaRefreshing`）。
+		*/
+		function loadSnapshot(fresh = false) {
+			return fetchJson(SNAPSHOT_PATH + (fresh ? "?fresh=1" : ""));
 		}
 		/** 手动刷新：服务端自己串行化（撞上重建会等，最多 10 秒），超时才回 `{ok:false}`。 */
 		async function refreshAll() {
@@ -6471,7 +6475,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				let cancelled = false;
 				(async () => {
 					setLoading(true);
-					const snapshot = await loadSnapshot();
+					const snapshot = await loadSnapshot(true);
 					if (cancelled) return;
 					if (snapshot !== null) applySnapshot(snapshot);
 					else await reloadFromEndpoints(false, false);
@@ -6481,6 +6485,33 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cancelled = true;
 				};
 			}, [applySnapshot, reloadFromEndpoints]);
+			/**
+			* 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
+			* 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。最多追 6 次（约 12 秒）就放弃。
+			*/
+			(0, react.useEffect)(() => {
+				let cancelled = false;
+				let attempts = 0;
+				let timer = null;
+				const chase = async () => {
+					const snapshot = await loadSnapshot();
+					if (cancelled || snapshot === null) return;
+					applySnapshot(snapshot);
+					if (snapshot.building === true || snapshot.quotaRefreshing === true) {
+						attempts += 1;
+						if (attempts < 6) timer = setTimeout(() => {
+							chase();
+						}, 2e3);
+					}
+				};
+				timer = setTimeout(() => {
+					chase();
+				}, 1500);
+				return () => {
+					cancelled = true;
+					if (timer !== null) clearTimeout(timer);
+				};
+			}, [applySnapshot]);
 			(0, react.useEffect)(() => {
 				hydrateLog();
 			}, []);

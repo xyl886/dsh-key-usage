@@ -814,14 +814,15 @@ export function mountKeyUsageRoutes(
   }
 
   /**
-   * 配额段（余额与订阅窗口）：**唯一会联网取余额的地方**，只在首次构建与手动刷新时调用。
+   * 配额段（余额与订阅窗口）：**唯一会联网取余额的地方**，只在首次构建、手动刷新、/quota?fresh=1
+   * 与页面打开的后台补查（orce: false，由 live-quota 的 60 秒缓存把关）时调用。
    * 实时成功的通道标 `source: 'live'`；失败的通道回落本机快照（插件自己的 snapshot.json，
    * 首次构建时兼容读一次旧版 `quota-snapshots.json` 当种子），并给出 `capturedAt`（数据时间）、
    * `stale`（正在展示旧值）与 `error`（本次失败原因）—— 界面据此标注，绝不静默当最新。
    */
-  const quotaPayload = async (seedLegacy: boolean, previousSection: unknown): Promise<SnapshotQuotaBuild> => {
+  const quotaPayload = async (seedLegacy: boolean, previousSection: unknown, force = true): Promise<SnapshotQuotaBuild> => {
     const channels = classifyChannels(readChannelConfig(), [])
-    const live = await liveQuota.refreshIfStale(channels, true)
+    const live = await liveQuota.refreshIfStale(channels, force)
     const seeded = seedLegacy ? readQuotaSnapshots(quotaSnapshotPath) : []
     const hostSnapshots = readSnapshots()
     // 回落优先级：上一份快照的配额段（插件自己最近一次成功值）> 旧版 quota-snapshots.json（仅首次构建）> 宿主快照
@@ -943,7 +944,7 @@ export function mountKeyUsageRoutes(
           issues: [],
         }
       },
-      quota: async (input) => quotaPayload(input.seedLegacy, input.previous),
+      quota: async (input) => quotaPayload(input.seedLegacy, input.previous, input.force !== false),
       channels: async ({ quota, outcome }) => ({ channels: channelsPayloadOf(quota, outcome), issues: [] }),
     },
   })
@@ -958,8 +959,10 @@ export function mountKeyUsageRoutes(
     path: '/dsh-key-usage/snapshot',
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
-      // 首次没有快照时会现算一次（含配额联网）；构建中返回上一份完整内容 + building:true
-      sendJson(response, 200, await snapshotService.view())
+      // 打开页面（?fresh=1）：本地段超过防抖下限就阻塞重算一次、配额段超时就后台补查；
+      // 构建中返回上一份完整内容 + building:true，客户端按 building / quotaRefreshing 追取
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      sendJson(response, 200, await snapshotService.view({ fresh: url.searchParams.get('fresh') === '1' }))
     },
   })
 

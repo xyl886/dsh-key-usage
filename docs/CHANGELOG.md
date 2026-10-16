@@ -17,6 +17,7 @@
 ### 变更
 
 - **计价口径改两层，台账反推均价整层删除**：`通道内价目`（内置官方价目命中 → `costSource: 'catalog'`；否则 LiteLLM 聚合价按**通道别名**命中 → `'aggregate'`）→ `同模型官方价目`（本通道没有价目时，聚合价里该模型名**全库唯一**命中 → 新增 `'model'`），两层都不命中即 `'none'`（界面显示 `—`）。强弱序 `SOURCE_RANK = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }`，整天 / 整行仍取最弱的一格。内置价目因此只是「通道内价目」的来源之一、不再是必需项；
+- **打开页面即最新（汇率与 LiteLLM 除外）**：页面打开走 `GET /snapshot?fresh=1` —— 本地段距上次重建 ≥ **10 秒**（`SNAPSHOT_OPEN_MIN_MS`）就**阻塞**重算一次（只算本地、不联网，热缓存下几百毫秒），配额段距上次查询 ≥ **60 秒**（`SNAPSHOT_QUOTA_TTL_MS`）就**后台**补查一次（不阻塞首屏；返回体标 `quotaRefreshing: true`，客户端 1.5 秒后追取、最多 6 次）。补查用 `force: false`，由 `live-quota` 自身的 60 秒缓存做第二道闸门，同一分钟内反复打开不会重复打上游。新增构建来源 `open`（`buildSource`）。**修复**：原来「页面打开超 10 分钟 TTL 后台补查」的开关（`view({ backgroundQuota: true })`）从未被任何调用点传过，打开页面既不重算本地段也不查配额，余额可能是几小时前的值 —— 现在真的接线了。汇率（12 小时 TTL）与 LiteLLM 价目（只手动刷新）维持原样；
 - **一次构建只读一遍会话**：`routes.ts` 的 `builders.local` 先 `collect()` 一次，再喂给 `modelsPayload` / `projectsPayload` / `sessionsPayload`（此前三个段各自 `collect()`，同一次构建把宿主会话列表与变更会话读三遍，实测 p50 3.3 s、最高 13.8 s）；
 - **首开不再等构建**：`snapshot.ts` 的 `view()` 在构建进行中不再 `await waitForIdle()`，直接把手上一份（标 `building: true`）返回 —— 以前首开要干等整轮构建，实测 1～14 s；
 - **快照构建耗时阈值 2000 → 4000 ms**（`SNAPSHOT_SLOW_BUILD_MS`）：实测 54 次采样里 42 次超 2000 ms，日志被这条刷满；会话读取明细已经每次落盘，阈值只留给「真的慢」；

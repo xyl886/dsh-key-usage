@@ -161,8 +161,12 @@ export const SNAPSHOT_PATH = '/dsh-key-usage/snapshot'
 /** 手动刷新端点：重算全部本地段 + 查配额（联网）+ 写快照。 */
 export const REFRESH_PATH = '/dsh-key-usage/refresh'
 
-export function loadSnapshot(): Promise<SnapshotResponse | null> {
-  return fetchJson<SnapshotResponse>(SNAPSHOT_PATH)
+/**
+ * 读快照。`fresh: true`（页面打开时用）让服务端先保证数据是最新的：
+ * 本地段超过防抖下限就重算一次再返回，配额段超时就**后台**补查（返回体标 `quotaRefreshing`）。
+ */
+export function loadSnapshot(fresh = false): Promise<SnapshotResponse | null> {
+  return fetchJson<SnapshotResponse>(SNAPSHOT_PATH + (fresh ? '?fresh=1' : ''))
 }
 
 /** 手动刷新：服务端自己串行化（撞上重建会等，最多 10 秒），超时才回 `{ok:false}`。 */

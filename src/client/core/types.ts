@@ -433,8 +433,11 @@ export interface SnapshotSections {
 export interface SnapshotResponse {
   ok: true
   updatedAt: string
-  buildSource: 'scheduled' | 'manual' | 'initial'
+  /** `open` = 打开页面触发的本地重建（配额段走后台补查）。 */
+  buildSource: 'scheduled' | 'manual' | 'initial' | 'open'
   building: boolean
+  /** 打开页面时触发的**后台配额补查**是否在进行：真时客户端隔一会儿再取一次。 */
+  quotaRefreshing?: boolean
   sections: SnapshotSections
   quotaOutcome: SnapshotQuotaOutcome
   issues: Array<{ kind: string; message: string }>

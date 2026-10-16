@@ -231,6 +231,16 @@ assert.ok(firstSnapshot.body.issues.some((issue) => issue.kind === 'build-durati
 assert.deepEqual((await callEndpoint('/dsh-key-usage/channels')).body, firstSnapshot.body.sections.channels)
 assert.deepEqual((await callEndpoint('/dsh-key-usage/summary')).body, firstSnapshot.body.sections.overview)
 
+// 打开页面（?fresh=1）：本地段在防抖下限内不重复重算、配额刚查过也不补查，
+// 但两个状态标记必须在响应里（客户端按 building / quotaRefreshing 追取）
+const reopened = await callEndpoint('/dsh-key-usage/snapshot?fresh=1')
+assert.equal(reopened.body.ok, true)
+assert.equal(reopened.body.buildSource, 'initial', '刚建过（10 秒防抖内）不重复重算本地段')
+assert.equal(reopened.body.building, false)
+assert.equal(reopened.body.quotaRefreshing, false, '配额刚查过（60 秒闸门内）不补查')
+assert.equal(typeof reopened.body.quotaRefreshing, 'boolean', '标记要下发（客户端据此决定追不追）')
+assert.deepEqual(reopened.body.sections.sessions, firstSnapshot.body.sections.sessions, '复用的仍是同一份快照')
+
 // 会话派生的三段同理（「统一快照是唯一数据来源」的回归哨兵）：端点调的是同一批构建器函数，
 // limit 取到上限（1000）时必须与快照段逐字段相同 —— 一旦有人给端点另算一份，这里立刻红
 assert.deepEqual(
