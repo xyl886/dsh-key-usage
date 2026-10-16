@@ -39,7 +39,7 @@
 - **被 seed 续接的会话被误判成子代理**：宿主也给续接会话写了父会话链接，插件据此推断成子代理并在默认视图里隐藏，而侧边栏把它当独立会话显示 —— 改以投影的 `record.rows.subagent.val.identity` 为准（存在才是真子代理），续接会话的 `origin` / `parentSessionId` 清空；
 - **项目数量与名字对不上**：项目页改以宿主工作区为骨架（名字用工作区 `title`），不在工作区表里的历史目录合并成一行「未归入工作区」，不再各占一行（本机实测 9 行 → 5 行，与侧边栏的 4 个工作区对齐）；
 - **英文模式下仍有中文（第二批，实测逐 Tab 扫描）**：服务端下发的 `costLabel` / `quotaWindowLabel` 是中文字符串，切英文不跟着变 —— 总览「类型」列与窗口百分比改用词典键（`COST_MODE_TAG_KEYS` / `WINDOW_TAG_KEYS`）；项目 / 模型 / 会话三页的「N 个会话」「N 个模型」「N 个子会话」「时长」「跨 N 天」「加载更多」「已显示 x / y 个会话」、会话抽屉的返回与「N 次」、通道详情的「币种」「数据时间」、口径弹窗的两条长句全部入词典；补 `nav.quota` / `sh.shareAll` 两个缺失的英文键并删掉孤儿键 `p.hintHint` 之外的孤儿键 `p.hitHint`（此前 `zh` 452 键 / `en` 451 键且 4 条英文值是中文）。
-
+- **「同模型官方价目」的两处误判**：同一厂商常有 `x` 与 `vendor/x` 两条价格完全一样的键（`deepseek-flash` 与 `deepseek/deepseek-flash`），此前被判成「多候选」而借不到价 → 现在**同厂商 + 四档价完全一致**算唯一；跨厂商的同名候选再用**内置价目里该模型的厂商**兜底查一次（`glm-5.3-flash` → `zai`）；`match-ambiguous` 改由匹配入口 `matchPricedRule` 在**最终确实定不下来**时记（纯匹配器 `aggregateRuleFor` 不再记），避免面板出现「报了已跳过却又有金额」。实测（百万输入 tokens）：`opencode-go` + `deepseek-flash` → `model` / USD 0.3，`opencode-go` + `glm-5.3-flash` → `model` / USD 0.15，`deepseek` + `gpt-5.4-mini`（跨厂商、价不同、内置价目也不认识）仍是 `none`；
 - **日志被同一个已知问题刷满**：客户端 `core/log.ts` 的同一条目**只落盘一次**，重复出现只在内存里累加 `×N`（以前每次重复都往 `plugin.log` 写一条一模一样的记录）；
 - **8 处未声明设计令牌**：`--dsw-alias-bg-mask` → `bg-mask-1`、`fill-l1` → `interactive-bg-hover`、`fill-l2` → `interactive-bg-active`、`state-danger-primary` → `state-error-primary`、`state-warning-primary` → `state-warn-primary`、`state-business-secondary` → `state-business-tertiary`（宿主没有 secondary 这一档）；其中 5 处在 CSS、3 处在组件内联 style（`channels.ts`、`Heatmap.tsx`、`OverviewTab.tsx`）—— 这些令牌在宿主里只被 `var()` 引用、从未声明，真机上取到空值；
 - **发布包不含更新记录**：`package.json` 的 `files` 里 `CHANGELOG.md` 改成 `docs/CHANGELOG.md`（原来指向仓库里不存在的路径）。

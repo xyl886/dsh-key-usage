@@ -35,7 +35,7 @@
 - **产物契约不能破**：客户端入口固定 `src/client/index.tsx` → 产物 `client/client.js`，必须是单文件 CJS + `window.__ModuleLoader__.load({ id, factory })` 头（`scripts/normalize-client-banner.mjs` 会校验）。不要改 entry、产物名或加载方式。
 - **不新增运行时依赖**：`react` / `react/jsx-runtime` 由宿主注入（external），其余依赖会被打进 bundle。要加依赖先说明体积理由。**YAML 也不例外**：内置价目用自带的受限子集解析器（`yaml-lite.ts`），不要引入 `js-yaml` / `yaml` 之类的包，也不要依赖宿主运行时的解析器。
 - **CSS 文件 basename 必须全局唯一**：`tsdown.config.ts` 用 `${插件id}/${basename}` 作为 `<style>` 的 `data-plugin-css` 去重键 —— 两个不同目录下的同名 `*.module.css` 会导致后一个**静默不注入**，样式整块丢失。拆分样式时用 `overview.module.css` / `detail.module.css` 这类唯一名，不要用 `styles/index.module.css` + `tabs/index.module.css`。
-- **主题令牌**：颜色一律走宿主 `--dsw-alias-*`（如 `--dsw-alias-label-primary`、`--dsw-alias-bg-layer-2`、`--dsw-alias-state-business-primary`；**`state-accent-primary` 在宿主里不存在**，写了只会吃兜底色），不要硬编码明暗两套色。注意 `--dsw-text-2` **不是**宿主令牌前缀（应为 `--dsw-alias-label-secondary`）；历史写法已在 2026-10-13 重构中清理，新增代码不要再引入。**写完务必核对令牌是否真实存在**：跑 `npm run check:tokens`（`scripts/check-design-tokens.mjs` 扫 `src/client/styles/*.css` **与** `src/client/**/*.ts(x)` 的内联 style，逐个在宿主归档里核对；宿主共 120 个 `--dsw-alias-*`）。2026-10-16 修掉过 5 个「只被 `var()` 引用、从未声明」的令牌（`bg-mask` → `bg-mask-1`、`fill-l1` → `interactive-bg-hover`、`fill-l2` → `interactive-bg-active`、`state-danger-primary` → `state-error-primary`、`state-warning-primary` → `state-warn-primary`）。
+- **主题令牌**：颜色一律走宿主 `--dsw-alias-*`（如 `--dsw-alias-label-primary`、`--dsw-alias-bg-layer-2`、`--dsw-alias-state-business-primary`；**`state-accent-primary` 在宿主里不存在**，写了只会吃兜底色），不要硬编码明暗两套色。注意 `--dsw-text-2` **不是**宿主令牌前缀（应为 `--dsw-alias-label-secondary`）；历史写法已在 2026-10-13 重构中清理，新增代码不要再引入。**写完务必核对令牌是否真实存在**：跑 `npm run check:tokens`（`scripts/check-design-tokens.mjs` 扫 `src/client/styles/*.css` **与** `src/client/**/*.ts(x)` 的内联 style，逐个在宿主归档里核对；宿主共 120 个 `--dsw-alias-*`）。2026-10-16 修掉过 5 个「只被 `var()` 引用、从未声明」的令牌（`bg-mask` → `bg-mask-1`、`fill-l1` → `interactive-bg-hover`、`fill-l2` → `interactive-bg-active`、`state-danger-primary` → `state-error-primary`、`state-warning-primary` → `state-warn-primary`），组件内联 style 里另有 3 处（含 `state-business-secondary` → `state-business-tertiary`，宿主没有 secondary 这一档）—— 一共 8 处。
 - **中文文案**：注释与文档一律简体中文，UTF-8。**界面文案一律走 i18n 词典**（`src/client/core/copy.ts`，中英成对，值只放词典键；界面标签 ≤6 字、提示 ≤8 字），禁止在组件里写死可见中文 —— 手写文案一律走 `t()`。
 - **导入风格**：客户端相对导入带 `.ts` / `.tsx` 后缀（`allowImportingTsExtensions: true`）；**服务端相对导入必须带 `.js` 后缀**（NodeNext 编译），两者不要混。
 
@@ -48,7 +48,7 @@
 - 改了 `src/server/**` 的口径或字段：**同步补 `test/*.test.mjs`**，并更新 `docs/架构与数据契约.md` 的契约。
 - 改了 `collect.ts` 的 cordis.yml 提取规则：必须补样本测试（该文件含 `!!js`，只做文本提取，不能换通用 YAML 解析器）。
 - 改了计费口径 / 价目：跑 `test/pricing.test.mjs`、`test/yaml-lite.test.mjs`、`test/model-prices.test.mjs`、`test/routes.test.mjs`；改 `data/pricing-catalog.yml` 还要同步 `test/fixtures/pricing-catalog.golden.json`；改随包聚合价目快照要同步 `data/README.md` 的字节数 / sha256 / commit / 抓取日期四行。
-- **改了 CSS 里的颜色令牌：跑 `npm run check:tokens`**（`scripts/check-design-tokens.mjs`，已挂进 `verify`，但改令牌时单独跑一次更快）：逐个核对插件 CSS 用到的 `--dsw-*` 在宿主归档里真实声明过；找不到宿主归档时只提示并退出 0（CI 与别的机器上不会误报失败）。
+- **改了颜色令牌：跑 `npm run check:tokens`**（`scripts/check-design-tokens.mjs`，已挂进 `verify`，但改令牌时单独跑一次更快）：逐个核对插件用到的 `--dsw-*`（CSS 与组件内联 style）在宿主归档里真实声明过；找不到宿主归档时只提示并退出 0（CI 与别的机器上不会误报失败）。
 - **改了 `src/client/**` 必须重新构建**（否则运行的还是旧 `client/client.js`），构建后刷新页面生效。
 - **改了 `src/server/**` 必须重新编译 `lib/` 并退出重开 DSH**：服务端模块在宿主启动时进入 ESM 缓存，Hub `/restart` 在桌面端不可用，无热重载途径。
 - **改完默认只跑 `npm run verify`**（2026-10-15 用户明确）：**不要**自动起浏览器 / 无头浏览器做自检，**不要**重截 `docs/images/` 的图 —— 太耗时；浏览器实测、截图、重启宿主都要用户明说再做。`docs/images/` 里的图由用户自己截、自己更新，不要代劳。
