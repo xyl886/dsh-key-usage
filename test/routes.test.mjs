@@ -731,7 +731,12 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.deepEqual(ratesOpencode.models[0].rates, { input: 0.15, cacheRead: 0.03, cacheWrite: 0, output: 0.5 })
   assert.equal(ratesOpencode.models[0].currency, 'USD')
   assert.equal(ratesOpencode.models[0].partial, false)
-  assert.ok(ratesOpencode.models[0].note.includes('zai/glm-5.3-flash'), 'note 要写明上游键，便于核对：' + ratesOpencode.models[0].note)
+  // 这一档优先用内置价目里厂商自己那条（随包、带出处），所以 note 是 z.ai 文档的口径说明；
+  // 只有内置价目没有时才退到聚合价，那时的 note 会写明上游键（`zai/glm-5.3-flash`）
+  assert.ok(
+    ratesOpencode.models[0].note.includes('GLM-5.3') || ratesOpencode.models[0].note.includes('zai/glm-5.3-flash'),
+    'note 要能追溯到价目出处：' + ratesOpencode.models[0].note,
+  )
   const ratesLocal = rates.body.channels.find((row) => row.provider === 'local')
   assert.equal(ratesLocal.currency, null, '没有任何币种依据')
   assert.equal(ratesLocal.models[0].source, 'none')

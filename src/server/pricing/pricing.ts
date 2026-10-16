@@ -183,10 +183,13 @@ export function matchPricedRule(provider: string, model: string): PricedRuleHit 
   if (catalogRule !== null) return { rule: catalogRule, source: 'catalog', partial: false }
   const aggregate = safeAggregateRule(provider, model)
   if (aggregate !== null && aggregate.ok) return aggregateHitOf(aggregate.hit)
-  // 歧义兜底：内置价目知道这个模型名的厂商（同名同型号条目），就用厂商自己在聚合价里的那一条。
-  // 这一档对外统一算「同模型官方价目」：内部虽然是以厂商为通道查到的（别名命中），
-  // 但对用户的通道来说它就是「本通道没有、用同名模型的官方价」。多个厂商时按名字字典序取第一个（确定性）。
+  // 歧义兜底：内置价目知道这个模型名的厂商（同名同型号条目），就用厂商自己的价目 ——
+  // 先看内置价目里厂商自己那条（随包、带出处，如 `deepseek-official|deepseek-v4.1-flash`），
+  // 再看聚合价里以该厂商为通道查到的键。这一档对外统一算「同模型官方价目」：对用户的通道来说
+  // 它就是「本通道没有、用同名模型厂商的官方价」。多个厂商时按名字字典序取第一个（确定性）。
   for (const vendor of catalogProvidersOfModel(model)) {
+    const vendorRule = catalogRuleFor(vendor, model)
+    if (vendorRule !== null) return { rule: vendorRule, source: 'model', partial: false }
     const vendorHit = safeAggregateRule(vendor, model)
     if (vendorHit !== null && vendorHit.ok) {
       return { rule: vendorHit.hit.rule, source: 'model', partial: vendorHit.hit.partial }

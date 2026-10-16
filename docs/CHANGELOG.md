@@ -16,6 +16,9 @@
 
 ### 变更
 
+- **「同模型官方价目」优先用内置价目里厂商自己那条**：跨厂商同名候选定不下来时，先看内置价目里该模型的厂商条目（`zai|glm-5.3-flash`、`deepseek-official|deepseek-v4.1-flash`），没有再退到「以厂商为通道查聚合价」。效果：任何通道只要用到内置价目认识的型号名，就能拿到厂商官方价 —— 例如 `opencsg` + `deepseek-v4.1-flash` 现在有价（DeepSeek 官方 CNY 2 / 0.04 / 8，错峰半价），不再是 `—`；
+- **内置价目补 `deepseek-official | deepseek-v4.1-flash`（19 条）**：第三方通道（如 opencsg）用这个 id 调的就是 DeepSeek-V4.1-Flash，官方文档注明与 `deepseek-flash` 同价，故照 `deepseek-flash` 记价并同步 `test/fixtures/pricing-catalog.golden.json`；
+
 - **计价口径改两层，台账反推均价整层删除**：`通道内价目`（内置官方价目命中 → `costSource: 'catalog'`；否则 LiteLLM 聚合价按**通道别名**命中 → `'aggregate'`）→ `同模型官方价目`（本通道没有价目时，聚合价里该模型名**全库唯一**命中 → 新增 `'model'`），两层都不命中即 `'none'`（界面显示 `—`）。强弱序 `SOURCE_RANK = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }`，整天 / 整行仍取最弱的一格。内置价目因此只是「通道内价目」的来源之一、不再是必需项；
 - **打开页面即最新（汇率与 LiteLLM 除外）**：页面打开走 `GET /snapshot?fresh=1` —— 本地段距上次重建 ≥ **10 秒**（`SNAPSHOT_OPEN_MIN_MS`）就**阻塞**重算一次（只算本地、不联网，热缓存下几百毫秒），配额段距上次查询 ≥ **60 秒**（`SNAPSHOT_QUOTA_TTL_MS`）就**后台**补查一次（不阻塞首屏；返回体标 `quotaRefreshing: true`，客户端 1.5 秒后追取、最多 6 次）。补查用 `force: false`，由 `live-quota` 自身的 60 秒缓存做第二道闸门，同一分钟内反复打开不会重复打上游。新增构建来源 `open`（`buildSource`）。**修复**：原来「页面打开超 10 分钟 TTL 后台补查」的开关（`view({ backgroundQuota: true })`）从未被任何调用点传过，打开页面既不重算本地段也不查配额，余额可能是几小时前的值 —— 现在真的接线了。汇率（12 小时 TTL）与 LiteLLM 价目（只手动刷新）维持原样；
 - **一次构建只读一遍会话**：`routes.ts` 的 `builders.local` 先 `collect()` 一次，再喂给 `modelsPayload` / `projectsPayload` / `sessionsPayload`（此前三个段各自 `collect()`，同一次构建把宿主会话列表与变更会话读三遍，实测 p50 3.3 s、最高 13.8 s）；
@@ -35,6 +38,8 @@
 - 原型页相关文件与早期手写设计稿：`src/prototype/`、`docs/prototype/`、`tsdown.prototype.config.ts`、`scripts/sync-prototype-plugin.mjs`、`.github/workflows/pages.yml` 与 `key-usage-settings-prototype.html`（不做 GitHub Pages 展示）。
 
 ### 修复
+
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
 
 - **会话名与侧边栏对不上**：宿主已把会话投影拆成「一会话一文件」（`storages/session_projcache/sessions/<id>.json` → `record.rows.title.val` 就是侧边栏显示名），插件此前只读旧的聚合文件 `session_projcache.json`（只剩少量历史条目），绝大多数会话退化成「首条提问的截断文本」—— 现在按 id 惰性读新投影、按文件 mtime 缓存（首次全量 331 ms，之后每次只 stat 约 16 ms），旧文件降级为兜底；
 - **被 seed 续接的会话被误判成子代理**：宿主也给续接会话写了父会话链接，插件据此推断成子代理并在默认视图里隐藏，而侧边栏把它当独立会话显示 —— 改以投影的 `record.rows.subagent.val.identity` 为准（存在才是真子代理），续接会话的 `origin` / `parentSessionId` 清空；
@@ -70,6 +75,9 @@
 
 ### 变更
 
+- **「同模型官方价目」优先用内置价目里厂商自己那条**：跨厂商同名候选定不下来时，先看内置价目里该模型的厂商条目（`zai|glm-5.3-flash`、`deepseek-official|deepseek-v4.1-flash`），没有再退到「以厂商为通道查聚合价」。效果：任何通道只要用到内置价目认识的型号名，就能拿到厂商官方价 —— 例如 `opencsg` + `deepseek-v4.1-flash` 现在有价（DeepSeek 官方 CNY 2 / 0.04 / 8，错峰半价），不再是 `—`；
+- **内置价目补 `deepseek-official | deepseek-v4.1-flash`（19 条）**：第三方通道（如 opencsg）用这个 id 调的就是 DeepSeek-V4.1-Flash，官方文档注明与 `deepseek-flash` 同价，故照 `deepseek-flash` 记价并同步 `test/fixtures/pricing-catalog.golden.json`；
+
 - **目录按域重排**：`src/server/{data,pricing,quota,snapshot}`、`src/client/core`；随包数据统一进 `data/`（`pricing-catalog.yml` 与 LiteLLM 快照同处），`CHANGELOG` 进 `docs/`；过程文档按版本分卷到 `docs/process/`（v0.1.0-0.1.5 / v0.1.6 / v0.1.7），不再堆单文件；
 - **移除「每日细目」表**：其中的信息并入图表按天 tip（调用数 / Tokens / 输入 / 输出 / 缓存读 / 命中率 / 成本 / 当日模型构成）；
 - **移除「环比对比」整块**：涨跌改到统计卡角标，上期值放到数值上方；
@@ -84,6 +92,8 @@
 - 会话列表的「另有 N 个子代理会话未显示：…」与「另有 N 个已归档会话未显示」两行，以及「时长」旁重复的「跨 N 天」（`crossDays` 只留在导出里）。
 
 ### 修复
+
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
 
 - **会话名与侧边栏对不上**：宿主已把会话投影拆成「一会话一文件」（`storages/session_projcache/sessions/<id>.json` → `record.rows.title.val` 就是侧边栏显示名），插件此前只读旧的聚合文件 `session_projcache.json`（只剩少量历史条目），绝大多数会话退化成「首条提问的截断文本」—— 现在按 id 惰性读新投影、按文件 mtime 缓存（首次全量 331 ms，之后每次只 stat 约 16 ms），旧文件降级为兜底；
 - **被 seed 续接的会话被误判成子代理**：宿主也给续接会话写了父会话链接，插件据此推断成子代理并在默认视图里隐藏，而侧边栏把它当独立会话显示 —— 改以投影的 `record.rows.subagent.val.identity` 为准（存在才是真子代理），续接会话的 `origin` / `parentSessionId` 清空；
@@ -116,6 +126,9 @@
 
 ### 变更
 
+- **「同模型官方价目」优先用内置价目里厂商自己那条**：跨厂商同名候选定不下来时，先看内置价目里该模型的厂商条目（`zai|glm-5.3-flash`、`deepseek-official|deepseek-v4.1-flash`），没有再退到「以厂商为通道查聚合价」。效果：任何通道只要用到内置价目认识的型号名，就能拿到厂商官方价 —— 例如 `opencsg` + `deepseek-v4.1-flash` 现在有价（DeepSeek 官方 CNY 2 / 0.04 / 8，错峰半价），不再是 `—`；
+- **内置价目补 `deepseek-official | deepseek-v4.1-flash`（19 条）**：第三方通道（如 opencsg）用这个 id 调的就是 DeepSeek-V4.1-Flash，官方文档注明与 `deepseek-flash` 同价，故照 `deepseek-flash` 记价并同步 `test/fixtures/pricing-catalog.golden.json`；
+
 - **价目固定为四层**：`官方账单 > 内置官方价目（CNY） > LiteLLM 聚合价（USD） > 台账反推均价`；
 - **「余额与配额」页改版**：每张通道卡片可点击展开查看该通道单价表；工具条放 ¥ RMB / $ USD 切换、刷新汇率、刷新价目与成本口径 ⓘ；
 - 端点 **15 个 = 13 个只读 GET + 2 个写 POST**；写盘目录固定为 `snapshot.json` / `model-prices.json` / `fx-rate.json` 三个文件（`quota-snapshots.json` 不再写入）；离线测试 **15 个**；随包体积 +2.7 MB（未压缩快照 2,797,533 B）。
@@ -126,6 +139,8 @@
 - **预算与告警整块移除**：`/budget` 端点、客户端横幅与阈值配置、`src/server/budget.ts`、`src/client/budget.ts`、`test/budget.test.mjs` 一起删除。
 
 ### 修复
+
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
 
 - **总览「余额或窗口」显示很久以前的旧值**：该列此前读**宿主**的 `dsh-usage/provider-snapshots.json`（本机那份是 14 天前的 `opencode-go = month 76%`）+ 60 秒内存缓存，从不读插件自己的快照 —— 两个页面数字不同，且旧值没有任何时间标注。现在统一走插件自己的快照，失败时回落**上一份自己的快照**并标出数据时间与失败原因；
 - **手动刷新后「只有一个通道更新」**：`opencode-go` 与 `opencode` 是两个通道、两把 Key、同一个上游 URL，一把 Key 失败时该通道静默沿用旧值。现在失败通道带 `error` 与 `capturedAt`，界面明示；
@@ -144,6 +159,8 @@
 - **客户端可访问性**：可排序表头改为真正的按钮（可 Tab、可 Enter/Space 触发）并带 `aria-sort`；交互控件补 `:focus-visible` 焦点环；图标按钮补 `aria-label`；计费抽屉补 `aria-expanded` / `aria-controls` 且抽屉 id 逐实例唯一；热力图与柱状图补整图 `role="img"` 与替代文本。
 
 ### 修复
+
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
 
 - 排序表头的箭头此前会被读屏念进按钮名（现加 `aria-hidden`）；当前排序列悬停时不再丢失主色；表头文字与箭头间距与改造前一致。
 
@@ -173,6 +190,8 @@
 
 ### 修复
 
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
+
 - 会话标题此前全为 `null`（改读 `user/message` 的 `data.content`）；
 - 修正早期模板里的错误价目：`deepseek-v4.1-flash` 实为 OpenRouter 中转价（官方在售是 `deepseek-flash`）、Kimi K2 系列文档未公布缓存写入价（不再按输入价猜填）、去掉无依据的 `provider: '*'` 通配兜底；
 - `list()` 不返回 `eventCount`：会话缓存实际只由 `revision` 把关，文档同步修正。
@@ -180,6 +199,9 @@
 ## [0.1.3] —— 2026-10-13
 
 ### 变更
+
+- **「同模型官方价目」优先用内置价目里厂商自己那条**：跨厂商同名候选定不下来时，先看内置价目里该模型的厂商条目（`zai|glm-5.3-flash`、`deepseek-official|deepseek-v4.1-flash`），没有再退到「以厂商为通道查聚合价」。效果：任何通道只要用到内置价目认识的型号名，就能拿到厂商官方价 —— 例如 `opencsg` + `deepseek-v4.1-flash` 现在有价（DeepSeek 官方 CNY 2 / 0.04 / 8，错峰半价），不再是 `—`；
+- **内置价目补 `deepseek-official | deepseek-v4.1-flash`（19 条）**：第三方通道（如 opencsg）用这个 id 调的就是 DeepSeek-V4.1-Flash，官方文档注明与 `deepseek-flash` 同价，故照 `deepseek-flash` 记价并同步 `test/fixtures/pricing-catalog.golden.json`；
 
 - 补齐**按模型维度**、**导出**与**余额快照自持久化**；
 - 加入 GitHub Actions：CI 跑 `verify` + 产物同步闸 + 打包检查；发布工作流手工触发、带 provenance；
@@ -189,11 +211,16 @@
 
 ### 修复
 
+- **没有余额接口的通道不再写「实时查询未成功」**：配额段 `supported: false` 的通道（如 opencsg）插件根本没查过它，却会在系统日志里记一条「实时查询未成功 · opencsg」——卡片上已经写了「无余额接口」，这条只会淹没真正的失败，现已跳过；
+
 - 修正误用的版本号：以 **0.1.2** 重新发布（0.1.x 序列），并把误发的 **0.2.0** 标记为 `deprecated`，提示改用 0.1.2。
 
 ## [0.1.1] —— 2026-10-13
 
 ### 变更
+
+- **「同模型官方价目」优先用内置价目里厂商自己那条**：跨厂商同名候选定不下来时，先看内置价目里该模型的厂商条目（`zai|glm-5.3-flash`、`deepseek-official|deepseek-v4.1-flash`），没有再退到「以厂商为通道查聚合价」。效果：任何通道只要用到内置价目认识的型号名，就能拿到厂商官方价 —— 例如 `opencsg` + `deepseek-v4.1-flash` 现在有价（DeepSeek 官方 CNY 2 / 0.04 / 8，错峰半价），不再是 `—`；
+- **内置价目补 `deepseek-official | deepseek-v4.1-flash`（19 条）**：第三方通道（如 opencsg）用这个 id 调的就是 DeepSeek-V4.1-Flash，官方文档注明与 `deepseek-flash` 同价，故照 `deepseek-flash` 记价并同步 `test/fixtures/pricing-catalog.golden.json`；
 
 - 「余额与配额」改为**实时查询官方接口**（opencode-go 的 rolling / weekly / monthly、DeepSeek 的 `/user/balance` …），失败回落本机快照并在卡片上写明原因；
 - 热力图改为近 9 个月的大格子、支持横向滚动，并修掉格子尺寸不一致；

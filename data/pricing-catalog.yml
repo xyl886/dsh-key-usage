@@ -85,6 +85,36 @@ rules:
           to: '00:00'
           days: [6, 7]
   - provider: 'deepseek-official'
+    model: 'deepseek-v4.1-flash'
+    unit: 'perMillionTokens'
+    currency: 'CNY'
+    input: 2
+    cacheRead: 0.04
+    cacheWrite: 2
+    output: 8
+    source: 'https://api-docs.deepseek.com/zh-cn/quick_start/pricing'
+    fetchedAt: '2026-10-16'
+    note: '模型版本名：第三方通道（如 opencsg）用 `deepseek-v4.1-flash` 这个 id 调的就是 DeepSeek-V4.1-Flash，与内置的 deepseek-flash 同价，故照 deepseek-flash 记高峰价 ¥2.00 / ¥0.04 / ¥8.00；错峰 = 高峰半价，窗口与限制同 deepseek-flash（无节假日日历，节假日按高峰算）。'
+    noteEn: 'deepseek-v4.1-flash is the model-version id third-party channels (e.g. opencsg) call for DeepSeek-V4.1-Flash; same rates as deepseek-flash (miss ¥2 / cache-read ¥0.04 / output ¥8 per 1M tokens, off-peak at half price); see source and fetch date below'
+    offPeak:
+      input: 1
+      cacheRead: 0.02
+      cacheWrite: 1
+      output: 4
+      windows:
+        - from: '00:00'
+          to: '09:00'
+          days: [1, 2, 3, 4, 5]
+        - from: '12:00'
+          to: '14:00'
+          days: [1, 2, 3, 4, 5]
+        - from: '18:00'
+          to: '00:00'
+          days: [1, 2, 3, 4, 5]
+        - from: '00:00'
+          to: '00:00'
+          days: [6, 7]
+  - provider: 'deepseek-official'
     model: 'deepseek-v4-flash-vision-exp'
     unit: 'perMillionTokens'
     currency: 'CNY'

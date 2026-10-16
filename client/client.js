@@ -4929,6 +4929,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}
 				for (const provider of props.quotaOutcome?.providers ?? []) {
 					if (provider.ok !== false) continue;
+					const quota = props.quotas.find((item) => item.provider === provider.provider);
+					if (quota !== void 0 && !quota.supported) continue;
 					logWarn("quota", t("quota.liveFailedShort") + " · " + provider.provider, provider.error ?? t("quota.notQueried"));
 				}
 			}, [

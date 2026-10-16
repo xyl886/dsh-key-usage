@@ -468,12 +468,17 @@ assert.equal(clockMinutes(900), null)
   assert.equal(rowCostsOf([row('deepseek-official', 'DeepSeek-Flash')])[0].source, 'catalog', '忽略大小写')
   assert.equal(rowCostsOf([row('DEEPSEEK-OFFICIAL', 'deepseek-flash')])[0].source, 'catalog', '通道也忽略大小写')
   // 这是「台账 / 事件里的模型名带 vendor 前缀」的常见形态：通道 `deepseek` 不在内置价目的通道里，
-  // 聚合价里该模型名又有 9 条同名候选、`deepseek` 也没有通道别名 → 两条路都定不下来 → 无依据
-  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')])[0].source, 'none', '内置价目没这个通道、聚合价同名多候选 → 显示 —')
+  // 但内置价目知道这个型号属于哪个厂商（`deepseek-official|deepseek-v4.1-flash`），
+  // 于是走「同模型官方价目」那一档 —— 用模型厂商的官方价，而不是显示「—」
+  const prefixed = rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')])[0]
+  assert.equal(prefixed.source, 'model', '通道没收录 → 用同名模型厂商的官方价目')
+  assert.equal(prefixed.rule.provider, 'deepseek-official', '价目声明的是模型厂商，不是查询里的通道')
+  assert.equal(prefixed.currency, 'CNY', 'DeepSeek 官方价目是人民币')
+  assert.equal(prefixed.cost, 2, '未命中价 ¥2.00 / 百万输入 tokens')
   assert.equal(
-    rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].cost,
+    rowCostsOf([row('intern', 'intern-s2')])[0].cost,
     null,
-    '第二参不再是均价回调：定不下来就不给金额，不按别的通道的价格顶替',
+    '两层价目都查不到就不给金额，不按别的通道的价格顶替',
   )
   assert.equal(
     rowCostsOf([row('openrouter', 'deepseek/deepseek-v4.1-flash')])[0].source,
@@ -725,7 +730,7 @@ assert.equal(clockMinutes(900), null)
   const entries = catalogEntries()
   assert.ok(entries.length > 0, '内置价目非空')
 
-  // 迁移回归基线：YAML 读出来的 18 条与迁移前 lib 导出的条目**逐字段深度相等**（含顺序）
+  // 回归基线：YAML 读出来的条目与 test/fixtures/pricing-catalog.golden.json **逐字段深度相等**（含顺序）
   // 基线只冻结价目事实：note / noteEn 是文案（随语言与措辞调整），不参与对比
   const slim = (list) => list.map((entry) => { const copy = { ...entry }; delete copy.note; delete copy.noteEn; return copy })
   assert.deepEqual(slim(entries), GOLDEN_CATALOG, 'pricing-catalog.yml 必须与迁移基线 test/fixtures/pricing-catalog.golden.json 完全一致（忽略文案字段）')
@@ -789,8 +794,8 @@ assert.equal(clockMinutes(900), null)
   }
   assert.equal(catalogEntryCount(), entries.length)
 
-  // 文档里的覆盖清单必须与 YAML 一致（docs/05 附录 A.5 写了「18 条」并列了 18 行）
-  assert.equal(catalogEntryCount(), 18, '条数变了要同步更新 docs/05 附录 A.5 的清单与条数')
+  // 文档里的覆盖清单必须与 YAML 一致（README 的「内置价目」表列了每一条）
+  assert.equal(catalogEntryCount(), 19, '条数变了要同步更新 README 的内置价目表与 docs 里的条数')
 }
 
 // ===== 17b. 内置价目文件的容错：坏条目跳过 + issue 带行号（绝不抛错、绝不猜单价）=====

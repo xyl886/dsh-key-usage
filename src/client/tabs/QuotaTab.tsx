@@ -186,6 +186,10 @@ export function QuotaTab(props: {
     }
     for (const provider of props.quotaOutcome?.providers ?? []) {
       if (provider.ok !== false) continue
+      // 没有余额接口的通道（`supported: false`）插件根本没查过它，别记成「实时查询未成功」——
+      // 那是配置事实，卡片上已经写了「无余额接口」，再往日志里写一条只会淹没真正的失败。
+      const quota = props.quotas.find((item) => item.provider === provider.provider)
+      if (quota !== undefined && !quota.supported) continue
       logWarn('quota', t('quota.liveFailedShort') + ' · ' + provider.provider, provider.error ?? t('quota.notQueried'))
     }
   }, [props.channels, props.quotas, props.quotaOutcome, t])
