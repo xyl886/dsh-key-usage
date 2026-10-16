@@ -87,6 +87,6 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 
 ## 事实优先级
 
-判断字段路径、接口行为、运行效果时：**当前源码与实测 > 原型 HTML > 本文档与 README**。原型（`docs/prototype/`，已随早期批次退役）只代表设计意图；与源码冲突时以源码为准，冲突记入 `docs/process/v0.1.0-0.1.5.md` 而不是静默按原型改。
+判断字段路径、接口行为、运行效果时：**当前源码与实测 > 本文档与 README**。早期手写的设置页设计稿（`docs/prototype/key-usage-settings-prototype.html`）已于 2026-10-16 删除，需要时从 git 历史取（引入提交 `749b3ef`）；历史设计取舍见 [`docs/process/v0.1.0-0.1.5.md`](./docs/process/v0.1.0-0.1.5.md)。
 
 汇报时说明：改了哪些文件、依据哪条实测、跑了哪些命令及结果、哪些没验证、有无口径变化或运行时风险。
