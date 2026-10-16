@@ -76,7 +76,7 @@ export interface DaySummary {
   cost: number
   /** 逐币种小计：合计按它折算后相加（`cost` 是混币种直接相加，只作兜底）。 */
   costsByCurrency?: CostsByCurrency
-  /** 成本来源角标：官方账单 / 内置官方价目 / 聚合价目 / 台账均价 / 无依据。 */
+  /** 成本来源角标：官方账单 / 内置官方价目 / 聚合价目 / 同模型官方价目 / 无依据。 */
   costSource?: CostSource
   /** 该格的聚合价目条目缺一个缓存价（按未命中价代），角标旁标「部分」。 */
   partial?: boolean
@@ -175,7 +175,7 @@ export interface UsageModelRow {
   providerLabel?: string
   /** 占该会话 tokens 的百分比（一位小数）：`/sessions` 行内展开与 `/session` 详情用。 */
   sharePercent?: number
-  /** 该模型这一格的估算金额与来源（内置官方价目 / 聚合价目 / 台账均价）。 */
+  /** 该模型这一格的金额与来源（内置官方价目 / 聚合价目 / 同模型官方价目 / 无依据）。 */
   cost?: number | null
   /** 该模型这一格的逐币种小计。 */
   costsByCurrency?: CostsByCurrency
