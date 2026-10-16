@@ -58,7 +58,7 @@
 
 .dialogMask {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: var(--dsw-alias-bg-mask, rgba(0, 0, 0, .45)); padding: 24px;
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, .45)); padding: 24px;
 }
 .dialog {
   width: 100%; max-width: 620px; max-height: 78vh; overflow: auto; padding: 16px;

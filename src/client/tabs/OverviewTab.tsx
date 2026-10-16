@@ -95,7 +95,7 @@ function quotaCellOf(channel: Channel): ReactNode {
     return (
       <span className={overviewStyles.quotaCell}>
         <span className={overviewStyles.miniBar}>
-          <i style={{ width: Math.max(2, percent) + '%', background: percent >= 60 ? 'var(--dsw-alias-state-warning-primary, #e0a13c)' : 'var(--dsw-alias-state-success-primary, #3fb96f)' }} />
+          <i style={{ width: Math.max(2, percent) + '%', background: percent >= 60 ? 'var(--dsw-alias-state-warn-primary, #e0a13c)' : 'var(--dsw-alias-state-success-primary, #3fb96f)' }} />
         </span>
         <span className={[overviewStyles.quotaText, levelClass].join(' ').trim()}>{windowLabel} {percent}%</span>
       </span>

@@ -19,7 +19,7 @@
   color: var(--dsw-alias-label-secondary, #9a9aa2);
   border-bottom: 1px dotted currentColor;
 }
-.sourceEstimate { color: var(--dsw-alias-state-warning-primary, #e0a13c); }
+.sourceModel { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
 
 .linkBtn {
   border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01);
@@ -37,8 +37,8 @@
 }
 /* 价目抓取超过阈值：只换成警示色并加一句复核提示，数值一律不动（自动改价会静默算错钱） */
 .catalogStale {
-  color: var(--dsw-alias-state-warning-primary, #e0a13c);
-  border-color: var(--dsw-alias-state-warning-primary, #e0a13c);
+  color: var(--dsw-alias-state-warn-primary, #e0a13c);
+  border-color: var(--dsw-alias-state-warn-primary, #e0a13c);
 }
 
 /* 价目文件位置：改了价目文件之后唯一的自查入口 */
@@ -50,9 +50,9 @@
 
 .issueBlock {
   margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7;
-  color: var(--dsw-alias-state-warning-primary, #e0a13c);
+  color: var(--dsw-alias-state-warn-primary, #e0a13c);
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
-  border: 1px solid var(--dsw-alias-state-warning-primary, #e0a13c);
+  border: 1px solid var(--dsw-alias-state-warn-primary, #e0a13c);
 }
 .issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
@@ -72,7 +72,7 @@
 .aggregateMeta b { color: var(--dsw-alias-label-secondary, #9a9aa2); font-weight: 600; }
 .aggregateStatus { margin-top: 4px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 .aggregateStatusOk { color: var(--dsw-alias-state-success-primary, #3fb96f); }
-.aggregateStatusBad { color: var(--dsw-alias-state-danger-primary, #e05a5a); }
+.aggregateStatusBad { color: var(--dsw-alias-state-error-primary, #e05a5a); }
 
 /* 口径说明：点 ⓘ 才展开，不占正文 */
 .explanation {

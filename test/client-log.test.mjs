@@ -71,6 +71,20 @@ await check('已发送的条目不会重复写盘', async () => {
   assert.equal(postBodies().length, 0)
 })
 
+await check('同一问题再次出现只累加内存计数，不再重复写文件', async () => {
+  calls.length = 0
+  log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
+  await sleep(1300)
+  assert.equal(postBodies().length, 1, '第一次出现要落盘')
+  calls.length = 0
+  // 同一个问题（同来源 + 同消息）第二次出现：内存里 ×2，磁盘上不该再多一条
+  log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
+  await sleep(1300)
+  assert.equal(postBodies().length, 0, '重复出现不再写文件（否则 plugin.log 会被同一个已知问题刷满）')
+  const entry = log.logEntries().find((item) => item.message.includes('sensenova'))
+  assert.equal(entry.count, 2, '内存里仍然累加计数')
+})
+
 await check('导出文本：带时间 / 级别 / 来源，详情缩进一行，重复标 ×N', async () => {
   const text = log.logText()
   assert.match(text, /\[error\] pricing · 刷新价目失败 ×2/)

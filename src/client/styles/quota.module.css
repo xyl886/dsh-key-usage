@@ -29,10 +29,10 @@
 .windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
 .windowValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .windowReset { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
-.windowBar { height: 6px; border-radius: 4px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; }
+.windowBar { height: 6px; border-radius: 4px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; }
 .windowBar > i { display: block; height: 100%; border-radius: 4px; }
 .snapshotHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 10px; }
-.snapshotStale { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 10px; }
+.snapshotStale { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 10px; }
 
 /* ===== 工具条 ===== */
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -53,7 +53,7 @@
 }
 .toolbarSpacer { flex: 1; }
 .fxText { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); }
-.fxWarn { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); }
+.fxWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); }
 .infoBtn {
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
   color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
@@ -75,7 +75,7 @@
   padding: 4px 14px 12px; margin-top: 6px;
 }
 .countLine { color: var(--dsw-alias-label-secondary, #9a9aa2); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.8; margin: 6px 0; }
-.staleLine { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7; margin: 6px 0; }
+.staleLine { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7; margin: 6px 0; }
 
 /* ===== 展开区：单价表（窄屏横向滚动）===== */
 .rateDrawer:empty { display: none; }

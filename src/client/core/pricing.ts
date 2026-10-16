@@ -6,7 +6,7 @@
 /** 成本来源角标，与服务端 `costSource` 一一对应。 */
 import { t } from './i18n.ts'
 
-export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
+export type CostSource = 'official' | 'catalog' | 'aggregate' | 'model' | 'none'
 
 export interface CatalogSourceSummary {
   source: string
@@ -92,7 +92,7 @@ export function shortCommitOf(commit: unknown): string | null {
   return commit.trim().slice(0, 7)
 }
 
-/** 覆盖度：三层价格各命中多少个模型 + 台账兜底 / 无依据的模型数（字段全可选，缺失整段省略）。 */
+/** 覆盖度：两层价格各命中多少个模型 + 无依据的模型数（字段全可选，缺失整段省略）。 */
 export interface PricingCoverage {
   from?: string
   to?: string
@@ -101,7 +101,8 @@ export interface PricingCoverage {
   /** 命中 LiteLLM 聚合价目的模型数（第三方、USD）。 */
   aggregateModels?: number
   partialModels?: number
-  averagedModels?: number
+  /** 命中「同模型官方价目」（跨通道同名唯一）的模型数。 */
+  modelModels?: number
   unpricedModels?: number
 }
 
@@ -142,7 +143,7 @@ export const COST_SOURCE_LABELS: Record<CostSource, string> = {
   official: 'cso.official',
   catalog: 'cso.catalog',
   aggregate: 'cso.aggregate',
-  estimate: 'cso.estimate',
+  model: 'cso.model',
   none: '—',
 }
 
@@ -151,7 +152,7 @@ export const COST_SOURCE_HINTS: Record<CostSource, string> = {
   official: 'csh.official',
   catalog: 'csh.catalog',
   aggregate: 'csh.aggregate',
-  estimate: 'csh.estimate',
+  model: 'csh.model',
   none: 'csh.none',
 }
 

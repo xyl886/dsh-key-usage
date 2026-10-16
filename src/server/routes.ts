@@ -10,12 +10,9 @@ import { join } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   aggregateRange,
-  buildPriceTable,
-  estimateCost,
   readLedger,
   type ChannelDailySummary,
   type ModelSummary,
-  type PriceEntry,
   type UsageLedger,
 } from './data/ledger.js'
 import {
@@ -42,7 +39,7 @@ import {
   type SessionRow,
 } from './data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
-import { appendLogRecords, clearLogFile, readLogRecords } from './data/log-file.js'
+import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-file.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
 import {
   mergeDailySeries,
@@ -62,7 +59,6 @@ import {
   sumMoneyByCurrency,
   weakestOf,
   UNIT_LABELS,
-  type AveragePrice,
   type CostSource,
   type MoneyByCurrency,
   type PricedRuleHit,
@@ -96,6 +92,8 @@ export interface SessionSource {
   collect(): Promise<SessionCollection>
   /** 单会话详情；旧的外部注入方可能没有这个能力，缺失时 `/session` 按「找不到」处理。 */
   detail?(id: string): Promise<SessionLookup>
+  /** 上一次整表折叠的耗时明细（可选：外部注入方可能没有）。 */
+  stats?(): { sessions: number; cached: number; read: number; listMs: number; readMs: number; totalMs: number }
 }
 
 /** 无会话服务时的兜底数据源，保证台账相关端点照常工作。 */
@@ -343,15 +341,14 @@ interface RateUsage {
 
 /**
  * 单价表的 `note`：命中价目就用价目自己的口径说明（附带非「每百万 tokens」的单位提示）；
- * 只回落均价 / 完全没依据时给出可读中文说明（不允许空 note）。
+ * 两层价目都没命中时给一句可读说明（不允许空 note）。
  */
-function ratesNoteOf(hit: PricedRuleHit | null, average: AveragePrice | null): string {
+function ratesNoteOf(hit: PricedRuleHit | null): string {
   if (hit !== null) {
     const unitHint = hit.rule.unit === 'perMillionTokens' ? '' : '（计价单位：' + UNIT_LABELS[hit.rule.unit] + '）'
     return hit.rule.note + unitHint
   }
-  if (average !== null) return '按台账反推均价估算'
-  return '暂无价格依据'
+  return '暂无价格依据（本通道与同名模型都没有官方价目）'
 }
 
 function minKey(first: string | undefined, second: string | undefined): string | undefined {
@@ -515,25 +512,17 @@ export function mountKeyUsageRoutes(
    */
   const ledgerCurrencyOf = (provider: string): string => catalogProviderCurrency(provider) ?? catalogCurrency()
 
-  const averagePriceOf = (priceTable: Map<string, PriceEntry>) =>
-    (row: PricingUsageRow): AveragePrice | null => {
-      const cost = estimateCost([{ provider: row.provider, model: row.model, tokens: displayTokensOf(row) }], priceTable)
-      return cost === null ? null : { cost, currency: ledgerCurrencyOf(row.provider) }
-    }
-
   /**
    * 给合并序列补成本与来源：台账天保留官方成本（official，不重算），
-   * 会话补位天逐模型按价目估算，价目没命中再回落台账均价。
+   * 会话补位天逐模型按价目算（通道内价目 → 同模型官方价目），两层都不命中就是 none。
    * @param offPeakHours - 单日范围才有的小时槽；给了就按错峰占比加权
    */
   const annotateCosts = (
     days: ChannelDailySummary[],
     sessionDates: string[],
-    priceTable: Map<string, PriceEntry>,
     offPeakHours: PricingUsageRow[] | null,
   ): AnnotatedDaySummary[] => {
     const sessionSet = new Set(sessionDates)
-    const averageOf = averagePriceOf(priceTable)
     return days.map((day) => {
       if (!sessionSet.has(day.date)) {
         // 台账天带官方账单金额：原样保留，不按价目重算
@@ -554,15 +543,16 @@ export function mountKeyUsageRoutes(
       const models = day.models.map((model) => {
         const row = dayModelPricingRow(model)
         const priced = priceRowsOf([row], { hours: offPeakHours })[0]
-        const average = averageOf(row)
-        const cost = Math.round((priced.cost ?? average?.cost ?? 0) * 100) / 100
-        const currency = priced.rule !== null ? priced.rule.currency : average?.currency ?? ledgerCurrencyOf(model.provider)
-        const source: CostSource = priced.cost !== null ? priced.source : average !== null ? 'estimate' : 'none'
+        const priced0 = priced.cost !== null && priced.rule !== null
+        // 价目没命中就是「无依据」：金额记 0 只是为了合计不炸，来源会标 none，界面显示 —
+        const cost = priced0 ? Math.round((priced.cost ?? 0) * 100) / 100 : 0
+        const currency = priced.rule !== null ? priced.rule.currency : ledgerCurrencyOf(model.provider)
+        const source: CostSource = priced0 ? priced.source : 'none'
         return {
           ...model,
           cost,
           costSource: source,
-          partial: priced.cost !== null ? priced.partial : false,
+          partial: priced0 ? priced.partial : false,
           // 只有真有依据的格子才进币种小计：`none` 的 0 元不是金额，混进去会凭空造出一个币种
           costsByCurrency: source === 'none' ? {} : costsByCurrencyOf([{ cost, currency }]),
         }
@@ -641,7 +631,7 @@ export function mountKeyUsageRoutes(
     // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
     const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
     // 单日有小时槽时按错峰占比加权；跨天拿不到小时分布，只能按标准价（不猜折扣）
-    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), hoursAsPricingRows(hours))
+    const days = annotateCosts(merged.days, merged.sessionDates, hoursAsPricingRows(hours))
     const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
     const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
     return {
@@ -672,7 +662,7 @@ export function mountKeyUsageRoutes(
     const from = earliest > yearAgo ? earliest : yearAgo
     const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
     const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
-    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
+    const days = annotateCosts(merged.days, merged.sessionDates, null)
     return {
       days: days
         .map((day) => ({
@@ -701,7 +691,7 @@ export function mountKeyUsageRoutes(
     const channels = classifyChannels(readChannelConfig(), [])
     const sessionRows = sessionDayRows(collection.records, channels.map((channel) => channel.provider))
     const merged = mergeDailySeries(aggregateRange(ledger, monthFrom, today, null).days, sessionRows, monthFrom, today)
-    const days = annotateCosts(merged.days, merged.sessionDates, buildPriceTable(ledger), null)
+    const days = annotateCosts(merged.days, merged.sessionDates, null)
     const todaySummary = summarizeMergedByProvider(days, today, today)
     const monthSummary = summarizeMergedByProvider(days, monthFrom, today)
     const rows = channels.map((channel) => {
@@ -737,16 +727,14 @@ export function mountKeyUsageRoutes(
   }
 
   /** 会话用量列表（`limit` 只影响展示条数；快照段用大 limit 物化全量）。 */
-  const sessionsPayload = async (limit: number, quota: unknown): Promise<Record<string, unknown>> => {
+  const sessionsPayload = async (limit: number, quota: unknown, collection?: SessionCollection): Promise<Record<string, unknown>> => {
     const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
     const known = channels.map((channel) => channel.provider)
     const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
-    const { records, coverage } = await sessionSource.collect()
-    const priceTable = buildPriceTable(loadLedger())
-    const averageOf = averagePriceOf(priceTable)
+    const { records, coverage } = collection ?? await sessionSource.collect()
     const meta = sessionMeta(records.map((record) => record.id))
     const rows = sessionRowsOf(records, known, meta).slice(0, limit).map((row) => {
-      const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
+      const costs = rowCostsOf(row.models.map(pricingRowOf))
       const cost = costs.length === 0 ? null : sumOrNull(costs)
       return {
         ...row,
@@ -763,18 +751,17 @@ export function mountKeyUsageRoutes(
         models: cappedModelRows(row, costs),
       }
     })
-    return { rows, coverage, priced: priceTable.size > 0 }
+    // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
+    return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
   }
 
   /** 项目用量列表。 */
-  const projectsPayload = async (limit: number): Promise<Record<string, unknown>> => {
+  const projectsPayload = async (limit: number, collection?: SessionCollection): Promise<Record<string, unknown>> => {
     const known = knownProviders()
-    const { records, coverage } = await sessionSource.collect()
-    const priceTable = buildPriceTable(loadLedger())
-    const averageOf = averagePriceOf(priceTable)
+    const { records, coverage } = collection ?? await sessionSource.collect()
     const titles = workspaceSource.titles()
     const priced = projectRowsOf(records, known, sessionMeta(records.map((record) => record.id))).map((row) => {
-      const costs = rowCostsOf(row.models.map(pricingRowOf), averageOf)
+      const costs = rowCostsOf(row.models.map(pricingRowOf))
       const cost = costs.length === 0 ? null : sumOrNull(costs)
       const title = titles.get(row.workspace.toLowerCase()) ?? null
       return {
@@ -796,18 +783,17 @@ export function mountKeyUsageRoutes(
     })
     // 项目页与侧边栏对齐：工作区各占一行，不在工作区里的历史目录合并成一行（否则会出现侧边栏里没有的「项目」）
     const rows = collapseOrphanProjects(priced).slice(0, limit)
-    return { rows, coverage, priced: priceTable.size > 0 }
+    // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
+    return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
   }
 
   /** 按模型用量列表。 */
-  const modelsPayload = async (limit: number, quota: unknown): Promise<Record<string, unknown>> => {
+  const modelsPayload = async (limit: number, quota: unknown, collection?: SessionCollection): Promise<Record<string, unknown>> => {
     const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
     const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
-    const { records, coverage } = await sessionSource.collect()
-    const priceTable = buildPriceTable(loadLedger())
-    const averageOf = averagePriceOf(priceTable)
+    const { records, coverage } = collection ?? await sessionSource.collect()
     const rows = modelRowsOf(records, channels.map((channel) => channel.provider)).slice(0, limit).map((row) => {
-      const costs = rowCostsOf([pricingRowOf(row)], averageOf)
+      const costs = rowCostsOf([pricingRowOf(row)])
       const cost = sumOrNull(costs)
       return {
         ...row,
@@ -823,7 +809,8 @@ export function mountKeyUsageRoutes(
         partial: costs[0]?.partial === true,
       }
     })
-    return { rows, coverage, priced: priceTable.size > 0 }
+    // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
+    return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
   }
 
   /**
@@ -923,18 +910,39 @@ export function mountKeyUsageRoutes(
     path: join(dshHomePath(), 'dsh-key-usage', SNAPSHOT_FILE),
     intervalMs: options.snapshotIntervalMs,
     builders: {
-      local: async ({ quota }) => ({
-        sections: {
-          overview: await summaryPayload(),
-          // 快照存默认范围：近 30 天 / 全部通道
-          usage: await usagePayload(shiftedDayKey(-29), dayKeyOf(new Date()), null),
-          heatmap: await heatmapPayload(),
-          models: await modelsPayload(Number.MAX_SAFE_INTEGER, quota),
-          projects: await projectsPayload(Number.MAX_SAFE_INTEGER),
-          sessions: await sessionsPayload(Number.MAX_SAFE_INTEGER, quota),
-        },
-        issues: [],
-      }),
+      local: async ({ quota }) => {
+        /**
+         * 整表折叠一次、三个段共用：以前 models / projects / sessions 各自 `collect()`，
+         * 同一次构建把宿主会话列表与变更会话读了三遍（实测 p50 3.3 s、最高 13.8 s）。
+         * `collect()` 内部只做「并发去重」，串行调用就是三次真实读取 —— 这里显式只取一次。
+         */
+        const collection = await sessionSource.collect()
+        const stats = sessionSource.stats?.() ?? null
+        // 耗时明细直接落盘（info）：这是排查信息，不是「快照问题」，不进 issues（界面就不会弹警告）
+        if (stats !== null) {
+          appendLogRecords([{
+            time: new Date().toISOString(),
+            level: 'info',
+            source: 'snapshot',
+            message: '本地重建：会话读取明细',
+            detail: '共 ' + String(stats.sessions) + ' 个，缓存命中 ' + String(stats.cached)
+              + '，本次读取 ' + String(stats.read) + '；宿主列表 ' + String(stats.listMs)
+              + ' ms，折叠 ' + String(stats.readMs) + ' ms，合计 ' + String(stats.totalMs) + ' ms',
+          }], logFilePath())
+        }
+        return {
+          sections: {
+            overview: await summaryPayload(),
+            // 快照存默认范围：近 30 天 / 全部通道
+            usage: await usagePayload(shiftedDayKey(-29), dayKeyOf(new Date()), null),
+            heatmap: await heatmapPayload(),
+            models: await modelsPayload(Number.MAX_SAFE_INTEGER, quota, collection),
+            projects: await projectsPayload(Number.MAX_SAFE_INTEGER, collection),
+            sessions: await sessionsPayload(Number.MAX_SAFE_INTEGER, quota, collection),
+          },
+          issues: [],
+        }
+      },
       quota: async (input) => quotaPayload(input.seedLegacy, input.previous),
       channels: async ({ quota, outcome }) => ({ channels: channelsPayloadOf(quota, outcome), issues: [] }),
     },
@@ -1071,7 +1079,6 @@ export function mountKeyUsageRoutes(
       }
       const channels = await channelsWithQuota()
       const knownProviders = channels.map((channel) => channel.provider)
-      const priceTable = buildPriceTable(loadLedger())
       const meta = sessionMeta([lookup.id])
       const detail = lookup.record === null
         // 降级时只有会话头字段，但投影缓存里的标题仍然可用，优先级与列表保持一致
@@ -1082,7 +1089,7 @@ export function mountKeyUsageRoutes(
           (meta.archived ?? new Set<string>()).has(normalizeSessionId(lookup.id)),
         )
         : sessionDetailOf(lookup.record, knownProviders, meta)
-      const costs = rowCostsOf(detail.models.map(pricingRowOf), averagePriceOf(priceTable))
+      const costs = rowCostsOf(detail.models.map(pricingRowOf))
       const models = detail.models.map((model, index) => {
         const cost = costs[index]?.cost ?? null
         return {
@@ -1110,7 +1117,7 @@ export function mountKeyUsageRoutes(
           status: lookup.status === 'ok' ? 'complete' : lookup.status === 'degraded' ? 'partial' : 'unavailable',
           reason: lookup.reason,
         },
-        priced: priceTable.size > 0,
+        priced: costs.some((entry) => entry.cost !== null),
       })
     },
   })
@@ -1137,8 +1144,8 @@ export function mountKeyUsageRoutes(
   })
 
   /**
-   * 每通道单价表：`rates` 与成本计算走同一套匹配（catalog → aggregate），给的是**此刻生效**的单价
-   * （错峰时是错峰价 + `offPeak: true`）；只有台账均价时标 `estimate`（`rates: null`），都没有标 `none`。
+   * 每通道单价表：`rates` 与成本计算走同一套匹配（通道内价目 → 同模型官方价目），给的是**此刻生效**的单价
+   * （错峰时是错峰价 + `offPeak: true`）；两层都没命中标 `none`（`rates: null`）。
    */
   webServer.register({
     kind: 'exact',
@@ -1160,7 +1167,6 @@ export function mountKeyUsageRoutes(
         from,
         today,
       )
-      const averageOf = averagePriceOf(buildPriceTable(ledger))
       const now = new Date()
       // 模型集合 = 范围内（台账 + 会话合并口径）出现过的模型
       const usageByProvider = new Map<string, Map<string, RateUsage>>()
@@ -1193,14 +1199,13 @@ export function mountKeyUsageRoutes(
           .slice(0, limit)
           .map(({ model, usage, tokens }) => {
             const hit = matchPricedRule(provider, model)
-            const average = averageOf({ provider, model, tokens, ...usage })
             const effective = hit === null ? null : ratesAt(hit.rule, now)
             return {
               model,
               tokens,
               calls: usage.calls,
-              source: hit !== null ? hit.source : average === null ? 'none' as const : 'estimate' as const,
-              currency: hit !== null ? hit.rule.currency : average === null ? null : average.currency,
+              source: hit !== null ? hit.source : 'none' as const,
+              currency: hit === null ? null : hit.rule.currency,
               partial: hit !== null && hit.partial,
               offPeak: effective !== null && effective.offPeak,
               rates: effective === null ? null : {
@@ -1209,7 +1214,7 @@ export function mountKeyUsageRoutes(
                 cacheWrite: effective.rates.cacheWrite,
                 output: effective.rates.output,
               },
-              note: ratesNoteOf(hit, average),
+              note: ratesNoteOf(hit),
       noteEn: hit === null || hit.rule.noteEn === undefined ? null : hit.rule.noteEn,
             }
           })
@@ -1251,7 +1256,7 @@ export function mountKeyUsageRoutes(
       )
       // 覆盖度按「近 30 天出现过的 provider|model」统计，与使用明细的口径一致
       const usageRows: PricingUsageRow[] = merged.days.flatMap((day) => day.models.map(dayModelPricingRow))
-      const coverage = summarizeCoverage(usageRows, averagePriceOf(buildPriceTable(ledger)))
+      const coverage = summarizeCoverage(usageRows)
       // 覆盖度统计会顺带做聚合价匹配，装载问题与「定不了通道」的提示要在这之后再取，才能一起下发
       const aggregate = aggregateStatus()
       sendJson(response, 200, {
@@ -1270,7 +1275,7 @@ export function mountKeyUsageRoutes(
           catalogModels: coverage.catalogModels,
           aggregateModels: coverage.aggregateModels,
           partialModels: coverage.partialModels,
-          averagedModels: coverage.averagedModels,
+          modelModels: coverage.modelModels,
           unpricedModels: coverage.unpricedModels,
           // 只作参照：界面上的成本按「官方账单 > 内置价目 > 聚合价 > 均价」逐格取值，与这个总额不一定相等
           costByCurrency: coverage.costByCurrency,

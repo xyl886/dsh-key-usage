@@ -356,7 +356,7 @@ export interface ModelRateRow {
   /** 近 N 天的展示口径 tokens。 */
   tokens: number
   calls: number
-  /** 单价来自哪一层：catalog = 内置官方价目；aggregate = LiteLLM 聚合价；estimate = 台账均价；none = 无依据。 */
+  /** 单价来自哪一层：catalog = 内置官方价目；aggregate = LiteLLM 聚合价（通道别名）；model = 同模型官方价目（跨通道同名，含厂商兜底）；none = 无依据。 */
   source: CostSource
   /** 价目的原币种；`source: 'none'` 时服务端给 null（不知道币种，不猜）。 */
   currency: string | null

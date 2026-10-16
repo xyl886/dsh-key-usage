@@ -21,7 +21,7 @@ import {
   refreshModelPrices,
   writeModelPricesFile,
 } from '../lib/pricing/model-prices.js'
-import { rowCostsOf } from '../lib/pricing/pricing.js'
+import { matchPricedRule, rowCostsOf } from '../lib/pricing/pricing.js'
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-prices-'))
 // DSH_HOME 一定要在第一次匹配前设好：本地刷新文件路径是按请求现算的
@@ -204,24 +204,43 @@ const status = aggregateStatus()
   assert.equal(ambiguous.reason, 'ambiguous')
   assert.equal(ambiguous.candidates, 9)
 
-  const twoCandidates = aggregateRuleFor('opencode-go', 'deepseek-flash')
-  assert.equal(twoCandidates.ok, false, '只要有 2 条候选就不算「唯一」')
-  assert.equal(twoCandidates.candidates, 2)
+  // 同厂商双键（`deepseek-flash` 与 `deepseek/deepseek-flash`，价格完全一样）仍算唯一：
+  // 用户举的例子 `opencode` + `deepseek-flash` 必须能拿到 DeepSeek 官方价
+  const sameVendor = aggregateRuleFor('opencode-go', 'deepseek-flash')
+  assert.equal(sameVendor.ok, true, '同厂商同价的多键仍算「唯一」，不当作歧义')
+  assert.equal(sameVendor.hit.source, 'unique')
+  assert.equal(sameVendor.hit.key, 'deepseek-flash', '取段数最少的那条键')
+  assert.equal(sameVendor.hit.rule.provider, 'deepseek', '价目声明的是模型厂商')
 
-  // 无法确定的匹配必须留下可读的 issue，并随装载状态一起下发给面板
-  const issue = aggregateLookupIssues().find((entry) => entry.message.includes('glm-5.3-flash'))
+  // 跨厂商、价还不同 → 仍算歧义（这一档不许猜厂商）
+  const crossVendor = aggregateRuleFor('opencode-go', 'gpt-5.4-mini')
+  assert.equal(crossVendor.ok, false, '跨厂商多候选 → 跳过，不许猜')
+  assert.equal(crossVendor.reason, 'ambiguous')
+
+  // 无法确定的匹配必须留下可读的 issue，并随装载状态一起下发给面板。
+  // 注意：记 issue 的是**匹配入口** `matchPricedRule`（纯匹配器本身不记）—— 因为入口还有
+  // 「按内置价目的厂商再查一次」的兜底，只有最终真定不下来才该报「跳过不参与定价」。
+  assert.equal(matchPricedRule('opencode-go', 'gpt-5.4-mini'), null, '跨厂商歧义 → 无依据')
+  const issue = aggregateLookupIssues().find((entry) => entry.message.includes('gpt-5.4-mini'))
   assert.notEqual(issue, undefined, '跳过的匹配要记 issue')
   assert.equal(issue.kind, 'match-ambiguous')
-  assert.ok(issue.message.includes('9 条候选'), issue.message)
-  assert.ok(issue.message.includes('opencode-go|glm-5.3-flash'), issue.message)
+  assert.ok(issue.message.includes('条候选'), issue.message)
+  assert.ok(issue.message.includes('opencode-go|gpt-5.4-mini'), issue.message)
   assert.ok(
-    aggregateStatus().issues.some((entry) => entry.kind === 'match-ambiguous' && entry.message.includes('glm-5.3-flash')),
+    aggregateStatus().issues.some((entry) => entry.kind === 'match-ambiguous' && entry.message.includes('gpt-5.4-mini')),
     'issue 要出现在装载状态里（面板据此解释「为什么这个模型没价」）',
   )
   // 同键只记一条，不会随请求次数增长
-  aggregateRuleFor('opencode-go', 'glm-5.3-flash')
-  assert.equal(aggregateLookupIssues().filter((entry) => entry.message.includes('glm-5.3-flash')).length, 1)
-  // 全库没有这个模型名时不算「问题」：正常回落均价
+  matchPricedRule('opencode-go', 'gpt-5.4-mini')
+  assert.equal(aggregateLookupIssues().filter((entry) => entry.message.includes('gpt-5.4-mini')).length, 1)
+  // 有厂商兜底的模型（glm-5.3-flash → zai）能拿到价，**不该**留下「已跳过」的 issue
+  assert.notEqual(matchPricedRule('opencode-go', 'glm-5.3-flash'), null, '内置价目知道厂商 → 用厂商的价目')
+  assert.equal(
+    aggregateLookupIssues().some((entry) => entry.message.includes('glm-5.3-flash')),
+    false,
+    '拿到了金额就不能同时报「已跳过不参与定价」',
+  )
+  // 全库没有这个模型名时不算「问题」：正常按「无依据」处理
   const missing = aggregateRuleFor('opencode-go', 'zzz-not-in-litellm')
   assert.equal(missing.ok, false)
   assert.equal(missing.reason, 'no-model')
@@ -267,44 +286,41 @@ const status = aggregateStatus()
   assert.equal(zeroPriced.ok, false)
 }
 
-// ===== 7. 接进成本链路：官方 CNY 价目在上层，聚合价在它下面 =====
+// ===== 7. 接进成本链路：通道内价目在上层，同模型官方价目在下层，定不下来就是无依据 =====
 {
   // deepseek-v4-flash 两层都有：内置官方价目（CNY）必须压过聚合价（USD）
   const official = rowCostsOf(
     [{ provider: 'deepseek-official', model: 'deepseek-v4-flash', calls: 1, inputTokens: 1_000_000 }],
-    () => null,
   )[0]
   assert.equal(official.source, 'catalog', '人民币官方价目仍在聚合价之上')
   assert.equal(official.rule.currency, 'CNY')
   assert.equal(official.partial, false)
 
-  // 官方价目没收录、聚合价能定的模型 → 走 aggregate（USD）
-  const aggregate = rowCostsOf(
+  // 官方价目没收录、聚合价里同名模型全库唯一 → 标 model（同模型官方价目，USD）
+  const crossChannel = rowCostsOf(
     [{ provider: 'opencode-go', model: 'moonshot-v1-8k', calls: 1, inputTokens: 1_000_000 }],
-    () => null,
   )[0]
-  assert.equal(aggregate.source, 'aggregate')
-  assert.equal(aggregate.rule.currency, 'USD')
-  assert.equal(aggregate.cost, 0.2, '0.2 USD / 百万 tokens × 1M')
-  assert.equal(aggregate.partial, false)
+  assert.equal(crossChannel.source, 'model', '别名不命中但同名唯一 → 用同模型官方价目')
+  assert.equal(crossChannel.rule.currency, 'USD')
+  assert.equal(crossChannel.cost, 0.2, '0.2 USD / 百万 tokens × 1M')
+  assert.equal(crossChannel.partial, false)
 
   // 缺一档缓存价的条目：partial 要一路传到成本行（界面据此标「部分」）
   const partial = rowCostsOf(
     [{ provider: 'opencode-go', model: 'amazon.nova-2-lite-v1:0', calls: 1, inputTokens: 1_000_000, cacheWriteTokens: 1_000_000 }],
-    () => null,
   )[0]
-  assert.equal(partial.source, 'aggregate')
+  assert.equal(partial.source, 'model', '同样是同名唯一命中')
   assert.equal(partial.partial, true)
   assert.equal(partial.cost, 0.6, '未命中 0.3 + 缓存写入按 0.3 代 = 0.6 USD')
 
-  // 定不了通道的模型仍然回落均价，不会被聚合价硬套一个通道
+  // 跨厂商、价还不同、内置价目也不认识 → 不再猜一个数字，金额为 null、界面显示 —
   const skipped = rowCostsOf(
-    [{ provider: 'opencode-go', model: 'glm-5.3-flash', calls: 1, inputTokens: 1_000_000 }],
-    () => ({ cost: 7, currency: 'CNY' }),
+    [{ provider: 'opencode-go', model: 'gpt-5.4-mini', calls: 1, inputTokens: 1_000_000 }],
   )[0]
-  assert.equal(skipped.source, 'estimate')
-  assert.equal(skipped.cost, 7)
-  assert.equal(skipped.currency, 'CNY', '回落均价的行带上台账币种')
+  assert.equal(skipped.source, 'none', '跨厂商多候选、定不了厂商 → 无依据')
+  assert.equal(skipped.cost, null, '无依据就是不给金额，不再回落台账反推均价')
+  assert.equal(skipped.currency, null)
+  assert.equal(skipped.rule, null)
 }
 
 // ===== 8. 本地刷新文件优先 + 坏文件降级（绝不抛错） =====

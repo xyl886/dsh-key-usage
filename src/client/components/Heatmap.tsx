@@ -39,7 +39,7 @@ function levelOf(tokens: number, thresholds: number[]): number {
 
 /** 五档由浅到深（首档为「无用量」的灰）。 */
 const LEVEL_COLORS = [
-  'var(--dsw-alias-fill-l2, rgba(128,128,140,.22))',
+  'var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.22))',
   // 用 color-mix 按比例混出五档深浅：直接写 var(--dsw-alias-state-business-primary, rgba(...)) 会拿到实心色，
   // 后三档全变成同一个颜色（层次看不出来）。兜底值给 rgba 以便 color-mix 不可用时仍能显示。
   'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 18%, transparent)',

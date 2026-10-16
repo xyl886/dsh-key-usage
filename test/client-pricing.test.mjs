@@ -43,10 +43,12 @@ if (clientPricing !== null) {
 
   // ===== 1. 成本来源：五档全覆盖，且与「你的规则」层一起退役 =====
   {
-    const sources = ['official', 'catalog', 'aggregate', 'estimate', 'none']
+    // model = 本通道没命中、聚合价里同名模型全库唯一 → 用同模型官方价目（台账反推均价那档已删除）
+    const sources = ['official', 'catalog', 'aggregate', 'model', 'none']
     assert.deepEqual(Object.keys(COST_SOURCE_LABELS).sort(), [...sources].sort(), '标签表只认这五档')
     assert.deepEqual(Object.keys(COST_SOURCE_HINTS).sort(), [...sources].sort(), '说明表与标签表同集合')
     assert.equal(COST_SOURCE_LABELS.rule, undefined, '「自定」角标已随用户规则层移除')
+    assert.equal(COST_SOURCE_LABELS.estimate, undefined, '台账反推均价已整层删除，不再有 estimate 档')
     const values = Object.values(COST_SOURCE_LABELS)
     assert.equal(new Set(values).size, values.length, '标签不重复')
     for (const source of sources) {

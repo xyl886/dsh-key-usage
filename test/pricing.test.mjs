@@ -1,9 +1,12 @@
 /**
- * 计费口径离线测试：单位换算 / 错峰 / 回落层级 / 覆盖度 / 按币种拆分，以及内置价目的回归基线。
- * 运行：node test/pricing.test.mjs（依赖 lib/pricing.js，改 src 后要先 npm run build:server）
+ * 计费口径离线测试：单位换算 / 错峰 / 价目层级（通道内价目 → 同模型官方价目 → 无依据）/ 覆盖度 /
+ * 按币种拆分，以及内置价目的回归基线。
+ * 运行：node test/pricing.test.mjs（依赖 lib/pricing/pricing.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   SOURCE_RANK,
   alignMoneyWithCost,
@@ -37,6 +40,14 @@ import {
   catalogSources,
   parseCatalogText,
 } from '../lib/pricing/pricing-catalog.js'
+import { aggregateRuleFor } from '../lib/pricing/model-prices.js'
+
+/**
+ * 聚合价目层只读**随包快照**：本机 `$DSH_HOME/dsh-key-usage/model-prices.json`（面板刷新写入的副本）
+ * 内容随用户点「刷新价目」变化，断言不能跟着它漂。装载优先级与刷新路径由 model-prices.test.mjs 覆盖。
+ */
+const aggregateHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-pricing-'))
+process.env.DSH_HOME = aggregateHome
 
 /** 迁移基线：迁移前从 lib/pricing-catalog.js 导出的 18 条原样条目（字段、顺序、数字一字不差）。 */
 const GOLDEN_CATALOG = JSON.parse(readFileSync(new URL('./fixtures/pricing-catalog.golden.json', import.meta.url), 'utf8'))
@@ -103,14 +114,15 @@ function closeTo(actual, expected, message) {
   assert.equal(priceRowsOf([row])[0].cacheSavings, 0)
 }
 
-// ===== 3. 成本来源强弱序：官方账单 > 内置价目 > 聚合价 > 均价 > 无 =====
+// ===== 3. 成本来源强弱序：官方账单 > 内置价目 > 聚合价（通道别名）> 同模型官方价目 > 无 =====
 {
-  assert.deepEqual(SOURCE_RANK, { official: 0, catalog: 1, aggregate: 2, estimate: 3, none: 4 })
+  assert.deepEqual(SOURCE_RANK, { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 })
   assert.equal(weakestOf('official', 'catalog'), 'catalog')
   assert.equal(weakestOf('catalog', 'aggregate'), 'aggregate', '官方价目比聚合价可信')
-  assert.equal(weakestOf('aggregate', 'estimate'), 'estimate')
-  assert.equal(weakestOf('estimate', 'none'), 'none')
+  assert.equal(weakestOf('aggregate', 'model'), 'model', '跨通道借来的官方价目比本通道聚合价弱')
+  assert.equal(weakestOf('model', 'none'), 'none')
   assert.equal(weakestOf('none', 'official'), 'none', '已经最弱就不会被「拉强」')
+  assert.equal(SOURCE_RANK.estimate, undefined, '台账反推均价已整层删除，不再有 estimate 档')
 }
 
 // ===== 4. 错峰判定（按本地时间） =====
@@ -205,30 +217,98 @@ assert.equal(clockMinutes(900), null)
   assert.equal(priceRowsOf(flashRowOnly, { hours: allOffPeakHours.map((slot) => ({ ...slot, inputTokens: 0 })) })[0].cost, 2, '没有 tokens 的槽不参与加权 → 按标准价')
 }
 
-// ===== 8. 两层回落：内置价目 → 台账反推均价 → 无 =====
+// ===== 8. 价目层级：内置价目 → 同模型官方价目 → 无依据（台账反推均价这一层已删除） =====
 {
   const rows = [
     { provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
     { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, tokens: 1_000_000, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  // 用内置价目里一定不存在的通道，避免意外命中干扰「纯均价回落」的断言
-  const average = (row) => (row.provider === 'zzz-unknown' ? { cost: 5, currency: 'CNY' } : null)
 
-  const perRow = rowCostsOf(rows, average)
-  assert.deepEqual(perRow.map((entry) => entry.source), ['catalog', 'estimate'])
-  assert.deepEqual(perRow.map((entry) => entry.cost), [2, 5], '内置价目 2 元 + 均价 5 元')
-  assert.deepEqual(perRow.map((entry) => entry.currency), ['CNY', 'CNY'], '每格都带自己的币种')
+  const perRow = rowCostsOf(rows)
+  assert.deepEqual(perRow.map((entry) => entry.source), ['catalog', 'none'], '内置价目命中 → catalog；两层都不命中 → none')
+  assert.deepEqual(perRow.map((entry) => entry.cost), [2, null], '命中内置价目 ¥2；无依据不给金额（界面显示 —）')
+  assert.deepEqual(perRow.map((entry) => entry.currency), ['CNY', null], '有金额才带币种')
+  assert.equal(perRow[1].rule, null, '无依据的行不带价目对象')
+  assert.equal(perRow[1].partial, false)
+  assert.equal(perRow[1].cacheSavings, 0)
 
-  const coverage = summarizeCoverage(rows, average)
+  const coverage = summarizeCoverage(rows)
   assert.equal(coverage.catalogModels, 1)
-  assert.equal(coverage.averagedModels, 1)
-  assert.equal(coverage.unpricedModels, 0)
+  assert.equal(coverage.modelModels, 0)
+  assert.equal(coverage.unpricedModels, 1, '无依据的模型单独计数')
   assert.deepEqual(coverage.costByCurrency, { CNY: 2 }, '只有命中价目的行进入价目口径金额')
 
-  const missing = rowCostsOf([rows[1]], () => null)[0]
-  assert.equal(missing.source, 'none', '既没价目也没均价 → 界面显示 —')
-  assert.equal(missing.cost, null)
-  assert.equal(missing.currency, null)
+  // 旧签名的第二参是「台账反推均价回调」：这一层已删除，硬塞进来也不该凭空造出金额
+  const legacyAverage = rowCostsOf([rows[1]], () => ({ cost: 5, currency: 'CNY' }))[0]
+  assert.equal(legacyAverage.source, 'none', '第二参只接受 { at, hours }，均价回调不再被读')
+  assert.equal(legacyAverage.cost, null, '台账里有金额也不反推数字')
+  assert.equal(legacyAverage.currency, null)
+}
+
+// ===== 8b. 跨通道同名唯一命中 → `model` 档（同模型官方价目） =====
+{
+  const row = (provider, model) => ({ provider, model, calls: 1, inputTokens: 1_000_000 })
+
+  // 前提：这一档只认「该模型名在全库唯一」。moonshot-v1-8k 在随包聚合价快照里只有一条候选，
+  // 且 opencode-go 不在通道别名表里 → 走「同模型官方价目」，而不是「本通道别名命中」。
+  const candidates = aggregateRuleFor('opencode-go', 'moonshot-v1-8k')
+  assert.equal(candidates.ok, true, '随包聚合价快照里 moonshot-v1-8k 必须唯一（快照换过就要重挑模型）')
+  assert.equal(candidates.hit.source, 'unique', '这一档的前提：别名不命中 + 同名候选唯一')
+  assert.equal(candidates.hit.key, 'moonshot/moonshot-v1-8k')
+
+  const crossChannel = rowCostsOf([row('opencode-go', 'moonshot-v1-8k')])[0]
+  assert.equal(crossChannel.source, 'model', '本通道没命中、同名模型全库唯一 → 用同模型官方价目')
+  assert.equal(crossChannel.cost, 0.2, '0.2 USD / 百万 tokens × 1M')
+  assert.equal(crossChannel.rule.provider, 'moonshot', '价目声明的那一侧是模型厂商，不是查询里的通道')
+  assert.equal(crossChannel.currency, 'USD', '价目原样记币种，不做汇率换算')
+  assert.equal(crossChannel.partial, false)
+
+  // 同一个模型名换到「有别名」的通道 → 是本通道别名命中，标 aggregate（两条路不许互相冒充）
+  const aliased = rowCostsOf([row('moonshotai', 'moonshot-v1-8k')])[0]
+  assert.equal(aliased.source, 'aggregate', 'moonshotai → moonshot 是通道别名命中')
+  assert.equal(aliased.cost, 0.2, '同一条价目，金额一致')
+  assert.equal(aliased.rule.model, crossChannel.rule.model)
+
+  // 同厂商双键（`deepseek-flash` 与 `deepseek/deepseek-flash`，价格完全一样）仍算唯一：
+  // 这正是用户举的例子 —— `opencode` + `deepseek-flash` 必须能拿到 DeepSeek 的官方价
+  const sameVendor = rowCostsOf([row('opencode-go', 'deepseek-flash')])[0]
+  assert.equal(sameVendor.source, 'model', '同厂商同价的双键算唯一 → 用 DeepSeek 官方价')
+  assert.equal(sameVendor.rule.provider, 'deepseek')
+  assert.equal(sameVendor.currency, 'USD')
+  assert.equal(sameVendor.cost, 0.3, '0.3 USD / 百万 tokens × 1M')
+
+  // 同名候选跨多个厂商、内置价目又知道该模型属于哪个厂商 → 用厂商自己的那条（glm-5.3-flash → zai）
+  const vendorHint = rowCostsOf([row('opencode-go', 'glm-5.3-flash')])[0]
+  assert.equal(vendorHint.source, 'model', '内置价目里 glm-5.3-flash 属于 zai → 用 zai 自己的价目')
+  assert.equal(vendorHint.rule.provider, 'zai')
+  assert.equal(vendorHint.cost, 0.15, 'zai/glm-5.3-flash 输入 0.15 USD / 百万 tokens')
+
+  // 真正定不下来的（多厂商、价不同、内置价目也不认识这个模型名）→ 无依据，不许挑一条「看起来像」的
+  const ambiguous = rowCostsOf([row('opencode-go', 'gpt-5.4-mini')])[0]
+  assert.equal(ambiguous.source, 'none', 'gpt-5.4-mini 有多条跨厂商候选、内置价目也不认识 → 无依据')
+  assert.equal(ambiguous.cost, null, '歧义时宁可不给金额')
+  assert.equal(ambiguous.currency, null)
+  assert.equal(ambiguous.rule, null)
+  assert.equal(ambiguous.partial, false)
+
+  // 通道内内置价目命中时仍然优先，不会被聚合价的任何一层顶替
+  const catalog = rowCostsOf([row('deepseek-official', 'deepseek-flash')])[0]
+  assert.equal(catalog.source, 'catalog', '通道内内置价目优先于聚合价')
+  assert.equal(catalog.rule.currency, 'CNY')
+
+  // 覆盖度：两档分开计数，定不下来的进 unpricedModels
+  const coverage = summarizeCoverage([
+    row('opencode-go', 'moonshot-v1-8k'),
+    row('moonshotai', 'moonshot-v1-8k'),
+    row('opencode-go', 'gpt-5.4-mini'),
+    row('zzz-unknown', 'zzz-model'),
+  ])
+  assert.equal(coverage.modelModels, 1, '跨通道唯一命中的模型数（opencode-go|moonshot-v1-8k）')
+  assert.equal(coverage.aggregateModels, 1, '通道别名命中的模型数（moonshotai|moonshot-v1-8k）')
+  assert.equal(coverage.catalogModels, 0)
+  assert.equal(coverage.unpricedModels, 2, '跨厂商歧义 + 全库没有都算无依据')
+  closeTo(coverage.costByCurrency.USD, 0.4, '两条命中同一条 USD 价目：0.2 + 0.2')
+  assert.deepEqual(Object.keys(coverage.costByCurrency), ['USD'], '无依据的行不进金额')
 }
 
 // ===== 9. 汇总口径：省钱按命中行统计、金额按币种分组 =====
@@ -238,11 +318,11 @@ assert.equal(clockMinutes(900), null)
     { provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 0, cacheReadTokens: 1_000_000, cacheWriteTokens: 0, outputTokens: 0 },
     { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, inputTokens: 1_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  const coverage = summarizeCoverage(rows, (row) => (row.provider === 'zzz-unknown' ? { cost: 1, currency: 'CNY' } : null))
+  const coverage = summarizeCoverage(rows)
   assert.equal(coverage.catalogModels, 2, '两个模型命中内置官方价目')
   assert.equal(coverage.aggregateModels, 0)
-  assert.equal(coverage.averagedModels, 1, 'zzz-model 由台账均价兜底')
-  assert.equal(coverage.unpricedModels, 0)
+  assert.equal(coverage.modelModels, 0, '没有跨通道同名唯一命中的模型')
+  assert.equal(coverage.unpricedModels, 1, 'zzz-model 既不在内置价目、也不在聚合价 → 无依据')
   assert.deepEqual(Object.keys(coverage.costByCurrency).sort(), ['CNY', 'USD'], '跨币种分组，不合计')
   // DeepSeek：未命中 1M × ¥2 + 命中 1M × ¥0.04 = ¥2.04；Z.ai：命中 1M × $0.26
   closeTo(coverage.costByCurrency.CNY, 2.04, 'CNY：未命中 1M×2 + 命中 1M×0.04')
@@ -253,8 +333,9 @@ assert.equal(clockMinutes(900), null)
   assert.equal(coverage.savingsDetail[0].model, 'deepseek-flash', '按省钱金额降序')
   assert.equal(coverage.savingsDetail[0].currency, 'CNY')
 
-  const unpriced = summarizeCoverage([rows[2]], () => null)
-  assert.equal(unpriced.unpricedModels, 1, '价目与均价都没有 → 无依据')
+  const unpriced = summarizeCoverage([rows[2]])
+  assert.equal(unpriced.unpricedModels, 1, '两层价目都没命中 → 无依据')
+  assert.deepEqual(unpriced.costByCurrency, {}, '无依据的行不进金额')
   assert.deepEqual(unpriced.savingsDetail, [])
 }
 
@@ -337,7 +418,7 @@ assert.equal(clockMinutes(900), null)
   assert.equal(catalogProviderCurrency(''), null)
 }
 
-// ===== 13. 内置官方价目自动生效：价目 > 台账均价 =====
+// ===== 13. 内置官方价目自动生效：通道内价目优先，两层都不命中就是「无依据」 =====
 {
   // DeepSeek flash 高峰价：未命中 ¥2 / 命中 ¥0.04 / 输出 ¥8（CNY / 百万 tokens）
   const flashRow = {
@@ -345,37 +426,35 @@ assert.equal(clockMinutes(900), null)
     inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0,
   }
 
-  const byCatalog = rowCostsOf([flashRow], () => null)[0]
+  const byCatalog = rowCostsOf([flashRow])[0]
   assert.equal(byCatalog.source, 'catalog', '内置价目自动生效，标「官方价」')
   assert.equal(byCatalog.cost, 2, 'deepseek-flash 未命中 1M tokens = ¥2.00')
   assert.equal(byCatalog.rule.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价，不做汇率换算')
   assert.equal(byCatalog.rule.provider, 'deepseek-official')
   assert.equal(byCatalog.currency, 'CNY')
 
-  // 内置价目 > 台账反推均价：命中内置时不去问均价
-  let askedAverage = false
-  const priced = rowCostsOf([flashRow], () => { askedAverage = true; return { cost: 123, currency: 'CNY' } })[0]
-  assert.equal(priced.source, 'catalog')
-  assert.equal(priced.cost, 2)
-  assert.equal(askedAverage, false, '命中内置价目后不再回落台账均价')
+  // 第二参只影响错峰与时间窗，不改变来源层级：命中内置价目就一直是 catalog
+  const withOptions = rowCostsOf([flashRow], { at: atLocal(3), hours: null })[0]
+  assert.equal(withOptions.source, 'catalog', '给了 at / hours 也不改变来源')
+  assert.equal(withOptions.cost, 2, '拿不到小时分布时按高峰价（有意保守）')
 
-  // 内置价目也不认识时，才轮到台账均价
+  // 两层价目都没命中：不给金额（不再回落台账反推均价）
   const unknown = { provider: 'nope', model: 'nothing', calls: 1, inputTokens: 1_000_000 }
-  const fallback = rowCostsOf([unknown], () => ({ cost: 42, currency: 'CNY' }))[0]
-  assert.equal(fallback.source, 'estimate', '内置没命中才回落台账均价')
-  assert.equal(fallback.cost, 42)
+  const unpriced = rowCostsOf([unknown])[0]
+  assert.equal(unpriced.source, 'none', '内置与聚合都没命中 → 无依据')
+  assert.equal(unpriced.cost, null, '无依据不给金额')
+  assert.equal(unpriced.currency, null)
+  assert.equal(unpriced.rule, null)
 
-  // 两层同时在场：逐层计数各算各的（宁可标弱，也不冒称精确）
-  const both = summarizeCoverage([flashRow, unknown], (row) => (row.provider === 'nope' ? { cost: 42, currency: 'CNY' } : null))
+  // 两层同时在场：逐层计数各算各的
+  const both = summarizeCoverage([flashRow, unknown])
   assert.equal(both.catalogModels, 1, '内置价目命中的模型数')
-  assert.equal(both.averagedModels, 1, '回落均价的模型数')
+  assert.equal(both.modelModels, 0, '没有跨通道唯一命中的模型')
+  assert.equal(both.unpricedModels, 1, '无依据的模型数')
   closeTo(both.costByCurrency.CNY, 2, '价目口径金额只算命中价目的行')
 
   // 缓存省钱按内置价目算：命中价比未命中价低的差价
-  const cached = rowCostsOf(
-    [{ ...flashRow, inputTokens: 0, cacheReadTokens: 1_000_000 }],
-    () => null,
-  )[0]
+  const cached = rowCostsOf([{ ...flashRow, inputTokens: 0, cacheReadTokens: 1_000_000 }])[0]
   assert.equal(cached.source, 'catalog')
   closeTo(cached.cacheSavings, 2 - 0.04, '缓存省钱 = 命中 tokens ×（未命中价 − 命中价）')
   assert.equal(cached.partial, false, '内置价目不存在「部分收录」')
@@ -385,47 +464,55 @@ assert.equal(clockMinutes(900), null)
 {
   const row = (provider, model) => ({ provider, model, calls: 1, inputTokens: 1_000_000 })
 
-  assert.equal(rowCostsOf([row('deepseek-official', 'deepseek-flash')], () => null)[0].source, 'catalog', '精确匹配')
-  assert.equal(rowCostsOf([row('deepseek-official', 'DeepSeek-Flash')], () => null)[0].source, 'catalog', '忽略大小写')
-  assert.equal(rowCostsOf([row('DEEPSEEK-OFFICIAL', 'deepseek-flash')], () => null)[0].source, 'catalog', '通道也忽略大小写')
+  assert.equal(rowCostsOf([row('deepseek-official', 'deepseek-flash')])[0].source, 'catalog', '精确匹配')
+  assert.equal(rowCostsOf([row('deepseek-official', 'DeepSeek-Flash')])[0].source, 'catalog', '忽略大小写')
+  assert.equal(rowCostsOf([row('DEEPSEEK-OFFICIAL', 'deepseek-flash')])[0].source, 'catalog', '通道也忽略大小写')
   // 这是「台账 / 事件里的模型名带 vendor 前缀」的常见形态：通道 `deepseek` 不在内置价目的通道里，
-  // 因此即便模型名去掉前缀能对上，也不该按别的通道的价格计费
-  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => null)[0].source, 'none', '去前缀后仍要通道也对得上才算命中（否则显示 —）')
-  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].source, 'estimate', '该行回落台账均价而不是内置价目')
+  // 聚合价里该模型名又有 9 条同名候选、`deepseek` 也没有通道别名 → 两条路都定不下来 → 无依据
+  assert.equal(rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')])[0].source, 'none', '内置价目没这个通道、聚合价同名多候选 → 显示 —')
   assert.equal(
-    rowCostsOf([row('openrouter', 'deepseek/deepseek-v4.1-flash')], () => null)[0].source,
+    rowCostsOf([row('deepseek', 'deepseek/deepseek-v4.1-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].cost,
+    null,
+    '第二参不再是均价回调：定不下来就不给金额，不按别的通道的价格顶替',
+  )
+  assert.equal(
+    rowCostsOf([row('openrouter', 'deepseek/deepseek-v4.1-flash')])[0].source,
     'catalog',
     '去 vendor/ 前缀 + 忽略大小写后可命中 OpenRouter 中转价',
   )
   assert.equal(
-    rowCostsOf([row('openrouter', 'DEEPSEEK/DeepSeek-V4.1-Flash')], () => null)[0].source,
+    rowCostsOf([row('openrouter', 'DEEPSEEK/DeepSeek-V4.1-Flash')])[0].source,
     'catalog',
     '前缀与大小写同时不同也能命中',
   )
 
-  // 保守：不做模糊 / 近似匹配，宁可继续显示「估算」
+  // 保守：不做模糊 / 近似匹配，对不上就显示「—」
   for (const nearMiss of ['deepseek-flash-2', 'deepseekflash', 'xdeepseek-flash', 'deepseek-v4-flash-exp']) {
-    const priced = rowCostsOf([row('deepseek-official', nearMiss)], () => ({ cost: 9, currency: 'CNY' }))[0]
-    assert.equal(priced.source, 'estimate', '不做模糊匹配：' + nearMiss + ' 应回落均价')
+    const priced = rowCostsOf([row('deepseek-official', nearMiss)])[0]
+    assert.equal(priced.source, 'none', '不做模糊匹配：' + nearMiss + ' 两层价目都对不上 → 无依据')
+    assert.equal(priced.cost, null)
   }
   // 只做首尾空白裁剪（不算模糊匹配）
   assert.equal(
-    rowCostsOf([row('deepseek-official', '  deepseek-flash  ')], () => null)[0].source,
+    rowCostsOf([row('deepseek-official', '  deepseek-flash  ')])[0].source,
     'catalog',
     '首尾空白被裁剪后命中',
   )
-  // 内置价目未收录的模型同样回落，不拿同类顶替
+  // 内置价目未收录的模型同样不给金额，不拿同类顶替
   assert.equal(
-    rowCostsOf([row('deepseek-official', 'deepseek-v5-unknown')], () => ({ cost: 9, currency: 'CNY' }))[0].source,
-    'estimate',
+    rowCostsOf([row('deepseek-official', 'deepseek-v5-unknown')])[0].source,
+    'none',
     '文档没收录的型号不用同类模型顶替',
   )
-  // 未收录的通道也不会被通配兜底（只有文档给出通道统一价时才会写通配）
-  assert.equal(rowCostsOf([row('opencode-go', 'deepseek-flash')], () => ({ cost: 9, currency: 'CNY' }))[0].source, 'estimate', '未覆盖通道回落均价')
-  assert.equal(rowCostsOf([row('sensenova', 'any-model')], () => null)[0].source, 'none', '免费额度通道无价目 → 显示 —')
+  // 未收录的通道也不会被通配兜底（只有文档给出通道统一价时才会写通配）；
+  // deepseek-flash 在聚合价里是同厂商同价的双键 → 走「同模型官方价目」，拿到 DeepSeek 官方价
+  assert.equal(rowCostsOf([row('opencode-go', 'deepseek-flash')])[0].source, 'model', '未覆盖通道 + 同厂商双键 → 同模型官方价目')
+  assert.equal(rowCostsOf([row('opencode-go', 'gpt-5.4-mini')])[0].source, 'none', '跨厂商多候选、定不了厂商 → 无依据')
+  assert.equal(rowCostsOf([row('sensenova', 'any-model')])[0].source, 'none', '免费额度通道无价目 → 显示 —')
 
-  // matchPricedRule 是唯一的匹配入口：两层都查不到时返回 null
+  // matchPricedRule 是唯一的匹配入口：命中给出对应档位，两层都查不到时返回 null
   assert.equal(matchPricedRule('deepseek-official', 'deepseek-flash').source, 'catalog')
+  assert.equal(matchPricedRule('opencode-go', 'moonshot-v1-8k').source, 'model', '跨通道同名唯一 → 同模型官方价目')
   assert.equal(matchPricedRule('zzz-unknown', 'zzz-model'), null)
 }
 
@@ -508,16 +595,15 @@ assert.equal(clockMinutes(900), null)
   // 币种：内置价目按文档原样记，不同通道的币种互不换算
   const flash = rowCostsOf(
     [{ provider: 'deepseek-official', model: 'deepseek-flash', calls: 1, inputTokens: 1_000_000 }],
-    () => null,
   )[0]
   assert.equal(flash.rule.currency, 'CNY', 'DeepSeek 取中文文档的 CNY 价')
-  const kimi = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 }], () => null)[0]
+  const kimi = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 }])[0]
   assert.equal(kimi.rule.currency, 'CNY', 'Kimi 文档以 CNY 计价')
   assert.equal(kimi.cost, 20, 'Kimi K3 未命中 ¥20 / MTok')
   assert.equal(flash.cost, 2, 'DeepSeek flash ¥2.00 / MTok —— 两者不做任何汇率换算')
 
   // z.ai 是 USD：跨币种不合计的口径不能被这轮改动破坏
-  const zai = rowCostsOf([{ provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 }], () => null)[0]
+  const zai = rowCostsOf([{ provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 }])[0]
   assert.equal(zai.rule.currency, 'USD', 'Z.ai 文档只有 USD 价，保持不动')
   assert.equal(zai.cost, 1.4)
   assert.equal(zai.currency, 'USD', '每格都带自己的币种')
@@ -529,11 +615,10 @@ assert.equal(clockMinutes(900), null)
       { provider: 'moonshotai', model: 'kimi-k3', calls: 1, inputTokens: 1_000_000 },
       { provider: 'zai', model: 'glm-5.3', calls: 1, inputTokens: 1_000_000 },
     ],
-    () => null,
   )
   assert.deepEqual(coverage.costByCurrency, { CNY: 22, USD: 1.4 }, '金额按币种分组，不跨币种合计')
   assert.equal(coverage.catalogModels, 3, '三个模型都由内置价目覆盖')
-  assert.equal(coverage.averagedModels, 0)
+  assert.equal(coverage.modelModels, 0)
   assert.equal(coverage.unpricedModels, 0)
   assert.equal(coverage.aggregateModels, 0)
 }
@@ -600,41 +685,39 @@ assert.equal(clockMinutes(900), null)
   assert.equal(normalizeDays('1,2'), undefined, '非数组 → 每天')
 }
 
-// ===== 16. 没有价目可命中时，行为与升级前完全一致 =====
+// ===== 16. 台账里有金额也不反推：没有价目就是「无依据」（被删掉的就是这一层） =====
 {
-  // 只用内置价目**完全没收录**的通道 / 模型，验证老口径没被改动
+  // 只用两层价目**完全没收录**的通道 / 模型
   const rows = [
     { provider: 'zzz-unknown', model: 'zzz-model', calls: 1, inputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
   ]
-  const average = () => ({ cost: 5, currency: 'CNY' })
+  // 旧签名的「台账反推均价回调」：类型与回落逻辑都已删除，硬塞进来也不会被读
+  const legacyAverage = () => ({ cost: 5, currency: 'CNY' })
 
-  const byAverage = rowCostsOf(rows, average)[0]
-  assert.equal(byAverage.source, 'estimate')
-  assert.equal(byAverage.cost, 5)
-  assert.equal(byAverage.currency, 'CNY', '回落均价的行带调用方给的台账币种')
-  assert.equal(byAverage.rule, null, '均价回落的行不带价目对象')
-  assert.equal(byAverage.cacheSavings, 0)
+  const unpricedRow = rowCostsOf(rows, legacyAverage)[0]
+  assert.equal(unpricedRow.source, 'none', '两层价目都没命中 → 无依据')
+  assert.equal(unpricedRow.cost, null, '台账里有金额也不给数字（界面显示 —）')
+  assert.equal(unpricedRow.currency, null, '没有金额就没有币种')
+  assert.equal(unpricedRow.rule, null, '无依据的行不带价目对象')
+  assert.equal(unpricedRow.partial, false)
+  assert.equal(unpricedRow.cacheSavings, 0)
 
-  const summary = summarizeCoverage(rows, average)
-  assert.equal(summary.averagedModels, 1)
+  const summary = summarizeCoverage(rows)
   assert.equal(summary.catalogModels, 0)
   assert.equal(summary.aggregateModels, 0)
-  assert.deepEqual(summary.costByCurrency, {}, '均价没有单价表，不进价目口径的金额')
-
-  const noneSummary = summarizeCoverage(rows, () => null)
-  assert.equal(noneSummary.unpricedModels, 1, '无均价、无价目 → 无依据')
-
-  const noneRow = rowCostsOf(rows, () => null)[0]
-  assert.equal(noneRow.cost, null, '既没价目也没均价 → 界面显示 —')
-  assert.equal(noneRow.source, 'none')
-  assert.equal(noneRow.currency, null)
+  assert.equal(summary.modelModels, 0)
+  assert.equal(summary.unpricedModels, 1, '无依据的模型计入 unpricedModels')
+  assert.deepEqual(summary.costByCurrency, {}, '无依据不产生金额')
+  assert.deepEqual(summary.savingsByCurrency, {})
+  assert.deepEqual(summary.savingsDetail, [])
 
   // 空用量：与升级前一致
-  const emptySummary = summarizeCoverage([], () => null)
+  const emptySummary = summarizeCoverage([])
   assert.deepEqual(emptySummary.costByCurrency, {})
   assert.deepEqual(emptySummary.savingsDetail, [])
   assert.equal(emptySummary.unpricedModels, 0)
   assert.equal(emptySummary.catalogModels, 0)
+  assert.equal(emptySummary.modelModels, 0)
 }
 
 // ===== 17. 价目数据本身的自检：来源、抓取日期、单位、缺档不用同类顶替 =====
@@ -691,7 +774,7 @@ assert.equal(clockMinutes(900), null)
   // 未收录官方「缓存写入」档的条目必须真的留空，而不是被填成输入价
   const kimiK2 = entries.find((entry) => entry.provider === 'moonshotai' && entry.model === 'kimi-k2.7-code')
   assert.equal(kimiK2.cacheWrite, undefined, 'Kimi K2 系列文档没有缓存写入列 → 该档留空（不按输入价顶替）')
-  const kimiK2Rule = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k2.7-code', calls: 1, cacheWriteTokens: 1_000_000 }], () => null)[0]
+  const kimiK2Rule = rowCostsOf([{ provider: 'moonshotai', model: 'kimi-k2.7-code', calls: 1, cacheWriteTokens: 1_000_000 }])[0]
   assert.equal(kimiK2Rule.cost, 0, '留空的档位按 0 计，不会凭空产生费用')
 
   // 覆盖摘要：接口拿它渲染「已内置 N 条（来源见 …）」
@@ -859,5 +942,8 @@ assert.equal(clockMinutes(900), null)
   assert.equal(priceRowsOf([proRow], { at: atLocal(10, 0, 1) })[0].cost, 9, '周一 10:00 按高峰价 ¥9')
   assert.equal(priceRowsOf([proRow], { at: atLocal(10, 0, 6) })[0].cost, 9, '拿不到小时分布时按高峰价算（有意保守）')
 }
+
+// 本次只借这个临时 DSH_HOME 把聚合价目层钉在随包快照上，没有往里面写任何东西
+rmSync(aggregateHome, { recursive: true, force: true })
 
 console.log('pricing.test: 全部通过')

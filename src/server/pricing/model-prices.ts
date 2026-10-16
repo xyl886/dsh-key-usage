@@ -346,7 +346,7 @@ const LOOKUP_ISSUE_LIMIT = 200
 const lookupIssues = new Map<string, AggregateIssue>()
 
 /** 定不了通道的匹配记一条 issue（按 `provider|model` 去重、有上限，避免长跑进程里无限增长）。 */
-function recordAmbiguous(provider: string, model: string, candidates: number): void {
+export function recordAggregateAmbiguous(provider: string, model: string, candidates: number): void {
   const key = provider + '|' + model
   if (lookupIssues.has(key) || lookupIssues.size >= LOOKUP_ISSUE_LIMIT) return
   lookupIssues.set(key, {
@@ -398,6 +398,10 @@ function hitOf(entry: AggregateEntry, source: AggregateMatchSource): AggregateHi
  * 1. 模型名 = 键的末段（查询里的 `vendor/` 前缀同样剥掉），小写比较；
  * 2. 通道别名命中 → 取别名通道里「键段数最少 → 键名字典序」的第一条；
  * 3. 别名不命中 → 只有该模型名全库唯一才用（`unique`），否则跳过并记 issue（**不猜通道**）。
+ *
+ * 「全库唯一」的判据（2026-10-16 修正）：同一个厂商常有两条键（`deepseek-flash` 与
+ * `deepseek/deepseek-flash`，价格完全一样），这种**同厂商同价**的多键仍算唯一 ——
+ * 否则「同模型官方价目」这一档会大面积失效（用户举的 `opencode` + `deepseek-flash` 就是这种）。
  */
 export function aggregateRuleFor(provider: string, model: string): AggregateLookup {
   const name = lastSegmentOf(model)
@@ -410,8 +414,20 @@ export function aggregateRuleFor(provider: string, model: string): AggregateLook
     if (matched.length > 0) return { ok: true, hit: hitOf(chooseDeterministic(matched), 'alias') }
   }
   if (candidates.length === 1) return { ok: true, hit: hitOf(candidates[0], 'unique') }
-  recordAmbiguous(provider, model, candidates.length)
+  if (sameVendorSameRates(candidates)) return { ok: true, hit: hitOf(chooseDeterministic(candidates), 'unique') }
+  // 纯函数：**不在这里记 issue** —— 上层（`matchPricedRule`）可能还有「按厂商再查一次」的兜底，
+  // 只有最终确实定不下来时才该报「跳过不参与定价」，否则面板会出现「报了问题却又有金额」的矛盾。
   return { ok: false, reason: 'ambiguous', candidates: candidates.length, name }
+}
+
+/** 候选是否都来自同一厂商、且单价完全一致（`x` 与 `vendor/x` 这种同价双键）。 */
+function sameVendorSameRates(candidates: AggregateEntry[]): boolean {
+  const first = candidates[0]
+  return candidates.every((entry) => entry.provider === first.provider
+    && entry.input === first.input
+    && entry.output === first.output
+    && entry.cacheRead === first.cacheRead
+    && entry.cacheWrite === first.cacheWrite)
 }
 
 /** 面板装载状态（`GET /dsh-key-usage/pricing` 的 `aggregate` 字段）。 */

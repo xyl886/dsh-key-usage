@@ -19,11 +19,10 @@ import {
 import { normalizeSessionId } from './session-meta.js'
 
 /**
- * 一次最多折叠的会话数：按更新时间倒序取，避免首次请求扫全量历史。
- * 本机会话约 120 个 / 143 MB，取 200 覆盖全量；折叠结果按 revision 缓存，
- * 只有首次请求（或会话变化）才重新读取事件。
+ * 折叠结果按 `(id, revision, eventCount)` 缓存：只有首次请求（或会话变化）才重新读取事件。
+ * **不再对会话数设上限**（2026-10-16 用户明确）：以前取最近 200 个，超出部分会静默退出
+ * 会话 / 项目 / 模型统计，出现「数字凭空变小」；现在有多少折多少，宿主 `list()` 返回多少就处理多少。
  */
-const MAX_SESSIONS = 200
 
 /**
  * 同时在读的会话数：宿主的 `open(id,"read")` 与随后的 `read(0)` 共用一条容量 2 的解析
@@ -149,15 +148,28 @@ function sortKeyOf(header: Record<string, unknown>, fallback: number): number {
   return fallback
 }
 
+/** 一次整表折叠的耗时明细：`listMs` = 宿主列表耗时，`readMs` = 解压折叠耗时，`cached` = 命中缓存的会话数。 */
+export interface SessionReadStats {
+  sessions: number
+  cached: number
+  read: number
+  listMs: number
+  readMs: number
+  totalMs: number
+}
+
 /**
  * 建立会话数据源（`host.get('sessionPersistence')` 缺失时降级为空态 + coverage 说明）。
  */
 export function createSessionSource(host: HostContextLike): {
   collect(): Promise<SessionCollection>
   detail(id: string): Promise<SessionLookup>
+  /** 上一次整表折叠的耗时明细（写进快照的构建日志，用来判断慢在哪一步）。 */
+  stats(): SessionReadStats
 } {
   const cache = new Map<string, CacheEntry>()
   let inFlight: Promise<SessionCollection> | null = null
+  let lastStats: SessionReadStats = { sessions: 0, cached: 0, read: 0, listMs: 0, readMs: 0, totalMs: 0 }
 
   /** 读一个会话并折叠；成功即写缓存，失败返回原因（不抛错），由调用方决定降级口径。 */
   async function readRecord(persistence: PersistenceService, pending: PendingSession): Promise<ReadOutcome> {
@@ -204,11 +216,12 @@ export function createSessionSource(host: HostContextLike): {
   }
 
   async function loadModern(persistence: PersistenceService): Promise<SessionCollection> {
+    const listStarted = performance.now()
     const snapshots = await persistence.list()
+    const listMs = performance.now() - listStarted
     const ordered = snapshots
       .map((snapshot, index) => ({ snapshot, order: sortKeyOf(snapshot.header, index) }))
       .sort((first, second) => second.order - first.order)
-      .slice(0, MAX_SESSIONS)
 
     const present = new Set<string>()
     // 小会话两路并发、大会话串行：两条队列都不改变最终 records 的顺序（顺序由 ordered 决定）
@@ -229,6 +242,7 @@ export function createSessionSource(host: HostContextLike): {
     }
 
     let skipped = 0
+    const readStarted = performance.now()
     const readSession = async (pending: PendingSession): Promise<void> => {
       const outcome = await readRecord(persistence, pending)
       if ('failure' in outcome || outcome.closeFailed) skipped += 1
@@ -236,6 +250,14 @@ export function createSessionSource(host: HostContextLike): {
 
     await forEachWithLimit(shared, READ_CONCURRENCY, readSession)
     await forEachWithLimit(alone, 1, readSession)
+    lastStats = {
+      sessions: ordered.length,
+      cached: ordered.length - shared.length - alone.length,
+      read: shared.length + alone.length,
+      listMs: Math.round(listMs),
+      readMs: Math.round(performance.now() - readStarted),
+      totalMs: Math.round(performance.now() - listStarted),
+    }
 
     for (const id of [...cache.keys()]) if (!present.has(id)) cache.delete(id)
     const records = ordered
@@ -350,7 +372,7 @@ export function createSessionSource(host: HostContextLike): {
         return headerId !== null && (headerId === id || normalizeSessionId(headerId) === normalizeSessionId(id))
       })
       if (snapshot === undefined) {
-        return { status: 'not-found', id, title: null, workspace: null, reason: '宿主会话列表里没有这个 id（可能已被删除，或不在最近 200 个会话里）', record: null }
+        return { status: 'not-found', id, title: null, workspace: null, reason: '宿主会话列表里没有这个 id（可能已被删除）', record: null }
       }
       const sessionId = firstString(snapshot.header.id) ?? id
       const metadata = metadataOf(snapshot.header)
@@ -388,7 +410,7 @@ export function createSessionSource(host: HostContextLike): {
     }
   }
 
-  return { collect, detail }
+  return { collect, detail, stats: () => lastStats }
 }
 
 function readFailureText(error: unknown): string {

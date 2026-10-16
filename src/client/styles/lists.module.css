@@ -18,7 +18,7 @@
 .listTitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .listMain { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .listSub { font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.listBar { width: 70px; height: 5px; border-radius: 3px; background: var(--dsw-alias-fill-l2, rgba(128,128,140,.18)); overflow: hidden; display: inline-block; vertical-align: middle; }
+.listBar { width: 70px; height: 5px; border-radius: 3px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; display: inline-block; vertical-align: middle; }
 .listBar > i { display: block; height: 100%; border-radius: 3px; }
 .sessionDay td {
   background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec);
@@ -130,7 +130,7 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .sessionTitleBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.composeCell { padding: 4px 10px 10px 30px !important; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.05)); text-align: left !important; }
+.composeCell { padding: 4px 10px 10px 30px !important; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.05)); text-align: left !important; }
 .composeRow {
   display: grid; align-items: center; gap: 8px; padding: 2px 0; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05);
   grid-template-columns: minmax(120px, 1.4fr) minmax(60px, .7fr) minmax(90px, 1fr) minmax(70px, .8fr);
@@ -196,7 +196,7 @@
 /* 首条提问全文：保留用户自己的换行，超长也能滚 */
 .promptText {
   white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow-y: auto;
-  background: var(--dsw-alias-fill-l1, rgba(128,128,140,.06)); border-radius: 8px; padding: 8px 10px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.06)); border-radius: 8px; padding: 8px 10px;
   color: var(--dsw-alias-label-primary, #e8e8ec); font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); line-height: 1.6;
 }
 .sessionDetailModelTable { table-layout: fixed; }

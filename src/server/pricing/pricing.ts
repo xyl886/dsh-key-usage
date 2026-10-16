@@ -1,18 +1,21 @@
 /**
- * 计费口径（纯函数，可离线单测）：单价匹配 catalog → aggregate → 调用方回落台账反推均价，
- * 以及错峰判定、单位换算与缓存省钱。
+ * 计费口径（纯函数，可离线单测）：单价匹配「通道内价目 → 模型官方价目（跨通道同名唯一命中）」，
+ * 两层都不命中就是**无依据**（不按台账反推均价猜一个数字），以及错峰判定、单位换算与缓存省钱。
  * 币种按价目原样记（CNY / USD），不做汇率换算；跨币种展示由客户端按 `costsByCurrency` 折算。
  */
-import { catalogRuleFor } from './pricing-catalog.js'
-import { aggregateRuleFor } from './model-prices.js'
+import { catalogProvidersOfModel, catalogRuleFor } from './pricing-catalog.js'
+import { aggregateRuleFor, recordAggregateAmbiguous } from './model-prices.js'
 
 export type PricingUnit = 'perMillionTokens' | 'perThousandTokens' | 'perCall'
 
-/** 成本来源：官方账单 / 内置官方价目 / 聚合价目 / 台账反推均价 / 无依据。 */
-export type CostSource = 'official' | 'catalog' | 'aggregate' | 'estimate' | 'none'
+/**
+ * 成本来源：官方账单 / 内置官方价目（本通道命中）/ 聚合价目（本通道别名命中）/
+ * 同模型官方价目（跨通道同名唯一命中，含「按内置价目的厂商兜底」）/ 无依据。
+ */
+export type CostSource = 'official' | 'catalog' | 'aggregate' | 'model' | 'none'
 
-/** 命中的价目层。 */
-export type PricingRuleSource = 'catalog' | 'aggregate'
+/** 命中的价目层：内置官方价目 / 聚合价目（通道别名）/ 同模型官方价目（跨通道唯一）。 */
+export type PricingRuleSource = 'catalog' | 'aggregate' | 'model'
 
 export interface OffPeakWindow {
   /** 本地时间 `HH:MM`（`to` < `from` 表示跨午夜，`24:00` 表示当天末尾）。 */
@@ -92,7 +95,7 @@ export const UNIT_LABELS: Record<PricingUnit, string> = {
 }
 
 /** 成本来源强弱序：数字越大越弱（官方账单最可信，无依据最弱）。 */
-export const SOURCE_RANK: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, estimate: 3, none: 4 }
+export const SOURCE_RANK: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }
 
 /** 两个来源取更弱的那个：整批金额的来源由最弱的一格决定（宁可标弱，也不把估算冒充成官方价）。 */
 export function weakestOf(current: CostSource, candidate: CostSource): CostSource {
@@ -167,21 +170,47 @@ export function clockMinutes(text: unknown): number | null {
 }
 
 /**
- * 找一条可用于该行的价目：内置官方价目（CNY / USD，随包）> LiteLLM 聚合价（USD）。
- * 两层都不命中时返回 null，由调用方回落台账反推均价（或显示 —）。
+ * 找一条可用于该行（通道 + 模型）的价目，两层，顺序固定：
+ * 1. **通道内价目**：内置官方价目（CNY / USD，随包）→ LiteLLM 聚合价按**通道别名**命中；
+ * 2. **同模型官方价目**：本通道没有时，用该模型名在全库**唯一**命中的那条（LiteLLM 聚合价里
+ *    多半就是模型厂商自己的官方价，如 `opencode` + `deepseek-flash` → DeepSeek 官方价）；
+ *    同名候选来自多个厂商、定不了是哪一个时，再看内置价目里**同名的模型属于哪个厂商**
+ *    （`glm-5.3-flash` → `zai`），以该厂商为通道再查一次 —— 拿到的就是厂商自己的那条键；
+ * 3. 都命不中返回 null —— 调用方按「无依据」处理，**不许**用台账反推均价猜一个数字。
  */
 export function matchPricedRule(provider: string, model: string): PricedRuleHit | null {
   const catalogRule = catalogRuleFor(provider, model)
   if (catalogRule !== null) return { rule: catalogRule, source: 'catalog', partial: false }
-  // 聚合价目是可选层：它坏掉只该让这一层失效，绝不能影响其它端点（上层已保证不抛错，这里再兜一次底）
-  let aggregate: ReturnType<typeof aggregateRuleFor> | null = null
-  try {
-    aggregate = aggregateRuleFor(provider, model)
-  } catch {
-    aggregate = null
+  const aggregate = safeAggregateRule(provider, model)
+  if (aggregate !== null && aggregate.ok) return aggregateHitOf(aggregate.hit)
+  // 歧义兜底：内置价目知道这个模型名的厂商（同名同型号条目），就用厂商自己在聚合价里的那一条。
+  // 这一档对外统一算「同模型官方价目」：内部虽然是以厂商为通道查到的（别名命中），
+  // 但对用户的通道来说它就是「本通道没有、用同名模型的官方价」。多个厂商时按名字字典序取第一个（确定性）。
+  for (const vendor of catalogProvidersOfModel(model)) {
+    const vendorHit = safeAggregateRule(vendor, model)
+    if (vendorHit !== null && vendorHit.ok) {
+      return { rule: vendorHit.hit.rule, source: 'model', partial: vendorHit.hit.partial }
+    }
   }
-  if (aggregate !== null && aggregate.ok) return { rule: aggregate.hit.rule, source: 'aggregate', partial: aggregate.hit.partial }
+  // 到这里才真的定不下来：记一条 issue 给面板解释「为什么这个模型没价」
+  if (aggregate !== null && !aggregate.ok && aggregate.reason === 'ambiguous') {
+    recordAggregateAmbiguous(provider, model, aggregate.candidates)
+  }
   return null
+}
+
+/** 聚合价匹配：这一层坏掉只该让这一层失效，绝不能影响其它端点（上层已保证不抛错，这里再兜一次底）。 */
+function safeAggregateRule(provider: string, model: string): ReturnType<typeof aggregateRuleFor> | null {
+  try {
+    return aggregateRuleFor(provider, model)
+  } catch {
+    return null
+  }
+}
+
+/** `alias` = 该通道自己在聚合价里的条目；`unique` = 同名唯一（或同厂商同价多键）→ 算模型厂商的官方价目。 */
+function aggregateHitOf(hit: { rule: PricingRule; source: 'alias' | 'unique'; partial: boolean }): PricedRuleHit {
+  return { rule: hit.rule, source: hit.source === 'alias' ? 'aggregate' : 'model', partial: hit.partial }
 }
 
 export interface PricedRuleHit {
@@ -315,13 +344,7 @@ export interface RowCost {
   currency: string | null
 }
 
-/** 台账反推均价：金额 + 币种（台账只记金额、不记币种，币种由调用方按通道判定）。 */
-export interface AveragePrice {
-  cost: number
-  currency: string
-}
-
-export type AveragePriceLookup = (row: PricingUsageRow) => AveragePrice | null
+/** 台账反推均价已整层移除：`AveragePrice` / `AveragePriceLookup` 与对应的回落逻辑不再存在。 */
 
 function round4(value: number): number {
   return Math.round(value * 10000) / 10000
@@ -332,11 +355,11 @@ function round2(value: number): number {
 }
 
 /**
- * 逐行定价：内置官方价目 > LiteLLM 聚合价，都没命中时回落调用方给的均价查价（台账反推均价）。
+ * 逐行定价：通道内价目 → 同模型官方价目；都不命中就是 `none`（金额为 null，界面显示 —）。
+ * 不许用台账反推均价兜底：那是猜出来的数字，会被当成账单读。
  */
 export function rowCostsOf(
   rows: PricingUsageRow[],
-  averagePrice: AveragePriceLookup = () => null,
   options: { at?: Date | null; hours?: PricingUsageRow[] | null } = {},
 ): RowCost[] {
   const priced = priceRowsOf(rows, options)
@@ -351,10 +374,6 @@ export function rowCostsOf(
         cacheSavings: hit.cacheSavings,
         currency: hit.rule.currency,
       }
-    }
-    const average = averagePrice(row)
-    if (average !== null) {
-      return { cost: round2(average.cost), source: 'estimate', rule: null, partial: false, cacheSavings: 0, currency: average.currency }
     }
     return { cost: null, source: 'none', rule: null, partial: false, cacheSavings: 0, currency: null }
   })
@@ -403,15 +422,14 @@ export function alignMoneyWithCost(money: MoneyByCurrency, cost: number | null):
   return { [currencies[0]]: cost }
 }
 
-/** 覆盖度统计：按 `provider|model` 数出 catalog / aggregate / 均价 / 无依据，并按币种分组累加金额与缓存省钱。 */
+/** 覆盖度统计：按 `provider|model` 数出 内置价目 / 聚合价（别名）/ 同模型官方价目 / 无依据，并按币种分组累加金额与缓存省钱。 */
 export function summarizeCoverage(
   rows: PricingUsageRow[],
-  averagePrice: AveragePriceLookup = () => null,
 ): {
   catalogModels: number
   aggregateModels: number
+  modelModels: number
   partialModels: number
-  averagedModels: number
   unpricedModels: number
   costByCurrency: MoneyByCurrency
   savingsByCurrency: MoneyByCurrency
@@ -422,20 +440,19 @@ export function summarizeCoverage(
   const savingsByModel = new Map<string, { provider: string; model: string; currency: string; cacheReadTokens: number; amount: number }>()
   const catalogKeys = new Set<string>()
   const aggregateKeys = new Set<string>()
+  const modelKeys = new Set<string>()
   const partialKeys = new Set<string>()
-  const averagedKeys = new Set<string>()
   const unpricedKeys = new Set<string>()
   for (const row of rows) {
     const key = row.provider + '|' + row.model
     const priced = priceRowsOf([row])[0]
     if (priced.cost === null || priced.rule === null) {
-      // 与成本口径一致：先看台账反推均价还能不能给出数字，再判「无依据」
-      if (averagePrice(row) !== null) averagedKeys.add(key)
-      else unpricedKeys.add(key)
+      unpricedKeys.add(key)
       continue
     }
     if (priced.source === 'catalog') catalogKeys.add(key)
-    else aggregateKeys.add(key)
+    else if (priced.source === 'aggregate') aggregateKeys.add(key)
+    else modelKeys.add(key)
     if (priced.partial) partialKeys.add(key)
     addMoney(costByCurrency, priced.rule.currency, priced.cost)
     if (priced.cacheSavings <= 0) continue
@@ -460,8 +477,8 @@ export function summarizeCoverage(
   return {
     catalogModels: catalogKeys.size,
     aggregateModels: aggregateKeys.size,
+    modelModels: modelKeys.size,
     partialModels: partialKeys.size,
-    averagedModels: averagedKeys.size,
     unpricedModels: unpricedKeys.size,
     costByCurrency,
     savingsByCurrency,

@@ -231,6 +231,24 @@ assert.ok(firstSnapshot.body.issues.some((issue) => issue.kind === 'build-durati
 assert.deepEqual((await callEndpoint('/dsh-key-usage/channels')).body, firstSnapshot.body.sections.channels)
 assert.deepEqual((await callEndpoint('/dsh-key-usage/summary')).body, firstSnapshot.body.sections.overview)
 
+// 会话派生的三段同理（「统一快照是唯一数据来源」的回归哨兵）：端点调的是同一批构建器函数，
+// limit 取到上限（1000）时必须与快照段逐字段相同 —— 一旦有人给端点另算一份，这里立刻红
+assert.deepEqual(
+  (await callEndpoint('/dsh-key-usage/sessions?limit=1000')).body,
+  firstSnapshot.body.sections.sessions,
+  '会话段 = /sessions 响应体（同一批构建器函数）',
+)
+assert.deepEqual(
+  (await callEndpoint('/dsh-key-usage/projects?limit=1000')).body,
+  firstSnapshot.body.sections.projects,
+  '项目段 = /projects 响应体（同一批构建器函数）',
+)
+assert.deepEqual(
+  (await callEndpoint('/dsh-key-usage/models?limit=1000')).body,
+  firstSnapshot.body.sections.models,
+  '模型段 = /models 响应体（同一批构建器函数）',
+)
+
 // 手动刷新（POST /refresh）：重算全部 + 查配额（联网），成功的通道标 live
 const liveHandlers = new Map()
 const liveCache = new Map([['opencode-go', {
@@ -327,13 +345,19 @@ assert.equal(summaryOpencode.month.calls, 9)
 const todayKey = summary.body.range.today
 assert.equal(summaryOpencode.today.calls, todayKey === '2026-10-13' ? 6 : 0, '「今日」按服务器当天计算')
 
-// 会话：模型归属归一 + 成本估算（台账里成本为 0，故无法估价）
+// 会话：模型归属归一 + 成本（台账里没有该模型的账单，走「同模型官方价目」这一档）
 const sessions = await callEndpoint('/dsh-key-usage/sessions')
 assert.equal(sessions.body.rows.length, 1)
 assert.equal(sessions.body.rows[0].provider, 'opencode-go', 'pi-ai 路由归一到通道')
 assert.equal(sessions.body.rows[0].providerLabel, 'opencode-go')
-assert.equal(sessions.body.rows[0].cost, null, '台账无成本数据时不给估算值')
-assert.deepEqual(sessions.body.rows[0].costsByCurrency, {}, '没有金额依据时按币种拆分为空（0 元不是金额）')
+assert.equal(
+  sessions.body.rows[0].costSource,
+  'model',
+  '本通道没有 GLM-5.3-Flash 的价目 → 用同名模型的官方价目（内置价目知道 GLM 的厂商是 zai）',
+)
+assert.equal(sessions.body.rows[0].cost, 0, '有价目依据，但夹具用量太小、四舍五入到分后是 0.00')
+assert.deepEqual(sessions.body.rows[0].costsByCurrency, { USD: 0 }, '有依据的 0 元进币种小计（无依据的 0 元才不进）')
+assert.equal(sessions.body.priced, true, '这份数据里有行命中了价目')
 assert.equal(sessions.body.rows[0].costMode, 'sub')
 assert.equal(sessions.body.coverage.status, 'complete')
 assert.equal(sessions.body.rows[0].archived, false, '没有归档集合时标记为未归档')
@@ -370,8 +394,10 @@ assert.equal(projects.body.rows[0].registered, true)
 assert.deepEqual(projects.body.rows[0].paths, ['D:\\EasyJob'])
 assert.equal(projects.body.rows[0].tokens, 9200 + 440, '两次结算样本的 tokens 之和')
 assert.equal(projects.body.rows[0].dominantProvider, 'opencode-go')
-assert.equal(projects.body.rows[0].cost, null)
-assert.deepEqual(projects.body.rows[0].costsByCurrency, {})
+// 项目行成本 = 行内模型成本之和：GLM-5.3-Flash 走「同模型官方价目」（USD），夹具用量太小 → 0.00
+assert.equal(projects.body.rows[0].costSource, 'model')
+assert.equal(projects.body.rows[0].cost, 0)
+assert.deepEqual(projects.body.rows[0].costsByCurrency, { USD: 0 })
 
 // 按模型：通道 + 模型聚合，口径与 /sessions 一致（tokens 不含 cacheWrite）
 const models = await callEndpoint('/dsh-key-usage/models')
@@ -388,10 +414,12 @@ assert.equal(modelRow.buckets.cacheReadTokens, 8000)
 assert.equal(modelRow.cacheHitRate, 83, '8000 / 9640')
 assert.equal(modelRow.sessionCount, 1)
 assert.equal(modelRow.costMode, 'sub')
-assert.equal(modelRow.cost, null, '台账无成本数据时不给估算值（与 /sessions 同口径）')
-assert.deepEqual(modelRow.costsByCurrency, {})
+// 与 /sessions 同口径：GLM-5.3-Flash 通过「同模型官方价目」拿到 Z.ai 的官方价（USD）
+assert.equal(modelRow.costSource, 'model')
+assert.equal(modelRow.cost, 0, '有价目依据，夹具用量太小、四舍五入到分后是 0.00')
+assert.deepEqual(modelRow.costsByCurrency, { USD: 0 })
 assert.equal(models.body.coverage.status, 'complete')
-assert.equal(models.body.priced, false)
+assert.equal(models.body.priced, true)
 
 // limit 生效，非法 limit 回落默认值而不是报错
 const limited = await callEndpoint('/dsh-key-usage/models?limit=0')
@@ -411,15 +439,15 @@ assert.deepEqual(spanning.body.sessionDates, ['2026-10-20'], '只有台账缺的
 assert.equal(spanning.body.days[1].cost, 0, '台账那两天不重算成本')
 assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带上了用量')
 
-// 按币种拆分：台账天的官方 0 元带币种（CNY），纯会话且无价格依据的天为空
+// 按币种拆分：台账天的官方 0 元带币种（CNY）；会话补齐的天现在也有依据（GLM-5.3-Flash → 同模型官方价目，USD）
 assert.deepEqual(spanning.body.days[0].costsByCurrency, { CNY: 0 }, '台账金额带台账币种（该通道无内置价目 → 基准 CNY）')
 assert.equal(spanning.body.days[0].models[0].costSource, 'official')
 assert.deepEqual(spanning.body.days[0].models[0].costsByCurrency, { CNY: 0 })
-assert.deepEqual(spanning.body.days[2].costsByCurrency, {}, '没有价格依据的会话天不产生币种小计')
-assert.deepEqual(spanning.body.days[2].models[0].costsByCurrency, {})
-assert.equal(spanning.body.days[2].models[0].costSource, 'none')
+assert.deepEqual(spanning.body.days[2].costsByCurrency, { USD: 0 }, '会话天按「同模型官方价目」算（GLM-5.3-Flash → zai）')
+assert.deepEqual(spanning.body.days[2].models[0].costsByCurrency, { USD: 0 })
+assert.equal(spanning.body.days[2].models[0].costSource, 'model')
 assert.equal(spanning.body.totals.cost, 0)
-assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
+assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两个币种各 0 元：台账天 CNY + 会话天 USD')
 
 // ===== 单会话详情端点 /session：只折一个会话、404 / 403 / 降级、标题过滤、模型构成截断 =====
 {
@@ -508,13 +536,14 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
   assert.equal(session.models[0].providerLabel, 'opencode-go')
   assert.equal(session.models[0].model, 'GLM-5.3-Flash')
   assert.equal(session.models[0].sharePercent, 100)
-  assert.equal(session.models[0].cost, null, '台账成本为 0 且没有价目时不编造金额')
-  assert.equal(session.models[0].costSource, 'none')
-  assert.deepEqual(session.models[0].costsByCurrency, {})
-  assert.equal(session.cost, null)
-  assert.deepEqual(session.costsByCurrency, {}, '没有金额依据时按币种拆分为空')
-  assert.equal(session.costSource, 'none')
-  assert.equal(detail.body.priced, false)
+  // GLM-5.3-Flash 走「同模型官方价目」（zai，USD）；夹具用量太小 → 0.00，但来源与币种都要如实给出
+  assert.equal(session.models[0].costSource, 'model')
+  assert.equal(session.models[0].cost, 0)
+  assert.deepEqual(session.models[0].costsByCurrency, { USD: 0 })
+  assert.equal(session.cost, 0)
+  assert.deepEqual(session.costsByCurrency, { USD: 0 })
+  assert.equal(session.costSource, 'model')
+  assert.equal(detail.body.priced, true)
 
   // 再点一次同一个会话：吃缓存，零 I/O
   await detailCall('/dsh-key-usage/session?id=session-detail')
@@ -599,23 +628,25 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
   assert.equal(pricing.body.aggregate.license, 'MIT')
   assert.equal(/^[0-9a-f]{40}$/.test(pricing.body.aggregate.upstreamCommit), true)
   assert.ok(pricing.body.aggregate.source.startsWith('https://github.com/BerriAI/litellm'))
-  // 夹具里的 GLM-5.3-Flash 在聚合价目里有 9 条同名候选、opencode-go 没有别名 → 跳过并报出来（不猜通道）
-  assert.equal(pricing.body.coverage.aggregateModels, 0, '定不了通道的模型不参与定价')
+  // 夹具里的 GLM-5.3-Flash 在聚合价目里有 9 条同名候选、opencode-go 没有别名 →
+  // 走「同模型官方价目」：内置价目知道 GLM 的厂商是 zai，用 zai 自己的那条键（USD）
+  assert.equal(pricing.body.coverage.aggregateModels, 0, '别名不命中就不算通道内价目')
   assert.equal(pricing.body.coverage.partialModels, 0)
-  assert.ok(
-    pricing.body.aggregate.issues.some((issue) => issue.kind === 'match-ambiguous' && issue.message.includes('GLM-5.3-Flash')),
-    '定不了通道时要给出可读的问题：' + JSON.stringify(pricing.body.aggregate.issues),
+  assert.equal(pricing.body.coverage.modelModels, 1, 'GLM-5.3-Flash 通过厂商兜底拿到同模型官方价目')
+  assert.equal(
+    pricing.body.aggregate.issues.some((issue) => issue.kind === 'match-ambiguous'),
+    false,
+    '拿到金额的模型不该同时报「已跳过不参与定价」：' + JSON.stringify(pricing.body.aggregate.issues),
   )
   assert.equal(pricing.body.coverage.catalogModels, 0, '夹具里的模型都不在内置价目里')
-  assert.equal(pricing.body.coverage.averagedModels, 0, '台账成本为 0 → 反推不出均价')
-  assert.ok(pricing.body.coverage.unpricedModels >= 1)
+  assert.equal(pricing.body.coverage.unpricedModels, 1, '夹具里还有一个完全没价目的模型')
   assert.deepEqual(Object.keys(pricing.body.coverage).sort(), [
-    'aggregateModels', 'averagedModels', 'catalogModels', 'costByCurrency', 'from', 'partialModels',
+    'aggregateModels', 'catalogModels', 'costByCurrency', 'from', 'modelModels', 'partialModels',
     'savingsByCurrency', 'savingsDetail', 'to', 'unpricedModels',
   ])
-  assert.deepEqual(pricing.body.coverage.costByCurrency, {}, '没有命中价目的行 → 没有金额')
-  assert.deepEqual(pricing.body.coverage.savingsByCurrency, {})
-  assert.deepEqual(pricing.body.coverage.savingsDetail, [])
+  assert.deepEqual(pricing.body.coverage.costByCurrency, { USD: 0.0015 }, '命中价目的行按币种累加')
+  assert.deepEqual(pricing.body.coverage.savingsByCurrency, { USD: 0.0029 })
+  assert.equal(pricing.body.coverage.savingsDetail.length, 1)
   assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.from), true)
   assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.to), true)
 
@@ -673,25 +704,30 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0 })
   const logOutside = await priced('/dsh-key-usage/log', '10.0.0.7')
   assert.equal(logOutside.status, 403, '非回环一律 403')
 
-  // /rates：夹具里两个模型都没有价格依据 → source = none，rates 为 null
+  // /rates：GLM-5.3-Flash 走「同模型官方价目」（zai，USD），Qwen3 完全没有依据 → source = none
   const rates = await priced('/dsh-key-usage/rates')
   assert.equal(rates.status, 200)
   assert.deepEqual(Object.keys(rates.body).sort(), ['channels', 'from', 'to'])
   assert.deepEqual(rates.body.channels.map((row) => row.provider), ['opencode-go', 'local'], '按展示 tokens 降序')
   const ratesOpencode = rates.body.channels.find((row) => row.provider === 'opencode-go')
   assert.equal(ratesOpencode.label, 'opencode-go', '通道名兜底为 provider id')
-  assert.equal(ratesOpencode.currency, null, '没有任何币种依据')
+  assert.equal(ratesOpencode.currency, 'USD', '该通道展示出来的模型币种一致（USD）')
   assert.equal(ratesOpencode.models.length, 1)
   assert.deepEqual(Object.keys(ratesOpencode.models[0]).sort(), [
     'calls', 'currency', 'model', 'note', 'noteEn', 'offPeak', 'partial', 'rates', 'source', 'tokens',
   ])
   assert.equal(ratesOpencode.models[0].model, 'GLM-5.3-Flash')
-  assert.equal(ratesOpencode.models[0].source, 'none')
-  assert.equal(ratesOpencode.models[0].rates, null)
-  assert.equal(ratesOpencode.models[0].currency, null)
+  assert.equal(ratesOpencode.models[0].source, 'model', '本通道没价目 → 用同名模型的官方价目')
+  assert.deepEqual(ratesOpencode.models[0].rates, { input: 0.15, cacheRead: 0.03, cacheWrite: 0, output: 0.5 })
+  assert.equal(ratesOpencode.models[0].currency, 'USD')
   assert.equal(ratesOpencode.models[0].partial, false)
+  assert.ok(ratesOpencode.models[0].note.includes('zai/glm-5.3-flash'), 'note 要写明上游键，便于核对：' + ratesOpencode.models[0].note)
+  const ratesLocal = rates.body.channels.find((row) => row.provider === 'local')
+  assert.equal(ratesLocal.currency, null, '没有任何币种依据')
+  assert.equal(ratesLocal.models[0].source, 'none')
+  assert.equal(ratesLocal.models[0].rates, null)
+  assert.ok(ratesLocal.models[0].note.includes('暂无价格依据'))
   assert.equal(ratesOpencode.models[0].offPeak, false)
-  assert.ok(ratesOpencode.models[0].note.includes('暂无价格依据'), ratesOpencode.models[0].note)
   assert.equal(ratesOpencode.models[0].calls, 9, '台账两天的调用数之和')
 
   // limit / days 归一：非法值回落默认，越大越截断
@@ -776,14 +812,14 @@ assert.equal(fallbackChannels.body.channels.length, 1, '组合产物为空时回
 assert.equal(fallbackChannels.body.channels[0].provider, 'sensenova')
 assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
 
-// ===== 有价格依据的夹具：内置官方价目（CNY）+ 聚合价（USD）+ 台账反推均价 + 无依据，四处金额按币种拆分 =====
-// 单独一个 DSH_HOME：台账只有一条「没有价目覆盖」的模型（走 estimate），其余用量全来自会话事件。
+// ===== 有价格依据的夹具：内置官方价目（CNY）+ 同模型官方价目（USD）+ 无依据，四处金额按币种拆分 =====
+// 单独一个 DSH_HOME：台账只有一条「两层价目都没命中」的模型（无依据），其余用量全来自会话事件。
 {
   const pricedHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-priced-'))
   mkdirSync(join(pricedHome, 'profiles', 'desktop'), { recursive: true })
   mkdirSync(join(pricedHome, 'dsh-usage'), { recursive: true })
 
-  // moonshotai → 内置官方价目（CNY）；opencode-go → 没有内置价目，moonshot-v1-8k 命中聚合价（USD）
+  // moonshotai → 内置官方价目（CNY）；opencode-go 没有内置价目，moonshot-v1-8k 在聚合价里同名唯一 → 同模型官方价目（USD）
   writeFileSync(join(pricedHome, 'profiles', 'desktop', 'cordis.yml'), [
     '- id: llm-pi-ai',
     '  config:',
@@ -801,7 +837,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
     '',
   ].join('\n'), 'utf8')
 
-  // 台账：mystery-model 没有内置价目、聚合价也定不了通道 → 只能反推均价（12.5 元 / 5M tokens）
+  // 台账：mystery-model 两层价目都没命中 → 不给金额；台账里的 12.5 元只是那天的官方账单金额（costSource: official）
   writeFileSync(join(pricedHome, 'dsh-usage', 'usage-ledger.json'), JSON.stringify({
     version: 1,
     days: {
@@ -817,7 +853,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
     { seq: 0, time: localTimeOf(-1, 10), type: 'user/message', data: { content: [{ type: 'text', text: '价目夹具' }] } },
     // 内置官方价目：kimi-k3 未命中 ¥20 / MTok、输出 ¥100 / MTok → 1M 输入 + 0.1M 输出 = ¥30
     { seq: 1, time: localTimeOf(-1, 10), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000000, outputTokens: 100000, cacheReadTokens: 0 } }, message: { source: { provider: 'pi-ai/moonshotai', model: 'kimi-k3' } } } },
-    // 聚合价：moonshot-v1-8k 在 LiteLLM 里全库唯一 → USD 0.2 / MTok × 1M
+    // 同模型官方价目：moonshot-v1-8k 在 LiteLLM 里全库唯一 → USD 0.2 / MTok × 1M
     { seq: 2, time: localTimeOf(-1, 11), type: 'assistant/chunk', data: { turn: 2, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000000, outputTokens: 0, cacheReadTokens: 0 } }, message: { source: { provider: 'pi-ai/opencode-go', model: 'moonshot-v1-8k' } } } },
     // 未配置的通道 + 没有任何价目依据
     { seq: 3, time: localTimeOf(0, 9), type: 'assistant/chunk', data: { turn: 3, step: 1, chunk: { type: 'usage', usage: { inputTokens: 500000, outputTokens: 0, cacheReadTokens: 0 } }, message: { source: { provider: 'unlisted-vendor', model: 'unknown-model-x' } } } },
@@ -832,7 +868,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   mountKeyUsageRoutes({ register: (route) => { pricedHandlers.set(route.path, route.handler) } }, pricedSessionSource)
   const pricedCall = (path, remoteAddress) => callHandler(pricedHandlers, path, remoteAddress)
 
-  // ---- /rates：四档单价（catalog / aggregate）、estimate、none 与通道币种 ----
+  // ---- /rates：三档单价（catalog / model / none）与通道币种 ----
   const rates = await pricedCall('/dsh-key-usage/rates?days=30')
   assert.equal(rates.status, 200)
   assert.equal(rates.body.from, localDayKey(-29), '近 30 天的起点 = 今天 − 29 天')
@@ -840,22 +876,22 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.deepEqual(rates.body.channels.map((row) => row.provider), ['opencode-go', 'moonshotai', 'unlisted-vendor'], '按 tokens 降序')
 
   const opencodeRates = rates.body.channels[0]
-  assert.equal(opencodeRates.currency, null, '同一通道混了 CNY（均价）与 USD（聚合价）→ 不给单一币种')
+  assert.equal(opencodeRates.currency, 'USD', '通道币种只按**有价的**行取：mystery-model 无依据（不带币种），剩下的是 USD')
   assert.deepEqual(opencodeRates.models.map((row) => row.model), ['mystery-model', 'moonshot-v1-8k'])
-  const estimateRow = opencodeRates.models[0]
-  assert.equal(estimateRow.source, 'estimate', '只有台账反推均价')
-  assert.equal(estimateRow.rates, null, 'estimate 不给单价表')
-  assert.equal(estimateRow.currency, 'CNY', '台账币种按通道的官方价目推断，推断不出来用基准币种')
-  assert.equal(estimateRow.tokens, 5000000)
-  assert.equal(estimateRow.calls, 7)
-  assert.equal(estimateRow.offPeak, false)
-  assert.ok(estimateRow.note.includes('台账反推均价'), estimateRow.note)
-  const aggregateRow = opencodeRates.models[1]
-  assert.equal(aggregateRow.source, 'aggregate')
-  assert.equal(aggregateRow.currency, 'USD')
-  assert.deepEqual(aggregateRow.rates, { input: 0.2, cacheRead: 0, cacheWrite: 0, output: 2 }, 'LiteLLM 聚合价：USD / 每百万 tokens')
-  assert.equal(aggregateRow.partial, false)
-  assert.equal(aggregateRow.tokens, 1000000)
+  const unpricedRow = opencodeRates.models[0]
+  assert.equal(unpricedRow.source, 'none', '两层价目都没命中 → 无依据')
+  assert.equal(unpricedRow.rates, null, '无依据不给单价表')
+  assert.equal(unpricedRow.currency, null, '没有金额就没有币种（台账里的金额不再用来反推）')
+  assert.equal(unpricedRow.tokens, 5000000)
+  assert.equal(unpricedRow.calls, 7)
+  assert.equal(unpricedRow.offPeak, false)
+  assert.ok(unpricedRow.note.includes('暂无价格依据'), unpricedRow.note)
+  const modelRow = opencodeRates.models[1]
+  assert.equal(modelRow.source, 'model', '本通道没命中、同名模型全库唯一 → 同模型官方价目')
+  assert.equal(modelRow.currency, 'USD')
+  assert.deepEqual(modelRow.rates, { input: 0.2, cacheRead: 0, cacheWrite: 0, output: 2 }, 'LiteLLM 聚合价：USD / 每百万 tokens')
+  assert.equal(modelRow.partial, false)
+  assert.equal(modelRow.tokens, 1000000)
 
   const moonshotRates = rates.body.channels[1]
   assert.equal(moonshotRates.currency, 'CNY', '内置官方价目是 CNY')
@@ -891,7 +927,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   const usage = await pricedCall('/dsh-key-usage/usage?from=' + localDayKey(-3) + '&to=' + localDayKey(0))
   assert.equal(usage.status, 200)
   assert.deepEqual(usage.body.days.map((day) => day.date), [localDayKey(-3), localDayKey(-1), localDayKey(0)])
-  assert.deepEqual(usage.body.days.map((day) => day.costSource), ['official', 'aggregate', 'none'])
+  assert.deepEqual(usage.body.days.map((day) => day.costSource), ['official', 'model', 'none'])
   assert.equal(usage.body.days[0].cost, 12.5, '台账天保留官方账单金额')
   assert.deepEqual(usage.body.days[0].costsByCurrency, { CNY: 12.5 })
   assert.equal(usage.body.days[1].cost, 30.2, 'CNY 30 + USD 0.2 按行相加（cost 语义不变）')
@@ -904,10 +940,10 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.equal(kimiModelRow.costSource, 'catalog')
   assert.equal(kimiModelRow.cost, 30)
   assert.deepEqual(kimiModelRow.costsByCurrency, { CNY: 30 }, '单币种时拆分值等于 cost')
-  const aggregateModelRow = kimiDay.models.find((row) => row.model === 'moonshot-v1-8k')
-  assert.equal(aggregateModelRow.costSource, 'aggregate')
-  assert.equal(aggregateModelRow.cost, 0.2)
-  assert.deepEqual(aggregateModelRow.costsByCurrency, { USD: 0.2 })
+  const modelTierRow = kimiDay.models.find((row) => row.model === 'moonshot-v1-8k')
+  assert.equal(modelTierRow.costSource, 'model', '同模型官方价目这一档')
+  assert.equal(modelTierRow.cost, 0.2)
+  assert.deepEqual(modelTierRow.costsByCurrency, { USD: 0.2 })
 
   assert.equal(usage.body.totals.cost, 42.7)
   assert.deepEqual(usage.body.totals.costsByCurrency, { CNY: 42.5, USD: 0.2 }, '合计按币种分列：CNY 12.5 + 30、USD 0.2')
@@ -922,9 +958,9 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.equal(summaryMoonshot.month.costSource, 'catalog')
   assert.equal(summaryMoonshot.today.cost, 0)
   assert.deepEqual(summaryMoonshot.today.costsByCurrency, { CNY: 0 }, '没有用量也给一个 0（币种按台账币种）')
-  assert.equal(summaryOpencode.month.cost, 12.7, '官方 12.5 + 聚合 0.2')
+  assert.equal(summaryOpencode.month.cost, 12.7, '官方账单 12.5 + 同模型官方价目 0.2')
   assert.deepEqual(summaryOpencode.month.costsByCurrency, { CNY: 12.5, USD: 0.2 })
-  assert.equal(summaryOpencode.month.costSource, 'aggregate')
+  assert.equal(summaryOpencode.month.costSource, 'model', '官方账单最可信，同模型官方价目次之 → 取最弱的那一格')
 
   // ---- /sessions 与 /session：行、模型、详情三处都带拆分 ----
   const sessions = await pricedCall('/dsh-key-usage/sessions')
@@ -945,7 +981,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.equal(detail.body.session.cost, 30.2)
   assert.deepEqual(detail.body.session.costsByCurrency, { CNY: 30, USD: 0.2 })
   assert.equal(detail.body.session.models.length, 3, '详情给全部模型')
-  assert.deepEqual(detail.body.session.models.map((row) => row.costSource), ['catalog', 'aggregate', 'none'])
+  assert.deepEqual(detail.body.session.models.map((row) => row.costSource), ['catalog', 'model', 'none'])
 
   // ---- /models 与 /projects：单币种行拆分值等于 cost，混币种行分列 ----
   const models = await pricedCall('/dsh-key-usage/models')
@@ -962,13 +998,13 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   assert.equal(projects.body.rows[0].cost, 30.2)
   assert.deepEqual(projects.body.rows[0].costsByCurrency, { CNY: 30, USD: 0.2 })
 
-  // ---- /pricing：覆盖度按命中层次计数（catalog / aggregate / estimate / none） ----
+  // ---- /pricing：覆盖度按命中层次计数（catalog / aggregate / model / none） ----
   const pricing = await pricedCall('/dsh-key-usage/pricing')
   assert.equal(pricing.body.coverage.catalogModels, 1, 'kimi-k3 命中内置官方价目')
-  assert.equal(pricing.body.coverage.aggregateModels, 1, 'moonshot-v1-8k 命中聚合价')
+  assert.equal(pricing.body.coverage.aggregateModels, 0, '没有通道别名命中的模型')
   assert.equal(pricing.body.coverage.partialModels, 0)
-  assert.equal(pricing.body.coverage.averagedModels, 1, 'mystery-model 只能反推均价')
-  assert.equal(pricing.body.coverage.unpricedModels, 1, 'unknown-model-x 没有任何依据')
+  assert.equal(pricing.body.coverage.modelModels, 1, 'moonshot-v1-8k 走同模型官方价目（跨通道同名唯一）')
+  assert.equal(pricing.body.coverage.unpricedModels, 2, 'mystery-model 与 unknown-model-x 都没有价格依据')
   assert.deepEqual(pricing.body.coverage.costByCurrency, { CNY: 30, USD: 0.2 }, '命中价目的行按币种分组（参照值）')
   assert.deepEqual(pricing.body.coverage.savingsByCurrency, {}, '没有缓存命中 → 不省任何钱')
   assert.deepEqual(pricing.body.coverage.savingsDetail, [])
@@ -995,7 +1031,7 @@ rmSync(home, { recursive: true, force: true })
   const collapsed = collapseOrphanProjects([
     row('D:\\EasyJob', { workspaceTitle: 'EasyJob', registered: true, tokens: 500, calls: 5, lastTime: 5000, cost: 3, costsByCurrency: { CNY: 3 }, costSource: 'catalog' }),
     row('D:\\old\\A', { tokens: 200, calls: 2, lastTime: 2000 }),
-    row('D:\\old\\B', { tokens: 300, calls: 3, lastTime: 3000, cost: 2, costsByCurrency: { CNY: 2 }, costSource: 'estimate', partial: true }),
+    row('D:\\old\\B', { tokens: 300, calls: 3, lastTime: 3000, cost: 2, costsByCurrency: { CNY: 2 }, costSource: 'model', partial: true }),
   ])
   assert.equal(collapsed.length, 2, '1 个工作区 + 1 行「未归入工作区」')
   assert.equal(collapsed[0].workspaceTitle, 'EasyJob')

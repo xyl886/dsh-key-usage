@@ -109,7 +109,7 @@
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .empty { color: var(--dsw-alias-label-tertiary, #67676f); padding: 18px 0; }
-.warning { color: var(--dsw-alias-state-warning-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 10px; }
+.warning { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 10px; }
 .legend { display: inline-flex; gap: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); color: var(--dsw-alias-label-tertiary, #67676f); align-items: center; flex-wrap: wrap; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
 .legend i.ghost { background: rgba(128,128,140,.10); border: 1px solid rgba(128,128,140,.28); }
@@ -138,7 +138,7 @@
 .tipName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tipAmount { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); width: 58px; text-align: right; }
 .tipRate { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
-.tipBar { height: 3px; border-radius: 2px; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.18)); margin: 1px 0 5px; overflow: hidden; }
+.tipBar { height: 3px; border-radius: 2px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.18)); margin: 1px 0 5px; overflow: hidden; }
 .tipBar > i { display: block; height: 100%; border-radius: 2px; }
 .tipDivider {
   display: flex; justify-content: space-between; gap: 12px;
@@ -147,7 +147,7 @@
 }
 
 /* 图例里的「无数据」色块：CSS Modules 需要独立类才能被引用（原来写成裸 className="ghost" 永不生效） */
-.ghost { background: var(--dsw-alias-fill-l2, rgba(128, 128, 140, .10)); border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 140, .28)); }
+.ghost { background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .10)); border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 140, .28)); }
 
 /* 口径弹窗里的版本号：弱化一行，便于报问题时报出来 */
 .caliberVersion { margin: 0 0 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
@@ -184,3 +184,7 @@
 .logDetailPad { padding-left: 8px; border-left: 2px solid var(--dsw-alias-border-l1, #2c2c34); }
 .logRetry { background: none; border: 0; padding: 0; font: inherit; color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }
 .logRetry:hover { text-decoration: underline; }
+
+/* 「未归入工作区」展开后的目录清单：等宽、可换行，缩进与列表子行对齐 */
+.pathsCell { padding: 2px 10px 10px 14px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.06)); text-align: left; }
+.pathLine { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #5c6572); line-height: 1.7; word-break: break-all; }

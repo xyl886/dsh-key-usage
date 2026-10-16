@@ -6,7 +6,6 @@
 import { t } from './i18n.ts'
 
 const KEYS: Record<string, string> = {
-  '按台账反推均价估算': 'srv.ratesAverage',
   '暂无价格依据': 'srv.ratesNone',
   '宿主未提供会话服务，无法读取该会话': 'srv.noSessionService',
   '当前注入的会话数据源不支持单会话查询': 'srv.noSingleSession',

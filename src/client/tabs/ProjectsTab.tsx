@@ -1,5 +1,5 @@
 /** 项目用量：按会话工作目录聚合。 */
-import { useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../core/channels.ts'
 import { fmtCalls, fmtDateTime, fmtRelative, fmtTokens } from '../core/format.ts'
 import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../core/export.ts'
@@ -44,6 +44,8 @@ export function ProjectsTab(props: {
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [nowMs] = useState(() => Date.now())
+  /** 「未归入工作区」那行的目录展开（那一行是多个目录合并出来的）。 */
+  const [orphanOpen, setOrphanOpen] = useState(false)
   const rows = props.data?.rows ?? []
   const focusWorkspace = props.focusWorkspace ?? null
 
@@ -129,7 +131,8 @@ export function ProjectsTab(props: {
             const paths = row.paths ?? [row.workspace]
             const isOrphan = row.registered === false
             return (
-              <tr key={row.workspace === '' ? 'orphan' : row.workspace}>
+              <Fragment key={row.workspace === '' ? 'orphan' : row.workspace}>
+              <tr>
                 <td>
                   <div className={listStyles.listTitle}>
                     <div>
@@ -137,6 +140,12 @@ export function ProjectsTab(props: {
                       <div className={listStyles.listSub} title={paths.join('\n')}>
                         {isOrphan ? t('p.orphanHint', { count: paths.length }) : row.workspace} · {row.sessionCount}{t('common.sessionSuffix')}
                         {row.archivedSessionCount > 0 ? t('p.archivePrefix') + row.archivedSessionCount + t('p.archiveSuffix') : ''}
+                        {/* 「未归入工作区」是多个目录合并成的一行：给个展开入口，否则目录只能靠 hover 看 */}
+                        {isOrphan && paths.length > 0 && (
+                          <button type="button" className={listStyles.linkBtn} onClick={() => setOrphanOpen(!orphanOpen)}>
+                            {orphanOpen ? t('p.pathsClose') : t('p.pathsOpen')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -153,6 +162,14 @@ export function ProjectsTab(props: {
                   : <>{costCell.text}{costCell.amount && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}</td>
                 <td>{fmtRelative(row.lastTime, nowMs)}</td>
               </tr>
+              {isOrphan && orphanOpen && (
+                <tr>
+                  <td colSpan={6} className={styles.pathsCell}>
+                    {paths.map((path) => <div key={path} className={styles.pathLine}>{path}</div>)}
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             )
           })}
           {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>

@@ -291,4 +291,22 @@ assert.equal(legacyRows[0].parentSessionId, null)
 assert.equal(legacyRows[0].origin, null)
 assert.equal(legacyRows[0].subagentCount, 0, '没有 parentSessionId 的记录不参与子会话统计')
 
+// 14. 会话数不设上限：以前只折叠最近 200 个，超出的会话会静默退出统计（数字凭空变小）
+const manyFixture = createFakePersistence(
+  Array.from({ length: 260 }, (_, index) => [
+    'bulk-' + String(index).padStart(3, '0'),
+    { header: { id: 'bulk-' + String(index).padStart(3, '0'), updatedAt: morning + index }, revision: Symbol('c1'), sizeBytes: 4 * 1024, events: sessionLog },
+  ]),
+)
+const manySource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? manyFixture.service : undefined) })
+const many = await manySource.collect()
+assert.equal(many.records.length, 260, '260 个会话全部折叠，一个都不丢')
+assert.equal(many.coverage.countedSessions, 260, '覆盖度按全量算')
+assert.equal(manySource.stats().sessions, 260, '耗时明细里的会话数也是全量')
+assert.equal(manySource.stats().read, 260, '首次全部要读')
+// 第二次 collect：revision 没变，全部走缓存（这是 5 分钟重建不会变慢的前提）
+await manySource.collect()
+assert.equal(manySource.stats().cached, 260, '第二次全部命中缓存')
+assert.equal(manySource.stats().read, 0, '第二次一个都不用重读')
+
 console.log('sessions.test: 全部通过')

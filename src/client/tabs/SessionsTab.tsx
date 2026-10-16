@@ -27,6 +27,27 @@ type ArchiveFilter = 'hide' | 'all' | 'only'
 /** 首屏渲染 50 个：本机有 ~130 个会话，一次全渲染会明显卡顿；「加载更多」每次再加这么多。 */
 const PAGE_SIZE = 50
 
+/** 归档筛选的记忆键：用户选过「全部 / 仅已归档」就记住，下次打开还是那一档。 */
+const ARCHIVE_FILTER_KEY = 'dsh-key-usage-archive-filter'
+
+function readArchiveFilter(): ArchiveFilter {
+  try {
+    const stored = globalThis.localStorage?.getItem(ARCHIVE_FILTER_KEY)
+    if (stored === 'hide' || stored === 'all' || stored === 'only') return stored
+  } catch {
+    // 隐私模式下 localStorage 会抛错：按默认档处理
+  }
+  return 'hide'
+}
+
+function writeArchiveFilter(value: ArchiveFilter): void {
+  try {
+    globalThis.localStorage?.setItem(ARCHIVE_FILTER_KEY, value)
+  } catch {
+    // 存不下就算了，不影响本次筛选
+  }
+}
+
 /** 导出列：标题可能带逗号或换行，由 toCsv 统一转义。 */
 const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
   { key: 'id', labelKey: 's.id', value: (row) => row.id },
@@ -58,7 +79,8 @@ export function SessionsTab(props: {
   const [channelFilter, setChannelFilter] = useState('ALL')
   const [daysFilter, setDaysFilter] = useState('30')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
-  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>('hide')
+  /** 归档三档筛选：记住上次选择（localStorage），下次打开不用重新点。 */
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>(() => readArchiveFilter())
   /** 子代理会话默认隐藏（它们是子会话，单独成行会淹没主会话）；可切换显示或只看。 */
   const [subagentFilter, setSubagentFilter] = useState<'hide' | 'all' | 'only'>('hide')
   /** 只看某个会话及其子会话（点子会话上的「子代理」标签或父行上的「N 个子会话」时设置）。 */
@@ -193,7 +215,11 @@ export function SessionsTab(props: {
         <Select
           ariaLabel={t('s.filterArchive')}
           value={archiveFilter}
-          onChange={(value) => setArchiveFilter(value as ArchiveFilter)}
+          onChange={(value) => {
+            const next = value as ArchiveFilter
+            setArchiveFilter(next)
+            writeArchiveFilter(next)
+          }}
           options={[
             { value: 'hide', labelKey: 's.archiveHide' },
             { value: 'all', labelKey: 's.archiveAll' },

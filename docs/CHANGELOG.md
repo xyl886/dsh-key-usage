@@ -10,16 +10,25 @@
 
 ### 新增
 
+- **本地重建的会话读取明细**：`createSessionSource` 新增 `stats()`，给出 `{ sessions, cached, read, listMs, readMs, totalMs }`；每次本地重建把这组明细以 `info` 追加进 `plugin.log`（消息「本地重建：会话读取明细」），**不进 `issues`**（界面不会因它弹警告）；
+- **归档筛选记忆与「未归入工作区」目录清单**：会话页的归档三档筛选记住上次选择（localStorage，键 `dsh-key-usage-archive-filter`，隐私模式下读写失败按默认档）；项目页「未归入工作区」那行可以展开 / 收起合并进来的目录清单（新词典键 `p.pathsOpen` / `p.pathsClose`）；
 - **系统日志落盘 + 失败原因只进日志**：日志写入 `$DSH_HOME/dsh-key-usage/plugin.log`（JSONL，追加写，超 512 KB 只留后半段；`GET|POST /dsh-key-usage/log`，端点 15 → **17**），刷新页面后仍能查上次为什么失败；刷新价目 / 汇率 / 余额查询失败、端点请求失败、快照问题与「读取不完整」、导出被拦截统一进日志，页面只留一行**「结论 · 查看系统日志」**（点击直接打开日志窗）；条目按「来源 + 消息 + 级别」去重累加 `×N`，可展开详情、失败条目可直接「重试」；
 
 ### 变更
 
+- **计价口径改两层，台账反推均价整层删除**：`通道内价目`（内置官方价目命中 → `costSource: 'catalog'`；否则 LiteLLM 聚合价按**通道别名**命中 → `'aggregate'`）→ `同模型官方价目`（本通道没有价目时，聚合价里该模型名**全库唯一**命中 → 新增 `'model'`），两层都不命中即 `'none'`（界面显示 `—`）。强弱序 `SOURCE_RANK = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }`，整天 / 整行仍取最弱的一格。内置价目因此只是「通道内价目」的来源之一、不再是必需项；
+- **一次构建只读一遍会话**：`routes.ts` 的 `builders.local` 先 `collect()` 一次，再喂给 `modelsPayload` / `projectsPayload` / `sessionsPayload`（此前三个段各自 `collect()`，同一次构建把宿主会话列表与变更会话读三遍，实测 p50 3.3 s、最高 13.8 s）；
+- **首开不再等构建**：`snapshot.ts` 的 `view()` 在构建进行中不再 `await waitForIdle()`，直接把手上一份（标 `building: true`）返回 —— 以前首开要干等整轮构建，实测 1～14 s；
+- **快照构建耗时阈值 2000 → 4000 ms**（`SNAPSHOT_SLOW_BUILD_MS`）：实测 54 次采样里 42 次超 2000 ms，日志被这条刷满；会话读取明细已经每次落盘，阈值只留给「真的慢」；
+- **客户端 `CostSource` 与词典同步**：客户端类型改为 `'official' | 'catalog' | 'aggregate' | 'model' | 'none'`，词典键 `cso.model` / `csh.model` / `source.model`（值「模型官方价」/「Model official」）取代原来的 `cso.estimate` / `csh.estimate` / `source.estimate`（`srv.ratesAverage` 删除）；`/pricing` 覆盖度字段 `averagedModels` → `modelModels`；
 - **自定义范围改日历弹层**（新增 `components/ui/DateRangePicker.tsx`）：起止日期在弹层里点选，不再用两个原生日期输入；
 - **占比条不再单列明细**：改回「悬停柱子外侧弹一个 tip 一次列全」，浮层不再盖住柱子；
 - README 界面预览换成 **7 张英文命名截图**（`overview` / `daily` / `projects` / `models` / `sessions` / `session-detail` / `quota`）并纳入发布包；引用核查、安装与预览顺序调整。
 
 ### 移除
 
+- **移除会话数上限 `MAX_SESSIONS = 200`**：以前只折最近 200 个会话，超出的静默退出会话 / 项目 / 模型统计，表现为「数字凭空变小」；现在宿主 `list()` 返回多少就折多少；
+- **移除台账反推均价整层**：`AveragePrice` / `AveragePriceLookup` 类型、`ledger.ts` 的 `buildPriceTable` / `estimateCost` / `PriceEntry`、`rowCostsOf` / `summarizeCoverage` 的均价回调与 `'estimate'` 档一起删除 —— 价目定不下来就是 `'none'`、界面显示 `—`，不再用反推的均价兜底；
 - 通道详情里的重复表达：悬空的「N 个模型单价 ·」、写死的「区间 2026-09-16 ~ …」（改「近 30 天」）、每行的「币种 CNY」（与显示币种一致时不写）、每行的「错峰中」（提到表头「当前空闲价」）、通道头重复的通道 id（挪到 hover）、「总余额 = 充值 + 赠送」的派生卡片（降级成一行「合计 x CNY」）、表头重复的「显示币种」与工具条的「显示币种」标签、错位的「最近活跃」（实际是 tokens，改「用量」）与重复的「模型」表头（备注列删除、长口径进 hover）；
 - 会话列表的「另有 N 个子代理会话未显示：…」与「另有 N 个已归档会话未显示」两行，以及「时长」旁重复的「跨 N 天」（`crossDays` 只留在导出里）；
 - 原型页相关文件与早期手写设计稿：`src/prototype/`、`docs/prototype/`、`tsdown.prototype.config.ts`、`scripts/sync-prototype-plugin.mjs`、`.github/workflows/pages.yml` 与 `key-usage-settings-prototype.html`（不做 GitHub Pages 展示）。
@@ -31,11 +40,18 @@
 - **项目数量与名字对不上**：项目页改以宿主工作区为骨架（名字用工作区 `title`），不在工作区表里的历史目录合并成一行「未归入工作区」，不再各占一行（本机实测 9 行 → 5 行，与侧边栏的 4 个工作区对齐）；
 - **英文模式下仍有中文（第二批，实测逐 Tab 扫描）**：服务端下发的 `costLabel` / `quotaWindowLabel` 是中文字符串，切英文不跟着变 —— 总览「类型」列与窗口百分比改用词典键（`COST_MODE_TAG_KEYS` / `WINDOW_TAG_KEYS`）；项目 / 模型 / 会话三页的「N 个会话」「N 个模型」「N 个子会话」「时长」「跨 N 天」「加载更多」「已显示 x / y 个会话」、会话抽屉的返回与「N 次」、通道详情的「币种」「数据时间」、口径弹窗的两条长句全部入词典；补 `nav.quota` / `sh.shareAll` 两个缺失的英文键并删掉孤儿键 `p.hintHint` 之外的孤儿键 `p.hitHint`（此前 `zh` 452 键 / `en` 451 键且 4 条英文值是中文）。
 
+- **日志被同一个已知问题刷满**：客户端 `core/log.ts` 的同一条目**只落盘一次**，重复出现只在内存里累加 `×N`（以前每次重复都往 `plugin.log` 写一条一模一样的记录）；
+- **8 处未声明设计令牌**：`--dsw-alias-bg-mask` → `bg-mask-1`、`fill-l1` → `interactive-bg-hover`、`fill-l2` → `interactive-bg-active`、`state-danger-primary` → `state-error-primary`、`state-warning-primary` → `state-warn-primary`、`state-business-secondary` → `state-business-tertiary`（宿主没有 secondary 这一档）；其中 5 处在 CSS、3 处在组件内联 style（`channels.ts`、`Heatmap.tsx`、`OverviewTab.tsx`）—— 这些令牌在宿主里只被 `var()` 引用、从未声明，真机上取到空值；
+- **发布包不含更新记录**：`package.json` 的 `files` 里 `CHANGELOG.md` 改成 `docs/CHANGELOG.md`（原来指向仓库里不存在的路径）。
+
 ### 工程
 
+- **新增 `npm run check:tokens`**（`scripts/check-design-tokens.mjs`，已挂进 `verify`）：插件用到的每个 `--dsw-*`（`src/client/styles/*.css` **与** `src/client/**/*.ts(x)` 的内联 style）必须在宿主归档里**真实声明过**（实测当前 18 个全部命中）；找不到宿主归档时只提示并退出 0，CI 与别的机器上安全；
+- **实测后决定不做：快照瘦身**：`snapshot.json` 实测 226 KB，其中 sessions 段 168 KB，但每行平均 1.0 KB、逐模型明细已被 `SESSION_MODEL_ROWS = 5` 合并（164 行只有 201 条模型行，平均 1.3 条/行）—— 上限再降没有收益；把 `models` 从快照里摘掉改成按需拉会破坏「统一快照是唯一数据来源」、并让展开多一次请求，不值得。结论与数字见 [`process/v0.1.8.md`](./process/v0.1.8.md)；
 - 修掉 publish 工作流的「假成功」：`dry_run` 传字符串时两个分支都不执行却报 success，改为先归一化成 `'true'` / `'false'` 再判条件，并加兜底断言；
 - 新增 `test/log-file.test.mjs`（10 项）与 `test/client-log.test.mjs`（9 项）；端点契约补 `/log` 的追加 / 回读 / 清空 / 非回环 403，`session-meta` 补投影源与会话行断言；测试文件 15 → 17；
-- 文档整理：`docs/` 根目录**去掉序号编排**（`01-架构与数据契约.md` → `架构与数据契约.md`、`06-开发与构建.md` → `开发与构建.md`）；`04-归档会话的影响与对策.md` 的取证结论并入契约 §3.11 与 AGENTS 硬约束（「归档只标注、不剔除」）后移除该文；顺手修掉 `44b6230` 文档归并留下的两条失效链接（原本指向已删除的 02/03/05 三份文档）。
+- 文档整理：`docs/` 根目录**去掉序号编排**（`01-架构与数据契约.md` → `架构与数据契约.md`、`06-开发与构建.md` → `开发与构建.md`）；`04-归档会话的影响与对策.md` 的取证结论并入契约 §3.11 与 AGENTS 硬约束（「归档只标注、不剔除」）后移除该文；顺手修掉 `44b6230` 文档归并留下的两条失效链接（原本指向已删除的 02/03/05 三份文档）；
+- 文档按本批口径同步：`AGENTS.md`（两层价目 + `model` 档 + 绝不回落台账均价、移除会话数上限、版本号「读 npm 最新版本 +0.1」、`check:tokens`）、契约（§3.13 改两层、`costSource` 五档、`modelModels`、§3.18 首开不等构建与阈值 4000 ms、§3.19 日志只落盘一次）、`docs/开发与构建.md`（`scripts/` 目录与令牌自检说明）、README（「成本与价目」两层、离线测试 17 个），并修掉契约里「最多 80 个会话」「指向已删的 `docs/05-后续版本计划.md`」这类旧说法。
 
 ## [0.1.7] —— 2026-10-15
 

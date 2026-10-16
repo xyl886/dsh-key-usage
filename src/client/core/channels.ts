@@ -5,7 +5,7 @@ import { t } from './i18n.ts'
 
 const CHANNEL_COLORS = [
   'var(--dsw-alias-state-business-primary, #5b8cff)',
-  'var(--dsw-alias-state-business-secondary, #9a7bff)',
+  'var(--dsw-alias-state-business-tertiary, #9a7bff)',
   'var(--dsw-alias-state-success-primary, #3fb96f)',
   'var(--dsw-alias-state-warn-primary, #e0a13c)',
   'var(--dsw-alias-state-error-primary, #e05a5a)',
@@ -66,15 +66,15 @@ export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell 
 /** 状态点的颜色（走宿主告警/成功令牌）。 */
 export function statusColorOf(status: ChannelStatus): string {
   if (status === 'ok') return 'var(--dsw-alias-state-success-primary, #3fb96f)'
-  if (status === 'warn') return 'var(--dsw-alias-state-warning-primary, #e0a13c)'
-  if (status === 'danger') return 'var(--dsw-alias-state-danger-primary, #e05a5a)'
+  if (status === 'warn') return 'var(--dsw-alias-state-warn-primary, #e0a13c)'
+  if (status === 'danger') return 'var(--dsw-alias-state-error-primary, #e05a5a)'
   return 'var(--dsw-alias-label-tertiary, #67676f)'
 }
 
 /** 窗口占用进度条颜色：≥90 危险、≥60 警告，其余正常。 */
 export function quotaBarColor(percent: number): string {
-  if (percent >= 90) return 'var(--dsw-alias-state-danger-primary, #e05a5a)'
-  if (percent >= 60) return 'var(--dsw-alias-state-warning-primary, #e0a13c)'
+  if (percent >= 90) return 'var(--dsw-alias-state-error-primary, #e05a5a)'
+  if (percent >= 60) return 'var(--dsw-alias-state-warn-primary, #e0a13c)'
   return 'var(--dsw-alias-state-success-primary, #3fb96f)'
 }
 

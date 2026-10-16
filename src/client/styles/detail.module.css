@@ -60,13 +60,13 @@
 .barLabels span { flex: 1; text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
 /* 每日细目展开块：原型用子表格（模型 + 调用/输入/输出/缓存读/命中率），不占主表列 */
-.subRowCell { padding: 2px 10px 10px 30px !important; background: var(--dsw-alias-fill-l1, rgba(128,128,140,.05)); text-align: left !important; }
+.subRowCell { padding: 2px 10px 10px 30px !important; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.05)); text-align: left !important; }
 .subHead, .subRow {
   display: grid; align-items: center; gap: 8px;
   grid-template-columns: minmax(150px, 1.5fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(80px, 1.1fr) minmax(70px, 1fr);
 }
-.subHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); border-bottom: 1px solid var(--dsw-alias-fill-l2, rgba(128,128,140,.2)); padding: 4px 0; }
-.subRow { padding: 5px 0; border-bottom: 1px dashed var(--dsw-alias-fill-l1, rgba(128,128,140,.14)); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
+.subHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); border-bottom: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.2)); padding: 4px 0; }
+.subRow { padding: 5px 0; border-bottom: 1px dashed var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.14)); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
 .subRow:last-child { border-bottom: 0; }
 /* 模型名与提供商名分两行，避免长模型名被截断 */
 .subName { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

@@ -36,6 +36,8 @@ let hydrated = false
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 /** 本次会话新建 / 累加过的条目：只回写这些（从磁盘读回来的不再写回去，否则越读越多）。 */
 const pending = new Map<number, LogEntry>()
+/** 已经落盘过的条目 id：同一问题重复出现只累加内存里的 `×N`，不再重复写文件。 */
+const flushed = new Set<number>()
 /** 已经从磁盘读过的记录（按时间 + 内容去重）：重复读同一份文件不会把次数刷虚。 */
 const storedKeys = new Set<string>()
 const listeners = new Set<() => void>()
@@ -77,16 +79,26 @@ function scheduleFlush(): void {
   }, FLUSH_DELAY_MS)
 }
 
-/** 把待写条目发一批到磁盘；失败就丢掉这一批（内存里还看得到），不重试、不再记日志。 */
+/**
+ * 把待写条目发一批到磁盘；失败就丢掉这一批（内存里还看得到），不重试、不再记日志。
+ *
+ * 同一条目**只落盘一次**：重复出现只在内存里累加 `×N`（`fold` 干的），不再重复写文件 ——
+ * 否则每次重复都写一条一模一样的记录，`plugin.log` 会被同一个已知问题刷满（实测 42 条里大半是这种）。
+ */
 export async function flushLog(): Promise<void> {
-  if (pending.size === 0) return
-  const records = [...pending.values()].map((entry) => ({
+  const fresh = [...pending.values()].filter((entry) => !flushed.has(entry.id))
+  if (fresh.length === 0) {
+    pending.clear()
+    return
+  }
+  const records = fresh.map((entry) => ({
     time: new Date(entry.time).toISOString(),
     level: entry.level,
     source: entry.source,
     message: entry.message,
     ...(entry.detail === undefined ? {} : { detail: entry.detail }),
   }))
+  for (const entry of fresh) flushed.add(entry.id)
   pending.clear()
   try {
     const response = await fetch(LOG_PATH, {

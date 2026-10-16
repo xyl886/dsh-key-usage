@@ -44,7 +44,7 @@ const RATE_SOURCE_LABELS: Record<string, string> = {
   official: 'source.official',
   catalog: 'source.catalog',
   aggregate: 'source.aggregate',
-  estimate: 'source.estimate',
+  model: 'source.model',
   none: 'source.none',
 }
 
@@ -662,7 +662,7 @@ function coverageTextOf(coverage: PricingResponse['coverage'] | null): string | 
   const counts: Array<[string, number | undefined]> = [
     [t('cso.catalog'), coverage.catalogModels],
     [t('cso.aggregate'), coverage.aggregateModels],
-    [t('cso.estimate'), coverage.averagedModels],
+    [t('cso.model'), coverage.modelModels],
     [t('q.noBasis'), coverage.unpricedModels],
   ]
   for (const [label, value] of counts) {
