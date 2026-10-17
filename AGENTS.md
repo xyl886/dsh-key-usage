@@ -55,7 +55,7 @@
 
 ## 插件安装方式
 
-本插件以 **`link:` 协议**挂在 `desktop` profile 上（`node_modules/dsh-key-usage` 是指向本仓库的 Junction），因此改文件即时可见、不需要重装。
+**当前状态（2026-10-16 起）：`desktop` profile 装的是 registry 版 `dsh-key-usage@0.1.8`**（`node_modules/dsh-key-usage` 是真目录，不是 Junction）—— 界面跑的就是 npm 上那一份，**改本仓库不再影响它**。切回 registry 版的正确顺序是 `pnpm remove dsh-key-usage` → `pnpm add dsh-key-usage@<版本>`；从 `link:` 直接 `add` registry 版会报 `ERR_PNPM_EPERM`（pnpm 去旧 junction 内部导入 peer 依赖），这时先把 `node_modules/dsh-key-usage` **改名让开**再装（详见 [`docs/开发与构建.md`](./docs/开发与构建.md) 的安装一节）。
 
 - `dsh plugin --profile desktop …` 被 CLI 硬编码拦截，不要用；Plugin Hub 不支持本地路径。
 - 需要重装/换协议时，用 DSH 自带 pnpm 在 profile 目录直接操作：
@@ -72,7 +72,7 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 ### 开发流程（2026-10-15 用户重新定义，优先级最高）
 
 1. **本地提交随意**：每批改动跑完 `npm run verify`（绿）即可直接本地 commit，不需要先征求同意；不要把半成品提交进去。
-2. **改完就装本地最新版**：`desktop` profile 用 `link:D:/EasyJob/.plugin/dsh-key-usage` 指向本仓库，构建产物（`lib/`、`client/client.js`）就是用户界面上的东西 —— 改完 build 完即可让用户验收，**不必等推送**；服务端改动仍需用户退出重开 DSH。
+2. **改完就装本地最新版**：本地开发期间把 `desktop` profile 换回 `link:D:/EasyJob/.plugin/dsh-key-usage` 指向本仓库（命令见「插件安装方式」），构建产物（`lib/`、`client/client.js`）就是用户界面上的东西 —— 改完 build 完即可让用户验收，**不必等推送**；服务端改动仍需用户退出重开 DSH。**profile 的默认状态是 registry 版**，动手前先确认当前是不是 link 模式，否则用户看到的还是发布出去的旧包。
 3. **推送 GitHub、CI 发布必须经用户明确授意 + 二次确认**：`git push`、`gh workflow run`（含 `publish.yml` 的 `dry_run`）都要先问一次、得到确认后再执行；「已验证 / 已验收」不等于授权。
 4. **版本号仍只由用户的发布指令推动**（见本节的版本号规则），CI 发布同样要单独确认。
 
