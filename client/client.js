@@ -7036,6 +7036,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const tooltip = useTooltip();
 			/** 订阅显示币种：金额随它重渲染（币种与汇率本身在设置弹窗里改）。 */
 			useCurrencyDisplay();
+			/** 打开那一刻的页决定首屏要哪些段：切 Tab 不该重跑首屏（会闪 loading），后续段按需取。 */
+			const initialSectionsRef = (0, react.useRef)([]);
 			/**
 			* 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
 			* 服务端只裁剪下发，构建仍是全量一份，所以不可能出现「两个数据源」。
@@ -7117,7 +7119,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				let cancelled = false;
 				(async () => {
 					setLoading(true);
-					const snapshot = await loadSnapshot(true, sectionsForTab(activeTab));
+					if (initialSectionsRef.current.length === 0) initialSectionsRef.current = sectionsForTab(activeTab);
+					const snapshot = await loadSnapshot(true, initialSectionsRef.current);
 					if (cancelled) return;
 					if (snapshot !== null) applySnapshot(snapshot);
 					else await reloadFromEndpoints(false, false);
@@ -7127,7 +7130,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cancelled = true;
 				};
 			}, [
-				activeTab,
 				applySnapshot,
 				reloadFromEndpoints,
 				sectionsForTab
@@ -7141,7 +7143,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				let attempts = 0;
 				let timer = null;
 				const chase = async () => {
-					const snapshot = await loadSnapshot(false, sectionsForTab(activeTab));
+					const snapshot = await loadSnapshot(false, initialSectionsRef.current);
 					if (cancelled || snapshot === null) return;
 					applySnapshot(snapshot);
 					if (snapshot.building === true || snapshot.quotaRefreshing === true) {
@@ -7158,11 +7160,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					cancelled = true;
 					if (timer !== null) clearTimeout(timer);
 				};
-			}, [
-				activeTab,
-				applySnapshot,
-				sectionsForTab
-			]);
+			}, [applySnapshot, sectionsForTab]);
 			(0, react.useEffect)(() => {
 				hydrateLog();
 			}, []);

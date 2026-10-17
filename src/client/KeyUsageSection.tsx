@@ -80,6 +80,9 @@ export function KeyUsageSection() {
   /** 订阅显示币种：金额随它重渲染（币种与汇率本身在设置弹窗里改）。 */
   useCurrencyDisplay()
 
+  /** 打开那一刻的页决定首屏要哪些段：切 Tab 不该重跑首屏（会闪 loading），后续段按需取。 */
+  const initialSectionsRef = useRef<string[]>([])
+
   /**
    * 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
    * 服务端只裁剪下发，构建仍是全量一份，所以不可能出现「两个数据源」。
@@ -148,14 +151,15 @@ export function KeyUsageSection() {
     void (async () => {
       setLoading(true)
       // 打开页面就要最新：服务端先保证本地段重算过（超过防抖下限才重算），配额段后台补查
-      const snapshot = await loadSnapshot(true, sectionsForTab(activeTab))
+      if (initialSectionsRef.current.length === 0) initialSectionsRef.current = sectionsForTab(activeTab)
+      const snapshot = await loadSnapshot(true, initialSectionsRef.current)
       if (cancelled) return
       if (snapshot !== null) applySnapshot(snapshot)
       else await reloadFromEndpoints(false, false)
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [activeTab, applySnapshot, reloadFromEndpoints, sectionsForTab])
+  }, [applySnapshot, reloadFromEndpoints, sectionsForTab])
 
   /**
    * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
@@ -166,7 +170,7 @@ export function KeyUsageSection() {
     let attempts = 0
     let timer: ReturnType<typeof setTimeout> | null = null
     const chase = async (): Promise<void> => {
-      const snapshot = await loadSnapshot(false, sectionsForTab(activeTab))
+      const snapshot = await loadSnapshot(false, initialSectionsRef.current)
       if (cancelled || snapshot === null) return
       applySnapshot(snapshot)
       if (snapshot.building === true || snapshot.quotaRefreshing === true) {
@@ -176,7 +180,7 @@ export function KeyUsageSection() {
     }
     timer = setTimeout(() => { void chase() }, 1500)
     return () => { cancelled = true; if (timer !== null) clearTimeout(timer) }
-  }, [activeTab, applySnapshot, sectionsForTab])
+  }, [applySnapshot, sectionsForTab])
 
   // 磁盘上的历史日志读回内存（刷新页面后还能看到上次为什么失败），并允许页面里任何组件请求打开日志窗
   useEffect(() => { void hydrateLog() }, [])
