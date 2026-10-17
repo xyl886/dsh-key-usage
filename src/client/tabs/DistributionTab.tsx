@@ -1,14 +1,14 @@
 /** 分布：项目用量与按模型合并成一页，图表优先（Tokens 占比 / 成本占比），明细表默认收起。 */
 import { useState, type ReactNode } from 'react'
+import { PieChart } from '../components/PieChart.tsx'
 import { Button } from '../components/ui/Button.tsx'
 import { channelColorOf, channelOf, costCellOf } from '../core/channels.ts'
 import { comparableMoneyOf, rowMoneyViewOf, type CostRowLike } from '../core/currency.ts'
 import { fmtTokens } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
-import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
+import type { TooltipApi } from '../core/tooltip.tsx'
 import type { Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse, SessionCoverage } from '../core/types.ts'
-import detailStyles from '../styles/detail.module.css'
 import styles from '../styles/distribution.module.css'
 import sharedStyles from '../styles/shared.module.css'
 import { ModelsTab } from './ModelsTab.tsx'
@@ -140,30 +140,12 @@ function ShareCard(props: {
         ? <div className={sharedStyles.empty}>{props.emptyText}</div>
         : (
           <>
-            <div
-              className={detailStyles.shareBar}
-              aria-hidden="true"
-              onMouseMove={(event) => props.tooltip.show(event, (
-                <>
-                  <TipTitle>{props.title}</TipTitle>
-                  <TipSub>{t('sh.shareAll')}</TipSub>
-                  {props.segments.map((segment) => (
-                    <TipRow
-                      key={segment.key}
-                      color={segment.color}
-                      label={segment.label}
-                      amount={segment.amountText}
-                      rate={percentOf(segment.value, total) + '%'}
-                    />
-                  ))}
-                </>
-              ))}
-              onMouseLeave={props.tooltip.hide}
-            >
-              {props.segments.map((segment) => (
-                <i key={segment.key} style={{ width: (segment.value / total * 100) + '%', background: segment.color }} />
-              ))}
-            </div>
+            <PieChart
+              title={props.title}
+              ariaLabel={props.title + ' ' + props.totalText}
+              tooltip={props.tooltip}
+              segments={props.segments}
+            />
             <div className={styles.legend}>
               {props.segments.map((segment) => (
                 <div key={segment.key} className={styles.legendRow}>

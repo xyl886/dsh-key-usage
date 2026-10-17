@@ -12,3 +12,15 @@
 .legendValue { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); }
 .legendRate { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .tableWrap { margin-top: 16px; }
+
+/* 环形图：纯 SVG，中心显示占比最大的一段；每段可悬浮（悬浮内容在组件里给） */
+.pieWrap { position: relative; width: 132px; height: 132px; margin: 6px auto 12px; }
+.pie { display: block; transform: rotate(0deg); }
+.pieSlice { transition: opacity .12s ease; cursor: default; }
+.pieSlice:hover { opacity: .82; }
+.pieCenter {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; pointer-events: none;
+}
+.pieCenterValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.5); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.pieCenterLabel { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }
