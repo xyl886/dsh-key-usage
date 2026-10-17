@@ -55,7 +55,12 @@
 
 ## 插件安装方式
 
-**当前状态（2026-10-16 起）：`desktop` profile 装的是 registry 版 `dsh-key-usage@0.1.8`**（`node_modules/dsh-key-usage` 是真目录，不是 Junction）—— 界面跑的就是 npm 上那一份，**改本仓库不再影响它**。切回 registry 版的正确顺序是 `pnpm remove dsh-key-usage` → `pnpm add dsh-key-usage@<版本>`；从 `link:` 直接 `add` registry 版会报 `ERR_PNPM_EPERM`（pnpm 去旧 junction 内部导入 peer 依赖），这时先把 `node_modules/dsh-key-usage` **改名让开**再装（详见 [`docs/开发与构建.md`](./docs/开发与构建.md) 的安装一节）。
+**`desktop` profile 的插件来源有两种模式，动手前先确认当前是哪种**（`node_modules/dsh-key-usage` 是 Junction = `link:` 模式，是真目录 = registry 版）：
+
+- **`link:D:/EasyJob/.plugin/dsh-key-usage`**（本地开发 / 验收）：改本仓库即时可见、不用重装；服务端改动要退出重开 DSH 才生效；
+- **`dsh-key-usage@<版本>`**（registry 版）：界面跑的就是 npm 上那一份，**改本仓库不再影响它**。
+
+两种模式互切都先 `pnpm remove dsh-key-usage` 再 `add` 目标：`pnpm remove dsh-key-usage` → `pnpm add "link:D:/EasyJob/.plugin/dsh-key-usage"` 或 `pnpm add dsh-key-usage@<版本>`。从 `link:` 直接 `add` registry 版会报 `ERR_PNPM_EPERM`（pnpm 去旧 junction 内部导入 peer 依赖），这时先把 `node_modules/dsh-key-usage` **改名让开**再装（详见 [`docs/开发与构建.md`](./docs/开发与构建.md) 的安装一节）。
 
 - `dsh plugin --profile desktop …` 被 CLI 硬编码拦截，不要用；Plugin Hub 不支持本地路径。
 - 需要重装/换协议时，用 DSH 自带 pnpm 在 profile 目录直接操作：
