@@ -217,11 +217,15 @@ export function subscribeOpenLog(listener: () => void): () => void {
 }
 
 /** 导出成纯文本（贴 issue 用）：带日期时间，详情缩进一行跟在条目后面，重复次数标 ×N。 */
-export function logText(): string {
-  return entries
+/** 按给定条目渲染文本：面板只导出「当前筛选看到的那些」时用它（时间用确定性本地格式，不再跟 locale 走）。 */
+export function logTextOf(list: readonly LogEntry[]): string {
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  return list
     .flatMap((entry) => {
-      const head = new Date(entry.time).toLocaleString('zh-CN', { hour12: false })
-        + ' [' + entry.level + '] ' + entry.source + ' · ' + entry.message
+      const time = new Date(entry.time)
+      const stamp = time.getFullYear() + '-' + pad(time.getMonth() + 1) + '-' + pad(time.getDate())
+        + ' ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) + ':' + pad(time.getSeconds())
+      const head = stamp + ' [' + entry.level + '] ' + entry.source + ' · ' + entry.message
         + (entry.count > 1 ? ' ×' + String(entry.count) : '')
       return entry.detail === undefined ? [head] : [head, '    ' + entry.detail]
     })

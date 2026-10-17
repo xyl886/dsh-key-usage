@@ -1,14 +1,11 @@
 /*
- * 价目来源展示：来源角标、内置官方价目说明、聚合价目署名 / 刷新回执、解析问题、成本口径说明。
+ * 价目来源展示：来源角标、内置官方价目说明、聚合价目署名 / 刷新回执、解析问题。
  * 颜色全部走宿主 --dsw-alias-* 令牌，不硬编码明暗两套色。
  */
 .sourceChip {
   display: inline-block; border-radius: 999px; padding: 0 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); line-height: 1.7;
   border: 1px solid currentColor; margin-left: 5px; vertical-align: baseline; white-space: nowrap;
 }
-.sourceOfficial { color: var(--dsw-alias-label-tertiary, #67676f); }
-/* 内置官方价目：比「估算」强，用次级文本色而非对错语义色 */
-.sourceCatalog { color: var(--dsw-alias-label-secondary, #9a9aa2); }
 /* 聚合价目（LiteLLM，第三方、USD）：比内置官方价目再弱一档，虚线边框做区分，不用语义色 */
 .sourceAggregate {
   color: var(--dsw-alias-label-tertiary, #67676f);
@@ -70,13 +67,3 @@
 /* 装载状态 / 条目数 / 时间等：一行小字，不写成大字报 */
 .aggregateMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
 .aggregateMeta b { color: var(--dsw-alias-label-secondary, #9a9aa2); font-weight: 600; }
-
-/* 口径说明：点 ⓘ 才展开，不占正文 */
-.explanation {
-  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  border-radius: 10px; padding: 10px 14px; margin-top: 8px;
-}
-.explanationTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 600; margin-bottom: 4px; }
-.explanationList { margin: 0; padding-left: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.75; }
-.explanationList b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
-.explanationList code { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }

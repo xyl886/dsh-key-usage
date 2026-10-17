@@ -754,7 +754,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.equal(ratesOpencode.currency, 'USD', '该通道展示出来的模型币种一致（USD）')
   assert.equal(ratesOpencode.models.length, 1)
   assert.deepEqual(Object.keys(ratesOpencode.models[0]).sort(), [
-    'calls', 'currency', 'model', 'note', 'noteEn', 'offPeak', 'partial', 'rates', 'source', 'tokens',
+    'calls', 'cost', 'costCurrency', 'currency', 'model', 'note', 'noteEn', 'offPeak', 'partial', 'rates', 'source', 'tokens',
   ])
   assert.equal(ratesOpencode.models[0].model, 'GLM-5.3-Flash')
   assert.equal(ratesOpencode.models[0].source, 'model', '本通道没价目 → 用同名模型的官方价目')
@@ -767,8 +767,14 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     ratesOpencode.models[0].note.includes('GLM-5.3') || ratesOpencode.models[0].note.includes('zai/glm-5.3-flash'),
     'note 要能追溯到价目出处：' + ratesOpencode.models[0].note,
   )
+  assert.equal(typeof ratesOpencode.models[0].cost, 'number', '有价目的行要给出这段用量的成本')
+  // 夹具里这一行只有调用数、tokens 为 0，所以成本是 0（有价目就算，不因为 0 而变成 null）
+  assert.ok(Number.isFinite(ratesOpencode.models[0].cost))
+  assert.equal(ratesOpencode.models[0].costCurrency, 'USD', '成本币种跟价目一致')
   const ratesLocal = rates.body.channels.find((row) => row.provider === 'local')
   assert.equal(ratesLocal.currency, null, '没有任何币种依据')
+  assert.equal(ratesLocal.models[0].cost, null, '无价目依据的行不给成本（不猜）')
+  assert.equal(ratesLocal.models[0].costCurrency, null)
   assert.equal(ratesLocal.models[0].source, 'none')
   assert.equal(ratesLocal.models[0].rates, null)
   assert.ok(ratesLocal.models[0].note.includes('暂无价格依据'))

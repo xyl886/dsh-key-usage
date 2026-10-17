@@ -41,22 +41,13 @@
 .tabBar button.active { color: var(--dsw-alias-state-business-primary, #5b8cff); border-bottom-color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 
 .card { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; }
-.cardGrid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
-.cardGrid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
-.cardGridAuto { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
 .cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 18px; }
 
-
-@media (max-width: 720px) { .cardGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 6px; }
 .statValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.83); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; padding-right: 72px; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-top: 4px; }
-
-.groupLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); font-weight: 600; margin: 4px 0 10px; }
-.blockLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin: 18px 0 4px; }
 
 .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .table th {
@@ -71,54 +62,23 @@
 }
 .table th:first-child, .table td:first-child { text-align: left; padding-left: 0; }
 .table td:first-child { color: var(--dsw-alias-label-primary, #e8e8ec); }
-/* 可排序表头本身是 <th scope="col" aria-sort>，真正可点的是里面的按钮，
-   这样键盘（Tab + Enter/Space）也能排序；这里只负责按钮外观与焦点环。
-   不加 gap：箭头与文字的距离仍由 .sortArrow 的 margin-left 决定，与改造前一致。 */
-.sortBtn {
-  display: inline-flex; align-items: center; background: none; border: 0; padding: 0;
-  font: inherit; color: inherit; cursor: pointer; user-select: none;
-}
-.sortBtn:hover { color: var(--dsw-alias-label-secondary, #9a9aa6); }
-/* 两段选择器是为了压过上面的 :hover：当前排序列悬停时仍保持主色，与改造前一致 */
-.sortBtn.sortActiveBtn { color: var(--dsw-alias-state-business-primary, #5b8cff); }
-
 /* 焦点必须可见：去掉 outline 又不给替代样式，键盘用户会彻底失去位置感 */
 .refreshBtn:focus-visible,
-.chip:focus-visible,
-.sortBtn:focus-visible,
 .tabBar button:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
 }
-.sortArrow { font-size: calc(var(--dsh-content-font-size, 12px) * 0.73); margin-left: 3px; opacity: .8; }
 .table tr.clickable { cursor: pointer; }
 .table tr.clickable:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .07)); }
-.table tr.total td { color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; border-bottom: 0; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); }
-.table tr.disabled { opacity: .55; }
-
-.chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.chip {
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
-  border-radius: 999px; padding: 5px 13px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.chip:hover { color: var(--dsw-alias-label-primary, #e8e8ec); border-color: var(--dsw-alias-label-tertiary, #67676f); }
-.chip.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); border-color: rgba(91,140,255,.4); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 
 .statusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }
-.mono { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .empty { color: var(--dsw-alias-label-tertiary, #67676f); padding: 18px 0; }
 .warning { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 10px; }
 .legend { display: inline-flex; gap: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); color: var(--dsw-alias-label-tertiary, #67676f); align-items: center; flex-wrap: wrap; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
 .legend i.ghost { background: rgba(128,128,140,.10); border: 1px solid rgba(128,128,140,.28); }
 
-.footnote {
-  margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.8;
-}
-.footnote b { color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 500; }
 /* 口径说明分点分行：每条一句话，避免挤成一段 */
 .footnoteList { margin: 4px 0 0; padding-left: 18px; }
 .footnoteList li { margin: 1px 0; }

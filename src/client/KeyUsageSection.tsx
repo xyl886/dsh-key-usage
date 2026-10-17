@@ -120,7 +120,9 @@ export function KeyUsageSection() {
     lastSnapshotAt.current = Date.now()
     // 快照问题与「读取不完整」只留一行状态；原因进系统日志，避免页面上摊开一大段
     for (const issue of snapshot.issues ?? []) {
-      logWarn('snapshot', t('log.issue') + '：' + issue.kind, issue.message)
+      // 构建耗时每次构建都记一条，属排查信息：走 info，免得把日志面板的「警告」档刷满
+      if (issue.kind === 'build-duration') logInfo('snapshot', t('log.issue') + '：' + issue.kind, issue.message)
+      else logWarn('snapshot', t('log.issue') + '：' + issue.kind, issue.message)
     }
     const partial: string[] = []
     for (const [name, section] of [['models', sections.models], ['projects', sections.projects], ['sessions', sections.sessions]] as const) {

@@ -3,7 +3,7 @@
  * 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧的内联实现一致：刷新 / 复制 / 导出 / 清空。
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { clearLog, logEntries, logText, logWarn, refreshLog, subscribeLog, type LogEntry, type LogLevel } from '../core/log.ts'
+import { clearLog, logEntries, logTextOf, logWarn, refreshLog, subscribeLog, type LogEntry, type LogLevel } from '../core/log.ts'
 import { useT } from '../core/i18n.ts'
 import { TEXT_MIME, downloadFile, exportFileName } from '../core/export.ts'
 import { Button } from './ui/Button.tsx'
@@ -78,12 +78,12 @@ export function LogPanel(): ReactNode {
   }
 
   const onCopy = (): void => {
-    navigator.clipboard?.writeText(logText()).catch(() => logWarn('export', t('log.copyBlocked'), 'clipboard'))
+    navigator.clipboard?.writeText(logTextOf(visible)).catch(() => logWarn('export', t('log.copyBlocked'), 'clipboard'))
   }
 
   const onExport = (): void => {
     try {
-      downloadFile(exportFileName('log', 'txt'), logText() + '\n', TEXT_MIME)
+      downloadFile(exportFileName('log', 'txt'), logTextOf(visible) + '\n', TEXT_MIME)
     } catch (error) {
       logWarn('export', t('log.exportBlocked'), error instanceof Error ? error.message : String(error))
     }

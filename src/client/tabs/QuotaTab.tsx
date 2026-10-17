@@ -6,7 +6,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { RATES_PATH, failureReasonOf, loadRates } from '../core/api.ts'
 import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../core/channels.ts'
 import {
-  convertsCurrencyOf, fxSummaryTextOf, rateTextOf, useCurrencyDisplay, DISPLAY_CURRENCY_SYMBOLS, type DisplayCurrency,
+  convertsCurrencyOf, fxSummaryTextOf, rateTextOf, rowMoneyViewOf, useCurrencyDisplay, DISPLAY_CURRENCY_SYMBOLS, type DisplayCurrency,
 } from '../core/currency.ts'
 import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
 import { isEnglish, t, useT } from '../core/i18n.ts'
@@ -295,7 +295,7 @@ function RateTable(props: {
           <thead>
             <tr>
               <th>{t('m.model')}</th><th>{t('c.input')}</th><th>{t('c.cacheRead')}</th><th>{t('d.cacheWrite')}</th><th>{t('c.output')}</th>
-              <th>{t('quota.sourceLabel')}</th><th>{t('quota.tokensColumn')}</th>
+              <th>{t('quota.tokensColumn')}</th><th>{t('c.cost')}</th>
             </tr>
           </thead>
           <tbody>
@@ -306,6 +306,10 @@ function RateTable(props: {
               // 行币种与显示币种一致时不重复写一遍（这是常态），只有跨币种行才值得说
               const showCurrency = typeof row.currency === 'string' && row.currency !== '' && row.currency.toUpperCase() !== props.display
               const note = noteTextOf(row)
+              // 有价目依据才有金额（服务端不猜）：null / 缺失一律按「无依据」呈现
+              const costView = typeof row.cost === 'number' && Number.isFinite(row.cost)
+                ? rowMoneyViewOf({ cost: row.cost, costsByCurrency: row.costCurrency === null ? undefined : { [row.costCurrency]: row.cost } })
+                : null
               return (
                 <tr key={row.model}>
                   <td>
@@ -331,13 +335,13 @@ function RateTable(props: {
                         {note !== '' ? note : noRateTextOf(row.source)}
                       </td>
                     )}
-                  {/* 长口径不占列：放进来源格的 hover，表格宽度也就够用了 */}
-                  <td title={note === '' ? undefined : note}>
-                    {row.source === 'none'
-                      ? <span className={quotaStyles.rateSourceNone} title={costSourceHintOf('none', row.partial)}>{t('q.noBasis')}</span>
-                      : <CostSourceChip source={row.source} partial={row.partial} />}
-                  </td>
                   <td>{fmtTokens(typeof row.tokens === 'number' && Number.isFinite(row.tokens) ? row.tokens : 0)}</td>
+                  {/* 长口径不占列：放进成本格的 hover，表格宽度也就够用了 */}
+                  <td title={note === '' ? undefined : note}>
+                    {costView === null
+                      ? <span className={quotaStyles.rateSourceNone} title={costSourceHintOf('none', row.partial)}>{t('q.noBasis')}</span>
+                      : <>{costView.text}<CostSourceChip source={row.source} partial={row.partial} /></>}
+                  </td>
                 </tr>
               )
             })}
@@ -393,7 +397,7 @@ function PricingInfoBlock(props: {
 
       {catalog !== null && Number.isFinite(catalog.entries) && catalog.entries > 0 && (
         <div className={pricingStyles.catalogNote + (props.catalogStale === null ? '' : ' ' + pricingStyles.catalogStale)}>
-          已内置 <b>{String(catalog.entries)}</b>{t('q.catalogPrefix')}<b>{t('q.catalogAuto')}</b>。来源：
+          {t('q.catalogLoaded', { count: catalog.entries })}
           {sources.length === 0
             ? t('quota.noSourceDetail')
             : sources.map((entry, index) => {
@@ -404,7 +408,11 @@ function PricingInfoBlock(props: {
                   {typeof entry.source === 'string' && entry.source !== ''
                     ? <a className={pricingStyles.linkBtn} href={entry.source} target="_blank" rel="noreferrer">{(entry.providers ?? []).join(' / ')}</a>
                     : (entry.providers ?? []).join(' / ')}
-                  （{String(entry.count)} 条，{entry.fetchedAt} 抓取{daysAgo === null ? '' : t('q.agoPrefix') + String(daysAgo) + t('q.daySuffix')}）
+                  {t('q.sourceLine', {
+                    count: entry.count,
+                    date: entry.fetchedAt,
+                    ago: daysAgo === null ? '' : t('q.agoPrefix') + String(daysAgo) + t('q.daySuffix'),
+                  })}
                 </span>
               )
             })}
@@ -414,7 +422,7 @@ function PricingInfoBlock(props: {
       {files !== null && files.catalog !== undefined && (
         <div className={pricingStyles.fileLine}>
           <span>
-            内置价目文件 <code className={pricingStyles.pathText}>{files.catalog.path}</code>
+            {t('q.catalogFile')} <code className={pricingStyles.pathText}>{files.catalog.path}</code>
             {files.catalog.exists ? '（' + String(files.catalog.entries) + t('q.entriesClose') : '（' + t('quota.unreadable') + '）'}
           </span>
         </div>
@@ -423,23 +431,23 @@ function PricingInfoBlock(props: {
       {issues.length > 0 && (
         <div className={pricingStyles.issueBlock}>
           <div className={pricingStyles.issueHead}>
-            <b>{String(issues.length)} 处价目解析问题</b>
+            <b>{t('q.issueCount', { count: issues.length })}</b>
             <span className={pricingStyles.issueNote}>
-              —— 这些问题所在的条目已被跳过，成本按其余层与台账算
+              {t('q.issueNote')}
             </span>
           </div>
           <ul className={pricingStyles.issueList}>
             {shownIssues.map((issue, index) => (
               <li key={String(issue.file) + '|' + String(issue.line) + '|' + String(index)}>
                 <span className={pricingStyles.issueWhere}>
-                  内置价目{issue.line === null ? '' : t('q.rowPrefix') + String(issue.line) + t('q.rowSuffix')}
+                  {t('q.issuePrefix')}{issue.line === null ? '' : ' ' + t('quota.row', { count: issue.line })}
                 </span>
                 {issueTextOf(issue)}
               </li>
             ))}
           </ul>
           {issues.length > ISSUE_LIMIT && (
-            <div className={pricingStyles.issueNote}>还有 {String(issues.length - ISSUE_LIMIT)} 条同类问题已折叠。</div>
+            <div className={pricingStyles.issueNote}>{t('q.issueMore', { count: issues.length - ISSUE_LIMIT })}</div>
           )}
         </div>
       )}
@@ -447,9 +455,9 @@ function PricingInfoBlock(props: {
       <div className={pricingStyles.aggregateBlock}>
         <div className={pricingStyles.aggregateHead}>
           <span className={pricingStyles.aggregateTitle}>
-            聚合价目来源：
-            <a className={pricingStyles.linkBtn} href={LITELLM_REPO_URL} target="_blank" rel="noreferrer">LiteLLM</a>
-            （{licenseText}，第三方聚合价目，美元计价；优先级低于内置官方价目）
+            {t('q.aggregateSource')}
+            <a className={pricingStyles.linkBtn} href={LITELLM_REPO_URL} target="_blank" rel="noreferrer">LiteLLM</a>{' '}
+            {t('q.aggregateNote', { license: licenseText })}
           </span>
         </div>
         {aggregate === null
@@ -463,14 +471,14 @@ function PricingInfoBlock(props: {
           : (
             <>
               <div className={pricingStyles.aggregateMeta}>
-                当前装载：<b>{aggregateLoadedLabelOf(aggregate.loaded)}</b>
+                {t('q.aggregateLoaded')}<b>{aggregateLoadedLabelOf(aggregate.loaded)}</b>
                 {Number.isFinite(aggregate.entries) ? t('quota.entry') + ' ' + String(aggregate.entries) : ''}
                 {Number.isFinite(aggregate.models) ? t('quota.modelCount') + ' ' + String(aggregate.models) : ''}
                 {fetchedAtText === null ? '' : t('quota.fileTime') + ' ' + fetchedAtText}
                 {commitShort === null ? '' : '　upstream ' + commitShort}
               </div>
               <div className={pricingStyles.aggregateMeta}>
-                平时不联网：<b>{t('q.aggregateRefreshOnly')}</b>才会访问 LiteLLM 上游地址；刷新失败不影响已装载的那一份。
+                {t('q.offlinePrefix')}<b>{t('quota.refreshPrices')}</b>{' '}{t('q.offlineSuffix')}
                 {pathText === null ? '' : t('quota.currentFile') + '：' + pathText}
               </div>
             </>
@@ -478,7 +486,7 @@ function PricingInfoBlock(props: {
         {aggregateIssues.length > 0 && (
           <div className={pricingStyles.issueBlock}>
             <div className={pricingStyles.issueHead}>
-              <b>{String(aggregateIssues.length)} 处聚合价目装载问题</b>
+              <b>{t('q.aggregateIssueCount', { count: aggregateIssues.length })}</b>
               <span className={pricingStyles.issueNote}>{t('q.aggregateScope')}</span>
             </div>
             <ul className={pricingStyles.issueList}>

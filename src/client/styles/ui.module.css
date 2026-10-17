@@ -15,7 +15,6 @@
 .btn:disabled { opacity: .55; cursor: default; }
 .btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 .btnSm { padding: 0 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
-.btnIcon { padding: 6px; }
 .btnPrimary { border-color: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-state-business-primary, #5b8cff); }
 .btnPrimary:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14));

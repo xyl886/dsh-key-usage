@@ -18,7 +18,6 @@
 
 .cellKey { display: flex; align-items: center; gap: 10px; }
 .keyDisplay { font-size: calc(var(--dsh-content-font-size, 12px) * 1.19); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.keyEnv { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); margin-top: 1px; }
 .tag {
   display: inline-block; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); padding: 1px 7px; border-radius: 5px;
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); color: var(--dsw-alias-label-secondary, #9a9aa6);

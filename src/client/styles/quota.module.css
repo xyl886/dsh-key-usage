@@ -35,26 +35,6 @@
 .windowBar { height: 6px; border-radius: 4px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; }
 .windowBar > i { display: block; height: 100%; border-radius: 4px; }
 
-.infoBtn {
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
-  color: var(--dsw-alias-label-tertiary, #67676f); border-radius: 999px; width: 22px; height: 22px;
-  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); line-height: 1; cursor: pointer; padding: 0;
-}
-.infoBtn:hover, .infoBtnActive { color: var(--dsw-alias-state-business-primary, #5b8cff); border-color: rgba(91,140,255,.45); }
-.infoBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-
-/* 价目信息块：默认折叠，只留一行摘要 */
-.pricingInfo { margin-bottom: 12px; }
-.pricingInfoToggle {
-  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01);
-  cursor: pointer; padding: 2px 0;
-}
-.pricingInfoToggle:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.pricingInfoToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.pricingInfoBody {
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
-  padding: 4px 14px 12px; margin-top: 6px;
-}
 .countLine { color: var(--dsw-alias-label-secondary, #9a9aa2); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.8; margin: 6px 0; }
 .staleLine { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7; margin: 6px 0; }
 
