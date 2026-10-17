@@ -302,7 +302,6 @@ export function DetailTab(props: {
         {chartRows.length === 0
           ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : <TokenBars rows={chartRows} tooltip={tooltip} ariaLabel={chartAriaLabel} />}
-        {useHourAxis && <div className={styles.statExtra}>{t('d.hourlyNote')}</div>}
       </div>
     </div>
   )

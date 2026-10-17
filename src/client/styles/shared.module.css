@@ -153,16 +153,6 @@
 .caliberVersion { margin: 0 0 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
 
 /* 系统日志：时间 / 级别 / 来源 / 内容 四列，等宽数字对齐 */
-.logActions { display: flex; gap: 8px; margin-bottom: 10px; }
-.logEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); }
-.logList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.logRow { display: grid; grid-template-columns: 68px 44px 62px 1fr; gap: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.5; font-variant-numeric: tabular-nums; }
-.logTime { color: var(--dsw-alias-label-tertiary, #67676f); }
-.logLevel { color: var(--dsw-alias-label-tertiary, #67676f); }
-.logWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
-.logError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
-.logSource { color: var(--dsw-alias-label-secondary, #9a9aa6); }
-.logMessage { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; }
 
 /* 角标贴在当期数值的右上角：数值行两端对齐 */
 /* 角标固定贴在当期数值右上角：数值右侧预留位置，角标绝对定位（不会换行，也不会挤走数值） */
@@ -177,13 +167,6 @@
 .statLabelRow { display: flex; align-items: center; gap: 6px; }
 
 /* 日志条目：点消息展开详情（只有带 detail 的可点），失败条目右侧给「重试」 */
-.logRow { grid-template-columns: 68px 44px 62px minmax(0, 1fr) auto; }
-.logMessageBtn { background: none; border: 0; padding: 0; font: inherit; text-align: left; color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-all; cursor: pointer; }
-.logMessageBtn:hover { text-decoration: underline; }
-.logDetail { grid-column: 4 / -1; color: var(--dsw-alias-label-secondary, #9a9aa6); word-break: break-all; white-space: pre-wrap; }
-.logDetailPad { padding-left: 8px; border-left: 2px solid var(--dsw-alias-border-l1, #2c2c34); }
-.logRetry { background: none; border: 0; padding: 0; font: inherit; color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }
-.logRetry:hover { text-decoration: underline; }
 
 /* 「未归入工作区」展开后的目录清单：等宽、可换行，缩进与列表子行对齐 */
 .pathsCell { padding: 2px 10px 10px 14px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.06)); text-align: left; }

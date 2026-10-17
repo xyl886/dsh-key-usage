@@ -1,0 +1,35 @@
+/* 设置弹窗：币种、汇率、价目的来源与刷新都收在这里，页面里只留结论。 */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 420px; }
+
+.block { display: flex; flex-direction: column; gap: 6px; }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+.title {
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.02);
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+}
+
+.actions { display: flex; align-items: center; gap: 6px; }
+
+/* 币种切换：选中态靠边框 + 主色 + 实底三重表达，不只靠颜色深浅 */
+.currencyBtn {
+  min-width: 34px;
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
+  line-height: 1.2;
+}
+
+.value {
+  font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  color: var(--dsw-alias-label-tertiary, #67676f);
+  word-break: break-all;
+}
+
+.valueWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+
+.version {
+  font-size: calc(var(--dsh-content-font-size, 12px) * 0.9);
+  color: var(--dsw-alias-label-tertiary, #67676f);
+}

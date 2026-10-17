@@ -76,7 +76,14 @@ import {
 } from './pricing/pricing-catalog.js'
 import { aggregateStatus, refreshModelPrices } from './pricing/model-prices.js'
 import { resolveFxRate } from './quota/fx-rate.js'
-import { SNAPSHOT_FILE, createSnapshotService, type SnapshotQuotaBuild, type SnapshotQuotaOutcome } from './snapshot/snapshot.js'
+import {
+  SNAPSHOT_FILE,
+  createSnapshotService,
+  type SnapshotQuotaBuild,
+  type SnapshotQuotaOutcome,
+  type SnapshotSections,
+  type SnapshotView,
+} from './snapshot/snapshot.js'
 
 /** 挂载选项：定时器周期（0 = 关闭，测试用）。 */
 export interface KeyUsageMountOptions {
@@ -348,7 +355,7 @@ function ratesNoteOf(hit: PricedRuleHit | null): string {
     const unitHint = hit.rule.unit === 'perMillionTokens' ? '' : '（计价单位：' + UNIT_LABELS[hit.rule.unit] + '）'
     return hit.rule.note + unitHint
   }
-  return '暂无价格依据（本通道与同名模型都没有官方价目）'
+  return '暂无价格依据'
 }
 
 function minKey(first: string | undefined, second: string | undefined): string | undefined {
@@ -382,6 +389,34 @@ export function parseRatesLimit(raw: string | null): number {
   const parsed = Number.parseInt(raw, 10)
   if (!Number.isFinite(parsed) || parsed <= 0) return RATES_DEFAULT_LIMIT
   return Math.min(parsed, RATES_MAX_LIMIT)
+}
+
+/** `/snapshot` 可以按需下发的段（= `sections` 的键）；顶层其余字段一律原样保留。 */
+export const SNAPSHOT_SECTION_NAMES = ['overview', 'channels', 'usage', 'heatmap', 'models', 'projects', 'sessions', 'quota'] as const
+
+/**
+ * `?sections=a,b,c` → 要下发的段名集合；trim + 小写比对，未知名字忽略。
+ * 不传、或裁剪后一个合法段都不剩时返回 null（= 全量下发）：客户端拼错段名不该拿到空壳响应，也不该报错。
+ */
+export function parseSections(raw: string | null): Set<string> | null {
+  if (raw === null) return null
+  const names = new Set<string>()
+  for (const piece of raw.split(',')) {
+    const name = piece.trim().toLowerCase()
+    if ((SNAPSHOT_SECTION_NAMES as readonly string[]).includes(name)) names.add(name)
+  }
+  return names.size === 0 ? null : names
+}
+
+/** 只裁剪下发的 `sections`；`building` / `buildSource` / `quotaRefreshing` / `updatedAt` / `version` / `issues` / `quotaOutcome` 全部保留。 */
+export function trimSnapshotSections(view: SnapshotView, names: Set<string> | null): SnapshotView {
+  if (names === null) return view
+  const source = view.sections as unknown as Record<string, unknown>
+  const sections: Record<string, unknown> = {}
+  for (const name of SNAPSHOT_SECTION_NAMES) {
+    if (names.has(name)) sections[name] = source[name]
+  }
+  return { ...view, sections: sections as unknown as SnapshotSections }
 }
 
 function requireLoopback(request: IncomingMessage, response: ServerResponse): boolean {
@@ -962,7 +997,9 @@ export function mountKeyUsageRoutes(
       // 打开页面（?fresh=1）：本地段超过防抖下限就阻塞重算一次、配额段超时就后台补查；
       // 构建中返回上一份完整内容 + building:true，客户端按 building / quotaRefreshing 追取
       const url = new URL(request.url ?? '/', 'http://localhost')
-      sendJson(response, 200, await snapshotService.view({ fresh: url.searchParams.get('fresh') === '1' }))
+      const view = await snapshotService.view({ fresh: url.searchParams.get('fresh') === '1' })
+      // ?sections=a,b,c 只裁剪下发（构建照旧全量），界面按 Tab 只取自己要的那几段
+      sendJson(response, 200, trimSnapshotSections(view, parseSections(url.searchParams.get('sections'))))
     },
   })
 

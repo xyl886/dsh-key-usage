@@ -1,0 +1,14 @@
+/* 分布页：顶部视图切换、两张占比卡（条沿用 detail.module.css 的 .shareBar）与可展开的明细表。 */
+.switchBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.switchGroup { display: inline-flex; align-items: center; gap: 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cardTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
+.cardTotal { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.legendRow { display: flex; align-items: center; gap: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
+.legendDot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.legendName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.legendValue { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); }
+.legendRate { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.tableWrap { margin-top: 16px; }

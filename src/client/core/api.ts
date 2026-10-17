@@ -165,8 +165,12 @@ export const REFRESH_PATH = '/dsh-key-usage/refresh'
  * 读快照。`fresh: true`（页面打开时用）让服务端先保证数据是最新的：
  * 本地段超过防抖下限就重算一次再返回，配额段超时就**后台**补查（返回体标 `quotaRefreshing`）。
  */
-export function loadSnapshot(fresh = false): Promise<SnapshotResponse | null> {
-  return fetchJson<SnapshotResponse>(SNAPSHOT_PATH + (fresh ? '?fresh=1' : ''))
+export function loadSnapshot(fresh = false, sections?: readonly string[]): Promise<SnapshotResponse | null> {
+  const query: string[] = []
+  if (fresh) query.push('fresh=1')
+  // 只取当前页面需要的段：会话段近 200 KB，没必要首屏就传（切 Tab 时再取）
+  if (sections !== undefined && sections.length > 0) query.push('sections=' + sections.join(','))
+  return fetchJson<SnapshotResponse>(SNAPSHOT_PATH + (query.length === 0 ? '' : '?' + query.join('&')))
 }
 
 /** 手动刷新：服务端自己串行化（撞上重建会等，最多 10 秒），超时才回 `{ok:false}`。 */

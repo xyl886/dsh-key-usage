@@ -1,7 +1,8 @@
 /* 项目用量 / 会话用量：筛选栏与列表表格。 */
 .filterBar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
 .searchInput {
-  flex: 1; min-width: 180px; background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  /* 定宽：吃满一行会把「导出 csv / json」挤到第二行（用户实测） */
+  flex: 0 1 220px; min-width: 150px; max-width: 220px; background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
  height: 30px;}
 .searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f);  height: 30px;}

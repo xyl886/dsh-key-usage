@@ -4,6 +4,7 @@
  */
 
 /** 成本来源角标，与服务端 `costSource` 一一对应。 */
+import { localTimeTextOf } from './format.ts'
 import { t } from './i18n.ts'
 
 export type CostSource = 'official' | 'catalog' | 'aggregate' | 'model' | 'none'
@@ -90,6 +91,21 @@ export function hostOf(url: unknown): string | null {
 export function shortCommitOf(commit: unknown): string | null {
   if (typeof commit !== 'string' || commit.trim().length < 7) return null
   return commit.trim().slice(0, 7)
+}
+
+/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
+export function modelPriceRefreshTextOf(result: { entries?: unknown; bytes?: unknown; url?: unknown; fetchedAt?: unknown }): string {
+  const parts: string[] = []
+  if (typeof result.entries === 'number' && Number.isFinite(result.entries)) {
+    parts.push(String(result.entries) + t('q.priceEntriesSuffix'))
+  }
+  const megabytes = megabytesTextOf(result.bytes)
+  if (megabytes !== null) parts.push(megabytes)
+  const host = hostOf(result.url)
+  if (host !== null) parts.push(t('quota.sourceLabel') + ' ' + host)
+  const time = typeof result.fetchedAt === 'string' ? localTimeTextOf(result.fetchedAt) : null
+  if (time !== null) parts.push(time)
+  return t('quota.updated') + '：' + (parts.length === 0 ? t('quota.recomputed') : parts.join(' · '))
 }
 
 /** 覆盖度：两层价格各命中多少个模型 + 无依据的模型数（字段全可选，缺失整段省略）。 */

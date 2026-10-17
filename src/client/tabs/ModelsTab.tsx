@@ -152,7 +152,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
         </tbody>
       </table></div>
       <div className={styles.statExtra}>
-        {t('m.footnote')}{props.data.priced ? '' : t('s.noCost')}{t('m.hitNote')}
+        {props.data.priced ? '' : t('s.noCost')}
       </div>
     </div>
   )

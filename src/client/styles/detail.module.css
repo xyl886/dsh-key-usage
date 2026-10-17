@@ -1,8 +1,8 @@
 /* 使用明细：范围条、占比卡、按天/按小时柱状图、每日细目折叠表。 */
 .rangeBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .rangeLeft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.rangeTabs { display: inline-flex; gap: 2px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 9px; padding: 2px; }
-.rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); padding: 4px 13px; border-radius: 7px; cursor: pointer; }
+.rangeTabs { display: inline-flex; gap: 2px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px; padding: 2px; }
+.rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); height: 26px; padding: 0 12px; border-radius: 6px; cursor: pointer; }
 .rangeTabs button.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 /* 自定义范围：两个日期输入合成一组（框内左侧标签），避免两个裸 input 夹一个「至」的粗糙感 */
 .dateRange {

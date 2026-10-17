@@ -280,7 +280,6 @@ export function SessionsTab(props: {
         </div>
       )}
       <div className={styles.statExtra}>
-        {t('s.footnote')}
         {props.data.priced ? '' : t('s.noCost')}
       </div>
 

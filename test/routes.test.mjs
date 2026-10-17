@@ -241,6 +241,36 @@ assert.equal(reopened.body.quotaRefreshing, false, '配额刚查过（60 秒闸�
 assert.equal(typeof reopened.body.quotaRefreshing, 'boolean', '标记要下发（客户端据此决定追不追）')
 assert.deepEqual(reopened.body.sections.sessions, firstSnapshot.body.sections.sessions, '复用的仍是同一份快照')
 
+// 按需下发（?sections=a,b,c）：只裁剪 sections 段，顶层字段一律保留；不传 = 全量（向后兼容）
+const allSectionNames = ['channels', 'heatmap', 'models', 'overview', 'projects', 'quota', 'sessions', 'usage']
+const onlyChannels = await callEndpoint('/dsh-key-usage/snapshot?sections=channels')
+assert.deepEqual(Object.keys(onlyChannels.body.sections), ['channels'], '只回请求的那一段')
+assert.deepEqual(onlyChannels.body.sections.channels, firstSnapshot.body.sections.channels, '裁剪只影响下发，内容不变')
+for (const field of ['ok', 'building', 'quotaRefreshing', 'version', 'updatedAt', 'buildSource', 'quotaOutcome', 'issues']) {
+  assert.deepEqual(onlyChannels.body[field], firstSnapshot.body[field], '顶层字段 ' + field + ' 不因裁剪而变')
+}
+
+// 与 fresh=1 组合 + 多段（名字 trim + 小写比对）
+const combinedSections = await callEndpoint('/dsh-key-usage/snapshot?fresh=1&sections=%20Overview%20,%20channels%20')
+assert.deepEqual(Object.keys(combinedSections.body.sections).sort(), ['channels', 'overview'])
+assert.equal(combinedSections.body.building, false)
+assert.equal(combinedSections.body.quotaRefreshing, false, '组合查询照常走到 fresh 那套逻辑')
+assert.deepEqual(combinedSections.body.sections.overview, firstSnapshot.body.sections.overview)
+assert.deepEqual(combinedSections.body.sections.channels, firstSnapshot.body.sections.channels)
+
+// 未知名字忽略；一个合法段都不剩（含空值）时 fail-open 返回全部段，不报错
+const partialSections = await callEndpoint('/dsh-key-usage/snapshot?sections=nope,quota')
+assert.deepEqual(Object.keys(partialSections.body.sections), ['quota'], '认得的留下、不认得的忽略')
+for (const query of ['sections=nope', 'sections=', 'sections=%20,%20']) {
+  const fellBack = await callEndpoint('/dsh-key-usage/snapshot?' + query)
+  assert.equal(fellBack.status, 200)
+  assert.deepEqual(Object.keys(fellBack.body.sections).sort(), allSectionNames, 'fail-open 返回全部段：' + query)
+}
+
+// 不带参数：行为与改动前一致（全量下发）
+const noSectionsParam = await callEndpoint('/dsh-key-usage/snapshot')
+assert.deepEqual(Object.keys(noSectionsParam.body.sections).sort(), allSectionNames)
+
 // 会话派生的三段同理（「统一快照是唯一数据来源」的回归哨兵）：端点调的是同一批构建器函数，
 // limit 取到上限（1000）时必须与快照段逐字段相同 —— 一旦有人给端点另算一份，这里立刻红
 assert.deepEqual(

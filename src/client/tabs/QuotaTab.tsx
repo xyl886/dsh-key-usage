@@ -2,24 +2,20 @@
  * 余额与配额：按通道展示官方余额快照与订阅窗口，卡片可展开看该通道近 30 天的模型单价表（`/rates`）。
  * 界面不维护任何价格；金额按工具条选的显示币种折算（汇率来自 `/fx`，折算收口在 currency.ts）。
  */
-import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
-import {
-  FX_PATH, MODEL_PRICE_REFRESH_PATH, RATES_PATH, failureReasonOf, loadFxRate, loadRates, refreshModelPrices,
-} from '../core/api.ts'
+import { useEffect, useId, useState, type ReactNode } from 'react'
+import { RATES_PATH, failureReasonOf, loadRates } from '../core/api.ts'
 import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../core/channels.ts'
 import {
-  convertsCurrencyOf, fxFallbackWarningOf, fxSummaryTextOf, normalizeFxRate, rateTextOf, setDisplayCurrency,
-  setFxRate, useCurrencyDisplay, DISPLAY_CURRENCIES, DISPLAY_CURRENCY_LABELS, type DisplayCurrency,
+  convertsCurrencyOf, fxSummaryTextOf, rateTextOf, useCurrencyDisplay, DISPLAY_CURRENCY_SYMBOLS, type DisplayCurrency,
 } from '../core/currency.ts'
 import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
 import { isEnglish, t, useT } from '../core/i18n.ts'
-import { logError, logInfo, logWarn } from '../core/log.ts'
-import { LogHint } from '../components/LogHint.tsx'
+import { logWarn, requestOpenLog } from '../core/log.ts'
 import { serverText } from '../core/serverText.ts'
 import {
   LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
   megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
-  type AggregateIssue, type CostSource, type ModelPriceAggregate, type PricingRefreshResult, type PricingResponse,
+  type AggregateIssue, type CostSource, type ModelPriceAggregate, type PricingResponse,
 } from '../core/pricing.ts'
 import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../core/types.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
@@ -46,12 +42,6 @@ const RATE_SOURCE_LABELS: Record<string, string> = {
   aggregate: 'source.aggregate',
   model: 'source.model',
   none: 'source.none',
-}
-
-/** 刷新价目的结果提示：ok = 成功回执，bad = 服务端原因或请求失败，两种都要留在界面上。 */
-interface PriceRefreshStatus {
-  tone: 'ok' | 'bad'
-  text: string
 }
 
 function resetTextOf(value: unknown): string {
@@ -83,40 +73,8 @@ export function QuotaTab(props: {
 
   const [rates, setRates] = useState<RatesResponse | null>(null)
   const [ratesLoading, setRatesLoading] = useState(true)
-  const [fxLoading, setFxLoading] = useState(false)
-  const [fxError, setFxError] = useState<string | null>(null)
   const [showPricingInfo, setShowPricingInfo] = useState(false)
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
-  const [refreshingPrices, setRefreshingPrices] = useState(false)
-  const [refreshElapsedSeconds, setRefreshElapsedSeconds] = useState(0)
-  const [refreshStatus, setRefreshStatus] = useState<PriceRefreshStatus | null>(null)
-
-  /** 取一次汇率：服务端 12 小时内走缓存，打上游的只有用户点「刷新汇率」那一下；失败时保留已有汇率。 */
-  const fetchFx = useCallback(async (force: boolean): Promise<void> => {
-    setFxLoading(true)
-    const result = await loadFxRate(force)
-    setFxLoading(false)
-    if (result === null) {
-      const reason = failureReasonOf(FX_PATH) ?? t('quota.noResponse')
-      setFxError(reason)
-      logWarn('fx', t('quota.fxUnavailable'), reason + ' · ' + FX_PATH)
-      return
-    }
-    setFxError(null)
-    // 归一化返回 null 说明 rate 非法：宁可说「没取到汇率」，也不要拿上一次的值冒充
-    const normalized = normalizeFxRate(result)
-    if (normalized === null) {
-      setFxError(t('quota.fxBad'))
-      logWarn('fx', t('quota.fxUnavailable'), t('quota.fxBad') + ' · ' + FX_PATH)
-      setFxRate(null)
-      return
-    }
-    setFxRate(normalized)
-    if (force) logInfo('fx', t('quota.refreshFx'), fxSummaryTextOf(normalized))
-  }, [t])
-
-  // 打开「余额与配额」页取一次汇率；价目刷新不影响汇率，所以不挂 reloadToken
-  useEffect(() => { void fetchFx(false) }, [fetchFx])
 
   // 单价表：近 30 天用到的模型（刷新价目后价目层变了，要重取）
   useEffect(() => {
@@ -129,45 +87,6 @@ export function QuotaTab(props: {
     })
     return () => { cancelled = true }
   }, [props.reloadToken])
-
-  // 刷新期间每秒推进一次「已等 N 秒」：20 秒的超时窗口里用户得看到它在跑，否则会以为界面卡死
-  useEffect(() => {
-    if (!refreshingPrices) return
-    const timer = setInterval(() => setRefreshElapsedSeconds((previous) => previous + 1), 1000)
-    return () => clearInterval(timer)
-  }, [refreshingPrices])
-
-  /** 切显示币种：只改展示口径，不重取用量；汇率缺失 / 过期才补取一次。 */
-  const switchCurrency = (next: DisplayCurrency): void => {
-    if (next === display.display) return
-    setDisplayCurrency(next)
-    if (display.fx === null || display.fx.stale) void fetchFx(false)
-  }
-
-  /** 「刷新价目」：唯一会拉上游的动作；成功后再让页面重取 /pricing 与用量（成本口径整体变了）。 */
-  const refreshPrices = async (): Promise<void> => {
-    if (refreshingPrices) return
-    setRefreshingPrices(true)
-    setRefreshElapsedSeconds(0)
-    setRefreshStatus(null)
-    const outcome = await refreshModelPrices()
-    setRefreshingPrices(false)
-    // 失败原因只进系统日志（页面上只留一行「刷新价目失败 · 查看系统日志」）
-    if (outcome === null) {
-      const reason = failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? t('quota.noResponse')
-      logError('pricing', t('quota.pricingFailedShort'), reason + ' · ' + MODEL_PRICE_REFRESH_PATH, () => { void refreshPrices() })
-      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
-      return
-    }
-    if (!outcome.ok) {
-      logError('pricing', t('quota.pricingFailedShort'), outcome.error, () => { void refreshPrices() })
-      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
-      return
-    }
-    setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
-    logInfo('pricing', t('quota.refreshPrices'), modelPriceRefreshTextOf(outcome) + '\n' + outcome.url)
-    props.onPricingReload()
-  }
 
   /**
    * 通道级失败原因进系统日志：页面每张卡片只留一行「本机快照 · 数据时间 + 本次查询未成功」，
@@ -194,13 +113,6 @@ export function QuotaTab(props: {
     }
   }, [props.channels, props.quotas, props.quotaOutcome, t])
 
-  // 汇率回落默认值：原因进日志（上游地址 + 失败类型），页面上只留那行兜底说明
-  const fxFallback = display.fx === null ? null : fxFallbackWarningOf(display.fx)
-  useEffect(() => {
-    if (fxFallback === null) return
-    logWarn('fx', fxFallback, (display.fx?.note ?? '') + ' · ' + FX_PATH)
-  }, [fxFallback, display.fx?.note])
-
   // 服务端没升级时整块缺省：按「读不到」降级，不影响余额与窗口
   const pricing = props.pricing
   const aggregate: ModelPriceAggregate | null = pricing?.aggregate ?? null
@@ -215,57 +127,8 @@ export function QuotaTab(props: {
     return entry === undefined || !Array.isArray(entry.models) ? [] : entry.models
   }
 
-  const fxText = display.fx === null
-    ? (fxError === null ? fxSummaryTextOf(null) : t('quota.fxUnavailable'))
-    : (fxFallback ?? fxSummaryTextOf(display.fx))
-  const fxTone = display.fx === null || display.fx.source === 'default' ? quotaStyles.fxWarn : quotaStyles.fxText
-  /** 汇率不可用 / 回落默认值时整行可点（原因在日志里），正常值就是纯文本。 */
-  const fxClickable = display.fx === null || display.fx.source === 'default'
-
   return (
     <div>
-      <div className={quotaStyles.toolbar}>
-        {DISPLAY_CURRENCIES.map((currency) => (
-          <button
-            key={currency}
-            type="button"
-            className={quotaStyles.toolbarBtn + (display.display === currency ? ' ' + quotaStyles.currencyBtnOn : '')}
-            aria-pressed={display.display === currency}
-            onClick={() => switchCurrency(currency)}
-          >
-            {DISPLAY_CURRENCY_LABELS[currency]}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={quotaStyles.toolbarBtn}
-          disabled={fxLoading}
-          aria-busy={fxLoading}
-          title={t('quota.fxCacheHint')}
-          onClick={() => void fetchFx(true)}
-        >
-          {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
-        </button>
-        <span className={quotaStyles.toolbarSpacer} />
-        <button
-          type="button"
-          className={quotaStyles.toolbarBtn + ' ' + quotaStyles.toolbarBtnPrimary}
-          disabled={refreshingPrices}
-          aria-busy={refreshingPrices}
-          onClick={() => void refreshPrices()}
-        >
-          {refreshingPrices
-            ? t('action.refreshing') + (refreshElapsedSeconds > 0 ? ' ' + String(refreshElapsedSeconds) + 's' : '')
-            : t('quota.refreshPrices')}
-        </button>
-      </div>
-
-      {/* 汇率来源 / 时间 / 兜底原因：`source: 'default'` 必须能看出「没联网，用的是兜底值」；原因在日志里 */}
-      {fxClickable
-        ? <LogHint text={fxText} className={quotaStyles.fxHint} />
-        : <div className={fxTone} title={display.fx?.note ?? undefined}>{fxText}</div>}
-
-      {/* 价目来源已并入页头口径弹窗（需求 5/6），这里不再单独占版面 */}
 
       {catalogStale !== null && (
         <div className={quotaStyles.staleLine}>
@@ -274,20 +137,6 @@ export function QuotaTab(props: {
       )}
 
       
-
-      <div
-        className={pricingStyles.aggregateStatus + (refreshStatus === null ? '' : ' ' + (refreshStatus.tone === 'ok'
-          ? pricingStyles.aggregateStatusOk
-          : pricingStyles.aggregateStatusBad))}
-        role="status"
-        aria-live="polite"
-      >
-        {refreshStatus === null
-          ? ''
-          : refreshStatus.tone === 'ok'
-            ? refreshStatus.text
-            : <LogHint text={refreshStatus.text} tone="error" />}
-      </div>
 
       <div className={quotaStyles.quotaList}>
         {props.channels.filter((channel) => props.onlyProvider === undefined || channel.provider === props.onlyProvider).map((channel, index) => {
@@ -317,19 +166,12 @@ export function QuotaTab(props: {
               >
                 <span className={styles.statusDot} style={{ background: statusColorOf(channel.status) }} />
                 <span className={quotaStyles.quotaTitle}>{channel.displayName}</span>
-                {isLive && <span className={quotaStyles.liveChip}>{t('quota.live')}{' · ' + freshTextOf(snapshot?.fetchedAt ?? null)}</span>}
                 <span className={quotaStyles.rateCount}>{rateCountTextOf(rateRows, ratesLoading, rates === null, failureReasonOf(RATES_PATH))}</span>
                 {/* 右侧只留计费模式：通道 id 与左边显示名是同一件事，id 挪到 hover（排障要看时也有） */}
                 <span className={quotaStyles.quotaProvider} title={channel.provider}>{t(COST_MODE_KEYS[channel.costMode] ?? 'ch.notQueried')}</span>
                 {props.onlyProvider === undefined && <span className={quotaStyles.expandArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>}
               </button>
 
-              {outcome !== null && outcome.ok === false && (
-                <div className={quotaStyles.staleLine}>
-                  {t('quota.snapshotAt', { time: outcome.capturedAt === null ? t('quota.unknown') : (localTimeTextOf(outcome.capturedAt) ?? t('quota.unknown')) })}
-                  <LogHint text={t('quota.liveFailedShort')} />
-                </div>
-              )}
 
               {balanceView !== null && (
                 <>
@@ -370,13 +212,14 @@ export function QuotaTab(props: {
                 <div className={styles.dim}>{emptyReasonOf(channel, snapshot)}</div>
               )}
 
-              {snapshot !== null && !isLive && snapshot.supported && (
-                <div className={staleDaysOf(snapshot.updatedAt) >= 1 ? quotaStyles.snapshotStale : quotaStyles.snapshotHint}>
-                  <LogHint text={t('quota.liveFailedShort')} />
-                  {snapshot.updatedAt === null
-                    ? t('q.retryHint')
-                    : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt) + (staleDaysOf(snapshot.updatedAt) >= 1 ? t('q.stalePrefix') + staleDaysOf(snapshot.updatedAt) + t('q.daysStaleSuffix') : '')}
-                </div>
+              {/* 不是实时值时只留一个小标签：完整时间与原因在悬浮里，点击开日志（不摊在版面上） */}
+              {!isLive && (
+                <button
+                  type="button"
+                  className={quotaStyles.snapshotChip}
+                  title={snapshotTitleOf(snapshot, outcome, channel)}
+                  onClick={() => requestOpenLog()}
+                >{t('quota.snapshotChip')}</button>
               )}
 
               {/* 单价抽屉：收起时保持空容器，aria-controls 指过来始终有效 */}
@@ -446,7 +289,7 @@ function RateTable(props: {
   return (
     <>
       <div className={quotaStyles.rateHead}>
-        {t('quota.priceUnit')}（{t('unit.perMillion')} · {DISPLAY_CURRENCY_LABELS[props.display]}）
+        {t('quota.priceUnit')}（{t('unit.perMillion')} · {DISPLAY_CURRENCY_SYMBOLS[props.display]}）
         {converted && props.convertedHint !== null ? t('q.convertedPrefix') + props.convertedHint + '）' : ''}
         {offPeakNow ? t('q.offPeakNow') : ''}
         {props.range === null ? '' : t('q.ratesRange')}
@@ -687,30 +530,6 @@ function daysBetween(from: string, to: string): number | null {
   return Math.round((end - start) / 86400000) + 1
 }
 
-/** 刷新回执：契约只给 `entries`（条目数）不给模型数，所以写「条」而不冒充「个模型」。 */
-function modelPriceRefreshTextOf(result: Extract<PricingRefreshResult, { ok: true }>): string {
-  const parts: string[] = []
-  if (typeof result.entries === 'number' && Number.isFinite(result.entries)) {
-    parts.push(String(result.entries) + t('q.priceEntriesSuffix'))
-  }
-  const megabytes = megabytesTextOf(result.bytes)
-  if (megabytes !== null) parts.push(megabytes)
-  const host = hostOf(result.url)
-  if (host !== null) parts.push(t('quota.sourceLabel') + ' ' + host)
-  const time = localTimeTextOf(result.fetchedAt)
-  if (time !== null) parts.push(time)
-  return t('quota.updated') + '：' + (parts.length === 0 ? t('quota.recomputed') : parts.join(' · '))
-}
-
-function freshTextOf(fetchedAt: number | null): string {
-  if (fetchedAt === null) return t('quota.justNow')
-  const seconds = Math.max(0, Math.floor((Date.now() - fetchedAt) / 1000))
-  if (seconds < 60) return t('quota.justNow')
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return minutes + t('q.minutesAgoSuffix')
-  return Math.floor(minutes / 60) + t('q.hoursAgoSuffix')
-}
-
 /** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
 function noteTextOf(row: { note?: string | null; noteEn?: string | null }): string {
   const note = row.note ?? ''
@@ -729,6 +548,16 @@ function issueTextOf(issue: { kind?: string; message: string }): string {
   return english === 'issue.' + issue.kind ? issue.message : english
 }
 
+/** 非实时值的小标签悬浮说明：数据时间 + 这次查询的结果或原因（原因不摊在版面上）。 */
+function snapshotTitleOf(snapshot: QuotaProvider | null, outcome: SnapshotQuotaOutcome['providers'][number] | null, channel: Channel): string {
+  const parts: string[] = []
+  if (outcome !== null && outcome.capturedAt !== null) parts.push(t('quota.snapshotAt', { time: localTimeTextOf(outcome.capturedAt) ?? t('quota.unknown') }))
+  else if (snapshot !== null && snapshot.updatedAt !== null) parts.push(t('quota.snapshotAt', { time: fmtDateTime(snapshot.updatedAt) }))
+  if (outcome !== null && outcome.ok === false) parts.push(errorTextOf(outcome.error) || t('quota.liveFailedShort'))
+  else if (snapshot !== null && snapshot.supported && snapshot.error !== null && snapshot.error !== '') parts.push(errorTextOf(snapshot.error))
+  else if (snapshot !== null && !snapshot.supported) parts.push(t('err.detail.none'))
+  return parts.join(' · ')
+}
 function errorTextOf(error: string | null): string {
   if (error === null) return t('err.noLiveQuery')
   if (error === 'no-key') return t('err.noApiKey')

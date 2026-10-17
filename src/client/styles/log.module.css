@@ -1,0 +1,89 @@
+/* 系统日志面板：筛选条 + 可滚动条目列表 + 等宽详情。
+   颜色只吃宿主 --dsw-alias-* 令牌，字号以 --dsh-content-font-size 为基准。
+   （CSS basename 必须全局唯一：tsdown 用 basename 做 <style> 去重键。） */
+
+.panel { display: flex; flex-direction: column; gap: 10px; }
+
+/* 顶部一条：左边条数，右边四个操作 */
+.head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.count {
+  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.headActions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* 筛选条：级别（分段按钮）+ 来源下拉 + 搜索框 */
+.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.levelGroup { display: inline-flex; align-items: center; gap: 4px; }
+.searchInput {
+  flex: 1 1 140px; min-width: 120px; height: 30px; box-sizing: border-box; padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec);
+  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1);
+}
+.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f); }
+.searchInput:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+
+/* 列表本体：只有它滚动，筛选条和操作始终可见 */
+.listScroll {
+  max-height: min(52vh, 520px); overflow-y: auto;
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+}
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.row {
+  display: flex; flex-direction: column; gap: 3px; padding: 7px 10px;
+  border-left: 2px solid transparent; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.5;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+/* 警告 / 错误整行带左侧色条：一眼看出哪几条是坏消息 */
+.rowWarn { border-left-color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+.rowError { border-left-color: var(--dsw-alias-state-error-primary, #e05a5a); }
+
+.meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.time {
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.badge {
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 999px; padding: 0 6px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87);
+  font-weight: 600; letter-spacing: .04em; line-height: 1.7; white-space: nowrap;
+}
+.levelWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); border-color: currentColor; }
+.levelError { color: var(--dsw-alias-state-error-primary, #e05a5a); border-color: currentColor; }
+
+.source {
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 999px; padding: 0 6px;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87);
+  line-height: 1.7; white-space: nowrap; font-family: ui-monospace, Consolas, monospace;
+}
+
+.retry {
+  border: 0; background: none; padding: 0; font: inherit;
+  font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer;
+}
+.retry:hover { text-decoration: underline; }
+.retry:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+
+.message { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-word; overflow-wrap: anywhere; }
+/* 有详情的消息整行可点展开；焦点环与按钮一致 */
+.messageBtn {
+  display: block; width: 100%; border: 0; background: none; padding: 0; font: inherit; text-align: left;
+  color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-word; overflow-wrap: anywhere; cursor: pointer;
+}
+.messageBtn:hover { text-decoration: underline; }
+.messageBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+.caret { margin-right: 5px; color: var(--dsw-alias-label-tertiary, #67676f); }
+
+/* 详情：等宽字体、保留换行、可折行（上游 URL / 堆栈一行可以很长） */
+.detail {
+  margin: 2px 0 0; padding: 6px 8px; border-left: 2px solid var(--dsw-alias-border-l2, #2c2c34);
+  border-radius: 0 6px 6px 0; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  line-height: 1.55; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+}

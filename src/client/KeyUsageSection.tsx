@@ -1,16 +1,17 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
-import { fxSummaryTextOf, useCurrencyDisplay } from './core/currency.ts'
+import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
 import { PLUGIN_VERSION } from './core/version.ts'
-import { clearLog, hydrateLog, logEntries, logInfo, logText, logWarn, refreshLog, subscribeLog, subscribeOpenLog, type LogEntry } from './core/log.ts'
-import { TEXT_MIME, downloadFile, exportFileName } from './core/export.ts'
+import { hydrateLog, logInfo, logWarn, subscribeOpenLog } from './core/log.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
+import { LogPanel } from './components/LogPanel.tsx'
 import { Dialog } from './components/ui/Dialog.tsx'
+import { SettingsDialog } from './components/SettingsDialog.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
 import { ModelsTab } from './tabs/ModelsTab.tsx'
@@ -68,6 +69,8 @@ export function KeyUsageSection() {
   const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
   /** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
   const [showCaliber, setShowCaliber] = useState(false)
+  /** 设置弹窗：币种、汇率、价目的来源与刷新都收在这里，页面里只留结论。 */
+  const [showSettings, setShowSettings] = useState(false)
   /** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
   const [quotaDialog, setQuotaDialog] = useState<string | null>(null)
   const [showLog, setShowLog] = useState(false)
@@ -75,8 +78,20 @@ export function KeyUsageSection() {
   const t = useT()
   const lastSnapshotAt = useRef(0)
   const tooltip = useTooltip()
-  /** 汇率与显示币种放在模块级 store 里：任意 Tab 的金额都要按它折算，页脚也要显示来源。 */
-  const currency = useCurrencyDisplay()
+
+  /** 订阅显示币种：金额随它重渲染（币种与汇率本身在设置弹窗里改）。 */
+  useCurrencyDisplay()
+
+  /**
+   * 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
+   * 服务端只裁剪下发，构建仍是全量一份，所以不可能出现「两个数据源」。
+   */
+  const sectionsForTab = useCallback((tab: TabId): string[] => {
+    const base = ['channels', 'overview', 'heatmap', 'quota']
+    if (tab === 'sessions') return [...base, 'sessions']
+    if (tab === 'projects' || tab === 'models') return [...base, 'projects', 'models']
+    return base
+  }, [])
 
   /** 用户是否还在看默认范围（近 30 天 / 全部通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
   const usageIsDefaultRef = useRef(true)
@@ -86,15 +101,15 @@ export function KeyUsageSection() {
   const applySnapshot = useCallback((snapshot: SnapshotResponse) => {
     const sections = snapshot.sections
     setQuotaOutcome(snapshot.quotaOutcome)
-    if (sections.channels !== null) setChannels(sections.channels.channels ?? [])
-    if (sections.quota !== null) setQuotas(sections.quota.providers ?? [])
-    setSummary(sections.overview)
-    if (sections.heatmap !== null) setHeatmap(sections.heatmap.days ?? [])
-    setSessions(sections.sessions)
-    setProjects(sections.projects)
-    setModels(sections.models)
+    if (sections.channels !== undefined && sections.channels !== null) setChannels(sections.channels.channels ?? [])
+    if (sections.quota !== undefined && sections.quota !== null) setQuotas(sections.quota.providers ?? [])
+    if (sections.overview !== undefined) setSummary(sections.overview)
+    if (sections.heatmap !== undefined && sections.heatmap !== null) setHeatmap(sections.heatmap.days ?? [])
+    if (sections.sessions !== undefined) setSessions(sections.sessions)
+    if (sections.projects !== undefined) setProjects(sections.projects)
+    if (sections.models !== undefined) setModels(sections.models)
     const usageSection = sections.usage
-    if (usageIsDefaultRef.current && usageSection !== null) {
+    if (usageSection !== undefined && usageIsDefaultRef.current && usageSection !== null) {
       setUsage(usageSection)
       if (usageSection.availableFrom !== null && usageSection.availableTo !== null) {
         setAvailable({ from: usageSection.availableFrom, to: usageSection.availableTo })
@@ -107,7 +122,7 @@ export function KeyUsageSection() {
     }
     const partial: string[] = []
     for (const [name, section] of [['models', sections.models], ['projects', sections.projects], ['sessions', sections.sessions]] as const) {
-      if (section === null || section.coverage.status === 'complete') continue
+      if (section === undefined || section === null || section.coverage.status === 'complete') continue
       partial.push(name + '(' + section.coverage.status + '：' + String(section.coverage.countedSessions) + '/' + String(section.coverage.totalSessions) + ')')
     }
     if (partial.length > 0) logWarn('snapshot', t('log.coveragePartial') + '：' + partial.join('、'))
@@ -135,14 +150,14 @@ export function KeyUsageSection() {
     void (async () => {
       setLoading(true)
       // 打开页面就要最新：服务端先保证本地段重算过（超过防抖下限才重算），配额段后台补查
-      const snapshot = await loadSnapshot(true)
+      const snapshot = await loadSnapshot(true, sectionsForTab(activeTab))
       if (cancelled) return
       if (snapshot !== null) applySnapshot(snapshot)
       else await reloadFromEndpoints(false, false)
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [applySnapshot, reloadFromEndpoints])
+  }, [activeTab, applySnapshot, reloadFromEndpoints, sectionsForTab])
 
   /**
    * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
@@ -153,7 +168,7 @@ export function KeyUsageSection() {
     let attempts = 0
     let timer: ReturnType<typeof setTimeout> | null = null
     const chase = async (): Promise<void> => {
-      const snapshot = await loadSnapshot()
+      const snapshot = await loadSnapshot(false, sectionsForTab(activeTab))
       if (cancelled || snapshot === null) return
       applySnapshot(snapshot)
       if (snapshot.building === true || snapshot.quotaRefreshing === true) {
@@ -163,7 +178,7 @@ export function KeyUsageSection() {
     }
     timer = setTimeout(() => { void chase() }, 1500)
     return () => { cancelled = true; if (timer !== null) clearTimeout(timer) }
-  }, [applySnapshot])
+  }, [activeTab, applySnapshot, sectionsForTab])
 
   // 磁盘上的历史日志读回内存（刷新页面后还能看到上次为什么失败），并允许页面里任何组件请求打开日志窗
   useEffect(() => { void hydrateLog() }, [])
@@ -175,12 +190,12 @@ export function KeyUsageSection() {
     const tick = (): void => {
       if (document.visibilityState === 'hidden') return
       if (Date.now() - lastSnapshotAt.current < pollMs) return
-      void loadSnapshot().then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+      void loadSnapshot(false, sectionsForTab(activeTab)).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     }
     const timer = setInterval(tick, pollMs)
     document.addEventListener('visibilitychange', tick)
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick) }
-  }, [applySnapshot])
+  }, [activeTab, applySnapshot, sectionsForTab])
 
   // 价目信息：内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态（刷新价目后重取）
   useEffect(() => {
@@ -258,6 +273,12 @@ export function KeyUsageSection() {
               <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
               <circle cx="8" cy="4.9" r="0.85" fill="currentColor" />
               <rect x="7.15" y="6.9" width="1.7" height="5" rx="0.85" fill="currentColor" />
+            </svg>
+          </Button>
+          <Button size="sm" onClick={() => setShowSettings(true)} ariaLabel={t('action.settings')} title={t('action.settings')}>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <path fill="none" stroke="currentColor" strokeWidth="1.3" stroke-linecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
             </svg>
           </Button>
           <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
@@ -353,14 +374,15 @@ export function KeyUsageSection() {
           <li>{t('caliber.cost')}</li>
         <li>{t('caliber.costHint')}</li>
         <li>{t('caliber.pricingInfo')}</li>
-          <li>
-            {t('caliber.currency', {
-              fx: currency.fx === null ? t('caliber.fxMissing') : fxSummaryTextOf(currency.fx),
-            })}
-          </li>
+          <li>{t('caliber.sessionSource')}</li>
           <li>{t('caliber.refresh')}</li>
         </ul>
       </Dialog>)}
+
+      {showSettings && (
+        <Dialog title={t('settings.title')} closeLabel={t('action.close')} onClose={() => setShowSettings(false)}>
+          <SettingsDialog onPricingReload={() => setPricingRevision((previous) => previous + 1)} />
+        </Dialog>)}
 
       {showLog && (
       <Dialog title={t('log.title')} closeLabel={t('action.close')} onClose={() => setShowLog(false)}>
@@ -386,59 +408,4 @@ export function KeyUsageSection() {
   )
 }
 
-/** 系统日志面板：条目来自内存 + 磁盘（磁盘那份在页面打开时读回），可刷新 / 复制 / 导出 / 清空。 */
-function LogPanel(): ReactNode {
-  const [entries, setEntries] = useState(logEntries)
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({})
-  useEffect(() => subscribeLog(() => setEntries(logEntries())), [])
-  const toggle = (id: number): void => setExpanded((previous) => ({ ...previous, [id]: previous[id] !== true }))
-  return (
-    <div>
-      <div className={styles.logActions}>
-        <Button size="sm" onClick={() => { void refreshLog() }}>{t('action.refresh')}</Button>
-        <Button size="sm" disabled={entries.length === 0} onClick={() => {
-          navigator.clipboard?.writeText(logText()).catch(() => logWarn('export', t('log.copyBlocked'), 'clipboard'))
-        }}>{t('log.copy')}</Button>
-        <Button size="sm" disabled={entries.length === 0} onClick={() => {
-          try {
-            downloadFile(exportFileName('log', 'txt'), logText() + '\n', TEXT_MIME)
-          } catch (error) {
-            logWarn('export', t('log.exportBlocked'), error instanceof Error ? error.message : String(error))
-          }
-        }}>{t('log.export')}</Button>
-        <Button size="sm" onClick={() => { clearLog() }}>{t('log.clear')}</Button>
-      </div>
-      {entries.length === 0
-        ? <div className={styles.logEmpty}>{t('log.empty')}</div>
-        : (
-          <ul className={styles.logList}>
-            {[...entries].reverse().map((entry) => (
-              <li key={entry.id} className={styles.logRow}>
-                <span className={styles.logTime}>{new Date(entry.time).toLocaleTimeString('zh-CN', { hour12: false })}</span>
-                <span className={styles.logLevel + ' ' + (entry.level === 'error' ? styles.logError : entry.level === 'warn' ? styles.logWarn : '')}>{entry.level}</span>
-                <span className={styles.logSource}>{entry.source}</span>
-                {entry.detail === undefined
-                  ? <span className={styles.logMessage}>{messageTextOf(entry)}</span>
-                  : (
-                    <button type="button" className={styles.logMessageBtn} aria-expanded={expanded[entry.id] === true} onClick={() => toggle(entry.id)}>
-                      {messageTextOf(entry)}
-                    </button>
-                  )}
-                {entry.retry === undefined ? null : (
-                  <button type="button" className={styles.logRetry} onClick={() => { entry.retry?.() }}>{t('log.retry')}</button>
-                )}
-                {entry.detail !== undefined && expanded[entry.id] === true && (
-                  <div className={styles.logDetail + ' ' + styles.logDetailPad}>{entry.detail}</div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-    </div>
-  )
-}
 
-/** 日志条目正文：重复次数跟在消息后面（去重累加后要能看出「发生过几次」）。 */
-function messageTextOf(entry: LogEntry): string {
-  return entry.message + (entry.count > 1 ? ' ×' + String(entry.count) : '')
-}

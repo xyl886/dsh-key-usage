@@ -11,10 +11,10 @@ export type DisplayCurrency = 'CNY' | 'USD'
 
 export const DISPLAY_CURRENCIES: DisplayCurrency[] = ['CNY', 'USD']
 
-/** 切换按钮的文案：符号 + ISO 代码，避免只认符号的用户认错币种。 */
-export const DISPLAY_CURRENCY_LABELS: Record<DisplayCurrency, string> = {
-  CNY: '¥ RMB',
-  USD: '$ USD',
+/** 切换按钮的文案：只留单位符号（ISO 代码在设置弹窗与导出里出现，不占版面）。 */
+export const DISPLAY_CURRENCY_SYMBOLS: Record<DisplayCurrency, string> = {
+  CNY: '¥',
+  USD: '$',
 }
 
 /** 缺省显示人民币：内置官方价目以 CNY 为主，旧的界面口径也是 ¥。 */
