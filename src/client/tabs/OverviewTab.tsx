@@ -113,9 +113,3 @@ function quotaCellOf(channel: Channel): ReactNode {
   return <span className={[overviewStyles.quotaText, overviewStyles.dim].join(' ')}>{fallback}</span>
 }
 
-/** 供标题行使用的调用汇总（占位保持导出面稳定）。 */
-export function overviewCaptionOf(summary: SummaryResponse | null): string {
-  if (summary === null) return t('o.ledgerUnavailable')
-  const calls = summary.channels.reduce((total, row) => total + row.month.calls, 0)
-  return fmtCalls(calls) + t('o.callsSuffix')
-}

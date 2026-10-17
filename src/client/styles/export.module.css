@@ -2,7 +2,7 @@
 .exportGroup { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
 .exportBtn {
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); background: transparent;
-  color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 999px; padding: 4px 11px;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 8px; padding: 0 10px; height: 30px; box-sizing: border-box;
   font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); cursor: pointer; white-space: nowrap;
 }
 .exportBtn:hover:not(:disabled) {
@@ -15,5 +15,3 @@
   outline-offset: 2px;
 }
 
-/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
-.exportBtn { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }

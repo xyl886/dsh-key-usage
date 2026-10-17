@@ -85,7 +85,6 @@
 .rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 6px 0; }
 
 /* 汇率兜底/不可用那一行：与普通文本同排版，只是整句可点（点开系统日志看原因） */
-.fxHint { margin: 0; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); }
 
 /* 派生总余额：从卡片降级成一行小字（充值 + 赠送 = 总余额时不再单列一张卡） */
 .balanceTotal { margin-top: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); font-variant-numeric: tabular-nums; }

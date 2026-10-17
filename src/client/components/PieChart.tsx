@@ -57,7 +57,6 @@ export function PieChart(props: {
               onMouseMove={(event) => props.tooltip.show(event, (
                 <>
                   <TipTitle>{props.title}</TipTitle>
-                  <TipSub>{segment.label}</TipSub>
                   <TipRow color={segment.color} label={segment.label} amount={segment.amountText} rate={percentOf(segment.value) + '%'} />
                 </>
               ))}

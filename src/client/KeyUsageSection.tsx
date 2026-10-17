@@ -106,9 +106,10 @@ export function KeyUsageSection() {
     if (sections.quota !== undefined && sections.quota !== null) setQuotas(sections.quota.providers ?? [])
     if (sections.overview !== undefined) setSummary(sections.overview)
     if (sections.heatmap !== undefined && sections.heatmap !== null) setHeatmap(sections.heatmap.days ?? [])
-    if (sections.sessions !== undefined) setSessions(sections.sessions)
-    if (sections.projects !== undefined) setProjects(sections.projects)
-    if (sections.models !== undefined) setModels(sections.models)
+    // 段为 null 说明这次构建失败（sections 全置 null）：此时不能覆盖已按需取来的数据
+    if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
+    if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
+    if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
     const usageSection = sections.usage
     if (usageSection !== undefined && usageIsDefaultRef.current && usageSection !== null) {
       setUsage(usageSection)
@@ -354,17 +355,6 @@ export function KeyUsageSection() {
           onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('distribution') }}
         />
       )}
-      {activeTab === 'quota' && (
-        <QuotaTab
-          channels={channels}
-          quotas={quotas}
-          pricing={pricing}
-          quotaOutcome={quotaOutcome}
-          reloadToken={pricingRevision}
-          onPricingReload={() => setPricingRevision((previous) => previous + 1)}
-        />
-      )}
-
       {showCaliber && (
       <Dialog title={t('caliber.title')} closeLabel={t('action.close')} onClose={() => setShowCaliber(false)}>
         <div className={styles.caliberVersion}>{t('caliber.version', { version: PLUGIN_VERSION })}</div>

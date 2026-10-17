@@ -230,7 +230,6 @@ export function QuotaTab(props: {
                     loading={ratesLoading}
                     failureText={rates === null ? (failureReasonOf(RATES_PATH) ?? t('quota.noResponse')) : null}
                     display={display.display}
-                    convertedHint={display.fx === null ? null : fxSummaryTextOf(display.fx)}
                     range={rates !== null && typeof rates.from === 'string' && typeof rates.to === 'string'
                       ? { from: rates.from, to: rates.to }
                       : null}
@@ -270,7 +269,6 @@ function RateTable(props: {
   failureText: string | null
   display: DisplayCurrency
   /** 折算口径（`1 USD = 7.10 CNY · 来源 · 时间`）；没取到汇率时为 null。 */
-  convertedHint: string | null
   range: { from: string; to: string } | null
 }): ReactNode {
   if (props.rows.length === 0) {
@@ -284,13 +282,11 @@ function RateTable(props: {
       </div>
     )
   }
-  const converted = props.rows.some((row) => convertsCurrencyOf(row.currency))
   const offPeakNow = props.rows.some((row) => row.offPeak === true)
   return (
     <>
       <div className={quotaStyles.rateHead}>
         {t('quota.priceUnit')}（{t('unit.perMillion')} · {DISPLAY_CURRENCY_SYMBOLS[props.display]}）
-        {converted && props.convertedHint !== null ? t('q.convertedPrefix') + props.convertedHint + '）' : ''}
         {offPeakNow ? t('q.offPeakNow') : ''}
         {props.range === null ? '' : t('q.ratesRange')}
       </div>
@@ -317,7 +313,7 @@ function RateTable(props: {
                     {showCurrency && (
                       <div className={quotaStyles.rateConverted}>
                         {t('q.currencyLabel', { value: row.currency ?? '' })}
-                        {rowConverted ? ' → ' + props.display : ''}
+                        {rowConverted ? ' → ' + DISPLAY_CURRENCY_SYMBOLS[props.display] : ''}
                       </div>
                     )}
                   </td>
@@ -550,13 +546,10 @@ function issueTextOf(issue: { kind?: string; message: string }): string {
 
 /** 非实时值的小标签悬浮说明：数据时间 + 这次查询的结果或原因（原因不摊在版面上）。 */
 function snapshotTitleOf(snapshot: QuotaProvider | null, outcome: SnapshotQuotaOutcome['providers'][number] | null, channel: Channel): string {
-  const parts: string[] = []
-  if (outcome !== null && outcome.capturedAt !== null) parts.push(t('quota.snapshotAt', { time: localTimeTextOf(outcome.capturedAt) ?? t('quota.unknown') }))
-  else if (snapshot !== null && snapshot.updatedAt !== null) parts.push(t('quota.snapshotAt', { time: fmtDateTime(snapshot.updatedAt) }))
-  if (outcome !== null && outcome.ok === false) parts.push(errorTextOf(outcome.error) || t('quota.liveFailedShort'))
-  else if (snapshot !== null && snapshot.supported && snapshot.error !== null && snapshot.error !== '') parts.push(errorTextOf(snapshot.error))
-  else if (snapshot !== null && !snapshot.supported) parts.push(t('err.detail.none'))
-  return parts.join(' · ')
+  const capturedAt = outcome !== null && outcome.capturedAt !== null ? localTimeTextOf(outcome.capturedAt) : null
+  const fallbackTime = snapshot !== null && snapshot.updatedAt !== null ? fmtDateTime(snapshot.updatedAt) : null
+  const time = capturedAt ?? fallbackTime ?? t('quota.unknown')
+  return t('quota.snapshotAt', { time })
 }
 function errorTextOf(error: string | null): string {
   if (error === null) return t('err.noLiveQuery')

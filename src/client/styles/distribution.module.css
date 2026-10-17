@@ -24,3 +24,4 @@
 }
 .pieCenterValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.5); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .pieCenterLabel { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }
+.scopeNote { margin-top: 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }

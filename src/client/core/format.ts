@@ -75,14 +75,15 @@ export function fmtDuration(milliseconds: number | null): string {
   return `${hours}h ${minutes % 60}m`
 }
 
-/** 最近活跃：刚刚 / N 分钟前 / N 小时前 / N 天前。 */
+/** 最近活跃：确定性的本地时间（今天给 HH:mm，更早给 MM-DD HH:mm）—— 相对时间词（刚刚 / N 分钟前）用户明确不要。 */
 export function fmtRelative(timeMs: number | null, nowMs: number): string {
   if (timeMs === null) return '—'
-  const minutes = Math.round((nowMs - timeMs) / 60000)
-  if (minutes < 1) return t('fmt.justNow')
-  if (minutes < 60) return t('fmt.minutesAgo', { count: minutes })
-  if (minutes < 60 * 24) return t('fmt.hoursAgo', { count: Math.round(minutes / 60) })
-  return t('fmt.daysAgo', { count: Math.round(minutes / (60 * 24)) })
+  const time = new Date(timeMs)
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  const clock = pad(time.getHours()) + ':' + pad(time.getMinutes())
+  const now = new Date(nowMs)
+  const sameDay = time.getFullYear() === now.getFullYear() && time.getMonth() === now.getMonth() && time.getDate() === now.getDate()
+  return sameDay ? clock : pad(time.getMonth() + 1) + '-' + pad(time.getDate()) + ' ' + clock
 }
 
 /** 命中率：一位小数百分数，无提示侧 token 时返回 —。 */

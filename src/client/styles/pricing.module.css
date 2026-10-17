@@ -70,9 +70,6 @@
 /* 装载状态 / 条目数 / 时间等：一行小字，不写成大字报 */
 .aggregateMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
 .aggregateMeta b { color: var(--dsw-alias-label-secondary, #9a9aa2); font-weight: 600; }
-.aggregateStatus { margin-top: 4px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
-.aggregateStatusOk { color: var(--dsw-alias-state-success-primary, #3fb96f); }
-.aggregateStatusBad { color: var(--dsw-alias-state-error-primary, #e05a5a); }
 
 /* 口径说明：点 ⓘ 才展开，不占正文 */
 .explanation {

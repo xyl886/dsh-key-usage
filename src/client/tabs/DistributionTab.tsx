@@ -10,6 +10,7 @@ import { dropEmptyRows } from '../core/rows.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
 import type { Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse, SessionCoverage } from '../core/types.ts'
 import styles from '../styles/distribution.module.css'
+import listStyles from '../styles/lists.module.css'
 import sharedStyles from '../styles/shared.module.css'
 import { ModelsTab } from './ModelsTab.tsx'
 import { ProjectsTab, baseNameOf } from './ProjectsTab.tsx'
@@ -87,6 +88,13 @@ export function DistributionTab(props: {
         </Button>
       </div>
 
+      {view === 'project' && focusWorkspace !== null && (
+        <div className={listStyles.focusChip}>
+          {t('p.focusPrefix')}{focusWorkspace}
+          <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label={t('p.clearFilter')}>✕</button>
+        </div>
+      )}
+
       {!tableOpen && coverage !== undefined && coverage.status !== 'complete' && (
         <div className={sharedStyles.warning}>{coverageTextOf(coverage)}</div>
       )}
@@ -107,6 +115,7 @@ export function DistributionTab(props: {
           tooltip={props.tooltip}
         />
       </div>
+      <div className={styles.scopeNote}>{t('dist.costScope')}</div>
 
       {/* 表格默认收起：展开后直接用现成的两个页，筛选 / 排序 / 导出 / 联动都不重做 */}
       {tableOpen && (

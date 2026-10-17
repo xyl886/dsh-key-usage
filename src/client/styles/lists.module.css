@@ -3,9 +3,9 @@
 .searchInput {
   /* 定宽：吃满一行会把「导出 csv / json」挤到第二行（用户实测） */
   flex: 0 1 220px; min-width: 150px; max-width: 220px; background: transparent; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
- height: 30px;}
-.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f);  height: 30px;}
+  color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 8px; padding: 0 10px; font: inherit;
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); height: 30px; box-sizing: border-box; }
+.searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f); }
 .filterSelect {
   background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); cursor: pointer;
@@ -212,5 +212,3 @@
 .hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 2px 2px 0 0; }
 .hourBarTick { text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.83); color: var(--dsw-alias-label-tertiary, #67676f); }
 
-/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
-.searchInput { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }

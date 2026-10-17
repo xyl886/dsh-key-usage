@@ -29,9 +29,9 @@
 .selectWrap { position: relative; display: inline-block; }
 .selectBtn {
   display: inline-flex; align-items: center; gap: 8px; max-width: 240px;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px;
   background: transparent; color: var(--dsw-alias-label-primary, #e8e8ec);
-  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 0 10px; height: 30px; box-sizing: border-box; border-radius: 8px; cursor: pointer;
+  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 0 10px; height: 30px; box-sizing: border-box; cursor: pointer;
 }
 .selectBtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
 .selectBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
@@ -116,8 +116,6 @@
 .dateClear:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 
 
-/* 统一控件尺寸（需求 4）：下拉触发按钮 */
-.selectBtn { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }
 
 /* 一行状态提示（LogHint）：结论留在页面，原因进系统日志；整句可点，点开日志窗 */
 .logHint { display: inline-flex; align-items: baseline; gap: 6px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-align: left; }
