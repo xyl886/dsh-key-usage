@@ -80,8 +80,8 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 - **本地 vs 远端（2026-10-13 用户明确）**：
   - **本地 commit 可以自行做**（用于留可回退基线），但仍要选在**验证通过、没有并行写入者**的时点，不要把半成品提交进去。
   - **任何远端动作都必须先获得用户明确授权**：`git push`、`npm publish`、以及会触发远端工作流的操作（`gh workflow run`，包括 `publish.yml` 的 dry_run）。授权要具体到「推送 / 发版」这类指令，不能由「已验证 / 已验收」推断出来。
-- **版本号只由用户的发布指令推动**：1.0 之前一律走 `patch`；npm 上最新已发布的是 **`0.1.7`（2026-10-15 经 CI 发布）**，本地已累计 **0.1.8 的改动但尚未发布** —— `package.json` 的 `version` 仍保持 `0.1.7`，**禁止自行升版、禁止自行发布**，这批改动合并记在 CHANGELOG 的 `[0.1.8] —— 未发布` 一节里。**发版时读 npm 上最新已发布的版本号，往后推一个 `.1`**（现在是 `0.1.7` → `0.1.8`），本地攒了多少提交都不改变这一步 —— 不要按提交数或自己的判断升版。
-- 本机发布：`npm version patch --no-git-tag-version` → `npm publish`；发布前跑完 `verify` / `pack:dry`。
+- **版本号只由用户的发布指令推动**：1.0 之前一律走 `patch`；**发版时读 npm 上最新已发布的版本号（`npm view dsh-key-usage version`），往后推一个 `.1`**（如 `0.1.7` → `0.1.8`），本地攒了多少提交都不改变这一步 —— 不要按提交数或自己的判断升版；未得到发布指令前**禁止自行升版、禁止自行发布**。某一版是否已发布，看 CHANGELOG 该节标题：没发时写「未发布」，发布后改成发布当天的日期。
+- 本机发布：`npm version patch --no-git-tag-version` → `npm publish`；发布前跑完 `verify` / `pack:dry`。CI 发布成功后，把 CHANGELOG 该节标题的「未发布」改成发布当天的日期。
 - **CI 发布（长期做法）**：`.github/workflows/publish.yml` 手动触发，默认 `dry_run=true` 只校验打包；改成 false 才真正 `pnpm publish --provenance --no-git-checks`。**token 只放仓库 Secret `NPM_TOKEN`，本机不再放**。
 - 已发布的版本号**永久占用**（撤回了也不能复用），所以改版本号前先确认。
 - **撤回的坑**：`npm unpublish` 属于破坏性操作，**「Bypass 2FA」的 granular token 会被 npm 拒绝**（`E403 … may not perform this action`）。真要撤回需要：新建一个**不勾 Bypass2FA** 的 token + 命令带 `--otp=<验证码>`。另外**单版本撤回只有 CLI 支持**，官网「Delete package」是删整包（还会锁 24 小时）。

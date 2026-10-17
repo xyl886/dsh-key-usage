@@ -6827,7 +6827,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						onClose: () => setShowCaliber(false),
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.caliberVersion,
-							children: t("caliber.version", { version: "0.1.7" })
+							children: t("caliber.version", { version: "0.1.8" })
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 							className: shared_module_css_default.footnoteList,
 							children: [
