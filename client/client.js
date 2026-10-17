@@ -1677,9 +1677,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function moneyTotalsTextOf(row) {
 			return rowMoneyViewOf(row).text;
 		}
-		/** 同一行在展示币种下的可比数值（环比涨跌、排序用）。 */
-		function comparableMoneyAmountOf(row) {
-			return rowMoneyViewOf(row).amount;
+		/**
+		* 同一行在展示币种下的可比数值（环比涨跌、排序用）。
+		*
+		* `rowMoneyViewOf().amount` 在**混币种又折算不了**时是「把各币种当同一个币种相加」（界面会如实显示 `¥611.55 · $11.63`
+		* 这种分行文本），拿它算环比会得到一个没有意义的百分比 —— 所以这里只在**同一币种口径**下给数字：
+		* 每个分币种小计要么本身就是展示币种，要么能按汇率折过来；否则返回 null（调用方据此不显示环比）。
+		*/
+		function comparableMoneyOf(row) {
+			const entries = positiveEntriesOf(row);
+			if (entries.length === 0) return typeof row.cost === "number" && Number.isFinite(row.cost) ? row.cost : null;
+			let total = 0;
+			for (const [currency, amount] of entries) {
+				const view = moneyViewOf(currency, amount);
+				if (!view.converted && normalizeCurrency(currency) !== state.display) return null;
+				total += view.amount;
+			}
+			return total;
 		}
 		/** 汇率说明：`1 USD = 7.10 CNY · 实时上游 · 08-14 10:22`；没取到时说明为什么。 */
 		function fxSummaryTextOf(fx) {
@@ -3487,7 +3501,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				dailyAvg: activeDays === 0 ? 0 : tokens / activeDays,
 				channels: channels.size,
 				activeDays,
-				cost: usage.totals === null ? 0 : comparableMoneyAmountOf(usage.totals)
+				costRow: usage.totals
 			};
 		}
 		/** 百分比涨跌角标。 */
@@ -3549,6 +3563,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (current === null) return null;
 				const aboveOf = (node) => previous === null ? void 0 : node;
 				const points = (value) => value === null ? "—" : (value * 100).toFixed(1) + "%";
+				const currentCost = current.costRow === null ? null : comparableMoneyOf(current.costRow);
+				const previousCost = previous === null || previous.costRow === null ? null : comparableMoneyOf(previous.costRow);
 				return {
 					calls: {
 						above: aboveOf(previous === null ? "—" : fmtCalls(previous.calls)),
@@ -3587,8 +3603,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						badge: previous === null ? null : percentBadge(current.activeDays, previous.activeDays, false)
 					},
 					cost: {
-						above: aboveOf(previous === null ? "—" : rowMoneyViewOf({ cost: previous.cost }).text),
-						badge: previous === null || current.cost === 0 ? null : percentBadge(current.cost, previous.cost, true)
+						above: aboveOf(previous === null || previous.costRow === null ? "—" : rowMoneyViewOf(previous.costRow).text),
+						badge: previousCost === null || currentCost === null || previousCost === 0 || currentCost === 0 ? null : percentBadge(currentCost, previousCost, true)
 					}
 				};
 			}, [

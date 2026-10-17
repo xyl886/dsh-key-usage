@@ -7,7 +7,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadUsage } from '../core/api.ts'
-import { comparableMoneyAmountOf, rowMoneyViewOf } from '../core/currency.ts'
+import { comparableMoneyOf, rowMoneyViewOf } from '../core/currency.ts'
+import type { CostRowLike } from '../core/currency.ts'
 import { fmtCalls, fmtTokens, isoDate } from '../core/format.ts'
 import { t } from '../core/i18n.ts'
 import type { Channel, UsageResponse } from '../core/types.ts'
@@ -40,7 +41,8 @@ interface Metrics {
   dailyAvg: number
   channels: number
   activeDays: number
-  cost: number
+  /** 原始分币种行：环比要先判断两期能不能按同一币种口径比（混币种又没汇率时不给环比） */
+  costRow: CostRowLike | null
 }
 
 /** 闭区间天数，至少 1。 */
@@ -84,7 +86,7 @@ function metricsOf(usage: UsageResponse | null): Metrics | null {
     dailyAvg: activeDays === 0 ? 0 : tokens / activeDays,
     channels: channels.size,
     activeDays,
-    cost: usage.totals === null ? 0 : comparableMoneyAmountOf(usage.totals),
+    costRow: usage.totals,
   }
 }
 
@@ -139,6 +141,10 @@ export function useTrend(props: {
     if (current === null) return null
     const aboveOf = (node: ReactNode): ReactNode => previous === null ? undefined : node
     const points = (value: number | null): string => value === null ? '—' : (value * 100).toFixed(1) + '%'
+    // 成本环比只在两期都能按同一币种口径比时给：混币种又没汇率时 `comparableMoneyOf` 返回 null，
+    // 这时主值会如实显示 `¥611.55 · $11.63`，上期值显示它自己的分币种构成，**不给百分比**（宁缺不猜）。
+    const currentCost = current.costRow === null ? null : comparableMoneyOf(current.costRow)
+    const previousCost = previous === null || previous.costRow === null ? null : comparableMoneyOf(previous.costRow)
     return {
       calls: { above: aboveOf(previous === null ? '—' : fmtCalls(previous.calls)), badge: previous === null ? null : percentBadge(current.calls, previous.calls, false) },
       tokens: { above: aboveOf(previous === null ? '—' : fmtTokens(previous.tokens)), badge: previous === null ? null : percentBadge(current.tokens, previous.tokens, false) },
@@ -150,9 +156,12 @@ export function useTrend(props: {
       channels: { above: aboveOf(previous === null ? '—' : String(previous.channels)), badge: previous === null ? null : percentBadge(current.channels, previous.channels, false) },
       activeDays: { above: aboveOf(previous === null ? '—' : String(previous.activeDays)), badge: previous === null ? null : percentBadge(current.activeDays, previous.activeDays, false) },
       cost: {
-        above: aboveOf(previous === null ? '—' : rowMoneyViewOf({ cost: previous.cost }).text),
+        above: aboveOf(previous === null || previous.costRow === null ? '—' : rowMoneyViewOf(previous.costRow).text),
         // 成本为 0（订阅内 / 无计费 / 无依据）时不给环比：没有可比金额
-        badge: previous === null || current.cost === 0 ? null : percentBadge(current.cost, previous.cost, true),
+        badge:
+          previousCost === null || currentCost === null || previousCost === 0 || currentCost === 0
+            ? null
+            : percentBadge(currentCost, previousCost, true),
       },
     }
   }, [comparable, usage, previousUsage])
