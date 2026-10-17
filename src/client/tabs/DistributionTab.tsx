@@ -7,7 +7,7 @@ import { fmtTokens } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
-import type { Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse } from '../core/types.ts'
+import type { Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse, SessionCoverage } from '../core/types.ts'
 import detailStyles from '../styles/detail.module.css'
 import styles from '../styles/distribution.module.css'
 import sharedStyles from '../styles/shared.module.css'
@@ -275,4 +275,10 @@ function sumTokens(entries: ShareEntry[]): number {
 
 function percentOf(value: number, total: number): number {
   return total > 0 ? Math.round(value / total * 100) : 0
+}
+
+/** 会话数据覆盖度结论：与两张列表同一套文案（不完整 / 不可用）。 */
+function coverageTextOf(coverage: SessionCoverage): string {
+  if (coverage.status === 'unavailable') return t('s.unavailable')
+  return t('s.partial') + String(coverage.skippedSessions) + t('s.partialTail')
 }

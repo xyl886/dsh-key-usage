@@ -11,8 +11,7 @@ export const zh: Record<string, string> = {
 
   'tab.overview': '总览',
   'tab.detail': '使用明细',
-  'tab.projects': '项目用量',
-  'tab.models': '按模型',
+  'tab.distribution': '分布',
   'tab.sessions': '会话用量',
   'tab.quota': '余额与配额',
 
@@ -495,8 +494,7 @@ export const en: Record<string, string> = {
 
   'tab.overview': 'Overview',
   'tab.detail': 'Details',
-  'tab.projects': 'Projects',
-  'tab.models': 'Models',
+  'tab.distribution': 'Distribution',
   'tab.sessions': 'Sessions',
   'tab.quota': 'Balance',
 

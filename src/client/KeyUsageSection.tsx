@@ -14,8 +14,7 @@ import { Dialog } from './components/ui/Dialog.tsx'
 import { SettingsDialog } from './components/SettingsDialog.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
-import { ModelsTab } from './tabs/ModelsTab.tsx'
-import { ProjectsTab } from './tabs/ProjectsTab.tsx'
+import { DistributionTab } from './tabs/DistributionTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
 import type {
@@ -33,13 +32,12 @@ import type {
 } from './core/types.ts'
 import styles from './styles/shared.module.css'
 
-type TabId = 'overview' | 'detail' | 'projects' | 'models' | 'sessions' | 'quota'
+type TabId = 'overview' | 'detail' | 'distribution' | 'sessions' | 'quota'
 
 const TABS: Array<[TabId, string]> = [
   ['overview', 'tab.overview'],
   ['detail', 'tab.detail'],
-  ['projects', 'tab.projects'],
-  ['models', 'tab.models'],
+  ['distribution', 'tab.distribution'],
   ['sessions', 'tab.sessions'],
 ]
 
@@ -89,7 +87,7 @@ export function KeyUsageSection() {
   const sectionsForTab = useCallback((tab: TabId): string[] => {
     const base = ['channels', 'overview', 'heatmap', 'quota']
     if (tab === 'sessions') return [...base, 'sessions']
-    if (tab === 'projects' || tab === 'models') return [...base, 'projects', 'models']
+    if (tab === 'distribution') return [...base, 'projects', 'models']
     return base
   }, [])
 
@@ -213,8 +211,10 @@ export function KeyUsageSection() {
   // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab；快照已经带了就直接用）
   useEffect(() => {
     if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
-    if (activeTab === 'projects' && projects === null) void loadProjects().then(setProjects)
-    if (activeTab === 'models' && models === null) void loadModels().then(setModels)
+    if (activeTab === 'distribution') {
+      if (projects === null) void loadProjects().then(setProjects)
+      if (models === null) void loadModels().then(setModels)
+    }
   }, [activeTab, sessions, projects, models])
 
   const bounds = useMemo(() => {
@@ -332,21 +332,22 @@ export function KeyUsageSection() {
           pricingRevision={pricingRevision}
         />
       )}
-      {activeTab === 'projects' && (
-        <ProjectsTab
-          data={projects}
+      {activeTab === 'distribution' && (
+        <DistributionTab
+          projects={projects}
+          models={models}
           channels={channels}
+          tooltip={tooltip}
           focusWorkspace={projectFilter}
           onClearFocus={() => setProjectFilter(null)}
         />
       )}
-      {activeTab === 'models' && <ModelsTab data={models} channels={channels} />}
       {activeTab === 'sessions' && (
         <SessionsTab
           data={sessions}
           channels={channels}
           tooltip={tooltip}
-          onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('projects') }}
+          onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('distribution') }}
         />
       )}
       {activeTab === 'quota' && (
