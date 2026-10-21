@@ -35,8 +35,6 @@
 .windowBar { height: 6px; border-radius: 4px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; }
 .windowBar > i { display: block; height: 100%; border-radius: 4px; }
 
-.countLine { color: var(--dsw-alias-label-secondary, #9a9aa2); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.8; margin: 6px 0; }
-.staleLine { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7; margin: 6px 0; }
 
 /* ===== 展开区：单价表（窄屏横向滚动）===== */
 .rateDrawer:empty { display: none; }

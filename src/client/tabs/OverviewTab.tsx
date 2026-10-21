@@ -19,6 +19,8 @@ export function OverviewTab(props: {
   onOpenDetail: (provider: string) => void
   /** 点通道行：打开该通道的余额/配额详情弹窗 */
   onOpenChannel: (provider: string) => void
+  /** 点热力图某天：切到「使用明细」并定位到那一天 */
+  onPickDay: (date: string) => void
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
@@ -50,7 +52,7 @@ export function OverviewTab(props: {
                     <div className={overviewStyles.keyDisplay}>{channel.displayName}</div>
                   </div>
                 </td>
-                <td><span className={tagClassOf(channel)}>{channel.status === 'off' ? t('err.noApiKey') : t(COST_MODE_TAG_KEYS[channel.costMode] ?? 'ch.notQueried')}</span></td>
+                <td><span className={tagClassOf(channel)}>{t(COST_MODE_TAG_KEYS[channel.costMode] ?? 'ch.notQueried')}</span></td>
                 <td>{todayTokens > 0 ? fmtTokens(todayTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{monthTokens > 0 ? fmtTokens(monthTokens) : <span className={styles.dim}>—</span>}</td>
                 <td>{quotaCellOf(channel)}</td>
@@ -67,7 +69,7 @@ export function OverviewTab(props: {
         </tbody>
       </table></div>
 
-      <Heatmap days={props.heatmap} channels={channels} tooltip={props.tooltip} />
+      <Heatmap days={props.heatmap} channels={channels} tooltip={props.tooltip} onPickDay={props.onPickDay} />
 
       {summary === null && (
         <div className={styles.empty}>{t('o.ledgerHint')}</div>

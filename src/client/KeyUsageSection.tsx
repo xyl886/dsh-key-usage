@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadPricing, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
+import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
@@ -21,7 +21,6 @@ import type {
   Channel,
   HeatmapDay,
   ModelsResponse,
-  PricingResponse,
   ProjectsResponse,
   QuotaProvider,
   SessionsResponse,
@@ -58,7 +57,6 @@ export function KeyUsageSection() {
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
-  const [pricing, setPricing] = useState<PricingResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
   /** 价目版本号：点「刷新价目」后自增，用来让服务端重算成本并整体重取数据。 */
@@ -148,17 +146,23 @@ export function KeyUsageSection() {
     }
   }, [])
 
-  // 首次打开：取快照（还没有时服务端会现算一份），失败才退回逐端点
+  // 首屏两段式：先出本机快照（读文件，毫秒级），再让服务端重建并追取 —— 打开页面不干等重建
   useEffect(() => {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      // 打开页面就要最新：服务端先保证本地段重算过（超过防抖下限才重算），配额段后台补查
       if (initialSectionsRef.current.length === 0) initialSectionsRef.current = sectionsForTab(activeTab)
-      const snapshot = await loadSnapshot(true, initialSectionsRef.current)
+      const cached = await loadSnapshot(false, initialSectionsRef.current)
       if (cancelled) return
-      if (snapshot !== null) applySnapshot(snapshot)
-      else await reloadFromEndpoints(false, false)
+      if (cached !== null) {
+        applySnapshot(cached)
+        setLoading(false)
+      }
+      // fresh=1：服务端保证本地段重算过（超过防抖下限才重算），配额段后台补查，返回后替换
+      const fresh = await loadSnapshot(true, initialSectionsRef.current)
+      if (cancelled) return
+      if (fresh !== null) applySnapshot(fresh)
+      else if (cached === null) await reloadFromEndpoints(false, false)
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
@@ -166,7 +170,7 @@ export function KeyUsageSection() {
 
   /**
    * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
-   * 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。最多追 6 次（约 12 秒）就放弃。
+   * 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。最多追 2 次（约 4 秒）就放弃。
    */
   useEffect(() => {
     let cancelled = false
@@ -178,7 +182,7 @@ export function KeyUsageSection() {
       applySnapshot(snapshot)
       if (snapshot.building === true || snapshot.quotaRefreshing === true) {
         attempts += 1
-        if (attempts < 6) timer = setTimeout(() => { void chase() }, 2000)
+        if (attempts < 2) timer = setTimeout(() => { void chase() }, 2000)
       }
     }
     timer = setTimeout(() => { void chase() }, 1500)
@@ -201,13 +205,6 @@ export function KeyUsageSection() {
     document.addEventListener('visibilitychange', tick)
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick) }
   }, [activeTab, applySnapshot, sectionsForTab])
-
-  // 价目信息：内置官方价目来源、覆盖度、价目文件与解析问题、聚合价目装载状态（刷新价目后重取）
-  useEffect(() => {
-    let cancelled = false
-    void loadPricing().then((result) => { if (!cancelled) setPricing(result) })
-    return () => { cancelled = true }
-  }, [pricingRevision])
 
   // 价目换了 → 让服务端重算一次（成本按价目算）并取回新快照
   useEffect(() => {
@@ -233,7 +230,9 @@ export function KeyUsageSection() {
     return { from: available?.from ?? today, to: available?.to ?? today }
   }, [range, customFrom, customTo, available])
 
+  // 明细数据只在切到「使用明细」时才取：总览 / 分布 / 会话都不需要它
   useEffect(() => {
+    if (activeTab !== 'detail') return
     let cancelled = false
     void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => {
       if (cancelled || result === null) return
@@ -243,7 +242,7 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [bounds.from, bounds.to, channelFilter, pricingRevision])
+  }, [activeTab, bounds.from, bounds.to, channelFilter, pricingRevision])
 
   const refresh = useCallback(() => {
     setLoading(true)
@@ -320,6 +319,7 @@ export function KeyUsageSection() {
           tooltip={tooltip}
           onOpenDetail={(provider) => { setChannelFilter(provider); setActiveTab('detail') }}
           onOpenChannel={setQuotaDialog}
+          onPickDay={(date) => { setRange('custom'); setCustomFrom(date); setCustomTo(date); setActiveTab('detail') }}
         />
       )}
       {activeTab === 'detail' && (
@@ -392,7 +392,6 @@ export function KeyUsageSection() {
             onlyProvider={quotaDialog}
           channels={channels}
           quotas={quotas}
-          pricing={pricing}
           quotaOutcome={quotaOutcome}
           reloadToken={pricingRevision}
           onPricingReload={() => setPricingRevision((previous) => previous + 1)}

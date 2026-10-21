@@ -49,10 +49,10 @@ const LEVEL_COLORS = [
   'var(--dsw-alias-state-business-primary, #5b8cff)',
 ]
 
-export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; tooltip: TooltipApi }): ReactNode {
+export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; tooltip: TooltipApi; onPickDay?: (date: string) => void }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
-  const { days, channels, tooltip } = props
+  const { days, channels, tooltip, onPickDay } = props
   const heatmapByDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   const thresholds = useMemo(() => levelThresholds(days), [days])
 
@@ -117,15 +117,6 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
     >
       <div className={styles.heatmapHead}>
         <span className={styles.heatmapTitle}>{t('h.summary')}</span>
-        <span className={shared.legend}>
-          <span><i className={styles.ghost} />{t('h.noData')}</span>
-          <span><i style={{ background: LEVEL_COLORS[0] }} />{t('h.noUsage')}</span>
-          <span><i style={{ background: LEVEL_COLORS[1] }} />{t('h.level1')}</span>
-          <span><i style={{ background: LEVEL_COLORS[2] }} />{t('h.level2')}</span>
-          <span><i style={{ background: LEVEL_COLORS[3] }} />{t('h.level3')}</span>
-          <span><i style={{ background: LEVEL_COLORS[4] }} />{t('h.level4')}</span>
-          <span><i style={{ background: LEVEL_COLORS[5] }} />{t('h.level5')}</span>
-        </span>
       </div>
       <div className={styles.heatmapScroll} ref={scrollRef}>
         <div className={styles.heatmapBody}>
@@ -148,6 +139,7 @@ export function Heatmap(props: { days: HeatmapDay[]; channels: Channel[]; toolti
                         style={cell.state === 'active' ? { background: LEVEL_COLORS[cell.level] } : undefined}
                         onMouseMove={(event) => tooltip.show(event, tipOf(cell, day, channels))}
                         onMouseLeave={tooltip.hide}
+                        onClick={cell.state === 'active' ? () => onPickDay?.(cell.date) : undefined}
                       />
                     )
                   })}

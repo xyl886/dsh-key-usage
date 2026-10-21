@@ -77,7 +77,6 @@
 .warning { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-bottom: 10px; }
 .legend { display: inline-flex; gap: 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); color: var(--dsw-alias-label-tertiary, #67676f); align-items: center; flex-wrap: wrap; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
-.legend i.ghost { background: rgba(128,128,140,.10); border: 1px solid rgba(128,128,140,.28); }
 
 /* 口径说明分点分行：每条一句话，避免挤成一段 */
 .footnoteList { margin: 4px 0 0; padding-left: 18px; }
@@ -107,7 +106,6 @@
 }
 
 /* 图例里的「无数据」色块：CSS Modules 需要独立类才能被引用（原来写成裸 className="ghost" 永不生效） */
-.ghost { background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .10)); border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 140, .28)); }
 
 /* 口径弹窗里的版本号：弱化一行，便于报问题时报出来 */
 .caliberVersion { margin: 0 0 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }

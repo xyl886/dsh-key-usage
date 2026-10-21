@@ -12,16 +12,11 @@ import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
 import { isEnglish, t, useT } from '../core/i18n.ts'
 import { logWarn, requestOpenLog } from '../core/log.ts'
 import { serverText } from '../core/serverText.ts'
-import {
-  LITELLM_REPO_URL, aggregateLoadedLabelOf, catalogStaleDays, costSourceHintOf, fetchedDaysAgo, hostOf,
-  megabytesTextOf, shortCommitOf, COST_SOURCE_HINTS,
-  type AggregateIssue, type CostSource, type ModelPriceAggregate, type PricingResponse,
-} from '../core/pricing.ts'
+import { costSourceHintOf, COST_SOURCE_HINTS, type CostSource } from '../core/pricing.ts'
 import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../core/types.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
-import pricingStyles from '../styles/pricing.module.css'
 import uiStyles from '../styles/ui.module.css'
 
 /** 余额字段展示顺序（未收录字段按原键名追加在后）。 */
@@ -31,9 +26,6 @@ const BALANCE_LABELS: Record<string, string> = {
 }
 const WINDOW_ORDER = ['5h', 'week', 'month', 'day']
 const WINDOW_LABELS: Record<string, string> = { '5h': 'window.5h', week: 'window.week', month: 'window.month', day: 'window.day' }
-
-/** 解析问题默认只列几条：一屏列不完的清单没人读。 */
-const ISSUE_LIMIT = 5
 
 /** 单价来源在表格里的说法（`none` 写「无依据」，不用角标的 `—`）。 */
 const RATE_SOURCE_LABELS: Record<string, string> = {
@@ -54,7 +46,6 @@ function resetTextOf(value: unknown): string {
 export function QuotaTab(props: {
   channels: Channel[]
   quotas: QuotaProvider[]
-  pricing: PricingResponse | null
   /** 配额执行结果：哪个通道这次查到实时值、展示值时间与失败原因（用来标「本机快照 + 数据时间」）。 */
   quotaOutcome: SnapshotQuotaOutcome | null
   /** 只渲染指定通道（总览的行内弹窗用）；不传则渲染全部通道。 */
@@ -68,12 +59,10 @@ export function QuotaTab(props: {
   const t = useT()
   // 抽屉 / 信息块的 id 逐实例唯一：同一页渲染两份时写死字符串会撞 id，aria-controls 会指到别处
   const instanceId = useId()
-  const pricingInfoId = instanceId + '-pricing-info'
   const display = useCurrencyDisplay()
 
   const [rates, setRates] = useState<RatesResponse | null>(null)
   const [ratesLoading, setRatesLoading] = useState(true)
-  const [showPricingInfo, setShowPricingInfo] = useState(false)
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
 
   // 单价表：近 30 天用到的模型（刷新价目后价目层变了，要重取）
@@ -113,14 +102,6 @@ export function QuotaTab(props: {
     }
   }, [props.channels, props.quotas, props.quotaOutcome, t])
 
-  // 服务端没升级时整块缺省：按「读不到」降级，不影响余额与窗口
-  const pricing = props.pricing
-  const aggregate: ModelPriceAggregate | null = pricing?.aggregate ?? null
-  const catalog = pricing?.catalog ?? null
-  const issues = Array.isArray(pricing?.issues) ? pricing.issues : []
-  // 超过阈值就改成警示样式并提示复核：价目是静态数据，厂商调价后只能人工更新
-  const catalogStale = catalog === null ? null : catalogStaleDays(Array.isArray(catalog.sources) ? catalog.sources : [])
-
   const rateChannels = Array.isArray(rates?.channels) ? rates.channels : []
   const rateRowsOf = (provider: string): ModelRateRow[] => {
     const entry = rateChannels.find((item) => item.provider === provider)
@@ -130,11 +111,6 @@ export function QuotaTab(props: {
   return (
     <div>
 
-      {catalogStale !== null && (
-        <div className={quotaStyles.staleLine}>
-          {t('quota.catalogStale', { days: catalogStale })}
-        </div>
-      )}
 
       
 
@@ -362,178 +338,6 @@ function noRateTextOf(source: CostSource): string {
   return t(COST_SOURCE_HINTS[source] ?? 'quota.noFourRates')
 }
 
-/** 价目信息块：官方价目来源与新鲜度、价目文件与解析问题、聚合价目装载状态。 */
-function PricingInfoBlock(props: {
-  pricing: PricingResponse | null
-  aggregate: ModelPriceAggregate | null
-  issues: PricingResponse['issues']
-  catalogStale: number | null
-}): ReactNode {
-  const { pricing, aggregate } = props
-  const catalog = pricing?.catalog ?? null
-  const sources = Array.isArray(catalog?.sources) ? catalog.sources : []
-  const issues = props.issues ?? []
-  const shownIssues = issues.slice(0, ISSUE_LIMIT)
-  const coverage = pricing?.coverage ?? null
-  const files = pricing?.files ?? null
-  const coverageText = coverageTextOf(coverage)
-
-  // issues 是新增字段，老响应可能整块没有；非数组一律当空（不让一条脏数据把这块带崩）
-  const aggregateIssues = (Array.isArray(aggregate?.issues) ? aggregate.issues : [])
-    .filter((issue): issue is AggregateIssue => issue !== null && typeof issue === 'object')
-  const fetchedAtText = aggregate === null ? null : localTimeTextOf(aggregate.fetchedAt)
-  const pathText = typeof aggregate?.path === 'string' && aggregate.path !== '' ? aggregate.path : null
-  const commitFull = typeof aggregate?.upstreamCommit === 'string' && aggregate.upstreamCommit.trim() !== ''
-    ? aggregate.upstreamCommit.trim()
-    : null
-  const commitShort = commitFull === null ? null : shortCommitOf(commitFull)
-  const licenseText = typeof aggregate?.license === 'string' && aggregate.license.trim() !== ''
-    ? aggregate.license
-    : 'MIT'
-
-  return (
-    <>
-      {coverageText !== null && <div className={quotaStyles.countLine}>{coverageText}</div>}
-
-      {catalog !== null && Number.isFinite(catalog.entries) && catalog.entries > 0 && (
-        <div className={pricingStyles.catalogNote + (props.catalogStale === null ? '' : ' ' + pricingStyles.catalogStale)}>
-          {t('q.catalogLoaded', { count: catalog.entries })}
-          {sources.length === 0
-            ? t('quota.noSourceDetail')
-            : sources.map((entry, index) => {
-              const daysAgo = fetchedDaysAgo(entry.fetchedAt)
-              return (
-                <span key={entry.source}>
-                  {index > 0 && '；'}
-                  {typeof entry.source === 'string' && entry.source !== ''
-                    ? <a className={pricingStyles.linkBtn} href={entry.source} target="_blank" rel="noreferrer">{(entry.providers ?? []).join(' / ')}</a>
-                    : (entry.providers ?? []).join(' / ')}
-                  {t('q.sourceLine', {
-                    count: entry.count,
-                    date: entry.fetchedAt,
-                    ago: daysAgo === null ? '' : t('q.agoPrefix') + String(daysAgo) + t('q.daySuffix'),
-                  })}
-                </span>
-              )
-            })}
-        </div>
-      )}
-
-      {files !== null && files.catalog !== undefined && (
-        <div className={pricingStyles.fileLine}>
-          <span>
-            {t('q.catalogFile')} <code className={pricingStyles.pathText}>{files.catalog.path}</code>
-            {files.catalog.exists ? '（' + String(files.catalog.entries) + t('q.entriesClose') : '（' + t('quota.unreadable') + '）'}
-          </span>
-        </div>
-      )}
-
-      {issues.length > 0 && (
-        <div className={pricingStyles.issueBlock}>
-          <div className={pricingStyles.issueHead}>
-            <b>{t('q.issueCount', { count: issues.length })}</b>
-            <span className={pricingStyles.issueNote}>
-              {t('q.issueNote')}
-            </span>
-          </div>
-          <ul className={pricingStyles.issueList}>
-            {shownIssues.map((issue, index) => (
-              <li key={String(issue.file) + '|' + String(issue.line) + '|' + String(index)}>
-                <span className={pricingStyles.issueWhere}>
-                  {t('q.issuePrefix')}{issue.line === null ? '' : ' ' + t('quota.row', { count: issue.line })}
-                </span>
-                {issueTextOf(issue)}
-              </li>
-            ))}
-          </ul>
-          {issues.length > ISSUE_LIMIT && (
-            <div className={pricingStyles.issueNote}>{t('q.issueMore', { count: issues.length - ISSUE_LIMIT })}</div>
-          )}
-        </div>
-      )}
-
-      <div className={pricingStyles.aggregateBlock}>
-        <div className={pricingStyles.aggregateHead}>
-          <span className={pricingStyles.aggregateTitle}>
-            {t('q.aggregateSource')}
-            <a className={pricingStyles.linkBtn} href={LITELLM_REPO_URL} target="_blank" rel="noreferrer">LiteLLM</a>{' '}
-            {t('q.aggregateNote', { license: licenseText })}
-          </span>
-        </div>
-        {aggregate === null
-          ? (
-            <div className={pricingStyles.aggregateMeta}>
-              {pricing === null
-                ? t('quota.loadingPricing')
-                : t('quota.pricingUnavailable')}
-            </div>
-          )
-          : (
-            <>
-              <div className={pricingStyles.aggregateMeta}>
-                {t('q.aggregateLoaded')}<b>{aggregateLoadedLabelOf(aggregate.loaded)}</b>
-                {Number.isFinite(aggregate.entries) ? t('quota.entry') + ' ' + String(aggregate.entries) : ''}
-                {Number.isFinite(aggregate.models) ? t('quota.modelCount') + ' ' + String(aggregate.models) : ''}
-                {fetchedAtText === null ? '' : t('quota.fileTime') + ' ' + fetchedAtText}
-                {commitShort === null ? '' : '　upstream ' + commitShort}
-              </div>
-              <div className={pricingStyles.aggregateMeta}>
-                {t('q.offlinePrefix')}<b>{t('quota.refreshPrices')}</b>{' '}{t('q.offlineSuffix')}
-                {pathText === null ? '' : t('quota.currentFile') + '：' + pathText}
-              </div>
-            </>
-          )}
-        {aggregateIssues.length > 0 && (
-          <div className={pricingStyles.issueBlock}>
-            <div className={pricingStyles.issueHead}>
-              <b>{t('q.aggregateIssueCount', { count: aggregateIssues.length })}</b>
-              <span className={pricingStyles.issueNote}>{t('q.aggregateScope')}</span>
-            </div>
-            <ul className={pricingStyles.issueList}>
-              {aggregateIssues.slice(0, ISSUE_LIMIT).map((issue, index) => (
-                <li key={issue.kind + '|' + String(index)}>
-                  <span className={pricingStyles.issueWhere}>{issue.kind}</span>
-                  {issueTextOf(issue)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
-
-/** 覆盖度一行：官方账单天数 + 三层价目各命中多少模型 + 台账兜底与无依据；一个数字都没有就整段省略。 */
-function coverageTextOf(coverage: PricingResponse['coverage'] | null): string | null {
-  if (coverage === null) return null
-  const days = coverage.from === undefined || coverage.to === undefined ? null : daysBetween(coverage.from, coverage.to)
-  const parts: string[] = []
-  if (days !== null) parts.push(t('quota.officialBill') + ' ' + String(days) + t('q.daySuffix'))
-  const counts: Array<[string, number | undefined]> = [
-    [t('cso.catalog'), coverage.catalogModels],
-    [t('cso.aggregate'), coverage.aggregateModels],
-    [t('cso.model'), coverage.modelModels],
-    [t('q.noBasis'), coverage.unpricedModels],
-  ]
-  for (const [label, value] of counts) {
-    if (typeof value === 'number' && Number.isFinite(value)) parts.push(label + ' ' + String(value) + t('q.modelsSuffix'))
-  }
-  if (typeof coverage.partialModels === 'number' && coverage.partialModels > 0) {
-    parts.push(t('q.partialPrefix') + String(coverage.partialModels) + t('q.countSuffix'))
-  }
-  if (parts.length === 0) return null
-  return t('quota.basis') + '：' + parts.join(' · ') + t('quota.basisAuto')
-}
-
-/** 覆盖区间的自然天数（含首尾），用作「官方账单 X 天」的口径。 */
-function daysBetween(from: string, to: string): number | null {
-  const start = new Date(from + 'T00:00:00').getTime()
-  const end = new Date(to + 'T00:00:00').getTime()
-  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null
-  return Math.round((end - start) / 86400000) + 1
-}
-
 /** 价目说明：中文原文只在中文模式显示；英文模式改成指向界面已有的费率 / 来源 / 日期。 */
 function noteTextOf(row: { note?: string | null; noteEn?: string | null }): string {
   const note = row.note ?? ''
@@ -543,13 +347,6 @@ function noteTextOf(row: { note?: string | null; noteEn?: string | null }): stri
     if (/[\u4e00-\u9fa5]/.test(note)) return t('srv.rateNoteEn')
   }
   return note === '' ? '' : serverText(note)
-}
-
-/** 快照 issue：kind 机器可读，英文模式按 kind 渲染；中文模式保留服务端原文（含路径与数字）。 */
-function issueTextOf(issue: { kind?: string; message: string }): string {
-  if (!isEnglish() || issue.kind === undefined) return issue.message
-  const english = t('issue.' + issue.kind)
-  return english === 'issue.' + issue.kind ? issue.message : english
 }
 
 /** 非实时值的小标签悬浮说明：数据时间 + 这次查询的结果或原因（原因不摊在版面上）。 */

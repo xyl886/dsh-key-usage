@@ -18,52 +18,12 @@
 }
 .sourceModel { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
 
-.linkBtn {
-  border: 0; background: none; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01);
-  cursor: pointer; padding: 0 6px;
-}
-.linkBtn:hover { color: var(--dsw-alias-state-business-primary, #5b8cff); }
-.linkBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.linkBtn:disabled { opacity: .5; cursor: default; }
 
 /* 内置官方价目说明：只读信息，不需要用户操作 */
-.catalogNote {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7;
-  color: var(--dsw-alias-label-secondary, #9a9aa2);
-  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-}
 /* 价目抓取超过阈值：只换成警示色并加一句复核提示，数值一律不动（自动改价会静默算错钱） */
-.catalogStale {
-  color: var(--dsw-alias-state-warn-primary, #e0a13c);
-  border-color: var(--dsw-alias-state-warn-primary, #e0a13c);
-}
 
 /* 价目文件位置：改了价目文件之后唯一的自查入口 */
-.fileLine {
-  display: flex; gap: 4px 18px; flex-wrap: wrap; margin: 6px 0;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
-}
-.pathText { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); word-break: break-all; }
 
-.issueBlock {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.7;
-  color: var(--dsw-alias-state-warn-primary, #e0a13c);
-  background: var(--dsw-alias-bg-layer-2, #1d1d22);
-  border: 1px solid var(--dsw-alias-state-warn-primary, #e0a13c);
-}
-.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.issueNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
-.issueList { margin: 6px 0 0; padding-left: 18px; }
-.issueWhere { color: var(--dsw-alias-label-secondary, #9a9aa6); margin-right: 6px; }
 
 /* ===== 聚合价目（LiteLLM）来源与刷新 ===== */
-.aggregateBlock {
-  margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.75;
-  color: var(--dsw-alias-label-secondary, #9a9aa2);
-  background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-}
-.aggregateHead { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
-.aggregateTitle { flex: 1 1 auto; min-width: 0; }
 /* 装载状态 / 条目数 / 时间等：一行小字，不写成大字报 */
-.aggregateMeta { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
-.aggregateMeta b { color: var(--dsw-alias-label-secondary, #9a9aa2); font-weight: 600; }
