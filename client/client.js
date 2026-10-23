@@ -2619,7 +2619,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: settings_module_css_default.version,
-						children: t("settings.version") + " 0.1.8"
+						children: t("settings.version") + " 0.1.9"
 					})
 				]
 			});
@@ -7613,7 +7613,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						onClose: () => setShowCaliber(false),
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: shared_module_css_default.caliberVersion,
-							children: t("caliber.version", { version: "0.1.8" })
+							children: t("caliber.version", { version: "0.1.9" })
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 							className: shared_module_css_default.footnoteList,
 							children: [
