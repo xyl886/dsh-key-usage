@@ -9,9 +9,9 @@
  * 运行：node test/client-currency.test.mjs（Node ≥ 22.18 直接加载 .ts）
  */
 import assert from 'node:assert/strict'
-import { pathToFileURL } from 'node:url'
 
-const url = pathToFileURL(new URL('../src/client/core/currency.ts', import.meta.url).pathname.replace(/^\//, '')).href
+// 直接交给 URL 解析：pathname 在 Windows 带盘符、在 Linux 是绝对路径，手动去前导斜杠会让路径退化成相对路径
+const url = new URL('../src/client/core/currency.ts', import.meta.url).href
 const { comparableMoneyOf, rowMoneyViewOf, setDisplayCurrency, setFxRate } = await import(url)
 
 const fx = {
