@@ -149,6 +149,16 @@ function closeTo(actual, expected, message) {
   assert.equal(isOffPeakAt(allDay, atLocal(3)), true, '起止相同表示全天')
   assert.equal(isOffPeakAt(allDay, atLocal(23, 59)), true)
 
+  // 「周末全天」窗口必须按星期判断：不传星期会把它当成「每天全天」，把工作日整天的用量也算成错峰
+  const weekendOnly = rule({ offPeak: { windows: [{ from: '00:00', to: '00:00', days: [6, 7] }], input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } })
+  const fullDayHours = Array.from({ length: 24 }, () => ({ calls: 1, tokens: 1000000 }))
+  assert.equal(offPeakTokenShare(weekendOnly, fullDayHours, 3), 0, '工作日不能被「周末全天」窗口判成错峰')
+  assert.equal(offPeakTokenShare(weekendOnly, fullDayHours, 6), 1, '周六整天都是错峰')
+  // 分时段：工作日 11:00 高峰、20:00 空闲（官方规则：工作日 9-12 / 14-18 高峰）
+  const workdayHours = fullDayHours.map((_, index) => ({ calls: 1, tokens: index === 11 || index === 20 ? 1000000 : 0 }))
+  const officialRule = rule({ offPeak: { windows: [{ from: '00:00', to: '09:00', days: [1, 2, 3, 4, 5] }, { from: '12:00', to: '14:00', days: [1, 2, 3, 4, 5] }, { from: '18:00', to: '00:00', days: [1, 2, 3, 4, 5] }, { from: '00:00', to: '00:00', days: [6, 7] }], input: 1, cacheRead: 0, cacheWrite: 1, output: 4 } })
+  assert.equal(offPeakTokenShare(officialRule, workdayHours, 3), 0.5, '工作日：只有 20:00 那小时在错峰窗口内')
+  assert.equal(offPeakTokenShare(officialRule, workdayHours, 7), 1, '周日整天都是错峰（含 11:00 高峰时段）')
   const toMidnight = rule({ offPeak: { windows: [{ from: '18:00', to: '24:00' }], input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } })
   assert.equal(isOffPeakAt(toMidnight, atLocal(18)), true)
   assert.equal(isOffPeakAt(toMidnight, atLocal(23)), true)

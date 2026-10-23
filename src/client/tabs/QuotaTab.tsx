@@ -6,11 +6,11 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { RATES_PATH, failureReasonOf, loadRates } from '../core/api.ts'
 import { COST_MODE_KEYS, quotaBarColor, statusColorOf } from '../core/channels.ts'
 import {
-  convertsCurrencyOf, fxSummaryTextOf, rateTextOf, rowMoneyViewOf, useCurrencyDisplay, DISPLAY_CURRENCY_SYMBOLS, type DisplayCurrency,
+  rateTextOf, rowMoneyViewOf, useCurrencyDisplay, DISPLAY_CURRENCY_SYMBOLS, type DisplayCurrency,
 } from '../core/currency.ts'
-import { fmtDateTime, fmtTokens, localTimeTextOf } from '../core/format.ts'
+import { fmtDateTime, fmtTokens } from '../core/format.ts'
 import { isEnglish, t, useT } from '../core/i18n.ts'
-import { logWarn, requestOpenLog } from '../core/log.ts'
+import { logWarn } from '../core/log.ts'
 import { serverText } from '../core/serverText.ts'
 import { costSourceHintOf, COST_SOURCE_HINTS, type CostSource } from '../core/pricing.ts'
 import type { Channel, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../core/types.ts'
@@ -32,7 +32,6 @@ const RATE_SOURCE_LABELS: Record<string, string> = {
   official: 'source.official',
   catalog: 'source.catalog',
   aggregate: 'source.aggregate',
-  model: 'source.model',
   none: 'source.none',
 }
 
@@ -120,7 +119,6 @@ export function QuotaTab(props: {
           const outcome = props.quotaOutcome?.providers.find((item) => item.provider === channel.provider) ?? null
           const balance = snapshot?.balance ?? null
           const plan = snapshot?.plan ?? null
-          const isLive = snapshot?.source === 'live'
           const windows = plan !== null && Array.isArray((plan as { windows?: unknown }).windows)
             ? (plan as { windows: Array<{ key?: unknown; percent?: unknown; resetsAt?: unknown }> }).windows
             : null
@@ -188,16 +186,6 @@ export function QuotaTab(props: {
                 <div className={styles.dim}>{emptyReasonOf(channel, snapshot)}</div>
               )}
 
-              {/* 不是实时值时只留一个小标签：完整时间与原因在悬浮里，点击开日志（不摊在版面上） */}
-              {!isLive && (
-                <button
-                  type="button"
-                  className={quotaStyles.snapshotChip}
-                  title={snapshotTitleOf(snapshot, outcome, channel)}
-                  onClick={() => requestOpenLog()}
-                >{t('quota.snapshotChip')}</button>
-              )}
-
               {/* 单价抽屉：收起时保持空容器，aria-controls 指过来始终有效 */}
               <div id={drawerId} className={quotaStyles.rateDrawer}>
                 {isOpen && (
@@ -227,7 +215,7 @@ function rateCountTextOf(rows: ModelRateRow[], loading: boolean, failed: boolean
     const counts = new Map<string, number>()
     for (const row of rows) counts.set(row.source, (counts.get(row.source) ?? 0) + 1)
     const mix = [...counts.entries()]
-      .filter(([source]) => source !== 'catalog' && source !== 'official')
+      .filter(([source]) => source !== 'catalog' && source !== 'official' && source !== 'model')
       .map(([source, count]) => t(RATE_SOURCE_LABELS[source] ?? source) + ' ' + String(count))
       .join(' / ')
     // 来源全是默认档（catalog / official）时 mix 为空：不能再留一个悬空的分隔符
@@ -278,9 +266,6 @@ function RateTable(props: {
             {props.rows.map((row) => {
               const rates = row.rates
               const hasRates = rates !== null && typeof rates === 'object'
-              const rowConverted = convertsCurrencyOf(row.currency)
-              // 行币种与显示币种一致时不重复写一遍（这是常态），只有跨币种行才值得说
-              const showCurrency = typeof row.currency === 'string' && row.currency !== '' && row.currency.toUpperCase() !== props.display
               const note = noteTextOf(row)
               // 有价目依据才有金额（服务端不猜）：null / 缺失一律按「无依据」呈现
               const costView = typeof row.cost === 'number' && Number.isFinite(row.cost)
@@ -290,12 +275,6 @@ function RateTable(props: {
                 <tr key={row.model}>
                   <td>
                     <div className={quotaStyles.rateModel}>{row.model}</div>
-                    {showCurrency && (
-                      <div className={quotaStyles.rateConverted}>
-                        {t('q.currencyLabel', { value: row.currency ?? '' })}
-                        {rowConverted ? ' → ' + DISPLAY_CURRENCY_SYMBOLS[props.display] : ''}
-                      </div>
-                    )}
                   </td>
                   {hasRates
                     ? (
@@ -349,13 +328,6 @@ function noteTextOf(row: { note?: string | null; noteEn?: string | null }): stri
   return note === '' ? '' : serverText(note)
 }
 
-/** 非实时值的小标签悬浮说明：数据时间 + 这次查询的结果或原因（原因不摊在版面上）。 */
-function snapshotTitleOf(snapshot: QuotaProvider | null, outcome: SnapshotQuotaOutcome['providers'][number] | null, channel: Channel): string {
-  const capturedAt = outcome !== null && outcome.capturedAt !== null ? localTimeTextOf(outcome.capturedAt) : null
-  const fallbackTime = snapshot !== null && snapshot.updatedAt !== null ? fmtDateTime(snapshot.updatedAt) : null
-  const time = capturedAt ?? fallbackTime ?? t('quota.unknown')
-  return t('quota.snapshotAt', { time })
-}
 function errorTextOf(error: string | null): string {
   if (error === null) return t('err.noLiveQuery')
   if (error === 'no-key') return t('err.noApiKey')

@@ -84,6 +84,8 @@ export interface SnapshotSections {
   models: unknown
   projects: unknown
   sessions: unknown
+  /** 用户提问词云（形状 = `sections.prompts` 契约：`{ words, totalPrompts, totalChars, from, to }`）。 */
+  prompts: unknown
   quota: unknown
 }
 
@@ -181,7 +183,7 @@ function emptyOutcome(): SnapshotQuotaOutcome {
 function emptySections(): SnapshotSections {
   return {
     overview: null, channels: null, usage: null, heatmap: null,
-    models: null, projects: null, sessions: null, quota: null,
+    models: null, projects: null, sessions: null, prompts: null, quota: null,
   }
 }
 
@@ -484,28 +486,36 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
       // 首次没有快照：现算一次（含配额联网）→ 写盘 → 返回，这一次算 initial。
       // 这一段的判断到 beginBuild 之间没有 await，两个并发调用不会都去构建。
       if (current === null && !building) {
+        // 有磁盘快照：立即返回它，重建放后台（打开页面不等构建，冷启动首开从十几秒降到毫秒级）
         if (loadFromDisk() !== null) {
-          if (options?.fresh === true) await refreshForOpen()
-          return view(false)
+          if (options?.fresh === true) void refreshForOpen()
+          return view(building)
         }
-        const result = await beginBuild('initial')
-        if (result.ok) return result.view
-        current = {
-          version: 1,
-          updatedAt: new Date(now()).toISOString(),
-          buildSource: 'initial',
-          sections: emptySections(),
-          quotaOutcome: emptyOutcome(),
-          issues: [{ kind: 'build-failed', message: result.error }],
-        }
-        return view(false)
+        // 连磁盘快照都没有（首次安装）：后台构建，先给空视图 + building=true，客户端按 building 追取
+        const started = beginBuild('initial')
+        void started.then((result) => {
+          if (result.ok) return
+          current = {
+            version: 1,
+            updatedAt: new Date(now()).toISOString(),
+            buildSource: 'initial',
+            sections: emptySections(),
+            quotaOutcome: emptyOutcome(),
+            issues: [{ kind: 'build-failed', message: result.error }],
+          }
+        })
+        return view(true)
       }
       if (building) {
         // 不阻塞页面：手上这份先给出去（标 building=true），界面照常渲染上一份数据；
         // 以前这里 await 整轮构建，首开要干等 1～14 s（2026-10-16 实测）。
         return view(true)
       }
-      if (options?.fresh === true) await refreshForOpen()
+      if (options?.fresh === true) {
+        // 不 await：重建在后台跑，响应立刻带回手头这份 + building=true，客户端继续追
+        void refreshForOpen()
+        return view(building)
+      }
       return view(false)
     },
     async refresh() {

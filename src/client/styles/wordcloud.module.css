@@ -1,0 +1,14 @@
+/* 提问词云：纯 SVG，8 色相按排名轮换（全部由宿主令牌派生），等比缩放不重叠。 */
+.cloud { display: block; width: 100%; height: auto; }
+.word { font-weight: 500; }
+.heavy { font-weight: 700; }
+.medium { font-weight: 600; }
+.tone0 { fill: var(--dsw-alias-state-business-primary, #5b8cff); }
+.tone1 { fill: var(--dsw-alias-state-warn-primary, #e0a13c); }
+.tone2 { fill: var(--dsw-alias-state-success-primary, #3fb96f); }
+.tone3 { fill: var(--dsw-alias-state-error-primary, #e05a5a); }
+.tone4 { fill: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 45%, var(--dsw-alias-state-success-primary, #3fb96f)); }
+.tone5 { fill: color-mix(in srgb, var(--dsw-alias-state-warn-primary, #e0a13c) 45%, var(--dsw-alias-state-error-primary, #e05a5a)); }
+.tone6 { fill: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 40%, var(--dsw-alias-state-warn-primary, #e0a13c)); }
+.tone7 { fill: color-mix(in srgb, var(--dsw-alias-label-secondary, #9a9aa6) 55%, var(--dsw-alias-state-business-primary, #5b8cff)); }
+.empty { padding: 24px 0; text-align: center; color: var(--dsw-alias-label-tertiary, #67676f); }

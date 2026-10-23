@@ -25,7 +25,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<ProjectRow>> = [
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', labelKey: 'c.hitRate', value: (row) => row.cacheHitRate },
   { key: 'cost', labelKey: 'c.costNative', value: (row) => row.cost },
-  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : row.costSource },
   { key: 'sessionCount', labelKey: 'm.sessions', value: (row) => row.sessionCount },
   { key: 'archivedSessionCount', labelKey: 'p.archivedSessions', value: (row) => row.archivedSessionCount },
   { key: 'lastTime', labelKey: 'm.lastActive', value: (row) => fmtDateTime(row.lastTime) },
@@ -36,6 +36,10 @@ export function ProjectsTab(props: {
   channels: Channel[]
   /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看这一个项目（null = 不过滤） */
   focusWorkspace?: string | null
+  /** 下钻定位：只显示用过该通道的项目；null = 不过滤 */
+  focusProvider?: string | null
+  /** 外层（分布页）已有自己的定位 chip 时传 true，避免同一句话显示两遍 */
+  hideFocusChip?: boolean
   onClearFocus?: () => void
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
@@ -48,6 +52,7 @@ export function ProjectsTab(props: {
   const [orphanOpen, setOrphanOpen] = useState(false)
   const rows = props.data?.rows ?? []
   const focusWorkspace = props.focusWorkspace ?? null
+  const focusProvider = props.focusProvider ?? null
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -60,7 +65,8 @@ export function ProjectsTab(props: {
       const matchesChannel = channelFilter === 'ALL' || row.providers[channelFilter] !== undefined
       // 联动筛选按**目录**命中：合并行（未归入工作区）也要能被它覆盖的目录筛出来
       const matchesFocus = focusWorkspace === null || row.workspace === focusWorkspace || paths.includes(focusWorkspace)
-      return matchesQuery && matchesChannel && matchesFocus
+      const matchesFocusProvider = focusProvider === null || row.providers[focusProvider] !== undefined
+      return matchesQuery && matchesChannel && matchesFocus && matchesFocusProvider
     })
     const sorters: Record<SortKey, (first: ProjectRow, second: ProjectRow) => number> = {
       recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
@@ -69,7 +75,7 @@ export function ProjectsTab(props: {
       callsDesc: (first, second) => second.calls - first.calls,
     }
     return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, sortKey, focusWorkspace])
+  }, [rows, query, channelFilter, sortKey, focusWorkspace, focusProvider])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
@@ -112,7 +118,7 @@ export function ProjectsTab(props: {
         </span>
       </div>
 
-      {focusWorkspace !== null && (
+      {focusWorkspace !== null && props.hideFocusChip !== true && (
         <div className={listStyles.focusChip}>
           {t('p.focusPrefix')}{focusWorkspace}
           <button type="button" className={listStyles.focusClear} onClick={() => props.onClearFocus?.()} aria-label={t('p.clearFilter')}>✕</button>

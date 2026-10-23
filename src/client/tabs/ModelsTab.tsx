@@ -32,13 +32,20 @@ const EXPORT_COLUMNS: Array<ExportColumn<ModelAggregateRow>> = [
   { key: 'cacheReadTokens', labelKey: 'c.cacheRead', value: (row) => row.buckets.cacheReadTokens },
   { key: 'cacheHitRate', labelKey: 'c.hitRate', value: (row) => row.cacheHitRate },
   { key: 'cost', labelKey: 'c.costNative', value: (row) => row.cost },
-  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : row.costSource },
   { key: 'costMode', labelKey: 'd.costMode', value: (row) => row.costMode },
   { key: 'sessionCount', labelKey: 'm.sessions', value: (row) => row.sessionCount },
   { key: 'lastTime', labelKey: 'm.lastActive', value: (row) => fmtDateTime(row.lastTime) },
 ]
 
-export function ModelsTab(props: { data: ModelsResponse | null; channels: Channel[] }): ReactNode {
+export function ModelsTab(props: {
+  data: ModelsResponse | null
+  channels: Channel[]
+  /** 下钻定位：只显示该模型（key = provider|model）；null = 不过滤 */
+  focusModel?: string | null
+  /** 下钻定位：只显示该通道；null = 不过滤 */
+  focusProvider?: string | null
+}): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const [query, setQuery] = useState('')
@@ -46,6 +53,8 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
   const [sortKey, setSortKey] = useState<SortKey>('tokensDesc')
   const [nowMs] = useState(() => Date.now())
   const rows = props.data?.rows ?? []
+  const focusModel = props.focusModel ?? null
+  const focusProvider = props.focusProvider ?? null
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -53,7 +62,9 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
       const haystack = (row.model + ' ' + row.provider + ' ' + row.providerLabel).toLowerCase()
       const matchesQuery = keyword === '' || haystack.includes(keyword)
       const matchesChannel = channelFilter === 'ALL' || row.provider === channelFilter
-      return matchesQuery && matchesChannel
+      const matchesFocusModel = focusModel === null || row.provider + '|' + row.model === focusModel
+      const matchesFocusProvider = focusProvider === null || row.provider === focusProvider
+      return matchesQuery && matchesChannel && matchesFocusModel && matchesFocusProvider
     })
     const sorters: Record<SortKey, (first: ModelAggregateRow, second: ModelAggregateRow) => number> = {
       tokensDesc: (first, second) => second.tokens - first.tokens,
@@ -62,7 +73,7 @@ export function ModelsTab(props: { data: ModelsResponse | null; channels: Channe
       recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
     }
     return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, sortKey])
+  }, [rows, query, channelFilter, sortKey, focusModel, focusProvider])
 
   const totalTokens = rows.reduce((total, row) => total + row.tokens, 0)
   const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden

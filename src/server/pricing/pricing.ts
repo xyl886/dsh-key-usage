@@ -285,10 +285,10 @@ export function costOfRowAtRates(row: PricingUsageRow, rule: PricingRule, rates:
 /**
  * 错峰权重：一天里落在错峰窗口内的 tokens 占比（按小时槽取样，小时粒度取该小时中点判定）。
  * 小时槽只有整天的分桶、没有「模型 × 小时」的拆分，所以这是近似值；调用方拿不到小时数据时按 0 处理。
- * 只有整天的分桶、拿不到日期，因此带 `days` 的窗口在这里按「每天适用」算 —— 与实际一周里的
- * 星期分布无关，属有意近似（单日范围的加权本就更粗）。
+ * `isoDay` 是该日的 ISO 星期（1=周一…7=周日）：**必须传**，否则「周末全天」这类带 `days` 的窗口
+ * 会按「每天适用」命中，把工作日整天也算成错峰（会把单日成本整体打五折）。不传时按旧行为（每天适用）。
  */
-export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | null): number {
+export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | null, isoDay?: number): number {
   if (rule.offPeak === null || hours === null || hours.length === 0) return 0
   let total = 0
   let offPeak = 0
@@ -296,7 +296,7 @@ export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | 
     const tokens = displayTokensOf(hours[index])
     if (tokens <= 0) continue
     total += tokens
-    if (isOffPeakAtMinutes(rule, index * 60 + 30)) offPeak += tokens
+    if (isOffPeakAtMinutes(rule, index * 60 + 30, isoDay)) offPeak += tokens
   }
   return total > 0 ? offPeak / total : 0
 }
@@ -305,13 +305,15 @@ export function offPeakTokenShare(rule: PricingRule, hours: PricingUsageRow[] | 
  * 按命中价目估算一组行的成本（内置官方价目 > 聚合价；两层都没命中时 cost 为 null）。
  * @param at - 时间点；null 表示这段用量跨了峰谷、无法定位，按标准价算（不猜折扣）
  * @param hours - 24 个小时槽（本地时间，索引即小时）；给了就按错峰占比加权
+ * @param hoursDay - 这批小时槽所属日期的 ISO 星期（错峰窗口按星期区分，缺了会误判）
  */
 export function priceRowsOf(
   rows: PricingUsageRow[],
-  options: { at?: Date | null; hours?: PricingUsageRow[] | null } = {},
+  options: { at?: Date | null; hours?: PricingUsageRow[] | null; hoursDay?: number } = {},
 ): PricedRow[] {
   const at = options.at ?? null
   const sharedHours = options.hours ?? null
+  const sharedHoursDay = options.hoursDay
   return rows.map((row) => {
     const matched = matchPricedRule(row.provider, row.model)
     if (matched === null) {
@@ -321,7 +323,7 @@ export function priceRowsOf(
     const standard = costOfRowAtRates(row, rule, rule)
     const share = rule.offPeak === null
       ? (at !== null && isOffPeakAt(rule, at) ? 1 : 0)
-      : offPeakTokenShare(rule, sharedHours)
+      : offPeakTokenShare(rule, sharedHours, sharedHoursDay)
     const offPeakCost = rule.offPeak === null ? standard : costOfRowAtRates(row, rule, rule.offPeak)
     const cost = standard * (1 - share) + offPeakCost * share
     return {

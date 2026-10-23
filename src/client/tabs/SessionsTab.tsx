@@ -62,7 +62,7 @@ const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
   { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
   { key: 'cacheHitRate', labelKey: 's.hitRate', value: (row) => row.cacheHitRate },
   { key: 'cost', labelKey: 's.costNative', value: (row) => row.cost },
-  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : t(COST_SOURCE_LABELS[row.costSource]) },
+  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : row.costSource },
   { key: 'archived', labelKey: 's.archived', value: (row) => row.archived ? t('s.yes') : t('s.no') },
 ]
 
@@ -479,7 +479,7 @@ function costTipOf(row: SessionRow): ReactNode {
       <TipRow
         label={t('s.amount')}
         amount={row.cost === null ? '—' : moneyTotalsTextOf(row)}
-        rate={t(COST_SOURCE_LABELS[source])}
+        rate={t(COST_SOURCE_LABELS[source] ?? source)}
       />
     </>
   )

@@ -1,27 +1,63 @@
-/* 分布页：顶部视图切换、两张占比卡（条沿用 detail.module.css 的 .shareBar）与可展开的明细表。 */
-.switchBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.switchGroup { display: inline-flex; align-items: center; gap: 8px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-.cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.cardTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
-.cardTotal { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-variant-numeric: tabular-nums; }
-.legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-.legendRow { display: flex; align-items: center; gap: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
-.legendDot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.legendName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.legendValue { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); }
-.legendRate { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.tableWrap { margin-top: 16px; }
+/* 分布页：4 张占比环形图（单页，无视图切换）+ 提问词云 + 可收起的明细表。 */
 
-/* 环形图：纯 SVG，中心显示占比最大的一段；每段可悬浮（悬浮内容在组件里给） */
-.pieWrap { position: relative; width: 132px; height: 132px; margin: 6px auto 12px; }
-.pie { display: block; transform: rotate(0deg); }
+.page { display: flex; flex-direction: column; gap: 12px; }
+
+/* 四张图卡片：自适应两列、等高，内容少的一侧由环形图撑住，不留大片空白 */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; align-items: stretch; }
+
+.cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cardTitle {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); font-weight: 600;
+}
+.cardGroup { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); font-weight: 500; }
+.cardTotal { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-variant-numeric: tabular-nums; }
+
+/* 只放图表本身：卡片高度统一、居中，不再右侧堆图例文字 */
+.cardBody { display: flex; justify-content: center; margin-top: 4px; }
+
+/* 口径说明：不横在卡片之间，放卡片底部一行小字 */
+.note { margin-top: 8px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); color: var(--dsw-alias-label-tertiary, #67676f); }
+
+/* 词云卡横跨整行 */
+.cloudCard {
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1, #2a2a30);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+}
+
+/* 明细：标题在左、按钮在右；展开后模型表在上、项目表在下 */
+.detailsBar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.detailsTitle { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); }
+.tables { display: flex; flex-direction: column; gap: 16px; }
+.tableTitle { margin-bottom: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 600; }
+
+/* 联动筛选说明：项目图与项目明细只看该项目，模型图仍是全量 */
+.focusNote { margin-left: 8px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); }
+
+/* 环形图本体（纯 SVG） */
+.pieWrap { position: relative; width: 156px; height: 156px; margin: 0 auto; }
+.pie { display: block; }
 .pieSlice { transition: opacity .12s ease; cursor: default; }
 .pieSlice:hover { opacity: .82; }
 .pieCenter {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; pointer-events: none;
 }
-.pieCenterValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.5); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.pieCenterLabel { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }
-.scopeNote { margin-top: 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); }
+.pieCenterValue {
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.7); font-weight: 650; font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+}
+
+/* 统计范围一行小字：分布页图表与词云都是全量历史，与「近 30 天」的页面口径不同，必须标出来 */
+.rangeLine { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); }
+
+/* 段可点击下钻：指针 + 悬停时把该段加粗高亮（替代被移除的图例） */
+.pieSlicePickable { cursor: pointer; }
+.pieSliceActive { stroke-width: 26; }
+
+/* 悬停时中心显示该段名称（默认只显示百分比，不占版面） */
+.pieCenterLabel { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); }

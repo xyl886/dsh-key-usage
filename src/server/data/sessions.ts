@@ -13,6 +13,7 @@ import {
   PROMPT_SNIPPET_CHARS,
   PROMPT_TITLE_CHARS,
   type SessionEvent,
+  type SessionFold,
   type SessionSummary,
   type TokenBuckets,
 } from './session-usage.js'
@@ -43,6 +44,15 @@ export interface SessionUsageRecord {
   parentSessionId: string | null
   /** 会话来源（宿主 header 的 `origin`，子代理会话为 `subagent`）；老会话可能没有。 */
   origin: string | null
+  /** 参与词频统计的提问条数（快照 `prompts` 段聚合用）。 */
+  promptCount: number
+  /** 参与词频统计的提问字符数（每条截断后相加）。 */
+  promptChars: number
+  /** 词频表（中文 2-gram + 英文标识符）：跟着缓存走，重建时只合并、不重读会话。 */
+  words: Map<string, number>
+  /** 参与统计的提问最早 / 最晚时间（毫秒），没有统计到提问时为 null。 */
+  promptFirstTime: number | null
+  promptLastTime: number | null
   summary: SessionSummary
 }
 
@@ -124,12 +134,15 @@ function firstString(...values: unknown[]): string | null {
   return null
 }
 
-function metadataOf(header: Record<string, unknown>): {
+/** 会话头里的展示字段（与折叠结果分开，旧数据源只有这些）。 */
+interface SessionMetadata {
   title: string | null
   workspace: string | null
   parentSessionId: string | null
   origin: string | null
-} {
+}
+
+function metadataOf(header: Record<string, unknown>): SessionMetadata {
   return {
     title: firstString(header.title, header.name, header.summary, header.label),
     workspace: firstString(header.cwd, header.workspace, header.workspacePath, header.projectPath, header.project),
@@ -137,6 +150,23 @@ function metadataOf(header: Record<string, unknown>): {
     parentSessionId: firstString(header.parentSession, header.parentSessionId),
     // origin 缺失时用父会话推断：带了 parentSession 的会话一定是子代理起的孩子
     origin: firstString(header.origin) ?? (firstString(header.parentSession, header.parentSessionId) === null ? null : 'subagent'),
+  }
+}
+
+/** 折叠结果 + 会话头字段 → 缓存记录；提问词频字段原样透传，快照 `prompts` 段直接聚合它们。 */
+function recordOf(id: string, metadata: SessionMetadata, fold: SessionFold): SessionUsageRecord {
+  return {
+    id,
+    title: metadata.title,
+    workspace: metadata.workspace,
+    parentSessionId: metadata.parentSessionId,
+    origin: metadata.origin,
+    promptCount: fold.promptCount,
+    promptChars: fold.promptChars,
+    words: fold.words,
+    promptFirstTime: fold.promptFirstTime,
+    promptLastTime: fold.promptLastTime,
+    summary: summarizeSession(fold),
   }
 }
 
@@ -192,14 +222,7 @@ export function createSessionSource(host: HostContextLike): {
           ...events.slice(inherited),
         ])
       const metadata = metadataOf(pending.header)
-      const record: SessionUsageRecord = {
-        id: pending.id,
-        title: metadata.title,
-        workspace: metadata.workspace,
-        parentSessionId: metadata.parentSessionId,
-        origin: metadata.origin,
-        summary: summarizeSession(fold),
-      }
+      const record = recordOf(pending.id, metadata, fold)
       cache.set(pending.id, { revision: pending.revision, eventCount: pending.eventCount, record })
       box.value = { record, closeFailed: false }
     } catch (error) {
@@ -283,14 +306,7 @@ export function createSessionSource(host: HostContextLike): {
             parentSessionId: firstString(session.parentSession, session.parentSessionId),
             origin: firstString(session.origin),
           }
-          merged.set(session.id, {
-            id: session.id,
-            title: metadata.title,
-            workspace: metadata.workspace,
-            parentSessionId: metadata.parentSessionId,
-            origin: metadata.origin,
-            summary: summarizeSession(fold),
-          })
+          merged.set(session.id, recordOf(session.id, metadata, fold))
         } catch {
           skipped += 1
         }
@@ -305,14 +321,7 @@ export function createSessionSource(host: HostContextLike): {
           const { events } = await persistence.readFrom(id, 0)
           const fold = foldSessionEvents(events)
           const metadata = metadataOf(snapshot.header)
-          merged.set(id, {
-            id,
-            title: metadata.title,
-            workspace: metadata.workspace,
-            parentSessionId: metadata.parentSessionId,
-            origin: metadata.origin,
-            summary: summarizeSession(fold),
-          })
+          merged.set(id, recordOf(id, metadata, fold))
         } catch {
           skipped += 1
         }
@@ -382,14 +391,7 @@ export function createSessionSource(host: HostContextLike): {
         }
         try {
           const { events } = await persistence.readFrom(sessionId, 0)
-          const record: SessionUsageRecord = {
-            id: sessionId,
-            title: metadata.title,
-            workspace: metadata.workspace,
-            parentSessionId: metadata.parentSessionId,
-            origin: metadata.origin,
-            summary: summarizeSession(foldSessionEvents(events)),
-          }
+          const record = recordOf(sessionId, metadata, foldSessionEvents(events))
           return { status: 'ok', id: sessionId, title: record.title, workspace: record.workspace, reason: null, record }
         } catch (error) {
           return { status: 'degraded', id: sessionId, title: metadata.title, workspace: metadata.workspace, reason: readFailureText(error), record: null }

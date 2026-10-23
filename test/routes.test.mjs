@@ -44,14 +44,19 @@ writeFileSync(join(home, 'profiles', 'desktop', 'cordis.yml'), [
   '',
 ].join('\n'), 'utf8')
 
+// 台账与会话夹具的日期一律相对「今天」：写死的日期一旦滑出近 30 天 / 热力图窗口，断言会随日历失效
+const ledgerOlderDay = localDayKey(-3)
+const ledgerNewerDay = localDayKey(-2)
+const sessionOnlyDay = localDayKey(0)
+
 writeFileSync(join(home, 'dsh-usage', 'usage-ledger.json'), JSON.stringify({
   version: 1,
   days: {
-    '2026-10-12': {
+    [ledgerOlderDay]: {
       'opencode-go': { 'GLM-5.3-Flash': { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 8000, cacheWriteTokens: 0, reasoningTokens: 0, calls: 3, cost: 0 } },
       local: { Qwen3: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, calls: 1, cost: 0 } },
     },
-    '2026-10-13': {
+    [ledgerNewerDay]: {
       'opencode-go': { 'GLM-5.3-Flash': { inputTokens: 2000, outputTokens: 400, cacheReadTokens: 16000, cacheWriteTokens: 0, reasoningTokens: 0, calls: 6, cost: 0 } },
     },
   },
@@ -64,9 +69,9 @@ writeFileSync(join(home, 'dsh-usage', 'provider-snapshots.json'), JSON.stringify
   },
 }), 'utf8')
 
-const morning = new Date(2026, 9, 13, 9, 15, 0).getTime()
-// 2026-10-20 刻意落在台账覆盖之外：用来验证「台账缺的日期由会话补位」
-const outsideLedger = new Date(2026, 9, 20, 14, 30, 0).getTime()
+const morning = localTimeOf(-2, 9, 15)
+// 今天刻意落在台账覆盖之外：用来验证「台账缺的日期由会话补位」
+const outsideLedger = localTimeOf(0, 14, 30)
 const sessionEvents = [
   { seq: 0, time: morning, type: 'request/header', data: { header: { config: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } } },
   { seq: 1, time: morning, type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 8000 } } } },
@@ -77,6 +82,12 @@ const sessionRecords = [{
   title: '夹具会话',
   workspace: 'D:\\EasyJob',
   summary: summarizeSession(foldSessionEvents(sessionEvents)),
+  // 提问词频统计字段（快照 prompts 段直接聚合它们；数据源外部注入时也允许缺这些字段）
+  promptCount: 2,
+  promptChars: 24,
+  words: new Map([['分析', 3], ['snapshot.json', 2], ['ledger', 1]]),
+  promptFirstTime: morning,
+  promptLastTime: outsideLedger,
 }]
 const sessionSource = {
   collect: async () => ({
@@ -119,6 +130,7 @@ const handlers = new Map()
 // DSH_HOME 必须在挂载前设置：路由在挂载时就解析出文件路径
 process.env.DSH_HOME = home
 mountKeyUsageRoutes({ register: (route) => { handlers.set(route.path, route.handler) } }, sessionSource)
+await warmUp(handlers)
 
 async function callHandler(handlers, path, remoteAddress = '127.0.0.1', body = null) {
   const handler = handlers.get(path.split('?')[0])
@@ -136,6 +148,18 @@ async function callHandler(handlers, path, remoteAddress = '127.0.0.1', body = n
     { writeHead: (code) => { status = code }, end: (value) => { payload = value } },
   )
   return { status, body: payload === '' ? null : JSON.parse(payload) }
+}
+
+/** 打开页面现在不等构建（先给本机快照、重建放后台）：测试里先等首次构建落地再断言端点内容。 */
+async function warmUp(handlerMap) {
+  const first = await callHandler(handlerMap, '/dsh-key-usage/snapshot')
+  assert.equal(first.status, 200)
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const probe = await callHandler(handlerMap, '/dsh-key-usage/snapshot')
+    if (probe.body.building === false) return
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  throw new Error('首次快照构建没有在预期时间内完成')
 }
 
 async function callEndpoint(path, remoteAddress = '127.0.0.1') {
@@ -175,27 +199,27 @@ assert.equal(localChannel.costMode, 'none', '127.0.0.1 baseURL 判为本地端�
 assert.equal(localChannel.balanceText, null)
 
 // 范围聚合
-const usage = await callEndpoint('/dsh-key-usage/usage?from=2026-10-12&to=2026-10-13')
+const usage = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + ledgerNewerDay)
 assert.equal(usage.body.totals.calls, 10)
 assert.equal(usage.body.days.length, 2)
 assert.equal(usage.body.hours, null, '多日范围不返回小时数据')
-const singleDay = await callEndpoint('/dsh-key-usage/usage?from=2026-10-13&to=2026-10-13')
+const singleDay = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerNewerDay + '&to=' + ledgerNewerDay)
 assert.equal(singleDay.body.days.length, 1)
 assert.equal(singleDay.body.hours.length, 24, '单日范围返回 24 小时槽')
 assert.equal(singleDay.body.hours[9].calls, 1, '小时数据来自会话事件')
 assert.equal(singleDay.body.hours[9].buckets.cacheReadTokens, 8000)
 
 // 通道过滤
-const filtered = await callEndpoint('/dsh-key-usage/usage?from=2026-10-12&to=2026-10-13&provider=local')
+const filtered = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + ledgerNewerDay + '&provider=local')
 assert.equal(filtered.body.totals.calls, 1)
 
 // 热力图：台账两天 + 会话补齐的一天
 const heatmap = await callEndpoint('/dsh-key-usage/heatmap')
 assert.equal(heatmap.body.days.length, 3)
 assert.equal(heatmap.body.days[1].totalTokens, 18400)
-assert.equal(heatmap.body.days[2].date, '2026-10-20')
+assert.equal(heatmap.body.days[2].date, sessionOnlyDay)
 assert.equal(heatmap.body.days[2].totalTokens, 440, '台账缺的日期由会话事件补进热力图')
-assert.deepEqual(heatmap.body.sessionDates, ['2026-10-20'])
+assert.deepEqual(heatmap.body.sessionDates, [sessionOnlyDay])
 
 // 余额 / 窗口：按配置的通道逐个返回；首次构建（还没有快照）就把结果写进快照
 const quota = await callEndpoint('/dsh-key-usage/quota')
@@ -218,11 +242,19 @@ assert.equal(firstSnapshot.body.ok, true)
 assert.equal(firstSnapshot.body.buildSource, 'initial')
 assert.equal(firstSnapshot.body.building, false)
 assert.deepEqual(Object.keys(firstSnapshot.body.sections).sort(), [
-  'channels', 'heatmap', 'models', 'overview', 'projects', 'quota', 'sessions', 'usage',
+  'channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'usage',
 ])
 assert.equal(firstSnapshot.body.sections.overview.channels.length, 2, '总览段 = /summary 响应体')
 assert.equal(firstSnapshot.body.sections.channels.channels.length, 2, '通道段 = /channels 响应体')
-assert.equal(firstSnapshot.body.sections.usage.availableFrom, '2026-10-12', '使用明细段 = 默认范围（近 30 天 / 全部通道）')
+assert.equal(firstSnapshot.body.sections.usage.availableFrom, ledgerOlderDay, '使用明细段 = 默认范围（近 30 天 / 全部通道）')
+assert.deepEqual(firstSnapshot.body.sections.prompts, {
+  words: [{ word: '分析', count: 3 }, { word: 'snapshot.json', count: 2 }, { word: 'ledger', count: 1 }],
+  totalPrompts: 2,
+  totalChars: 24,
+  from: ledgerNewerDay,
+  to: sessionOnlyDay,
+}, 'prompts 段 = 跨会话词频合并结果（不含提问原文）')
+assert.equal(JSON.stringify(firstSnapshot.body.sections.prompts).includes('夹具会话'), false, '词云不下发提问原文')
 assert.equal(firstSnapshot.body.quotaOutcome.providers.length, 2)
 assert.equal(firstSnapshot.body.stale === undefined, true, 'stale 只出现在 quotaOutcome 的通道条目里')
 assert.ok(firstSnapshot.body.issues.some((issue) => issue.kind === 'build-duration'), '构建耗时进 issues')
@@ -242,10 +274,15 @@ assert.equal(typeof reopened.body.quotaRefreshing, 'boolean', '标记要下发�
 assert.deepEqual(reopened.body.sections.sessions, firstSnapshot.body.sections.sessions, '复用的仍是同一份快照')
 
 // 按需下发（?sections=a,b,c）：只裁剪 sections 段，顶层字段一律保留；不传 = 全量（向后兼容）
-const allSectionNames = ['channels', 'heatmap', 'models', 'overview', 'projects', 'quota', 'sessions', 'usage']
+const allSectionNames = ['channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'usage']
 const onlyChannels = await callEndpoint('/dsh-key-usage/snapshot?sections=channels')
 assert.deepEqual(Object.keys(onlyChannels.body.sections), ['channels'], '只回请求的那一段')
 assert.deepEqual(onlyChannels.body.sections.channels, firstSnapshot.body.sections.channels, '裁剪只影响下发，内容不变')
+
+// 词云段同样受 ?sections= 裁剪（分布页切到时才取，不占首屏体积）
+const onlyPrompts = await callEndpoint('/dsh-key-usage/snapshot?sections=prompts')
+assert.deepEqual(Object.keys(onlyPrompts.body.sections), ['prompts'], '词云段可按需单独下发')
+assert.deepEqual(onlyPrompts.body.sections.prompts, firstSnapshot.body.sections.prompts, '裁剪只影响下发，内容不变')
 for (const field of ['ok', 'building', 'quotaRefreshing', 'version', 'updatedAt', 'buildSource', 'quotaOutcome', 'issues']) {
   assert.deepEqual(onlyChannels.body[field], firstSnapshot.body[field], '顶层字段 ' + field + ' 不因裁剪而变')
 }
@@ -381,9 +418,10 @@ assert.equal(staleChannel.quotaWindowKey, '5h')
 // 总览汇总：今日与近 30 天
 const summary = await callEndpoint('/dsh-key-usage/summary')
 const summaryOpencode = summary.body.channels.find((row) => row.provider === 'opencode-go')
-assert.equal(summaryOpencode.month.calls, 9)
+assert.equal(summaryOpencode.month.calls, 10, '台账两天 3 + 6，加会话补齐的今天 1')
 const todayKey = summary.body.range.today
-assert.equal(summaryOpencode.today.calls, todayKey === '2026-10-13' ? 6 : 0, '「今日」按服务器当天计算')
+assert.equal(todayKey, sessionOnlyDay, '「今日」按服务器当天计算')
+assert.equal(summaryOpencode.today.calls, 1, '今天只有会话补齐的那一条')
 
 // 会话：模型归属归一 + 成本（台账里没有该模型的账单，走「同模型官方价目」这一档）
 const sessions = await callEndpoint('/dsh-key-usage/sessions')
@@ -472,10 +510,10 @@ const foreign = await callEndpoint('/dsh-key-usage/channels', '192.168.1.9')
 assert.equal(foreign.status, 403)
 assert.deepEqual(foreign.body, { error: 'loopback only' })
 
-// 台账缺的日期由会话补位（10-12/10-13 在台账里，10-20 只在会话里）
-const spanning = await callEndpoint('/dsh-key-usage/usage?from=2026-10-12&to=2026-10-20')
-assert.deepEqual(spanning.body.days.map((day) => day.date), ['2026-10-12', '2026-10-13', '2026-10-20'])
-assert.deepEqual(spanning.body.sessionDates, ['2026-10-20'], '只有台账缺的那天标为会话来源')
+// 台账缺的日期由会话补位（近两天在台账里，今天只在会话里）
+const spanning = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay)
+assert.deepEqual(spanning.body.days.map((day) => day.date), [ledgerOlderDay, ledgerNewerDay, sessionOnlyDay])
+assert.deepEqual(spanning.body.sessionDates, [sessionOnlyDay], '只有台账缺的那天标为会话来源')
 assert.equal(spanning.body.days[1].cost, 0, '台账那两天不重算成本')
 assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带上了用量')
 
@@ -684,7 +722,8 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     'aggregateModels', 'catalogModels', 'costByCurrency', 'from', 'modelModels', 'partialModels',
     'savingsByCurrency', 'savingsDetail', 'to', 'unpricedModels',
   ])
-  assert.deepEqual(pricing.body.coverage.costByCurrency, { USD: 0.0015 }, '命中价目的行按币种累加')
+  // 近 30 天覆盖度含「台账两天 + 会话补齐的今天」：GLM 三段用量按同模型官方价目（USD）累加
+  assert.deepEqual(pricing.body.coverage.costByCurrency, { USD: 0.0016 }, '命中价目的行按币种累加')
   assert.deepEqual(pricing.body.coverage.savingsByCurrency, { USD: 0.0029 })
   assert.equal(pricing.body.coverage.savingsDetail.length, 1)
   assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.from), true)
@@ -733,9 +772,11 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.deepEqual(logAppend.body, { ok: true, written: 1 })
   const logRead = await priced('/dsh-key-usage/log?limit=10')
   assert.equal(logRead.status, 200)
-  assert.equal(logRead.body.records.length, 1)
-  assert.equal(logRead.body.records[0].message, '刷新价目失败')
-  assert.equal(logRead.body.records[0].detail, 'HTTP 502 · https://example.test/prices.json')
+  // 启动埋点（source=boot）也会落进同一个文件：断言只看业务日志，不因埋点条数变化而脆断
+  const businessRecords = logRead.body.records.filter((record) => record.source !== 'boot')
+  assert.equal(businessRecords.length, 1)
+  assert.equal(businessRecords[0].message, '刷新价目失败')
+  assert.equal(businessRecords[0].detail, 'HTTP 502 · https://example.test/prices.json')
   const logBadBody = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', '不是 JSON')
   assert.equal(logBadBody.body.ok, false, '坏请求体回 {ok:false}，不抛错')
   const logClear = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({ clear: true }))
@@ -779,13 +820,13 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.equal(ratesLocal.models[0].rates, null)
   assert.ok(ratesLocal.models[0].note.includes('暂无价格依据'))
   assert.equal(ratesOpencode.models[0].offPeak, false)
-  assert.equal(ratesOpencode.models[0].calls, 9, '台账两天的调用数之和')
+  assert.equal(ratesOpencode.models[0].calls, 10, '台账两天 9 次 + 会话补齐的今天 1 次')
 
   // limit / days 归一：非法值回落默认，越大越截断
   const limitedRates = await priced('/dsh-key-usage/rates?limit=1')
   assert.equal(limitedRates.body.channels.every((row) => row.models.length <= 1), true)
   const tinyRange = await priced('/dsh-key-usage/rates?days=1')
-  assert.deepEqual(tinyRange.body.channels, [], '近 1 天（今天）没有用量')
+  assert.deepEqual(tinyRange.body.channels.map((row) => row.provider), ['opencode-go'], '近 1 天只剩今天（会话补齐）的用量')
   assert.equal(parseDays(null), 30)
   assert.equal(parseDays('0'), 30)
   assert.equal(parseDays('abc'), 30)
@@ -803,7 +844,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
 
   // 契约不变量：主夹具（没有价格依据）同样满足「没有金额就没有币种小计」
   for (const path of [
-    '/dsh-key-usage/usage?from=2026-10-12&to=2026-10-20',
+    '/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay,
     '/dsh-key-usage/summary',
     '/dsh-key-usage/sessions',
     '/dsh-key-usage/projects',
@@ -830,8 +871,8 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
 rmSync(join(home, 'dsh-usage', 'usage-ledger.json'))
 const sessionOnlyUsage = await callEndpoint('/dsh-key-usage/usage')
 assert.equal(sessionOnlyUsage.status, 200)
-assert.deepEqual(sessionOnlyUsage.body.days.map((day) => day.date), ['2026-10-13', '2026-10-20'])
-assert.deepEqual(sessionOnlyUsage.body.sessionDates, ['2026-10-13', '2026-10-20'])
+assert.deepEqual(sessionOnlyUsage.body.days.map((day) => day.date), [ledgerNewerDay, sessionOnlyDay])
+assert.deepEqual(sessionOnlyUsage.body.sessionDates, [ledgerNewerDay, sessionOnlyDay])
 assert.equal(sessionOnlyUsage.body.totals.inputTokens, 1400)
 
 // 台账与会话都没有数据的范围才返回空前端空态
@@ -917,6 +958,7 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   const pricedHandlers = new Map()
   process.env.DSH_HOME = pricedHome
   mountKeyUsageRoutes({ register: (route) => { pricedHandlers.set(route.path, route.handler) } }, pricedSessionSource)
+await warmUp(pricedHandlers)
   const pricedCall = (path, remoteAddress) => callHandler(pricedHandlers, path, remoteAddress)
 
   // ---- /rates：三档单价（catalog / model / none）与通道币种 ----

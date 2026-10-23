@@ -76,7 +76,7 @@ export interface DaySummary {
   cost: number
   /** 逐币种小计：合计按它折算后相加（`cost` 是混币种直接相加，只作兜底）。 */
   costsByCurrency?: CostsByCurrency
-  /** 成本来源角标：官方账单 / 内置官方价目 / 聚合价目 / 同模型官方价目 / 无依据。 */
+  /** 成本来源角标：官方账单 / 内置官方价目 / 聚合价目 / 跨通道厂商官方价 / 无依据。 */
   costSource?: CostSource
   /** 该格的聚合价目条目缺一个缓存价（按未命中价代），角标旁标「部分」。 */
   partial?: boolean
@@ -175,7 +175,7 @@ export interface UsageModelRow {
   providerLabel?: string
   /** 占该会话 tokens 的百分比（一位小数）：`/sessions` 行内展开与 `/session` 详情用。 */
   sharePercent?: number
-  /** 该模型这一格的金额与来源（内置官方价目 / 聚合价目 / 同模型官方价目 / 无依据）。 */
+  /** 该模型这一格的金额与来源（内置官方价目 / 聚合价目 / 跨通道厂商官方价 / 无依据）。 */
   cost?: number | null
   /** 该模型这一格的逐币种小计。 */
   costsByCurrency?: CostsByCurrency
@@ -360,7 +360,7 @@ export interface ModelRateRow {
   cost: number | null
   /** 成本的币种；`cost: null` 时为 null。 */
   costCurrency: string | null
-  /** 单价来自哪一层：catalog = 内置官方价目；aggregate = LiteLLM 聚合价（通道别名）；model = 同模型官方价目（跨通道同名，含厂商兜底）；none = 无依据。 */
+  /** 单价来自哪一层：catalog = 内置官方价目；aggregate = LiteLLM 聚合价（通道别名）；model = 跨通道厂商官方价（同名唯一，含厂商兜底）；none = 无依据。 */
   source: CostSource
   /** 价目的原币种；`source: 'none'` 时服务端给 null（不知道币种，不猜）。 */
   currency: string | null
@@ -422,6 +422,15 @@ export interface SnapshotQuotaOutcome {
 }
 
 /** 快照里的 6 个 Tab 数据段，每段形状与对应端点一致（null = 该段这次没构建成功）。 */
+/** 提问词云：服务端已聚合好的 top 词（只下发词与频次，不下发提问原文）。 */
+export interface PromptsResponse {
+  words: Array<{ word: string; count: number }>
+  totalPrompts: number
+  totalChars: number
+  from: string | null
+  to: string | null
+}
+
 export interface SnapshotSections {
   overview: SummaryResponse | null
   channels: { channels: Channel[] } | null
@@ -431,6 +440,7 @@ export interface SnapshotSections {
   projects: ProjectsResponse | null
   sessions: SessionsResponse | null
   quota: { providers: QuotaProvider[] } | null
+  prompts: PromptsResponse | null
 }
 
 /** `/snapshot` 与 `POST /refresh` 的同一份响应形状。 */

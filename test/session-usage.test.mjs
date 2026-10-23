@@ -1,5 +1,5 @@
 /**
- * session-usage 折叠逻辑离线测试：样本去重/重试累加、模型归属、小时分桶与汇总。
+ * session-usage 折叠逻辑离线测试：样本去重/重试累加、模型归属、小时分桶、汇总与提问词频。
  * 运行：node test/session-usage.test.mjs
  */
 import assert from 'node:assert/strict'
@@ -7,10 +7,13 @@ import {
   attributeModelKey,
   foldSessionEvents,
   isInjectedPromptText,
+  mergePromptStats,
   normalizeProvider,
   promptSnippetOf,
   summarizeSession,
+  MAX_SESSION_WORDS,
   PROMPT_SNIPPET_CHARS,
+  PROMPT_STATS_CHARS,
   PROMPT_TITLE_CHARS,
 } from '../lib/data/session-usage.js'
 
@@ -202,5 +205,198 @@ assert.deepEqual(attributeModelKey('sensenova/sensenova-6.8-flash-lite', ['sense
 assert.deepEqual(attributeModelKey('unknown/unknown', ['sensenova']), { provider: 'unknown', model: 'unknown' })
 assert.equal(normalizeProvider('pi-ai/opencode-go', ['opencode-go']), 'opencode-go')
 assert.equal(normalizeProvider('other', ['opencode-go']), 'other')
+
+// ===== 场景七：提问词频（中文 2-gram + 英文标识符、虚词边界过滤、系统注入不计、中英等权） =====
+const timeUserMessage = (seq, time, text) => ({ seq, time, type: 'user/message', data: { content: [{ type: 'text', text }] } })
+const promptStatsFold = foldSessionEvents([
+  timeUserMessage(0, baseTime, '<system-reminder> You are teammate "kurlon".'),
+  timeUserMessage(1, baseTime, '请分析 snapshot.json 的写入耗时，插件的性能问题'),
+  timeUserMessage(2, baseTime, 'The pricing parser is broken, please fix the ledger'),
+  timeUserMessage(3, baseTime, '你是我的助手，不要修改数据库'),
+])
+const promptTexts = [
+  '请分析 snapshot.json 的写入耗时，插件的性能问题',
+  'The pricing parser is broken, please fix the ledger',
+  '你是我的助手，不要修改数据库',
+]
+assert.equal(promptStatsFold.promptCount, 3, '每条非注入提问都统计（不再只取首条）')
+assert.equal(promptStatsFold.promptChars, promptTexts.reduce((sum, text) => sum + text.length, 0), '字符数 = 参与统计的提问长度之和')
+assert.equal(promptStatsFold.promptFirstTime, baseTime)
+assert.equal(promptStatsFold.promptLastTime, baseTime)
+assert.equal(promptStatsFold.words.get('snapshot.json'), 1, '英文标识符（含点号）计数')
+assert.equal(promptStatsFold.words.get('pricing'), 1)
+assert.equal(promptStatsFold.words.get('is'), undefined, '英文停用词不计：is')
+assert.equal(promptStatsFold.words.get('the'), undefined, '英文停用词不计：the')
+for (const chineseWord of ['分析', '写入', '耗时', '插件', '性能', '问题', '助手', '修改', '数据']) {
+  assert.equal(promptStatsFold.words.get(chineseWord), 1, '中文 2-gram 计数：' + chineseWord)
+}
+for (const functionGram of ['你是', '不要', '件的', '的性', '的写', '我的', '要修', '是我']) {
+  assert.equal(promptStatsFold.words.get(functionGram), undefined, '虚词边界 gram 被丢弃：' + functionGram)
+}
+
+// 中英等权：同一段里中英各出现两次，计数相同（不按语言加权）
+const equalWeightFold = foldSessionEvents([timeUserMessage(0, baseTime, '分析 analysis 分析 analysis')])
+assert.equal(equalWeightFold.words.get('分析'), 2)
+assert.equal(equalWeightFold.words.get('analysis'), 2, '中英权重相同：一次出现算一次')
+
+// 超长提问只统计前 300 字：300 字之后的词不进词表
+const longPromptTail = '词频统计测试'.repeat(80) + ' uniquetailmarker'
+const longStatsFold = foldSessionEvents([timeUserMessage(0, baseTime, longPromptTail)])
+assert.equal(longStatsFold.promptCount, 1)
+assert.equal(longStatsFold.promptChars, PROMPT_STATS_CHARS, '超过 300 字的提问只按前 300 字计入')
+assert.ok(longStatsFold.words.get('词频') > 0, '前 300 字里的 2-gram 照常统计')
+assert.equal(longStatsFold.words.get('uniquetailmarker'), undefined, '300 字之后的词不统计')
+
+// 单会话词表上限：到顶后只累加已有词，不再收新词
+const capEvents = []
+let capToken = 0
+for (let messageIndex = 0; messageIndex < 230; messageIndex += 1) {
+  const tokens = []
+  for (let position = 0; position < 37; position += 1) {
+    tokens.push('t' + String(capToken).padStart(6, '0'))
+    capToken += 1
+  }
+  capEvents.push(timeUserMessage(messageIndex, baseTime, tokens.join(' ')))
+}
+const capFold = foldSessionEvents(capEvents)
+assert.equal(capFold.words.size, MAX_SESSION_WORDS, '单会话词表封顶：' + String(MAX_SESSION_WORDS))
+assert.equal(capFold.words.get('t000000'), 1, '上限内的词照常计入')
+assert.equal(capFold.words.get('t008509'), undefined, '超过上限后的词不收')
+
+// 合并：词频相加、条数与字符数相加、时间取并集、top N 排序与截断
+const mergeFirstDay = new Date(2026, 9, 13, 10, 30, 0).getTime()
+const mergeSecondDay = new Date(2026, 9, 15, 9, 0, 0).getTime()
+const mergeFirst = foldSessionEvents([
+  timeUserMessage(0, mergeFirstDay, '分析 插件 snapshot.json'),
+  timeUserMessage(1, mergeFirstDay, '分析 插件'),
+])
+const mergeSecond = foldSessionEvents([timeUserMessage(0, mergeSecondDay, 'ledger 分析 会话')])
+const merged = mergePromptStats([mergeFirst, mergeSecond])
+assert.equal(merged.totalPrompts, 3, '条数相加')
+assert.equal(merged.totalChars, mergeFirst.promptChars + mergeSecond.promptChars, '字符数相加')
+assert.deepEqual(merged.words[0], { word: '分析', count: 3 }, '词频相加后按次数降序')
+assert.equal(merged.words.find((entry) => entry.word === '插件').count, 2)
+assert.equal(merged.from, '2026-10-13', '起点取参与统计提问的最早本地日期')
+assert.equal(merged.to, '2026-10-15', '终点取最晚本地日期')
+assert.deepEqual(merged.words.filter((entry) => entry.count === 1), [
+  { word: 'ledger', count: 1 },
+  { word: 'snapshot.json', count: 1 },
+  { word: '会话', count: 1 },
+], '同频按词升序（排序键固定，下发顺序稳定）')
+const limitedMerge = mergePromptStats([mergeFirst, mergeSecond], 2)
+assert.deepEqual(limitedMerge.words.map((entry) => entry.word), ['分析', '插件'], 'limit 截断')
+assert.deepEqual(mergePromptStats([]), { words: [], totalPrompts: 0, totalChars: 0, from: null, to: null }, '没有数据时给空词表')
+assert.deepEqual(
+  mergePromptStats([{ words: new Map([['分析', 4]]) }]),
+  { words: [{ word: '分析', count: 4 }], totalPrompts: 0, totalChars: 0, from: null, to: null },
+  '旧数据源没有统计字段时按空值合并，不抛错',
+)
+
+// ===== 场景八：剥离宿主注入（来源 kind + 标签段）与英文停用词 =====
+const sourcedUserMessage = (seq, time, text, source) => ({ seq, time, type: 'user/message', data: { content: [{ type: 'text', text }], source } })
+const humanPromptMessage = (seq, time, text) => sourcedUserMessage(seq, time, text, { kind: 'user' })
+const timeContextText = [
+  'Time sampled while preparing turn 1, step 1: 2026-10-23T10:36:14+08:00[Asia/Shanghai]',
+  'Browser time zone for this request: unavailable. Ask the user to clarify otherwise-unqualified dates and times.',
+  'Elapsed since the preceding model-visible message: unavailable.',
+].join('\n')
+
+// 宿主注入是独立的 user/message（source.kind 不是 user）：不进标题、不进词频、不计条数
+const humanOnlyText = '帮我看看 snapshot.json 的 cache 命中率'
+const sourcedFold = foldSessionEvents([
+  sourcedUserMessage(0, baseTime, timeContextText, { kind: 'time-context' }),
+  sourcedUserMessage(1, baseTime, 'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.', { kind: 'runtime-context' }),
+  humanPromptMessage(2, baseTime, humanOnlyText),
+])
+assert.equal(sourcedFold.promptCount, 1, '注入消息不计入提问条数')
+assert.equal(sourcedFold.promptChars, humanOnlyText.length, '字符数只算人类提问')
+assert.equal(sourcedFold.firstPrompt, humanOnlyText, '注入消息不当标题兜底')
+assert.equal(sourcedFold.words.get('cache'), 1, '人类提问里的实词照常统计')
+assert.equal(sourcedFold.words.get('snapshot.json'), 1)
+for (const injectedWord of ['the', 'this', 'step', 'message', 'browser', 'zone', 'asia/shanghai', 'dates', 'elapsed', 'sampled', 'preparing', 'request', 'turn', 'otherwise-unqualified', 'preceding', 'supersedes']) {
+  assert.equal(sourcedFold.words.get(injectedWord), undefined, '注入消息的词不进词表：' + injectedWord)
+}
+
+// 同一条人类消息里拼进成对注入段：只统计用户部分
+const mixedHumanPart = '请分析 snapshot.json 的写入耗时'
+const mixedFold = foldSessionEvents([
+  humanPromptMessage(0, baseTime, mixedHumanPart + '\n\n<system-reminder>\n' + timeContextText + '\n</system-reminder>'),
+])
+assert.equal(mixedFold.promptCount, 1, '剥离注入段后仍有正文，保留一条')
+assert.equal(mixedFold.promptChars, mixedHumanPart.length, '字符数只算用户部分')
+assert.equal(mixedFold.words.get('分析'), 1)
+assert.equal(mixedFold.words.get('写入'), 1)
+assert.equal(mixedFold.words.get('耗时'), 1)
+assert.equal(mixedFold.words.get('snapshot.json'), 1)
+for (const injectedWord of ['browser', 'sampled', 'preparing', 'elapsed', 'dates', 'zone']) {
+  assert.equal(mixedFold.words.get(injectedWord), undefined, '注入段剥离后不计：' + injectedWord)
+}
+
+// 行首的未闭合注入段（被截断）删到正文末尾
+const trailingUnclosed = foldSessionEvents([
+  humanPromptMessage(0, baseTime, '用户问题\n<system-reminder>Time sampled while preparing turn 3'),
+])
+assert.equal(trailingUnclosed.promptCount, 1)
+assert.equal(trailingUnclosed.promptChars, '用户问题'.length, '未闭合注入段删到末尾')
+assert.equal(trailingUnclosed.words.get('sampled'), undefined, '未闭合注入段不计词')
+
+// 只有注入文本的消息（成对 / 未闭合）清洗后为空：不计条数、不出词
+const onlyInjectedFold = foldSessionEvents([
+  humanPromptMessage(0, baseTime, '<system-reminder>Time sampled while preparing turn 1, step 1.</system-reminder>'),
+  humanPromptMessage(1, baseTime, '  <system>系统提示</system> '),
+  humanPromptMessage(2, baseTime, '<local-command-stdout>done</local-command-stdout>'),
+  humanPromptMessage(3, baseTime, '<system-reminder>Time sampled while preparing turn 2, step 1: 2026-10-23T10:36:14+08:00[Asia/Shanghai]'),
+])
+assert.equal(onlyInjectedFold.promptCount, 0, '清洗后为空的消息不计入提问条数')
+assert.equal(onlyInjectedFold.promptChars, 0)
+assert.equal(onlyInjectedFold.firstPrompt, null, '只有注入文本时没有标题兜底')
+assert.equal(onlyInjectedFold.words.size, 0, '注入文本不产生词')
+
+// 注入段在前、用户提问在后：剥掉注入后照常统计
+const injectionFirst = foldSessionEvents([
+  humanPromptMessage(0, baseTime, '<system-reminder>Time sampled while preparing turn 4</system-reminder>\n真正的提问在注入段之后'),
+])
+assert.equal(injectionFirst.promptCount, 1, '注入段在前的消息剥掉后仍统计用户部分')
+assert.equal(injectionFirst.firstPrompt, '真正的提问在注入段之后')
+
+// 正文里引用标签的正常提问不被清洗误杀（行内未闭合标签不删后半句）
+const inlineReference = '为什么 <system-reminder> 会出现在标题里？'
+const inlineReferenceFold = foldSessionEvents([humanPromptMessage(0, baseTime, inlineReference)])
+assert.equal(inlineReferenceFold.promptCount, 1, '行内引用标签的提问照常统计')
+assert.equal(inlineReferenceFold.firstPrompt, inlineReference)
+
+// 非文本块（tool_result / tool_use / 图片）里的 text 不参与统计
+const nonTextBlockFold = foldSessionEvents([{
+  seq: 0, time: baseTime, type: 'user/message',
+  data: {
+    source: { kind: 'user' },
+    content: [
+      { type: 'tool_result', text: 'hiddenmarker' },
+      { type: 'tool_use', text: 'othermarker' },
+      { type: 'image' },
+      { type: 'text', text: '真正的提问 deployment' },
+    ],
+  },
+}])
+assert.equal(nonTextBlockFold.firstPrompt, '真正的提问 deployment', '只取 type=text 的块')
+assert.equal(nonTextBlockFold.words.get('hiddenmarker'), undefined, 'tool_result 文本不统计')
+assert.equal(nonTextBlockFold.words.get('othermarker'), undefined, 'tool_use 文本不统计')
+assert.equal(nonTextBlockFold.words.get('deployment'), 1)
+
+// 英文停用词：虚词与注入模板词不出现，技术实词保留
+const stopWordFold = foldSessionEvents([humanPromptMessage(0, baseTime, 'the token cache model cost deployment step message browser request time')])
+for (const stopWord of ['the', 'step', 'message', 'browser', 'request', 'time']) {
+  assert.equal(stopWordFold.words.get(stopWord), undefined, '英文停用词不计：' + stopWord)
+}
+for (const realWord of ['token', 'cache', 'model', 'cost', 'deployment']) {
+  assert.equal(stopWordFold.words.get(realWord), 1, '技术实词保留：' + realWord)
+}
+
+// 中文注入模板 2-gram：整词命中即丢，2-gram 算法不变
+const injectedGramFold = foldSessionEvents([humanPromptMessage(0, baseTime, '时间 请求 消息 环境 区域 上海 采样 准备 缓存')])
+for (const injectedGram of ['时间', '请求', '消息', '环境', '区域', '上海', '采样', '准备']) {
+  assert.equal(injectedGramFold.words.get(injectedGram), undefined, '中文注入模板词不计：' + injectedGram)
+}
+assert.equal(injectedGramFold.words.get('缓存'), 1, '中文实词照常统计')
 
 console.log('session-usage.test: 全部通过')

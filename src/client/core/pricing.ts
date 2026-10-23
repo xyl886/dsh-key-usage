@@ -117,7 +117,7 @@ export interface PricingCoverage {
   /** 命中 LiteLLM 聚合价目的模型数（第三方、USD）。 */
   aggregateModels?: number
   partialModels?: number
-  /** 命中「同模型官方价目」（跨通道同名唯一）的模型数。 */
+  /** 命中「跨通道厂商官方价」（同名唯一）的模型数。 */
   modelModels?: number
   unpricedModels?: number
 }
@@ -155,20 +155,18 @@ export type PricingRefreshResult =
   | { ok: true; url: string; bytes: number; entries: number; sha256: string; fetchedAt: string }
   | { ok: false; error: string }
 
-export const COST_SOURCE_LABELS: Record<CostSource, string> = {
+export const COST_SOURCE_LABELS: Partial<Record<CostSource, string>> = {
   official: 'cso.official',
   catalog: 'cso.catalog',
   aggregate: 'cso.aggregate',
-  model: 'cso.model',
   none: '—',
 }
 
 /** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
-export const COST_SOURCE_HINTS: Record<CostSource, string> = {
+export const COST_SOURCE_HINTS: Partial<Record<CostSource, string>> = {
   official: 'csh.official',
   catalog: 'csh.catalog',
   aggregate: 'csh.aggregate',
-  model: 'csh.model',
   none: 'csh.none',
 }
 

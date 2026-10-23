@@ -86,7 +86,7 @@ await check('同一问题再次出现只累加内存计数，不再重复写文�
 })
 
 await check('导出文本：带时间 / 级别 / 来源，详情缩进一行，重复标 ×N', async () => {
-  const text = log.logText()
+  const text = log.logTextOf(log.logEntries())
   assert.match(text, /\[error\] pricing · 刷新价目失败 ×2/)
   assert.match(text, /\n {4}HTTP 502/)
   assert.match(text, /\[error\] quota · 实时查询未成功 · local ×2/)

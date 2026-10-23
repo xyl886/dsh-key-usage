@@ -4,6 +4,7 @@
  * 显示币种不落盘 —— 记住一个还没取到汇率的 USD 只会让界面更难懂。
  */
 import { useEffect, useState } from 'react'
+import { loadFxRate } from './api.ts'
 import { localTimeTextOf } from './format.ts'
 import { t } from './i18n.ts'
 
@@ -81,9 +82,20 @@ export function setFxRate(fx: FxRate | null): void {
 }
 
 /** 订阅显示币种与汇率：切币种 / 汇率更新后组件重渲染。 */
+let fxBootstrapStarted = false
+
 export function useCurrencyDisplay(): CurrencyDisplayState {
   const [current, setCurrent] = useState<CurrencyDisplayState>(currencyDisplayStateOf)
   useEffect(() => subscribeCurrencyDisplay(() => setCurrent(currencyDisplayStateOf())), [])
+  useEffect(() => {
+    // 服务端 12 小时内走缓存（不 force 就不联网）：没有汇率时跨币种金额只能并列，无法参与占比/环比
+    if (fxBootstrapStarted || currencyDisplayStateOf().fx !== null) return
+    fxBootstrapStarted = true
+    void loadFxRate(false).then((result) => {
+      const normalized = result === null ? null : normalizeFxRate(result)
+      if (normalized !== null) setFxRate(normalized)
+    }).catch(() => { /* 汇率取不到不影响页面 */ })
+  }, [])
   return current
 }
 

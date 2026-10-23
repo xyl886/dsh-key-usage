@@ -90,6 +90,9 @@ export function DetailTab(props: {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const { usage, channels, bounds, tooltip, channelFilter } = props
+  // hook 必须在任何早退之前调用：usage 从 null 变成有值时如果才第一次调 useTrend，
+  // React 会因为 hook 数量变化抛 #310（切到「使用明细」的瞬间必现）
+  const trend = useTrend({ usage, from: bounds.from, to: bounds.to, range: props.range, channelFilter, channels, pricingRevision: props.pricingRevision })
   if (usage === null) return <div className={styles.empty}>{t('d.ledgerLoading')}</div>
 
   const totals = usage.totals
@@ -103,8 +106,6 @@ export function DetailTab(props: {
   const activeDays = usage.days.filter((day) => day.inputTokens + day.outputTokens + day.cacheReadTokens > 0).length
   const singleChannel = channelFilter === 'ALL' ? null : channelOf(channels, channelFilter)
   const costCell = costCellOf(singleChannel, safeTotals)
-  // 环比：只取角标与上期值（需求 3）
-  const trend = useTrend({ usage, from: bounds.from, to: bounds.to, range: props.range, channelFilter, channels, pricingRevision: props.pricingRevision })
   const singleDay = bounds.from === bounds.to
   const rangeDays = Math.min(daysBetween(bounds.from, bounds.to), MAX_AXIS_DAYS)
 

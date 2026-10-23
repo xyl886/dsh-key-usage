@@ -41,12 +41,14 @@ if (clientPricing !== null) {
     shortCommitOf,
   } = clientPricing
 
-  // ===== 1. 成本来源：五档全覆盖，且与「你的规则」层一起退役 =====
+  // ===== 1. 成本来源：四档有文案（model 档不再显示文案，角标与摘要都不标注它）=====
   {
-    // model = 本通道没命中、聚合价里同名模型全库唯一 → 用同模型官方价目（台账反推均价那档已删除）
-    const sources = ['official', 'catalog', 'aggregate', 'model', 'none']
-    assert.deepEqual(Object.keys(COST_SOURCE_LABELS).sort(), [...sources].sort(), '标签表只认这五档')
+    // 「模型官方价」字样已按用户要求整体移除：标签表/说明表不再收录 model 档，界面走早退不渲染
+    const sources = ['official', 'catalog', 'aggregate', 'none']
+    assert.deepEqual(Object.keys(COST_SOURCE_LABELS).sort(), [...sources].sort(), '标签表只剩这四档')
     assert.deepEqual(Object.keys(COST_SOURCE_HINTS).sort(), [...sources].sort(), '说明表与标签表同集合')
+    assert.equal(COST_SOURCE_LABELS.model, undefined, 'model 档不再有可见文案')
+    assert.equal(COST_SOURCE_HINTS.model, undefined, 'model 档不再有可见说明')
     assert.equal(COST_SOURCE_LABELS.rule, undefined, '「自定」角标已随用户规则层移除')
     assert.equal(COST_SOURCE_LABELS.estimate, undefined, '台账反推均价已整层删除，不再有 estimate 档')
     const values = Object.values(COST_SOURCE_LABELS)

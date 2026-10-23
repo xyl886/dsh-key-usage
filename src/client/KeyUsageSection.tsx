@@ -22,6 +22,7 @@ import type {
   HeatmapDay,
   ModelsResponse,
   ProjectsResponse,
+  PromptsResponse,
   QuotaProvider,
   SessionsResponse,
   SnapshotQuotaOutcome,
@@ -55,6 +56,7 @@ export function KeyUsageSection() {
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([])
   const [usage, setUsage] = useState<UsageResponse | null>(null)
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
+  const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
@@ -88,7 +90,7 @@ export function KeyUsageSection() {
   const sectionsForTab = useCallback((tab: TabId): string[] => {
     const base = ['channels', 'overview', 'heatmap', 'quota']
     if (tab === 'sessions') return [...base, 'sessions']
-    if (tab === 'distribution') return [...base, 'projects', 'models']
+    if (tab === 'distribution') return [...base, 'projects', 'models', 'prompts']
     return base
   }, [])
 
@@ -108,6 +110,7 @@ export function KeyUsageSection() {
     if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
     if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
     if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
+    if (sections.prompts !== undefined && sections.prompts !== null) setPrompts(sections.prompts)
     const usageSection = sections.usage
     if (usageSection !== undefined && usageIsDefaultRef.current && usageSection !== null) {
       setUsage(usageSection)
@@ -170,7 +173,7 @@ export function KeyUsageSection() {
 
   /**
    * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
-   * 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。最多追 2 次（约 4 秒）就放弃。
+   * 隔一会儿追取几次，拿到新数据就换上，用户不用手动刷新。冷启动重建可能十几秒，追到 12 次（约 30 秒）为止。
    */
   useEffect(() => {
     let cancelled = false
@@ -182,7 +185,7 @@ export function KeyUsageSection() {
       applySnapshot(snapshot)
       if (snapshot.building === true || snapshot.quotaRefreshing === true) {
         attempts += 1
-        if (attempts < 2) timer = setTimeout(() => { void chase() }, 2000)
+        if (attempts < 12) timer = setTimeout(() => { void chase() }, 2500)
       }
     }
     timer = setTimeout(() => { void chase() }, 1500)
@@ -218,8 +221,10 @@ export function KeyUsageSection() {
     if (activeTab === 'distribution') {
       if (projects === null) void loadProjects().then(setProjects)
       if (models === null) void loadModels().then(setModels)
+      // prompts 只在首次打开时还没取过：切到本页补一次（服务端已算好，读快照即可）
+      if (prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     }
-  }, [activeTab, sessions, projects, models])
+  }, [activeTab, sessions, projects, models, prompts, applySnapshot])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
@@ -343,6 +348,7 @@ export function KeyUsageSection() {
         <DistributionTab
           projects={projects}
           models={models}
+          prompts={prompts}
           channels={channels}
           tooltip={tooltip}
           focusWorkspace={projectFilter}

@@ -76,6 +76,6 @@ function subscribe(listener: () => void): () => void {
 
 /** 组件里用它拿 t：宿主切语言时自动重渲染。 */
 export function useT(): (key: string, params?: Record<string, string | number>) => string {
-  useSyncExternalStore(subscribe, () => revision)
+  useSyncExternalStore(subscribe, () => revision, () => revision)
   return t
 }

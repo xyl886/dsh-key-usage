@@ -39,6 +39,7 @@ import {
   type SessionRow,
 } from './data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
+import { mergePromptStats } from './data/session-usage.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-file.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
 import {
@@ -59,6 +60,7 @@ import {
   sumMoneyByCurrency,
   weakestOf,
   UNIT_LABELS,
+  isoDayOf,
   type CostSource,
   type MoneyByCurrency,
   type PricedRuleHit,
@@ -392,7 +394,7 @@ export function parseRatesLimit(raw: string | null): number {
 }
 
 /** `/snapshot` 可以按需下发的段（= `sections` 的键）；顶层其余字段一律原样保留。 */
-export const SNAPSHOT_SECTION_NAMES = ['overview', 'channels', 'usage', 'heatmap', 'models', 'projects', 'sessions', 'quota'] as const
+export const SNAPSHOT_SECTION_NAMES = ['overview', 'channels', 'usage', 'heatmap', 'models', 'projects', 'sessions', 'prompts', 'quota'] as const
 
 /**
  * `?sections=a,b,c` → 要下发的段名集合；trim + 小写比对，未知名字忽略。
@@ -507,6 +509,28 @@ async function readJsonBody(request: IncomingMessage, limitBytes = 128 * 1024): 
   }
 }
 
+/** 启动埋点：插件挂载时刻（模块加载即挂载前一刻），与首次快照请求对比可看出首屏是否被拖慢。 */
+const bootMountedAtWallClock = Date.now()
+let bootFirstViewLogged = false
+
+/** 记录首次快照请求（只记一次，写失败静默）。 */
+function logFirstView(building: boolean): void {
+  if (bootFirstViewLogged) return
+  bootFirstViewLogged = true
+  try {
+    appendLogRecords([{
+      time: new Date().toISOString(),
+      level: 'info',
+      source: 'boot',
+      message: '首次快照请求',
+      detail: '宿主进程已运行 ' + String(Math.round(process.uptime() * 1000)) + ' ms；距插件挂载 '
+        + String(Date.now() - bootMountedAtWallClock) + ' ms；返回时 building=' + String(building),
+    }], logFilePath())
+  } catch {
+    // 埋点失败不影响主流程
+  }
+}
+
 export function mountKeyUsageRoutes(
   webServer: WebServer,
   sessionSource: SessionSource = unavailableSessionSource,
@@ -551,11 +575,13 @@ export function mountKeyUsageRoutes(
    * 给合并序列补成本与来源：台账天保留官方成本（official，不重算），
    * 会话补位天逐模型按价目算（通道内价目 → 同模型官方价目），两层都不命中就是 none。
    * @param offPeakHours - 单日范围才有的小时槽；给了就按错峰占比加权
+   * @param offPeakDay - 这批小时槽所属日期的 ISO 星期（错峰窗口按星期区分，缺了会把工作日误判成错峰）
    */
   const annotateCosts = (
     days: ChannelDailySummary[],
     sessionDates: string[],
     offPeakHours: PricingUsageRow[] | null,
+    offPeakDay?: number,
   ): AnnotatedDaySummary[] => {
     const sessionSet = new Set(sessionDates)
     return days.map((day) => {
@@ -577,7 +603,7 @@ export function mountKeyUsageRoutes(
       }
       const models = day.models.map((model) => {
         const row = dayModelPricingRow(model)
-        const priced = priceRowsOf([row], { hours: offPeakHours })[0]
+        const priced = priceRowsOf([row], { hours: offPeakHours, hoursDay: offPeakDay })[0]
         const priced0 = priced.cost !== null && priced.rule !== null
         // 价目没命中就是「无依据」：金额记 0 只是为了合计不炸，来源会标 none，界面显示 —
         const cost = priced0 ? Math.round((priced.cost ?? 0) * 100) / 100 : 0
@@ -666,7 +692,9 @@ export function mountKeyUsageRoutes(
     // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
     const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
     // 单日有小时槽时按错峰占比加权；跨天拿不到小时分布，只能按标准价（不猜折扣）
-    const days = annotateCosts(merged.days, merged.sessionDates, hoursAsPricingRows(hours))
+    // 星期几必须一起传：价目里有「周末全天」窗口，缺了它会把每个工作日也判成错峰（单日成本凭空打五折）
+    const offPeakDay = hours === null || from === '' ? undefined : isoDayOf(new Date(from + 'T12:00:00'))
+    const days = annotateCosts(merged.days, merged.sessionDates, hoursAsPricingRows(hours), offPeakDay)
     const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
     const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
     return {
@@ -975,6 +1003,8 @@ export function mountKeyUsageRoutes(
             models: await modelsPayload(Number.MAX_SAFE_INTEGER, quota, collection),
             projects: await projectsPayload(Number.MAX_SAFE_INTEGER, collection),
             sessions: await sessionsPayload(Number.MAX_SAFE_INTEGER, quota, collection),
+            // 提问词云：词频 Map 跟着会话折叠缓存走，这里只做跨会话合并 + 取 top N
+            prompts: mergePromptStats(collection.records),
           },
           issues: [],
         }
@@ -998,6 +1028,7 @@ export function mountKeyUsageRoutes(
       // 构建中返回上一份完整内容 + building:true，客户端按 building / quotaRefreshing 追取
       const url = new URL(request.url ?? '/', 'http://localhost')
       const view = await snapshotService.view({ fresh: url.searchParams.get('fresh') === '1' })
+      logFirstView(view.building)
       // ?sections=a,b,c 只裁剪下发（构建照旧全量），界面按 Tab 只取自己要的那几段
       sendJson(response, 200, trimSnapshotSections(view, parseSections(url.searchParams.get('sections'))))
     },
