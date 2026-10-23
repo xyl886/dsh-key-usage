@@ -855,12 +855,25 @@ export function projectRowsOf(
     .sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
 }
 
-/** 指定日期的 24 小时分桶（跨会话汇总），供「使用明细」单日按小时视图使用。 */
-export function hoursOfDate(records: SessionUsageRecord[], date: string): Array<{ calls: number; buckets: Record<string, number> }> {
-  const hours = Array.from({ length: 24 }, () => ({ calls: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }))
+type HourSlot = { calls: number; buckets: Record<string, number> }
+const emptyHourSlots = (): HourSlot[] => Array.from({ length: 24 }, () => ({
+  calls: 0,
+  buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+}))
+
+/**
+ * 按天聚合的 24 小时分桶（跨会话）。一次遍历拿全范围的小时分布：成本要在多天范围里
+ * 逐日按「当天星期几 + 当天错峰占比」加权，只有单日一条曲线时多天成本只能按高峰价算。
+ */
+export function hoursByDateOf(records: SessionUsageRecord[]): Map<string, HourSlot[]> {
+  const byDate = new Map<string, HourSlot[]>()
   for (const record of records) {
     for (const day of record.summary.days) {
-      if (day.date !== date) continue
+      let hours = byDate.get(day.date)
+      if (hours === undefined) {
+        hours = emptyHourSlots()
+        byDate.set(day.date, hours)
+      }
       for (let hour = 0; hour < 24; hour += 1) {
         const source = day.hours[hour]
         if (source === undefined) continue
@@ -872,5 +885,10 @@ export function hoursOfDate(records: SessionUsageRecord[], date: string): Array<
       }
     }
   }
-  return hours
+  return byDate
+}
+
+/** 指定日期的 24 小时分桶（跨会话汇总），供「使用明细」单日按小时视图使用。 */
+export function hoursOfDate(records: SessionUsageRecord[], date: string): HourSlot[] {
+  return hoursByDateOf(records).get(date) ?? emptyHourSlots()
 }
