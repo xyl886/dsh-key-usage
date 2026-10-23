@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import {
   attributeModelKey,
   foldSessionEvents,
+  preparePromptSegmenter,
   isInjectedPromptText,
   mergePromptStats,
   normalizeProvider,
@@ -400,3 +401,18 @@ for (const injectedGram of ['时间', '请求', '消息', '环境', '区域', '�
 assert.equal(injectedGramFold.words.get('缓存'), 1, '中文实词照常统计')
 
 console.log('session-usage.test: 全部通过')
+
+// ===== jieba 分词（独立于 2-gram 回退）：预热后中文长词整体成词 =====
+{
+  await preparePromptSegmenter()
+  const folded = foldSessionEvents([{
+    seq: 1,
+    time: Date.now(),
+    type: 'user/message',
+    data: { content: [{ type: 'text', text: '数据库表结构设计和成本计算，画蛇添足' }], source: { kind: 'user' } },
+  }])
+  const words = new Set(folded.words.keys())
+  assert.ok(words.has('数据库'), 'jieba 应把「数据库」识别为一个词（词表实际：' + [...words].join(' ') + '）')
+  assert.ok(words.has('成本计算'), 'jieba 应把「成本计算」识别为一个词')
+  assert.ok(!words.has('据库'), '不应再出现 2-gram 碎片「据库」')
+}

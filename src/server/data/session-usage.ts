@@ -211,8 +211,37 @@ const ENGLISH_STOP_WORDS = new Set([
   'result', 'output', 'input', 'system', 'human', 'user', 'assistant', 'date', 'time',
 ])
 
-/** 中文注入模板 2-gram：注入段的中文碎片，整 gram 命中即丢；不改 2-gram 算法，实词组合仍保留。 */
+/** 中文注入模板词：注入段的中文碎片，整词命中即丢；实词组合仍保留。 */
 const CHINESE_INJECTED_GRAMS = new Set(['时间', '请求', '消息', '环境', '区域', '上海', '采样', '准备'])
+
+/** 含汉字判定（jieba 会把标点与英文也切出来，这里只要中文词）。 */
+const HAN_ANY_PATTERN = /[\u4e00-\u9fff]/
+
+interface PromptSegmenter {
+  cut: (text: string, hmm?: boolean | null) => string[]
+}
+let segmenter: PromptSegmenter | null = null
+let segmenterLoading: Promise<void> | null = null
+
+/**
+ * 准备中文分词器（jieba-wasm，MIT）。
+ * **懒加载**：wasm 3.9 MB、首次 cut 约 270 ms，绝不能放在宿主启动路径上；构建词云前调用一次即可。
+ * 加载失败静默回退到 2-gram，不影响快照与其它端点。
+ */
+export async function preparePromptSegmenter(): Promise<void> {
+  if (segmenter !== null) return
+  segmenterLoading ??= (async () => {
+    try {
+      // nodejs 入口在 import 时已自带 wasm（无需手动 initSync / 读文件）
+      const wasm = await import('jieba-wasm') as unknown as { cut?: PromptSegmenter['cut']; default?: { cut?: PromptSegmenter['cut'] } }
+      const cut = wasm.cut ?? wasm.default?.cut
+      if (typeof cut === 'function') segmenter = { cut }
+    } catch {
+      segmenter = null
+    }
+  })()
+  await segmenterLoading
+}
 
 /** 累加词频：到上限后只累加已有词、不再收新词。 */
 function addWordCount(words: Map<string, number>, word: string, count: number, cap: number): void {
@@ -225,11 +254,26 @@ function addWordCount(words: Map<string, number>, word: string, count: number, c
   words.set(word, count)
 }
 
-/** 把一段提问正文拆成英文标识符与中文 2-gram 并逐词计数（中英同一权重）。 */
+/**
+ * 把一段提问正文拆成英文标识符与中文词并逐词计数（中英同一权重）。
+ * 中文优先走 jieba 分词；分词器没就绪时回退到滑动 2-gram（宁可碎片也不丢词）。
+ */
 function addPromptWords(words: Map<string, number>, text: string): void {
   for (const word of text.toLowerCase().match(LATIN_WORD_PATTERN) ?? []) {
     if (ENGLISH_STOP_WORDS.has(word)) continue
     addWordCount(words, word, 1, MAX_SESSION_WORDS)
+  }
+  const cut = segmenter?.cut ?? null
+  if (cut !== null) {
+    for (const word of cut(text, true)) {
+      // jieba 会把标点、英文、单字也切出来：只收 2 字以上的中文词
+      if (word.length < 2 || !HAN_ANY_PATTERN.test(word)) continue
+      // 词首 / 词尾是虚词（这个、什么、我们的…）就丢掉，与 2-gram 的边界判定同一套表
+      if (CHINESE_FUNCTION_CHAR_FLAGS[word.charCodeAt(0)] === 1 || CHINESE_FUNCTION_CHAR_FLAGS[word.charCodeAt(word.length - 1)] === 1) continue
+      if (CHINESE_INJECTED_GRAMS.has(word)) continue
+      addWordCount(words, word, 1, MAX_SESSION_WORDS)
+    }
+    return
   }
   for (const run of text.match(HAN_RUN_PATTERN) ?? []) {
     for (let index = 0; index + 1 < run.length; index += 1) {

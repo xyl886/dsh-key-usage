@@ -8,6 +8,7 @@
 import {
   attributeModelKey,
   foldSessionEvents,
+  preparePromptSegmenter,
   promptSnippetOf,
   summarizeSession,
   PROMPT_SNIPPET_CHARS,
@@ -332,6 +333,8 @@ export function createSessionSource(host: HostContextLike): {
   }
 
   async function collect(): Promise<SessionCollection> {
+  // 词云分词器预热：只在真正要构建会话数据时加载 wasm（宿主启动阶段不会走到这里）
+  await preparePromptSegmenter()
     if (inFlight !== null) return inFlight
     inFlight = (async () => {
       try {
