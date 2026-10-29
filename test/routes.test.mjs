@@ -235,7 +235,7 @@ assert.equal(localQuota.supported, false, '本地端点没有余额接口，界�
 assert.equal(localQuota.error, 'no-snapshot', '既无实时也无快照时给出原因')
 
 // 统一快照：首次请求物化一份，6 个 tab 共用（写盘 + 读回）
-const snapshotFile = join(home, 'dsh-key-usage', 'snapshot.json')
+const snapshotFile = join(home, 'dsh-key-usage', 'usage.db')
 assert.equal(existsSync(snapshotFile), true, '首次请求后应写出统一快照')
 const firstSnapshot = await callEndpoint('/dsh-key-usage/snapshot')
 assert.equal(firstSnapshot.body.ok, true)
@@ -772,11 +772,18 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.deepEqual(logAppend.body, { ok: true, written: 1 })
   const logRead = await priced('/dsh-key-usage/log?limit=10')
   assert.equal(logRead.status, 200)
-  // 启动埋点（source=boot）也会落进同一个文件：断言只看业务日志，不因埋点条数变化而脆断
-  const businessRecords = logRead.body.records.filter((record) => record.source !== 'boot')
-  assert.equal(businessRecords.length, 1)
-  assert.equal(businessRecords[0].message, '刷新价目失败')
-  assert.equal(businessRecords[0].detail, 'HTTP 502 · https://example.test/prices.json')
+  // 同一个库里还有构建/埋点日志：只断言「写入的那条在、且字段完整」，不依赖总条数
+  const written = logRead.body.records.find((record) => record.message === '刷新价目失败')
+  assert.ok(written !== undefined, '写入的日志要能回读：' + JSON.stringify(logRead.body.records.map((record) => record.message)))
+  assert.equal(written.detail, 'HTTP 502 · https://example.test/prices.json')
+  // 服务端过滤：level=error 只回 error 档（索引过滤，能查到 limit 之外的更早记录）
+  const onlyErrors = await priced('/dsh-key-usage/log?limit=50&level=error')
+  assert.equal(onlyErrors.status, 200)
+  assert.ok(onlyErrors.body.records.length > 0, '库里应有 error 记录')
+  assert.ok(onlyErrors.body.records.every((record) => record.level === 'error'), 'level=error 只回 error：' + JSON.stringify(onlyErrors.body.records.map((record) => record.level)))
+  const bySource = await priced('/dsh-key-usage/log?limit=50&source=pricing')
+  assert.ok(bySource.body.records.every((record) => record.source === 'pricing'), 'source=pricing 只回该来源')
+
   const logBadBody = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', '不是 JSON')
   assert.equal(logBadBody.body.ok, false, '坏请求体回 {ok:false}，不抛错')
   const logClear = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({ clear: true }))

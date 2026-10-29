@@ -19,7 +19,7 @@ const require = createRequire(import.meta.url)
 const { Database } = require('node-sqlite3-wasm') as { Database: new (path: string) => DatabaseHandle }
 
 export const STORAGE_FILE = 'usage.db'
-export const STORAGE_SCHEMA_VERSION = 1
+export const STORAGE_SCHEMA_VERSION = 2
 /** 日志保留天数（超期在写入后清理）。 */
 export const LOG_RETENTION_DAYS = 30
 /** 拒绝把日志写进非 db 路径（迁移前的 JSONL 也走同一套接口，靠这个守卫兜住）。 */
@@ -30,7 +30,9 @@ const LEGACY_FX_FILE = 'fx-rate.json'
 const LEGACY_QUOTA_FILE = 'quota-snapshots.json'
 
 export function storageDir(): string {
-  return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-key-usage')
+  // DSH_HOME 可能是空串（只判 null/undefined 会拼出相对路径，打开到别处的同名文件）
+  const home = process.env.DSH_HOME?.trim()
+  return join(home !== undefined && home !== '' ? home : join(homedir(), '.dsh'), 'dsh-key-usage')
 }
 
 export function storagePath(): string {
@@ -48,6 +50,7 @@ export function openStorage(path: string = storagePath()): DatabaseHandle {
   const db = new Database(key)
   db.exec('PRAGMA journal_mode = DELETE; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = OFF;')
   createSchema(db)
+  ensurePriceColumns(db)
   migrateLegacyFiles(db, dirname(key))
   connections.set(key, db)
   return db
@@ -87,6 +90,7 @@ function createSchema(db: DatabaseHandle): void {
       model_key TEXT PRIMARY KEY,
       vendor TEXT,
       model_name TEXT NOT NULL,
+      mode TEXT,
       input_per_token REAL,
       output_per_token REAL,
       cache_read_per_token REAL,
@@ -107,6 +111,35 @@ function createSchema(db: DatabaseHandle): void {
     ) STRICT;
     CREATE TABLE IF NOT EXISTS quota_seed (provider TEXT PRIMARY KEY, payload TEXT NOT NULL) STRICT;
   `)
+}
+
+/** 旧库补列（schema 1 → 2）：`mode` 是装载优化用的派生列，缺了就加，不动已有数据。 */
+function ensurePriceColumns(db: DatabaseHandle): void {
+  const columns = db.all('PRAGMA table_info(litellm_price)') as unknown as Array<{ name: string }>
+  const hasMode = columns.some((column) => column.name === 'mode')
+  if (hasMode) {
+    metaSet(db, 'schema_version', String(STORAGE_SCHEMA_VERSION))
+    return
+  }
+  try {
+    db.exec('ALTER TABLE litellm_price ADD COLUMN mode TEXT')
+    // 从 raw 回填 mode（只做一次）：不回填的话装载时按空 mode 过滤，聚合价整层会失效。
+    // 必须包在一个事务里：逐行自动提交等于每行一次 fsync，4120 行实测要 17 秒。
+    const pending = db.all('SELECT model_key AS modelKey, raw FROM litellm_price WHERE mode IS NULL') as unknown as Array<{ modelKey: string; raw: string }>
+    db.exec('BEGIN')
+    try {
+      for (const row of pending) {
+        try {
+          const value = JSON.parse(row.raw) as { mode?: unknown }
+          if (typeof value.mode === 'string') db.run('UPDATE litellm_price SET mode = ? WHERE model_key = ?', [value.mode, row.modelKey])
+        } catch { /* 坏行跳过 */ }
+      }
+      db.exec('COMMIT')
+    } catch {
+      try { db.exec('ROLLBACK') } catch { /* 回滚失败保持原状 */ }
+    }
+    metaSet(db, 'schema_version', String(STORAGE_SCHEMA_VERSION))
+  } catch { /* 加列失败保持旧版本号，下次再试 */ }
 }
 
 // ===== meta =====
@@ -199,10 +232,30 @@ export function pruneLogRows(db: DatabaseHandle, days: number = LOG_RETENTION_DA
   return before - countRows(db, 'log_entry')
 }
 
-export function readLogRows(db: DatabaseHandle, limit: number): StoredLogRecord[] {
+export interface LogQuery {
+  /** 只要这一档；不传表示全部。 */
+  level?: string
+  /** 只要这个来源；不传表示全部。 */
+  source?: string
+}
+
+/** 读日志：可按 level / source 过滤（两列都有索引），筛选时能查到 limit 之外的更早记录。 */
+export function readLogRows(db: DatabaseHandle, limit: number, query: LogQuery = {}): StoredLogRecord[] {
+  const where: string[] = []
+  const params: Array<string | number> = []
+  if (query.level !== undefined && query.level !== '') {
+    where.push('level = ?')
+    params.push(query.level)
+  }
+  if (query.source !== undefined && query.source !== '') {
+    where.push('source = ?')
+    params.push(query.source)
+  }
+  params.push(limit)
+  const clause = where.length === 0 ? '' : ' WHERE ' + where.join(' AND ')
   const rows = db.all(
-    'SELECT time, level, source, message, detail FROM log_entry ORDER BY id DESC LIMIT ?',
-    [limit],
+    'SELECT time, level, source, message, detail FROM log_entry' + clause + ' ORDER BY id DESC LIMIT ?',
+    params,
   ) as unknown as StoredLogRecord[]
   return rows.reverse().map((row) => (row.detail === null ? { time: row.time, level: row.level, source: row.source, message: row.message } : row))
 }
@@ -226,6 +279,8 @@ export interface StoredPriceRow {
   modelKey: string
   vendor: string | null
   modelName: string
+  /** 上游条目的 mode（chat / completion / …）：装载时用它筛会话模型，不必解析 raw。 */
+  mode: string | null
   inputPerToken: number | null
   outputPerToken: number | null
   cacheReadPerToken: number | null
@@ -240,9 +295,9 @@ export function replacePriceRows(db: DatabaseHandle, rows: StoredPriceRow[], met
     for (const row of rows) {
       db.run(
         `INSERT INTO litellm_price
-           (model_key, vendor, model_name, input_per_token, output_per_token, cache_read_per_token, cache_write_per_token, raw)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [row.modelKey, row.vendor, row.modelName, row.inputPerToken, row.outputPerToken, row.cacheReadPerToken, row.cacheWritePerToken, row.raw],
+           (model_key, vendor, model_name, mode, input_per_token, output_per_token, cache_read_per_token, cache_write_per_token, raw)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [row.modelKey, row.vendor, row.modelName, row.mode, row.inputPerToken, row.outputPerToken, row.cacheReadPerToken, row.cacheWritePerToken, row.raw],
       )
     }
     db.run('DELETE FROM litellm_meta')
@@ -258,7 +313,7 @@ export function replacePriceRows(db: DatabaseHandle, rows: StoredPriceRow[], met
 
 export function readPriceRows(db: DatabaseHandle): StoredPriceRow[] {
   return db.all(
-    `SELECT model_key AS modelKey, vendor, model_name AS modelName,
+    `SELECT model_key AS modelKey, vendor, model_name AS modelName, mode,
             input_per_token AS inputPerToken, output_per_token AS outputPerToken,
             cache_read_per_token AS cacheReadPerToken, cache_write_per_token AS cacheWritePerToken, raw
        FROM litellm_price`,
@@ -376,6 +431,7 @@ function tryImportLegacyPrices(db: DatabaseHandle, path: string): boolean {
       modelKey,
       vendor: slash > 0 ? modelKey.slice(0, slash) : null,
       modelName: slash > 0 ? modelKey.slice(slash + 1) : modelKey,
+      mode: typeof entry.mode === 'string' ? entry.mode : null,
       inputPerToken: nameOf('input_cost_per_token'),
       outputPerToken: nameOf('output_cost_per_token'),
       cacheReadPerToken: nameOf('cache_read_input_token_cost'),

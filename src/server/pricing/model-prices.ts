@@ -243,11 +243,16 @@ function readCandidate(path: string, label: 'local' | 'shipped'): CandidateFile 
       return empty
     }
     if (rows.length === 0) return empty
+    // 用列直接重建 buildEntries 需要的形状：不再逐行 JSON.parse raw（4120 行 → 0 次）
     const raw: Record<string, unknown> = {}
     for (const row of rows) {
-      try {
-        raw[row.modelKey] = JSON.parse(row.raw)
-      } catch { /* 坏行跳过 */ }
+      raw[row.modelKey] = {
+        mode: row.mode ?? '',
+        input_cost_per_token: row.inputPerToken,
+        output_cost_per_token: row.outputPerToken,
+        cache_read_input_token_cost: row.cacheReadPerToken,
+        cache_creation_input_token_cost: row.cacheWritePerToken,
+      }
     }
     const entries = buildEntries(raw)
     if (entries.length === 0) {
@@ -520,6 +525,7 @@ export function writeModelPricesFile(path: string, text: string): { ok: true; by
       modelKey,
       vendor: slash > 0 ? modelKey.slice(0, slash) : null,
       modelName: slash > 0 ? modelKey.slice(slash + 1) : modelKey,
+      mode: typeof value.mode === 'string' ? value.mode : null,
       inputPerToken: numberAt('input_cost_per_token'),
       outputPerToken: numberAt('output_cost_per_token'),
       cacheReadPerToken: numberAt('cache_read_input_token_cost'),

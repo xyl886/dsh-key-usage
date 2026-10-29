@@ -42,6 +42,7 @@ import {
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
 import { mergePromptStats } from './data/session-usage.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-file.js'
+import type { LogQuery } from './storage/db.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
 import {
   mergeDailySeries,
@@ -982,11 +983,10 @@ export function mountKeyUsageRoutes(
   }
 
   /**
-   * 统一快照：6 个 tab 的唯一数据来源（`$DSH_HOME/dsh-key-usage/snapshot.json`）。
+   * 统一快照：6 个 tab 的唯一数据来源（`$DSH_HOME/dsh-key-usage/usage.db` 的 snapshot_section 表）。
    * 本地段由定时器每 5 分钟重算（不联网）；配额段只在首次构建与手动刷新时联网。
    */
   const snapshotService = createSnapshotService({
-    path: join(dshHomePath(), 'dsh-key-usage', SNAPSHOT_FILE),
     intervalMs: options.snapshotIntervalMs,
     builders: {
       local: async ({ quota }) => {
@@ -1444,7 +1444,13 @@ export function mountKeyUsageRoutes(
         return
       }
       const url = new URL(request.url ?? '/', 'http://localhost')
-      sendJson(response, 200, { ok: true, records: readLogRecords(parseLimit(url.searchParams.get('limit'), 500)) })
+      // level / source 过滤在库里做（都有索引）：筛选时能看到 limit 之外的更早记录
+      const levelParam = url.searchParams.get('level') ?? ''
+      const sourceParam = url.searchParams.get('source') ?? ''
+      const query: LogQuery = {}
+      if (levelParam === 'info' || levelParam === 'warn' || levelParam === 'error') query.level = levelParam
+      if (sourceParam.trim() !== '') query.source = sourceParam.trim().slice(0, 32)
+      sendJson(response, 200, { ok: true, records: readLogRecords(parseLimit(url.searchParams.get('limit'), 500), logFilePath(), query) })
     },
   })
 }

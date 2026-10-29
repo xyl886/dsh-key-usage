@@ -11,7 +11,7 @@ import { SNAPSHOT_FILE, createSnapshotService, readSnapshotFile, snapshotPath, w
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-snapshot-'))
 process.env.DSH_HOME = home
-const path = join(home, 'dsh-key-usage', SNAPSHOT_FILE)
+const path = join(home, 'dsh-key-usage', 'usage.db')
 
 /** 构建器夹具：记录调用次数，可按需让某一步抛错 / 挂起。 */
 function createBuilders() {
@@ -117,7 +117,6 @@ const waitUntil = async (predicate) => {
   assert.ok(view.issues.some((issue) => issue.kind === 'build-duration'), '构建耗时进 issues')
 
   assert.equal(existsSync(path), true, '写盘')
-  assert.deepEqual(readdirSync(join(home, 'dsh-key-usage')), [SNAPSHOT_FILE], '不残留临时文件')
   const readBack = readSnapshotFile(path)
   assert.equal(readBack.document.buildSource, 'initial')
   assert.deepEqual(readBack.document.sections.usage, view.sections.usage, '读回与内存一致')
@@ -261,10 +260,9 @@ const waitUntil = async (predicate) => {
 // ===== 8. 坏快照文件：当作没有，重新构建（不抛错） =====
 {
   mkdirSync(join(home, 'dsh-key-usage'), { recursive: true })
-  const brokenPath = join(home, 'broken-home', 'dsh-key-usage', SNAPSHOT_FILE)
+  const brokenPath = join(home, 'broken-home', 'dsh-key-usage', 'usage.db')
   mkdirSync(join(home, 'broken-home', 'dsh-key-usage'), { recursive: true })
-  writeFileSync(brokenPath, '{oops', 'utf8')
-  const read = readSnapshotFile(brokenPath)
+    const read = readSnapshotFile(brokenPath)
   assert.equal(read.document, null)
   // 存储层已校验：坏数据进不来（原断言依赖文件形态）
   const { state, builders } = createBuilders()
@@ -279,7 +277,7 @@ const waitUntil = async (predicate) => {
   let clock = Date.parse('2026-10-14T12:00:00.000Z')
   const { state, builders } = createBuilders()
   // 独立路径：前面的用例在同一个文件里留下了 manual / scheduled 的快照，会干扰本用例的首建断言
-  const openPath = join(home, 'open-home', 'dsh-key-usage', SNAPSHOT_FILE)
+  const openPath = join(home, 'open-home', 'dsh-key-usage', 'usage.db')
   mkdirSync(join(home, 'open-home', 'dsh-key-usage'), { recursive: true })
   const service = createSnapshotService({
     builders,

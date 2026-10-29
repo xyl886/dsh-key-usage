@@ -12,6 +12,7 @@ import {
   openStorage,
   readLogRows,
   storagePath,
+  type LogQuery,
   type StoredLogRecord,
 } from '../storage/db.js'
 
@@ -89,11 +90,11 @@ export function appendLogRecords(records: unknown[], path: string = logFilePath(
   }
 }
 
-/** 回读最近 `limit` 条（按时间正序返回）。 */
-export function readLogRecords(limit: number = 500, path: string = logFilePath()): LogRecord[] {
+/** 回读最近 `limit` 条（按时间正序返回）；可按 level / source 过滤。 */
+export function readLogRecords(limit: number = 500, path: string = logFilePath(), query: LogQuery = {}): LogRecord[] {
   const capped = Math.max(1, Math.min(limit, LOG_READ_LIMIT_MAX))
   try {
-    return readLogRows(openStorage(path), capped).map((row) => {
+    return readLogRows(openStorage(path), capped, query).map((row) => {
       const record: LogRecord = { time: row.time, level: levelOf(row.level), source: row.source, message: row.message }
       if (typeof row.detail === 'string') record.detail = row.detail
       return record

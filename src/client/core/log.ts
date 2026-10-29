@@ -121,14 +121,23 @@ export async function hydrateLog(): Promise<void> {
 }
 
 /** 日志窗的「刷新」：重新读一遍磁盘（已读过的记录按时间 + 内容去重，不重复计数）。 */
-export async function refreshLog(): Promise<void> {
-  hydrated = true
-  await readFromDisk()
+export interface LogRefreshFilter {
+  level?: string
+  source?: string
 }
 
-async function readFromDisk(): Promise<void> {
+/** 拉取服务端日志；带 level / source 时服务端先过滤（能取到 limit 之外的更早记录）。 */
+export async function refreshLog(filter: LogRefreshFilter = {}): Promise<void> {
+  hydrated = true
+  await readFromDisk(filter)
+}
+
+async function readFromDisk(filter: LogRefreshFilter = {}): Promise<void> {
   try {
-    const response = await fetch(LOG_PATH + '?limit=' + String(READ_LIMIT), { headers: { Accept: 'application/json' } })
+    const params = new URLSearchParams({ limit: String(READ_LIMIT) })
+  if (filter.level !== undefined && filter.level !== '') params.set('level', filter.level)
+  if (filter.source !== undefined && filter.source !== '') params.set('source', filter.source)
+  const response = await fetch(LOG_PATH + '?' + params.toString(), { headers: { Accept: 'application/json' } })
     if (!response.ok) return
     const body = await response.json() as { records?: unknown }
     if (!Array.isArray(body.records)) return

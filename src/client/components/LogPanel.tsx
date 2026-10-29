@@ -74,7 +74,8 @@ export function LogPanel(): ReactNode {
 
   const onRefresh = (): void => {
     setRefreshing(true)
-    void refreshLog().finally(() => setRefreshing(false))
+    // 刷新时把当前筛选带给服务端：筛选在库里生效，能查到最近 500 条之外的更早记录
+    void refreshLog({ level: levelFilter === 'all' ? undefined : levelFilter, source: sourceFilter === '' ? undefined : sourceFilter }).finally(() => setRefreshing(false))
   }
 
   const onCopy = (): void => {

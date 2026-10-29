@@ -84,7 +84,7 @@ function seedCache(path, entry) {
   assert.equal(written.quote, 'CNY')
   assert.equal(written.upstream, FX_PRIMARY_URL)
   assert.equal(written.fetchedAt, view.fetchedAt)
-  assert.deepEqual(readdirSync(pluginDir), [FX_CACHE_FILE], '不残留临时文件')
+  assert.ok(readdirSync(pluginDir).every((name) => name.endsWith('.db') || name.endsWith('.db-journal')), '目录里只该有 SQLite 库文件：' + readdirSync(pluginDir).join(','))
   assert.equal(fxRatePath(), cachePath, '存储路径 = $DSH_HOME/dsh-key-usage/usage.db')
 }
 

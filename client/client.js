@@ -864,14 +864,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			hydrated = true;
 			await readFromDisk();
 		}
-		/** 日志窗的「刷新」：重新读一遍磁盘（已读过的记录按时间 + 内容去重，不重复计数）。 */
-		async function refreshLog() {
+		/** 拉取服务端日志；带 level / source 时服务端先过滤（能取到 limit 之外的更早记录）。 */
+		async function refreshLog(filter = {}) {
 			hydrated = true;
-			await readFromDisk();
+			await readFromDisk(filter);
 		}
-		async function readFromDisk() {
+		async function readFromDisk(filter = {}) {
 			try {
-				const response = await fetch(LOG_PATH + "?limit=" + String(READ_LIMIT), { headers: { Accept: "application/json" } });
+				const params = new URLSearchParams({ limit: String(READ_LIMIT) });
+				if (filter.level !== void 0 && filter.level !== "") params.set("level", filter.level);
+				if (filter.source !== void 0 && filter.source !== "") params.set("source", filter.source);
+				const response = await fetch(LOG_PATH + "?" + params.toString(), { headers: { Accept: "application/json" } });
 				if (!response.ok) return;
 				const body = await response.json();
 				if (!Array.isArray(body.records)) return;
@@ -2194,7 +2197,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const onRefresh = () => {
 				setRefreshing(true);
-				refreshLog().finally(() => setRefreshing(false));
+				refreshLog({
+					level: levelFilter === "all" ? void 0 : levelFilter,
+					source: sourceFilter === "" ? void 0 : sourceFilter
+				}).finally(() => setRefreshing(false));
 			};
 			const onCopy = () => {
 				navigator.clipboard?.writeText(logTextOf(visible)).catch(() => logWarn("export", t("log.copyBlocked"), "clipboard"));
