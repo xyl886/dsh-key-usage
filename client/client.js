@@ -38,6 +38,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"multi.count": "已选 {count} 项",
 			"multi.all": "全选",
 			"multi.none": "清空",
+			"multi.sortedByName": "按名称排序",
 			"multi.empty": "没有匹配项",
 			"action.exportUsage": "导出明细",
 			"action.exportSessions": "导出会话",
@@ -555,6 +556,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"multi.count": "{count} selected",
 			"multi.all": "All",
 			"multi.none": "Clear",
+			"multi.sortedByName": "按名称排序",
 			"multi.empty": "No match",
 			"action.exportUsage": "Export details",
 			"action.exportSessions": "Export sessions",
@@ -2552,7 +2554,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/multiSelect.module.css.mjs
-		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}";
+		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}.zLYuDG_sortHint{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);margin-left:auto}";
 		const tagId$16 = "dsh-key-usage/multiSelect.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2579,6 +2581,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"panel": "zLYuDG_panel",
 			"root": "zLYuDG_root",
 			"search": "zLYuDG_search",
+			"sortHint": "zLYuDG_sortHint",
 			"toolbar": "zLYuDG_toolbar",
 			"trigger": "zLYuDG_trigger",
 			"triggerText": "zLYuDG_triggerText"
@@ -2588,14 +2591,36 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
 		/** 名称排序：中文按拼音、数字与符号跟在后面，保证每次打开顺序稳定。 */
 		function sorted(options) {
-			return [...options].sort((left, right) => left.label.localeCompare(right.label, "zh-Hans-CN"));
+			return [...options].sort((left, right) => left.label.localeCompare(right.label, "zh-Hans-CN", {
+				numeric: true,
+				sensitivity: "base"
+			}));
 		}
 		function MultiSelect(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [query, setQuery] = (0, react.useState)("");
+			const [anchor, setAnchor] = (0, react.useState)({
+				top: 0,
+				left: 0
+			});
 			const rootRef = (0, react.useRef)(null);
+			const triggerRef = (0, react.useRef)(null);
 			const options = (0, react.useMemo)(() => sorted(props.options), [props.options]);
 			const selectedSet = (0, react.useMemo)(() => new Set(props.selected), [props.selected]);
+			(0, react.useLayoutEffect)(() => {
+				if (!open) return;
+				const place = () => {
+					const rect = triggerRef.current?.getBoundingClientRect();
+					if (rect === void 0) return;
+					setAnchor({
+						top: rect.bottom + 6,
+						left: Math.max(8, Math.min(rect.left, window.innerWidth - 260 - 8))
+					});
+				};
+				place();
+				window.addEventListener("resize", place);
+				return () => window.removeEventListener("resize", place);
+			}, [open]);
 			(0, react.useEffect)(() => {
 				if (!open) return;
 				const onDown = (event) => {
@@ -2626,6 +2651,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				ref: rootRef,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
+					ref: triggerRef,
 					className: multiSelect_module_css_default.trigger,
 					onClick: () => setOpen((previous) => !previous),
 					"aria-haspopup": "listbox",
@@ -2642,6 +2668,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					})]
 				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: multiSelect_module_css_default.panel,
+					style: {
+						top: anchor.top,
+						left: anchor.left
+					},
 					role: "listbox",
 					"aria-multiselectable": "true",
 					children: [
@@ -2655,17 +2685,24 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: multiSelect_module_css_default.toolbar,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: multiSelect_module_css_default.linkBtn,
-								onClick: () => props.onChange(options.map((option) => option.value)),
-								children: t("multi.all")
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: multiSelect_module_css_default.linkBtn,
-								onClick: () => props.onChange([]),
-								children: t("multi.none")
-							})]
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: multiSelect_module_css_default.linkBtn,
+									onClick: () => props.onChange(options.map((option) => option.value)),
+									children: t("multi.all")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: multiSelect_module_css_default.linkBtn,
+									onClick: () => props.onChange([]),
+									children: t("multi.none")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: multiSelect_module_css_default.sortHint,
+									children: t("multi.sortedByName")
+								})
+							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: multiSelect_module_css_default.list,

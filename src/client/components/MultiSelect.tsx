@@ -1,5 +1,5 @@
 /** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../core/i18n.ts'
 import styles from '../styles/multiSelect.module.css'
 
@@ -22,15 +22,31 @@ export interface MultiSelectProps {
 
 /** 名称排序：中文按拼音、数字与符号跟在后面，保证每次打开顺序稳定。 */
 function sorted(options: MultiSelectOption[]): MultiSelectOption[] {
-  return [...options].sort((left, right) => left.label.localeCompare(right.label, 'zh-Hans-CN'))
+  return [...options].sort((left, right) => left.label.localeCompare(right.label, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }))
 }
 
 export function MultiSelect(props: MultiSelectProps): ReactNode {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [anchor, setAnchor] = useState({ top: 0, left: 0 })
   const rootRef = useRef<HTMLSpanElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const options = useMemo(() => sorted(props.options), [props.options])
   const selectedSet = useMemo(() => new Set(props.selected), [props.selected])
+
+  // 浮层 fixed 定位：不参与文档流，打开时不会把页面撑宽导致整页左移
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = (): void => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect === undefined) return
+      const width = 260
+      setAnchor({ top: rect.bottom + 6, left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)) })
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -67,6 +83,7 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
     <span className={styles.root} ref={rootRef}>
       <button
         type="button"
+        ref={triggerRef}
         className={styles.trigger}
         onClick={() => setOpen((previous) => !previous)}
         aria-haspopup="listbox"
@@ -78,7 +95,7 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
         <span className={styles.caret} aria-hidden="true">▾</span>
       </button>
       {open && (
-        <div className={styles.panel} role="listbox" aria-multiselectable="true">
+        <div className={styles.panel} style={{ top: anchor.top, left: anchor.left }} role="listbox" aria-multiselectable="true">
           <input
             className={styles.search}
             value={query}
@@ -90,6 +107,7 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
           <div className={styles.toolbar}>
             <button type="button" className={styles.linkBtn} onClick={() => props.onChange(options.map((option) => option.value))}>{t('multi.all')}</button>
             <button type="button" className={styles.linkBtn} onClick={() => props.onChange([])}>{t('multi.none')}</button>
+            <span className={styles.sortHint}>{t('multi.sortedByName')}</span>
           </div>
           <div className={styles.list}>
             {filtered.length === 0 && <div className={styles.empty}>{t('multi.empty')}</div>}
