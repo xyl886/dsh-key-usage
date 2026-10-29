@@ -37,7 +37,7 @@
 }
 
 /* 正文：正文 13px；行距按原型 5px */
-.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 8px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
+.chanBody { display: grid; grid-auto-rows: auto; align-content: start; align-items: center; gap: 8px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
 
 /* 订阅窗口行：列宽对齐原型 .row4（32px / 1fr / 38px / 112px，gap 7）；
    百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
