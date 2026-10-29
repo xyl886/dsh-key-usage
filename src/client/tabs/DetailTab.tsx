@@ -576,9 +576,13 @@ export function DetailTab(props: {
   const previousUsage = usePreviousUsage({
     from: bounds.from, to: bounds.to, range: props.range, pricingRevision: props.pricingRevision,
   })
-  /** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致 */
+  /** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致。
+   *  本期已由页头按通道多选过滤；上期是本 Tab 自己取的（服务端固定取全量），必须在这里补一次通道过滤。 */
   const scopedUsage = useMemo(() => filterUsageByModel(usage, modelFilter), [usage, modelFilter])
-  const scopedPrevious = useMemo(() => filterUsageByModel(previousUsage, modelFilter), [previousUsage, modelFilter])
+  const scopedPrevious = useMemo(
+    () => filterUsageByModel(filterUsageByChannels(previousUsage, props.channelFilter), modelFilter),
+    [previousUsage, props.channelFilter, modelFilter],
+  )
   /** 显示币种或汇率一变，金额文本就得重算（模块级状态变了，memo 自己发现不了）。 */
   const moneyKey = currency.display + '|' + (currency.fx === null ? '' : String(currency.fx.rate))
   const rows = useMemo(

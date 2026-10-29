@@ -5,7 +5,7 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { isoDate } from '../core/format.ts'
-import { isEnglish, t, useT } from '../core/i18n.ts'
+import { isEnglish, useT } from '../core/i18n.ts'
 import styles from '../styles/dateRange.module.css'
 
 const WEEKDAY_COUNT = 7
