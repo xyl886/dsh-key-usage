@@ -333,12 +333,25 @@ export function KeyUsageSection() {
   })), [channels])
 
   /** 项目下拉：值取 workspace（未归入工作区的那行用 sentinel），文案取宿主工作区标题。 */
+  const projectUsage = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const row of projects?.rows ?? []) {
+      const key = row.workspace === '' ? ORPHAN_PROJECT_VALUE : row.workspace
+      map.set(key, (map.get(key) ?? 0) + row.tokens)
+    }
+    return map
+  }, [projects])
   const projectOptions = useMemo(() => (projects?.rows ?? []).map((row) => ({
     value: row.workspace === '' ? ORPHAN_PROJECT_VALUE : row.workspace,
     label: row.workspace === '' ? t('p.orphan') : (row.workspaceTitle ?? row.workspace),
   })), [projects, t])
 
   /** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
+  const modelUsage = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const row of models?.rows ?? []) map.set(row.model, (map.get(row.model) ?? 0) + row.tokens)
+    return map
+  }, [models])
   const modelOptions = useMemo(() => {
     const seen = new Set<string>()
     const options: Array<{ value: string; label: string }> = []

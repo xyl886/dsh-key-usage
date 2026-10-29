@@ -38,7 +38,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"multi.count": "已选 {count} 项",
 			"multi.all": "全选",
 			"multi.none": "清空",
-			"multi.sortedByName": "按名称排序",
 			"multi.empty": "没有匹配项",
 			"action.exportUsage": "导出明细",
 			"action.exportSessions": "导出会话",
@@ -556,7 +555,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"multi.count": "{count} selected",
 			"multi.all": "All",
 			"multi.none": "Clear",
-			"multi.sortedByName": "按名称排序",
 			"multi.empty": "No match",
 			"action.exportUsage": "Export details",
 			"action.exportSessions": "Export sessions",
@@ -2554,7 +2552,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/multiSelect.module.css.mjs
-		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}.zLYuDG_sortHint{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);margin-left:auto}";
+		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}";
 		const tagId$16 = "dsh-key-usage/multiSelect.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2581,7 +2579,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"panel": "zLYuDG_panel",
 			"root": "zLYuDG_root",
 			"search": "zLYuDG_search",
-			"sortHint": "zLYuDG_sortHint",
 			"toolbar": "zLYuDG_toolbar",
 			"trigger": "zLYuDG_trigger",
 			"triggerText": "zLYuDG_triggerText"
@@ -2590,11 +2587,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#region src/client/components/MultiSelect.tsx
 		/** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
 		/** 名称排序：中文按拼音、数字与符号跟在后面，保证每次打开顺序稳定。 */
-		function sorted(options) {
-			return [...options].sort((left, right) => left.label.localeCompare(right.label, "zh-Hans-CN", {
+		function sorted(options, usageOf) {
+			const byName = (left, right) => left.label.localeCompare(right.label, "zh-Hans-CN", {
 				numeric: true,
 				sensitivity: "base"
-			}));
+			});
+			if (usageOf === void 0) return [...options].sort(byName);
+			return [...options].sort((left, right) => usageOf(right.value) - usageOf(left.value) || byName(left, right));
 		}
 		function MultiSelect(props) {
 			const [open, setOpen] = (0, react.useState)(false);
@@ -2605,7 +2604,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 			const rootRef = (0, react.useRef)(null);
 			const triggerRef = (0, react.useRef)(null);
-			const options = (0, react.useMemo)(() => sorted(props.options), [props.options]);
+			const options = (0, react.useMemo)(() => sorted(props.options, props.usageOf), [props.options, props.usageOf]);
 			const selectedSet = (0, react.useMemo)(() => new Set(props.selected), [props.selected]);
 			(0, react.useLayoutEffect)(() => {
 				if (!open) return;
@@ -2685,24 +2684,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: multiSelect_module_css_default.toolbar,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: multiSelect_module_css_default.linkBtn,
-									onClick: () => props.onChange(options.map((option) => option.value)),
-									children: t("multi.all")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: multiSelect_module_css_default.linkBtn,
-									onClick: () => props.onChange([]),
-									children: t("multi.none")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: multiSelect_module_css_default.sortHint,
-									children: t("multi.sortedByName")
-								})
-							]
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: multiSelect_module_css_default.linkBtn,
+								onClick: () => props.onChange(options.map((option) => option.value)),
+								children: t("multi.all")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: multiSelect_module_css_default.linkBtn,
+								onClick: () => props.onChange([]),
+								children: t("multi.none")
+							})]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: multiSelect_module_css_default.list,
@@ -9767,12 +9759,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				value: channel.provider,
 				label: channel.displayName ?? channel.provider
 			})), [channels]);
-			/** 项目下拉：值取 workspace（未归入工作区的那行用 sentinel），文案取宿主工作区标题。 */
+			(0, react.useMemo)(() => {
+				const map = /* @__PURE__ */ new Map();
+				for (const row of projects?.rows ?? []) {
+					const key = row.workspace === "" ? ORPHAN_PROJECT_VALUE : row.workspace;
+					map.set(key, (map.get(key) ?? 0) + row.tokens);
+				}
+				return map;
+			}, [projects]);
 			const projectOptions = (0, react.useMemo)(() => (projects?.rows ?? []).map((row) => ({
 				value: row.workspace === "" ? ORPHAN_PROJECT_VALUE : row.workspace,
 				label: row.workspace === "" ? t("p.orphan") : row.workspaceTitle ?? row.workspace
 			})), [projects, t]);
-			/** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
+			(0, react.useMemo)(() => {
+				const map = /* @__PURE__ */ new Map();
+				for (const row of models?.rows ?? []) map.set(row.model, (map.get(row.model) ?? 0) + row.tokens);
+				return map;
+			}, [models]);
 			const modelOptions = (0, react.useMemo)(() => {
 				const seen = /* @__PURE__ */ new Set();
 				const options = [];

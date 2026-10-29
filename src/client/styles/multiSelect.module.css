@@ -64,5 +64,4 @@
 .itemLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty { padding: 8px 6px; color: var(--dsw-alias-label-tertiary, #8b8b99); font-size: var(--ku-sub, 13px); }
 
-.sortHint { margin-left: auto; color: var(--dsw-alias-label-tertiary, #8b8b99); font-size: var(--ku-sub, 13px); }
 
