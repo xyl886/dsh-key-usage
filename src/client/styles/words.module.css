@@ -14,7 +14,7 @@
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .kpi {
   min-width: 0; padding: 8px 10px; box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 9px;
 }
 .kpiLabel { color: var(--dsw-alias-label-tertiary, #67676f); }
@@ -29,7 +29,7 @@
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; align-items: stretch; }
 .panel {
   display: flex; flex-direction: column; min-width: 0; padding: 10px 11px; box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 9px;
 }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }

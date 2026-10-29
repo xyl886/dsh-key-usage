@@ -1,8 +1,8 @@
 /* 额度与订阅：通道卡片网格（2–3 列自适应的放大卡片）、窗口进度行、键值行、展开的单价表。 */
 
 /* 网格：卡片最小 320px、吃满剩余宽度（宽屏 3 列、中屏 2 列、窄屏 1 列）；
-   grid-auto-rows 1fr 让同一行卡片等高，正文固定三行所以卡片高度不跳。 */
-.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); grid-auto-rows: 1fr; gap: 12px; }
+   间距对齐原型 .chans（10px）；grid-auto-rows 1fr 让同一行卡片等高。 */
+.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); grid-auto-rows: 1fr; gap: 10px; }
 /* 单通道详情弹窗：只有一张卡，不吃多列网格 */
 .cardGrid.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 360px) {
@@ -12,57 +12,60 @@
 /* 卡片上方的通道筛选条 */
 .cardToolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 
-/* 卡片：标题行 + 固定三行正文；正文按行等分剩余高度，短卡不会在底部留一大片空白 */
+/* 卡片：标题行 + 正文（同行等高靠外层 grid-auto-rows，正文行等分剩余高度）；
+   内边距与行距按「卡片过于紧凑」的反馈放大，原型是 9px 11px / gap 5。 */
 .chanCard {
   display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
-  border-radius: 12px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border-radius: 9px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
 
 /* 标题行：通道名 + 类型胶囊 + 右侧更新时间（整行是按钮，点开该通道的单价表） */
-.chanHead { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+.chanHead { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
 .chanHeadButton { width: 100%; cursor: pointer; border-radius: 6px; }
 .chanHeadButton:hover .chanName { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 .chanHeadButton:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.chanName { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chanName { min-width: 0; font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chanKind {
-  padding: 1px 8px; border-radius: 999px; white-space: nowrap;
+  padding: 0 6px; border-radius: 999px; white-space: nowrap;
   background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
 .chanChecked {
   margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
 
-/* 正文：固定三行、行高由内容决定，字号统一 13px */
-.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 6px; flex: 1 1 auto; min-height: 0; font-size: 13px; }
+/* 正文：正文 13px；行距按原型 5px */
+.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 5px; flex: 1 1 auto; min-height: 0; font-size: 13px; }
 
-/* 订阅窗口行：标签 + 进度条 + 百分比 + 重置时间；进度条吃剩余宽度，卡片放大后跟着变长 */
-.windowLine { display: grid; grid-template-columns: 34px minmax(64px, 1fr) 52px 102px; gap: 8px; align-items: center; font-variant-numeric: tabular-nums; }
+/* 订阅窗口行：列宽对齐原型 .row4（32px / 1fr / 38px / 112px，gap 7）；
+   百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
+   进度条吃剩余宽度，卡片越宽越长。 */
+.windowLine { display: grid; grid-template-columns: 32px minmax(0, 1fr) 46px 112px; gap: 7px; align-items: center; font-variant-numeric: tabular-nums; }
 .windowName { color: var(--dsw-alias-label-tertiary, #67676f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meter { display: block; height: 8px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
 .meter > i { display: block; height: 100%; border-radius: 4px; }
-.windowPercent { text-align: right; font-size: 18px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.windowPercent { text-align: right; font-size: 18px; font-weight: 600; color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .windowReset {
   text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
 
-/* 键值行：左标签右值；金额这类主数字（.lineValueNumber）用 18px */
+/* 键值行：左标签右值（原型 .line：标签 fg3、值 fg2）；金额这类主数字（.lineValueNumber）用 18px */
 .cardLine { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; font-variant-numeric: tabular-nums; }
 .lineKey { color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
-.lineValue { color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lineValue { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lineValueNumber { font-size: 18px; font-weight: 600; }
 
 /* ===== 展开区：单价表（整行铺在卡片网格下面，表格不挤进单张卡） ===== */
 .ratePanel {
-  margin-top: 12px; padding: 14px 16px; border-radius: 12px;
+  margin-top: 10px; padding: 14px 16px; border-radius: 9px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
-.ratePanelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.ratePanelTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.ratePanelHead { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.ratePanelTitle { font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .ratePanelClose {
   margin-left: auto; padding: 0 2px; border: 0; border-radius: 4px; background: none; cursor: pointer;
   font: inherit; font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f);
@@ -85,7 +88,7 @@
 .rateModel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
 
 .rateSourceNone {
-  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 12px; line-height: 1.7;
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 13px; line-height: 1.7;
   border: 1px dashed currentColor; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap;
 }
 .rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; padding: 8px 0; }

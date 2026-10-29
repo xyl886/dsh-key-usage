@@ -7,7 +7,7 @@
 import { useState, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../core/channels.ts'
 import { comparableMoneyOf, displaySymbolOf, moneyTextOf, moneyTotalsTextOf, rowMoneyViewOf, useCurrencyDisplay, type CostRowLike } from '../core/currency.ts'
-import { fmtCalls, fmtShortDate, fmtTokens, isoDate, shiftedIsoDate } from '../core/format.ts'
+import { fmtCalls, fmtCount, fmtShortDate, fmtTokens, isoDate, shiftedIsoDate } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
 import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import type {
@@ -274,16 +274,17 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
           unit={hitRate === null ? undefined : '%'}
           detail={splitTotals === null
             ? '—'
-            : t('overview.cacheLine', { value: fmtTokens(splitTotals.cacheReadTokens), saved: cacheSaved ?? '—' })}
+            : t('overview.cacheLine', { value: tokenTextOf(splitTotals.cacheReadTokens), saved: cacheSaved ?? '—' })}
         />
         <KpiCard
           label={t('overview.kpiSessions')}
           value={sessionCount === null ? '—' : fmtCalls(sessionCount)}
           detail={<PrevLine previous={props.previousSessions ?? null} current={sessionCount} format={fmtCalls} />}
         />
+        {/* 日均按原型保留 1 位小数（¥35.5），与本期成本的 2 位小数区分 */}
         <KpiCard
           label={t('overview.kpiDaily')}
-          value={dailyAverage === null ? '—' : moneyTextOf(display, dailyAverage)}
+          value={dailyAverage === null ? '—' : displaySymbolOf(display) + dailyAverage.toFixed(1)}
           detail={activeDays === 0 ? '—' : t('overview.activeDays', { count: activeDays })}
         />
       </div>
@@ -321,10 +322,18 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
             : <div className={shared.empty}>{trendEmptyText}</div>)}
         <div className={styles.trendFoot}>
           {isAllRange && hasHeatData && (
-            <span className={styles.scale}>
-              <span className={styles.scaleText}>{t('overview.legendLess')}</span>
-              {LEVEL_COLORS.map((color) => <i key={color} style={{ background: color }} />)}
-              <span className={styles.scaleText}>{t('overview.legendMore')}</span>
+            <span className={styles.legend}>
+              <span className={styles.legendItem}>
+                <i style={{ background: LEVEL_COLORS[0] }} />
+                {t('overview.legendLess')}
+              </span>
+              {LEVEL_COLORS.slice(1, -1).map((color) => (
+                <span key={color} className={styles.legendItem}><i style={{ background: color }} /></span>
+              ))}
+              <span className={styles.legendItem}>
+                <i style={{ background: LEVEL_COLORS[LEVEL_COLORS.length - 1] }} />
+                {t('overview.legendMore')}
+              </span>
             </span>
           )}
           {trendStats !== '' && <span className={styles.trendStats}>{trendStats}</span>}
@@ -408,7 +417,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   )
 }
 
-function KpiCard(props: { label: string; value: string; unit?: string; detail: ReactNode }): ReactNode {
+function KpiCard(props: { label: string; value: string; unit?: string; /** 副标：没有数据时传 null，整行不渲染（不编数字、也不留「—」占位） */ detail?: ReactNode }): ReactNode {
   return (
     <div className={styles.kpiCard}>
       <div className={styles.kpiLabel}>{props.label}</div>
@@ -416,23 +425,23 @@ function KpiCard(props: { label: string; value: string; unit?: string; detail: R
         {props.value}
         {props.unit !== undefined && <span className={styles.kpiUnit}>{props.unit}</span>}
       </div>
-      <div className={styles.kpiDetail}>{props.detail}</div>
+      {props.detail !== undefined && props.detail !== null && <div className={styles.kpiDetail}>{props.detail}</div>}
     </div>
   )
 }
 
 /**
- * 副标题的环比：给得出上期才出现涨跌（涨红跌绿），给不出就留 —。
- * 服务端目前没有上期字段，所以常态是 —。
+ * 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
+ * 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
  */
 function PrevLine(props: { previous: number | null; current: number | null; format: (value: number) => string }): ReactNode {
-  if (props.previous === null || props.current === null || props.previous <= 0) {
-    return <>{t('overview.prev', { value: props.previous === null ? '—' : props.format(props.previous) })}</>
-  }
+  if (props.previous === null) return null
+  const previousText = t('overview.prev', { value: props.format(props.previous) })
+  if (props.current === null || props.previous <= 0) return <>{previousText}</>
   const delta = (props.current - props.previous) / props.previous * 100
   return (
     <>
-      {t('overview.prev', { value: props.format(props.previous) })}
+      {previousText}
       <span className={delta > 0 ? styles.rise : delta < 0 ? styles.fall : undefined}>
         {(delta > 0 ? '+' : '') + delta.toFixed(1) + '%'}
       </span>
@@ -490,7 +499,7 @@ function RankPanel<Key extends string>(props: {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const shown = props.items.slice(0, RANK_ROWS)
-  const peak = shown.length === 0 ? 0 : Math.max(...shown.map((item) => item.value))
+  const peak = shown.reduce((maximum, item) => (item.value !== null && item.value > maximum ? item.value : maximum), 0)
   return (
     <div className={styles.panel}>
       <div className={styles.panelHead}>
@@ -506,7 +515,7 @@ function RankPanel<Key extends string>(props: {
             >{t(labelKey)}</button>
           ))}
         </div>
-        {props.total > 0 && (
+        {props.total > shown.length && (
           <span className={styles.panelMore}>
             {t('overview.more', { total: props.total, rest: Math.max(0, props.total - shown.length) })}
           </span>
@@ -520,10 +529,10 @@ function RankPanel<Key extends string>(props: {
             <span className={styles.rankTrack}>
               <i
                 className={index === 0 ? styles.rankBar + ' ' + styles.rankBarTop : styles.rankBar}
-                style={{ width: (peak <= 0 ? 0 : Math.max(2, item.value / peak * 100)) + '%' }}
+                style={{ width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + '%' }}
               />
             </span>
-            <span className={styles.rankValue}>{item.valueText}</span>
+            <span className={item.value === null ? styles.rankValue + ' ' + styles.rankDim : styles.rankValue}>{item.valueText}</span>
             <span className={styles.rankSub}>{item.subText}</span>
           </div>
         ))}
@@ -536,9 +545,18 @@ interface RankItem {
   name: string
   /** 悬停提示：名字被省略号截断时还能看全 */
   title: string
-  value: number
+  /** 排序 / 柱长用的数值；`null` = 该指标没有依据（成本无价目），显示「—」并排在末尾 */
+  value: number | null
   valueText: string
   subText: string
+}
+
+/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
+function compareRankValue(first: RankItem, second: RankItem): number {
+  if (first.value === null && second.value === null) return 0
+  if (first.value === null) return 1
+  if (second.value === null) return -1
+  return second.value - first.value
 }
 
 /** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
@@ -604,11 +622,21 @@ function usageDayCountOf(usage: UsageResponse | null | undefined, range: RangeKe
   return dates.size
 }
 
-/** 大数拆成「数值 + 单位」，单位用小字（原型：15.34<small>B</small>）。 */
+/** KPI 大数：按原型展示 2 位小数（15.34<small>B</small>），与共用 `fmtTokens` 的 1 位小数区分（榜单仍用 1 位）。 */
 function tokenValueOf(count: number): { text: string; unit: string } {
-  const text = fmtTokens(count)
-  const match = /^([\d.,]+)([KMB])$/.exec(text)
-  return match === null ? { text, unit: '' } : { text: match[1], unit: match[2] }
+  const units: Array<[number, string]> = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']]
+  for (const [base, unit] of units) {
+    if (Math.abs(count) < base) continue
+    const value = count / base
+    if (value < 1000) return { text: value.toFixed(2), unit }
+  }
+  return { text: fmtCount(count), unit: '' }
+}
+
+/** 大数文本（2 位小数 + 单位）：缓存读明细这类 KPI 副标用。 */
+function tokenTextOf(count: number): string {
+  const value = tokenValueOf(count)
+  return value.text + value.unit
 }
 
 /** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
@@ -726,18 +754,20 @@ function rankItemsOfProjects(projects: ProjectsResponse | null | undefined, metr
   const items: RankItem[] = []
   for (const row of rows) {
     const value = projectValueOf(metric, row)
-    if (value === null || value <= 0) continue
+    /** 成本口径下没有价目依据的行保留在末尾显示「—」（原型模型榜就有一条 —），不编金额 */
+    const missingCost = metric === 'cost' && value === null
+    if (!missingCost && (value === null || value <= 0)) continue
     const name = row.workspaceTitle ?? (row.workspace === '' ? t('p.orphan') : row.workspace)
     items.push({
       key: row.workspace === '' ? '__orphan__' : row.workspace,
       name,
       title: name,
       value,
-      valueText: projectValueTextOf(metric, row),
+      valueText: missingCost ? '—' : projectValueTextOf(metric, row),
       subText: t('overview.sessionCount', { count: row.sessionCount }),
     })
   }
-  items.sort((first, second) => second.value - first.value)
+  items.sort(compareRankValue)
   return { items, total: items.length }
 }
 
@@ -758,17 +788,19 @@ function rankItemsOfModels(models: ModelsResponse | null | undefined, metric: Mo
   const items: RankItem[] = []
   for (const row of rows) {
     const value = modelValueOf(metric, row)
-    if (value === null || value <= 0) continue
+    /** 成本口径下没有价目依据的模型保留在末尾显示「—」（原型模型榜第 5 行就是这种），不编金额 */
+    const missingCost = metric === 'cost' && value === null
+    if (!missingCost && (value === null || value <= 0)) continue
     items.push({
       key: row.provider + '|' + row.model,
       name: row.model,
       title: row.model + ' · ' + row.providerLabel,
       value,
-      valueText: modelValueTextOf(metric, row),
+      valueText: missingCost ? '—' : modelValueTextOf(metric, row),
       subText: fmtTokens(row.tokens),
     })
   }
-  items.sort((first, second) => second.value - first.value)
+  items.sort(compareRankValue)
   return { items, total: items.length }
 }
 

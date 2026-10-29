@@ -138,10 +138,10 @@ export function SessionsTab(props: {
                 { value: 'duration', label: t('sessions.metricDuration') },
               ]}
             />
-            <span className={sessionsStyles.panelTotal}>{fmtCount(pool.length) + t('common.sessionSuffix')}</span>
+            <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(pool.length) })}</span>
           </div>
           {topRows.length === 0
-            ? <div className={styles.empty}>{t(topMetric === 'cost' ? 's.noCost' : 'empty.noUsage')}</div>
+            ? <div className={styles.empty}>{t(topMetric === 'cost' ? 's.noCost' : 'sessions.noData')}</div>
             : topRows.map((row, index) => topRowOf(row, index + 1, topMetric, props.channels, () => setDetailId(row.id)))}
         </section>
 
@@ -157,10 +157,10 @@ export function SessionsTab(props: {
                 { value: 'tools', label: t('sessions.metricTools'), hint: t('sessions.callsBucket') },
               ]}
             />
-            <span className={sessionsStyles.panelTotal}>{fmtCount(pool.length) + t('common.sessionSuffix')}</span>
+            <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(pool.length) })}</span>
           </div>
           {pool.length === 0
-            ? <div className={styles.empty}>{t('empty.noUsage')}</div>
+            ? <div className={styles.empty}>{t('sessions.noData')}</div>
             : (
               <>
                 <div className={sessionsStyles.hist}>
@@ -198,13 +198,13 @@ export function SessionsTab(props: {
             ]}
           />
           <input
-            className={listStyles.searchInput}
-            placeholder={t('s.searchPlaceholder')}
-            aria-label={t('s.searchPlaceholder')}
+            className={listStyles.searchInput + ' ' + sessionsStyles.searchInput}
+            placeholder={t('sessions.searchPlaceholder')}
+            aria-label={t('sessions.searchPlaceholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <span className={sessionsStyles.panelTotal}>{fmtCount(recentRows.length) + t('common.sessionSuffix')}</span>
+          <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(recentRows.length) })}</span>
         </div>
         {visibleRows.length === 0
           ? <div className={styles.empty}>{t('s.empty')}</div>

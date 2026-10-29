@@ -3,23 +3,20 @@
 
 .page { display: flex; flex-direction: column; gap: 10px; }
 
-/* 数据来源标注：会话事件、全量历史（与页面范围筛选无关） */
-.sourceNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; }
-
 /* 两列卡片：窄屏自动单列 */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; align-items: stretch; }
 .panel {
   min-width: 0; padding: 10px 11px; box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px;
 }
-.panelHead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .panelTitle { margin: 0; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 15px; font-weight: 600; }
 .panelMeta { margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* 关键计数：18px；单位仍是 13px 正文 */
 .headNum { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
 
-/* 排行行：名字 + 横条 + 次数 + 占比 */
-.row { display: grid; grid-template-columns: minmax(72px, 112px) 1fr 58px 48px; gap: 8px; align-items: center; padding: 4px 0; }
+/* 排行行：名字 + 横条 + 次数 + 占比（列宽照原型 76 / 1fr / 58 / 56） */
+.row { display: grid; grid-template-columns: minmax(76px, 112px) 1fr 58px 56px; gap: 8px; align-items: center; padding: 4px 0; }
 .rowName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 13px; }
 .rowTrack { height: 9px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
 .rowFill, .rowFillTop, .rowFillOther { display: block; height: 100%; border-radius: 4px; background: var(--dsw-alias-state-business-primary, #5b8cff); }

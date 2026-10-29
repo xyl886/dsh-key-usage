@@ -1,71 +1,55 @@
-/* 使用明细：控件行、占比卡、按天/按小时柱状图、每日细目折叠表。 */
+/* 使用明细：每日成本柱状图 + 逐日明细表。
+   布局对齐原型 #sec-usage：面板 1px 边框 / 9px 圆角 / 10px 11px 内边距；字号正文 13 / 面板标题 15
+   跟随宿主字号缩放但设下限，页内没有小于 12px 的字。 */
 
-/* 明细页控件行：范围与导出在页头，这里只放通道筛选。 */
-.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-
-.shareBar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 2px; }
-.shareBar > i { display: block; height: 100%; cursor: default; }
-.shareBar > i:hover { filter: brightness(1.15); }
-
-.chartTitle { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-/* 纵轴与柱区并排：纵轴高度必须与 .bars 一致（110px + 同样的 margin-top），刻度才对得上柱子 */
-.chartAxisWrap { display: flex; gap: 6px; }
-.chartPane { flex: 1; min-width: 0; }
-.yAxis {
-  display: flex; flex-direction: column; justify-content: space-between; height: 110px; margin-top: 8px;
-  min-width: 40px; text-align: right; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f);
-  font-variant-numeric: tabular-nums;
+.page {
+  --detail-body: max(13px, var(--dsh-content-font-size, 13px));
+  --detail-title: max(15px, calc(var(--dsh-content-font-size, 13px) * 1.15));
+  display: flex; flex-direction: column; gap: 10px;
+  font-size: var(--detail-body);
 }
-.bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; margin-top: 8px; }
-.barsDense { gap: 2px; }
-.barColumn { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; height: 100%; cursor: default; }
-/* 悬停列：整列淡底 + 一条竖向指示线，柱子本身不变形（tip 钉在右上角，不会盖住它） */
-.barColumn { position: relative; border-radius: 3px; }
-.barColumnActive::before { content: ''; position: absolute; top: -4px; bottom: -4px; left: 50%; width: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); opacity: .45; transform: translateX(-50%); }
-.segCache { background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); border-radius: 2px 2px 0 0; }
-.segIn { background: var(--dsw-alias-state-business-primary, #5b8cff); }
-.segOut { background: var(--dsw-alias-state-business-primary, #9a7bff); border-radius: 0 0 2px 2px; }
-.barLabels { display: flex; margin-top: 6px; }
-.barLabels span { flex: 1; text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
-/* ===== 每日成本 / 逐日明细两张面板 ===== */
-.panelHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.panelTitle { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+/* ===== 面板（原型 .panel / .ph） ===== */
+.panel { min-width: 0; padding: 10px 11px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; box-sizing: border-box; }
+.panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.panelTitle { font-size: var(--detail-title); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 /* 右上角结论（合计 · 日均 · 峰值 / 行数）：永远贴右边，窄屏换行后仍靠右 */
-.panelStat { margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.panelGap { margin-top: 10px; }
+.panelMore { margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* 指标 / 维度切换：小胶囊，选中项抬到面板底色并加粗（与原型 mtabs 一致） */
-.metricTabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
-.metricTabs button {
-  border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 500;
-  height: 24px; padding: 0 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+/* 指标 / 维度切换：分段控件，选中项吃掉面板底色（与其它区块同一套） */
+.metricTabs {
+  display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; flex-wrap: wrap;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12));
 }
-.metricTabs button:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.metricTabs button.active { background: var(--dsw-alias-bg-layer-3, #232329); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
-.metricTabs button:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+.metricTab {
+  border: 0; background: transparent; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit;
+  font-size: var(--detail-body); padding: 2px 8px; border-radius: 5px;
+  cursor: pointer; white-space: nowrap;
+}
+.metricTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.metricTabOn { background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
+.metricTab:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
-/* 单指标柱状图：柱高按峰值归一，峰值那根用主色 */
-.costBars { display: flex; align-items: flex-end; gap: 3px; height: 104px; }
+/* ===== 每日成本：单指标柱状图 ===== */
+.costBars { display: flex; align-items: flex-end; gap: 4px; height: 104px; }
 /* 跨度大时（全部 / 90 天）柱子挨紧一点，否则固定间距会把图表挤到卡片外面 */
 .costBarsDense { gap: 1px; }
 .costBarCol { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; border-radius: 3px; cursor: default; }
 .costBarCol:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .08)); }
 .costBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .35)); }
 .costBarPeak { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); }
-.costAxis { display: flex; justify-content: space-between; gap: 4px; margin-top: 5px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-variant-numeric: tabular-nums; }
+.costAxis { display: flex; justify-content: space-between; gap: 4px; margin-top: 4px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--detail-body); font-variant-numeric: tabular-nums; }
 .costAxis span { flex: 1; text-align: center; white-space: nowrap; }
 
-/* 逐日明细：横向滚动 + 数字右对齐等宽 */
+/* ===== 逐日明细：横向滚动 + 数字右对齐等宽 ===== */
 .tableScroll { overflow-x: auto; }
-.detailTable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); }
+.detailTable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: var(--detail-body); }
 .detailTable th {
-  color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; padding: 5px 8px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; padding: 4px 7px;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .detailTable td {
-  color: var(--dsw-alias-label-secondary, #9a9aa6); padding: 5px 8px;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); padding: 4px 7px;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .detailTable .alignLeft { text-align: left; }
@@ -100,8 +84,8 @@
 .expandSpacer { display: inline-block; width: 16px; }
 
 /* 展开后的模型明细：缩进一层，列宽与上表无关，自己一整套右对齐数字 */
-.detailTable td.subCell { padding: 2px 8px 8px 26px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
+.detailTable td.subCell { padding: 2px 7px 8px 26px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
 .subTable { width: 100%; border-collapse: collapse; }
-.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 2px 8px; }
-.subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 2px 8px; font-variant-numeric: tabular-nums; }
+.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: var(--detail-body); padding: 2px 7px; }
+.subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 7px; font-variant-numeric: tabular-nums; }
 .subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }

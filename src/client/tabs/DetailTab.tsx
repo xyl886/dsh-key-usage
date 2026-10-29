@@ -1,8 +1,8 @@
 /**
- * 使用明细：通道筛选 + 每日成本柱状图（费用 · Token · 输出 Token · 会话）
+ * 使用明细：每日成本柱状图（费用 · Token · 输出 Token · 会话）
  * + 逐日明细表（按天 / 按通道 / 按模型，列可排序、行可展开模型明细、带环比）。
  * 两张面板的数据都来自同一份 `/usage`，维度聚合与环比全在客户端算；
- * 范围切换与导出统一由页头承担，本组件不再重复一份。
+ * 范围、通道筛选与导出统一由页头承担，本组件不再重复一份。
  */
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { loadUsage } from '../core/api.ts'
@@ -13,7 +13,6 @@ import { useT } from '../core/i18n.ts'
 import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse } from '../core/types.ts'
 import { COST_SOURCE_LABELS } from '../core/pricing.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
-import { Select } from '../components/ui/Select.tsx'
 import detailStyles from '../styles/detail.module.css'
 import styles from '../styles/shared.module.css'
 
@@ -402,6 +401,13 @@ function buildDailyBars(props: { usage: UsageResponse; from: string; to: string;
   }))
 }
 
+/** 横轴刻度：固定 `AXIS_LABEL_COUNT` 个等距日期（首尾都含）；跨度不足这个数时逐根标。 */
+function axisTicksOf(bars: DailyBar[]): DailyBar[] {
+  if (bars.length <= AXIS_LABEL_COUNT) return bars
+  const step = (bars.length - 1) / (AXIS_LABEL_COUNT - 1)
+  return Array.from({ length: AXIS_LABEL_COUNT }, (unused, index) => bars[Math.round(index * step)])
+}
+
 export function DetailTab(props: {
   usage: UsageResponse | null
   channels: Channel[]
@@ -485,9 +491,7 @@ export function DetailTab(props: {
     ].join(' · ')
   })()
 
-  const axisLabels = bars.filter((bar, index) => index === 0
-    || index === bars.length - 1
-    || index % Math.max(1, Math.ceil(bars.length / AXIS_LABEL_COUNT)) === 0)
+  const axisTicks = axisTicksOf(bars)
 
   const totalChannels = new Set<string>()
   const totalModels = new Set<string>()
@@ -497,9 +501,7 @@ export function DetailTab(props: {
       totalModels.add(model.provider + '|' + model.model)
     }
   }
-  const groupCountText = dimension === 'model'
-    ? t('detail.modelCount', { count: totalModels.size })
-    : t('detail.channelCount', { count: totalChannels.size })
+  const groupCount = dimension === 'model' ? totalModels.size : totalChannels.size
 
   const toggleSort = (key: SortKey): void => {
     if (sortKey === key) {
@@ -520,10 +522,10 @@ export function DetailTab(props: {
   }
 
   return (
-    <div>
-      {/* 范围与导出统一由页头承担；通道筛选留在明细页（概览下钻后要能看到并清除它）。 */}
+    <div className={detailStyles.page}>
+      {/* 范围与导出统一由页头承担，本组件只渲染两张面板。 */}
 
-      <div className={styles.card}>
+      <div className={detailStyles.panel}>
         <div className={detailStyles.panelHead}>
           <span className={detailStyles.panelTitle}>{t('detail.dailyCost')}</span>
           <div className={detailStyles.metricTabs}>
@@ -531,7 +533,7 @@ export function DetailTab(props: {
               <button
                 key={key}
                 type="button"
-                className={metric === key ? detailStyles.active : ''}
+                className={metric === key ? detailStyles.metricTabOn : detailStyles.metricTab}
                 aria-pressed={metric === key}
                 onClick={() => setMetric(key)}
               >
@@ -539,7 +541,7 @@ export function DetailTab(props: {
               </button>
             ))}
           </div>
-          <span className={detailStyles.panelStat}>{summaryText}</span>
+          <span className={detailStyles.panelMore}>{summaryText}</span>
         </div>
         {metric === 'sessions' || usage.days.length === 0
           ? <div className={styles.empty}>{metric === 'sessions' ? '—' : t('empty.noUsage')}</div>
@@ -569,13 +571,13 @@ export function DetailTab(props: {
                 ))}
               </div>
               <div className={detailStyles.costAxis} aria-hidden="true">
-                {axisLabels.map((bar) => <span key={bar.date}>{bar.short}</span>)}
+                {axisTicks.map((bar) => <span key={bar.date}>{bar.short}</span>)}
               </div>
             </>
           )}
       </div>
 
-      <div className={styles.card + ' ' + detailStyles.panelGap}>
+      <div className={detailStyles.panel}>
         <div className={detailStyles.panelHead}>
           <span className={detailStyles.panelTitle}>{t('detail.dailyDetail')}</span>
           <div className={detailStyles.metricTabs}>
@@ -583,7 +585,7 @@ export function DetailTab(props: {
               <button
                 key={key}
                 type="button"
-                className={dimension === key ? detailStyles.active : ''}
+                className={dimension === key ? detailStyles.metricTabOn : detailStyles.metricTab}
                 aria-pressed={dimension === key}
                 onClick={() => setDimension(key)}
               >
@@ -591,7 +593,7 @@ export function DetailTab(props: {
               </button>
             ))}
           </div>
-          <span className={detailStyles.panelStat}>{t('detail.rows', { count: sortedRows.length })}</span>
+          <span className={detailStyles.panelMore}>{t('detail.rows', { count: sortedRows.length })}</span>
         </div>
         {sortedRows.length === 0
           ? <div className={styles.empty}>{t('empty.noUsage')}</div>
@@ -652,7 +654,7 @@ export function DetailTab(props: {
                           <td className={detailStyles.alignRight}>{fmtTokens(row.cacheRead)}</td>
                           <td className={detailStyles.alignRight + ' ' + detailStyles.costCell}>{row.costText}</td>
                           <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>
-                          <td className={detailStyles.alignRight + ' ' + styles.dim}>{row.source === null || row.source === 'none' ? '—' : t(COST_SOURCE_LABELS[row.source] ?? '—')}</td>
+                          <td className={detailStyles.alignRight}>{row.source === null ? '—' : t(COST_SOURCE_LABELS[row.source] ?? row.source)}</td>
                         </tr>
                         {open && (
                           <tr>
@@ -689,7 +691,7 @@ export function DetailTab(props: {
                   <tr className={detailStyles.totalRow}>
                     <td />
                     <td className={detailStyles.alignLeft}>{t('detail.total')}</td>
-                    <td className={detailStyles.alignLeft}>{groupCountText}</td>
+                    <td className={detailStyles.alignLeft}>{t('detail.groupCount', { count: groupCount })}</td>
                     <td className={detailStyles.alignRight}>{fmtCalls(safeTotals.calls)}</td>
                     <td className={detailStyles.alignRight}>{fmtTokens(safeTotals.inputTokens)}</td>
                     <td className={detailStyles.alignRight}>{fmtTokens(safeTotals.outputTokens)}</td>

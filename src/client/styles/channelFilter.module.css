@@ -28,4 +28,4 @@
 .item:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
 .item input { margin: 0; width: 14px; height: 14px; accent-color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }
 .itemName { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.itemKind { flex: none; font-size: 12px; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
+.itemKind { flex: none; font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }

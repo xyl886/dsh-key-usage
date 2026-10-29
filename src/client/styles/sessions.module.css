@@ -1,8 +1,8 @@
 /* 会话页：最耗会话 / 会话形态 并排，最近会话整行。
-   字号只有三档：正文 13px、区块标题 15px、大数字 18px；辅助信息 12px，不得更小。
+   字号只有三档：正文 13px、区块标题 15px、大数字 18px；徽标 12px，不得更小。
    颜色只吃宿主 --dsw-alias-* 令牌。 */
 
-.page { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.page { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.55; }
 
 /* 两块并排，窄屏自动落成上下两行 */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; align-items: stretch; }
@@ -17,14 +17,14 @@
 .metrics { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
 .metricBtn {
   border: 0; background: none; padding: 2px 8px; border-radius: 5px; font: inherit;
-  font-size: 12px; color: var(--dsw-alias-label-tertiary, #67676f);
+  font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f);
   cursor: pointer; white-space: nowrap;
 }
 .metricBtn:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .metricBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .metricBtnOn { background: var(--dsw-alias-bg-layer-3, #26262d); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
 
-/* 最耗会话：一行 = 排名 + 标题 / 副标 + 右侧数值 */
+/* 最耗会话：一行 = 名次 + 标题 / 副标 + 右侧数值（原型 .item / .idx / .body / .v） */
 .topRow {
   display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 0;
   border: 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); background: none;
@@ -36,34 +36,34 @@
 .rank { flex: none; width: 18px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; font-variant-numeric: tabular-nums; }
 .rowBody { flex: 1; min-width: 0; }
 .rowTitle {
-  flex: 1; min-width: 0; color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600;
+  flex: 1; min-width: 0; color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 400;
   font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .rowSub {
-  display: block; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
+  display: block; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
   font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .rowValue { flex: none; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rowBig { display: block; color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 18px; font-weight: 600; }
-.rowSmall { display: block; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; }
+.rowSmall { display: block; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; }
 
-/* 会话形态：横轴标签与柱一一对齐 */
-.hist { display: flex; align-items: flex-end; gap: 4px; height: 104px; margin-top: 2px; }
+/* 会话形态：6 档，最高一档用主色（原型 .hist .b / .b.top） */
+.hist { display: flex; align-items: flex-end; gap: 4px; height: 104px; }
 .histCol { flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 0; }
-.histBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); opacity: .42; }
-.histBarTop { opacity: 1; }
-.histX { display: flex; gap: 4px; margin-top: 4px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; }
+.histBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-tertiary, #8c98ff); }
+.histBarTop { background: var(--dsw-alias-state-business-primary, #5b8cff); }
+.histX { display: flex; gap: 4px; margin-top: 4px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; }
 .histX span { flex: 1; text-align: center; }
 
-/* 最近会话：标题 / 副标 ｜ Tokens ｜ 成本 ｜ › */
-.row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); cursor: pointer; }
+/* 最近会话：标题 / 副标 ｜ Tokens ｜ 成本 ｜ ›（原型 .item.rich / .right / .cost / .chev） */
+.row { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); cursor: pointer; }
 .row:last-child { border-bottom: 0; }
 .row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .07)); }
 /* 已归档会话：用量照常计入，行里只淡化 + 打标 */
 .archived { opacity: .5; }
 .titleLine { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .titleBtn {
-  flex: 1; min-width: 0; border: 0; background: none; padding: 0; font: inherit; font-weight: 600;
+  flex: 1; min-width: 0; border: 0; background: none; padding: 0; font: inherit; font-weight: 400;
   font-size: 13px; color: var(--dsw-alias-label-primary, #e8e8ec);
   text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -74,9 +74,13 @@
 }
 /* 父会话行上的「N 子会话」：可悬停看这些子会话的 tokens 合计 */
 .tagChildren { border-color: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: default; }
-/* Tokens 单元格：数字在上，输入 / 输出 / 缓存读的小字在下，两行都右对齐；宽度跟随内容，不挤压标题列 */
-.tokens { flex: none; min-width: 96px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; font-variant-numeric: tabular-nums; }
+/* Tokens 单元格：大数字在上，输入 / 输出 / 缓存读在下，两行都右对齐 */
+.tokens { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; font-variant-numeric: tabular-nums; }
 .tokensValue { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: 18px; font-weight: 600; white-space: nowrap; }
-.tokensSub { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; white-space: nowrap; }
+.tokensSub { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; white-space: nowrap; }
 .cost { flex: none; min-width: 86px; text-align: right; white-space: nowrap; color: var(--dsw-alias-state-success-primary, #3fb96f); font-size: 13px; font-variant-numeric: tabular-nums; }
 .chev { flex: none; width: 10px; text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); }
+
+/* 搜索框：原型 .search 的最小宽度 150px（同排下拉仍是共享控件规格）；
+   用元素+类选择器压过 lists.module.css 里的同名类，避免样式注入顺序影响宽度 */
+input.searchInput { flex: 0 1 150px; min-width: 150px; max-width: 150px; box-sizing: border-box; font-size: 13px; }

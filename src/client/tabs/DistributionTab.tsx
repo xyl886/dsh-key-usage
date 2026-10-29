@@ -116,8 +116,6 @@ export function DistributionTab(props: {
         </div>
       )}
 
-      <div className={styles.rangeLine}>{t('dist.rangeAll')}</div>
-
       {!tableOpen && coverage !== undefined && coverage.status !== 'complete' && (
         <div className={sharedStyles.warning}>{coverageTextOf(coverage)}</div>
       )}
@@ -130,8 +128,8 @@ export function DistributionTab(props: {
         <ChannelCostPanel models={modelRows} channels={props.channels} loading={props.models === null} />
       </div>
 
+      {/* 明细表是原型没有的补充入口：默认收起，收成右上一个按钮，不占版面文字 */}
       <div className={styles.detailsBar}>
-        <span className={styles.detailsTitle}>{t('dist.tablesHint')}</span>
         <Button size="sm" active={tableOpen} onClick={() => setTableOpen(!tableOpen)}>
           {tableOpen ? t('dist.hideTable') : t('dist.showTable')}
         </Button>

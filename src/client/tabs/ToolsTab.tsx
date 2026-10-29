@@ -74,7 +74,6 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
     const reason = failureReasonOf(SNAPSHOT_PATH)
     return (
       <div className={styles.page}>
-        <div className={styles.sourceNote}>{t('tools.sourceNote')}</div>
         <EmptyState title={t('tools.empty')} reason={reason} />
       </div>
     )
@@ -92,14 +91,15 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
 
   const skills = data.skills
   const skillOtherVisible = skills.other.count > 0 && skills.other.calls > 0
-  const skillMaxCalls = Math.max(skills.rows[0]?.calls ?? 0, skillOtherVisible ? skills.other.calls : 0)
+  // 条宽只按「命名行」的最大值换算；「其它」行照原型固定满格并用弱化色（它汇总的是长尾，不与单行比大小）
+  const skillMaxCalls = skills.rows[0]?.calls ?? 0
   const skillRows: RankRowView[] = skills.rows.map((row, index) => ({
     key: 'skill-' + row.name,
     label: row.name,
     calls: row.calls,
     sharePercent: row.sharePercent,
     barPercent: barPercentOf(row.calls, skillMaxCalls),
-    top: index === 0 && !(skillOtherVisible && skills.other.calls > row.calls),
+    top: index === 0,
   }))
   if (skillOtherVisible) {
     skillRows.push({
@@ -107,7 +107,7 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
       label: t('tools.otherCount', { count: fmtCount(skills.other.count) }),
       calls: skills.other.calls,
       sharePercent: skills.calls > 0 ? skills.other.calls / skills.calls * 100 : 0,
-      barPercent: barPercentOf(skills.other.calls, skillMaxCalls),
+      barPercent: 100,
       top: false,
       muted: true,
     })
@@ -131,8 +131,6 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
 
   return (
     <div className={styles.page}>
-      <div className={styles.sourceNote}>{t('tools.sourceNote')}</div>
-
       <div className={styles.grid2}>
         <section className={styles.panel}>
           <div className={styles.panelHead}>
@@ -176,15 +174,17 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
         <section className={styles.panel}>
           <div className={styles.panelHead}>
             <h3 className={styles.panelTitle}>{t('tools.share')}</h3>
-            <span className={styles.panelMeta}>{t('tools.shareHint')}</span>
+            {share.topRows.length > 0 && (
+              <span className={styles.panelMeta}>{t('tools.shareTop', { name: share.topRows[0].name })}</span>
+            )}
           </div>
           <div className={styles.stack}>
             {share.topRows.map((row, index) => (
               <div
                 key={'share-' + row.name}
                 className={styles.stackSegment + ' ' + styles['stack' + String(index + 1)]}
-                style={{ flexGrow: Math.max(0.01, row.calls) }}
-                title={row.name + ' · ' + Math.round(row.sharePercent) + '%'}
+                style={{ flexGrow: Math.max(1, topDisplayPercents[index]) }}
+                title={row.name + ' · ' + topDisplayPercents[index] + '%'}
               >
                 {row.name} {topDisplayPercents[index]}%
               </div>
@@ -192,7 +192,7 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
             {share.otherCalls > 0 && (
               <div
                 className={styles.stackSegment + ' ' + styles.stackOther}
-                style={{ flexGrow: share.otherCalls }}
+                style={{ flexGrow: Math.max(1, otherDisplayPercent) }}
                 title={t('tools.other') + ' · ' + otherDisplayPercent + '%'}
               >
                 {t('tools.other')} {otherDisplayPercent}%

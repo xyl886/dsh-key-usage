@@ -12,10 +12,10 @@ import styles from '../styles/overview.module.css'
 
 const WEEK_COUNT = 53
 const DAYS_PER_WEEK = 7
-/** 周几标签列宽 / 格子列间距 / 横轴字号：与 overview.module.css 的 .yearWrap、.yearAxisLabel 一致。 */
-const WEEKDAY_COLUMN_PX = 18
+/** 周几标签列宽 / 格子列间距 / 横轴字号：与 overview.module.css 的 .yearWrap、.yearAxisLabel 一致（原型 26px / 3px / 正文 13px）。 */
+const WEEKDAY_COLUMN_PX = 26
 const COLUMN_GAP_PX = 3
-const AXIS_FONT_SIZE_PX = 12
+const AXIS_FONT_SIZE_PX = 13
 const LABEL_MIN_GAP_PX = 4
 /** 首帧还没量到面板宽度时的兜底列宽：按窄面板估，宁可少标也不叠字。 */
 const FALLBACK_COLUMN_WIDTH_PX = 8
@@ -27,19 +27,21 @@ type CellState = 'future' | 'empty' | 'idle' | 'active'
 interface HeatCell {
   date: string
   state: CellState
-  /** 1..5；非活跃格恒为 0 */
+  /** 1..6；非活跃格恒为 0 */
   level: number
 }
 
 /**
- * 五档色阶（浅 → 深）。用 color-mix 按比例混出深浅：直接写实心色会让后三档变成同一个颜色，
- * 层次看不出来；兜底值给 rgba，color-mix 不可用时仍能显示。
+ * 六档色阶（浅 → 深），与原型图例「少 → 多」的 6 个色块一致。
+ * 用 color-mix 按比例混出深浅：直接写实心色会让后几档变成同一个颜色，层次看不出来；
+ * 兜底值给 rgba，color-mix 不可用时仍能显示。
  */
 export const LEVEL_COLORS: string[] = [
-  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 18%, transparent)',
-  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 36%, transparent)',
-  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 56%, transparent)',
-  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 76%, transparent)',
+  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 14%, transparent)',
+  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 28%, transparent)',
+  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 42%, transparent)',
+  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 58%, transparent)',
+  'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 78%, transparent)',
   'var(--dsw-alias-state-business-primary, #5b8cff)',
 ]
 
@@ -49,17 +51,17 @@ export function levelColorOf(level: number): string | undefined {
   return LEVEL_COLORS[level - 1]
 }
 
-/** 分档阈值：样本足够按分位，否则按峰值固定比例 —— 任何量纲（tokens / 次数 / 金额）都适用。 */
+/** 分档阈值（6 档 = 5 个门槛）：样本足够按分位，否则按峰值比例 —— 任何量纲（tokens / 次数 / 金额）都适用。 */
 export function levelThresholds(values: number[]): number[] {
   const active = values.filter((value) => Number.isFinite(value) && value > 0).sort((first, second) => first - second)
-  if (active.length === 0) return [1, 2, 3, 4]
+  if (active.length === 0) return [1, 2, 3, 4, 5]
   const peak = active[active.length - 1]
-  if (active.length < 5) return [0.2, 0.4, 0.6, 0.8].map((fraction) => Math.max(peak * fraction, Number.EPSILON))
+  if (active.length < 6) return [0.17, 0.33, 0.5, 0.67, 0.83].map((fraction) => Math.max(peak * fraction, Number.EPSILON))
   const pick = (fraction: number): number => active[Math.min(active.length - 1, Math.floor(active.length * fraction))]
-  return [pick(0.2), pick(0.4), pick(0.6), pick(0.8)]
+  return [pick(1 / 6), pick(2 / 6), pick(3 / 6), pick(4 / 6), pick(5 / 6)]
 }
 
-/** 值 → 档位（0 = 无用量，1..5 = 五档由浅到深）。 */
+/** 值 → 档位（0 = 无用量，1..6 = 六档由浅到深）。 */
 export function levelOfValue(value: number, thresholds: number[]): number {
   if (!Number.isFinite(value) || value <= 0) return 0
   let level = 1
@@ -141,8 +143,6 @@ export function YearHeatmap(props: YearHeatmapProps): ReactNode {
   const columnWidthPx = wrapWidth > 0
     ? Math.max(1, (wrapWidth - WEEKDAY_COLUMN_PX - WEEK_COUNT * COLUMN_GAP_PX) / WEEK_COUNT)
     : FALLBACK_COLUMN_WIDTH_PX
-  /** 行距放不下 12px 字时只标隔行（一 / 三 / 五 / 日），免得周几标签上下叠字。 */
-  const weekdayLabelEvery = Math.max(1, Math.ceil(AXIS_FONT_SIZE_PX / (columnWidthPx + COLUMN_GAP_PX)))
   const monthAxis = buildMonthAxis({
     weekDates,
     columnWidthPx,
@@ -161,7 +161,7 @@ export function YearHeatmap(props: YearHeatmapProps): ReactNode {
           key={key}
           className={styles.yearWeekday}
           style={{ gridColumn: 1, gridRow: weekdayIndex + 2 }}
-        >{weekdayIndex % weekdayLabelEvery === 0 ? t(key) : ''}</span>
+        >{t(key)}</span>
       ))}
       {monthAxis.map((mark) => (
         <span

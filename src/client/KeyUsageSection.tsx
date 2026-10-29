@@ -1,7 +1,7 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
-import { useCurrencyDisplay } from './core/currency.ts'
+import { DISPLAY_CURRENCIES, DISPLAY_CURRENCY_SYMBOLS, setDisplayCurrency, useCurrencyDisplay, type DisplayCurrency } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
 import { hydrateLog, logInfo, logWarn, subscribeOpenLog } from './core/log.ts'
@@ -106,7 +106,7 @@ export function KeyUsageSection() {
   const tooltip = useTooltip()
 
   /** 订阅显示币种：金额随它重渲染（币种与汇率本身在设置弹窗里改）。 */
-  useCurrencyDisplay()
+  const currency = useCurrencyDisplay()
 
   /** 打开那一刻的页决定首屏要哪些段：切 Tab 不该重跑首屏（会闪 loading），后续段按需取。 */
   const initialSectionsRef = useRef<string[]>([])
@@ -371,8 +371,34 @@ export function KeyUsageSection() {
 
   return (
     <div className={styles.section}>
+      <div className={styles.stickyHead}>
       <div className={styles.title}>
-        <span>{t('app.title')}</span>
+        <span className={styles.brand}>{t('app.title')}</span>
+        <span className={styles.titleRange}>
+          <span className={styles.rangeTabs}>
+            {RANGES.map(([key, labelKey]) => (
+              <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
+            ))}
+          </span>
+          <span className={styles.rangeCustom}>
+            <span className={styles.rangeCustomLabel}>{t('r.custom')}</span>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customFrom}
+              aria-label={t('date.startHint')}
+              onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
+            />
+            <span className={styles.rangeTilde}>~</span>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customTo}
+              aria-label={t('date.endHint')}
+              onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
+            />
+          </span>
+        </span>
         <span className={styles.titleActions}>
           <select
             className={styles.refreshSelect}
@@ -414,33 +440,7 @@ export function KeyUsageSection() {
         </span>
       </div>
 
-      <div className={styles.rangeBar}>
-        <span className={styles.rangeTabs}>
-          {RANGES.map(([key, labelKey]) => (
-            <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
-          ))}
-          <button className={range === 'custom' ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange('custom')}>{t('r.custom')}</button>
-        </span>
-        {range === 'custom' && (
-          <span className={styles.rangeCustom}>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customFrom}
-              aria-label={t('date.startHint')}
-              onChange={(event) => setCustomFrom(event.target.value)}
-            />
-            <span className={styles.rangeTilde}>~</span>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customTo}
-              aria-label={t('date.endHint')}
-              onChange={(event) => setCustomTo(event.target.value)}
-            />
-          </span>
-        )}
-        <span className={styles.rangeBarSpacer} />
+      <div className={styles.filterBar}>
         <select
           className={styles.refreshSelect}
           value={channelFilter}
@@ -452,6 +452,18 @@ export function KeyUsageSection() {
             <option key={channel.provider} value={channel.provider}>{channel.displayName ?? channel.provider}</option>
           ))}
         </select>
+        <span className={styles.filterBarSpacer} />
+        <span className={styles.filterLabel}>{t('settings.currency')}</span>
+        <select
+          className={styles.refreshSelect}
+          value={currency.display}
+          onChange={(event) => setDisplayCurrency(event.target.value as DisplayCurrency)}
+          aria-label={t('settings.currency')}
+        >
+          {DISPLAY_CURRENCIES.map((code) => (
+            <option key={code} value={code}>{DISPLAY_CURRENCY_SYMBOLS[code]}</option>
+          ))}
+        </select>
       </div>
 
       <div className={styles.tabBar}>
@@ -460,9 +472,10 @@ export function KeyUsageSection() {
         ))}
         <span className={styles.tabBarSpacer} />
         <label className={styles.modeSwitch} title={t('section.modeHint')}>
-          <input type="checkbox" checked={paged} onChange={(event) => setPaged(event.target.checked)} />
-          {t('section.paged')}
+          <input type="checkbox" checked={!paged} onChange={(event) => setPaged(!event.target.checked)} />
+          {paged ? t('section.paged') : t('section.scroll')}
         </label>
+      </div>
       </div>
 
       <div className={styles.sections}>

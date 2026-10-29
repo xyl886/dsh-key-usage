@@ -1,6 +1,6 @@
 /* 总览：KPI 卡片行、使用趋势（全年热力图 / 柱状图）、项目与模型排行、按时段热力。
    颜色一律走宿主 --dsw-alias-* 令牌；字号：正文 13 / 区块标题 15 / KPI 数字 18 —— 跟随宿主
-   字号缩放但设下限，图表刻度固定 12px（热力图月份轴按 12px 估算标签宽度，字号改了要同步算法）。 */
+   字号缩放但设下限；图表刻度同正文（月份轴按 13px 估算标签宽度，改字号或列宽要同步 Heatmap.tsx 的 AXIS_FONT_SIZE_PX、WEEKDAY_COLUMN_PX）。 */
 .stack {
   --ov-body: max(13px, var(--dsh-content-font-size, 13px));
   --ov-title: max(15px, calc(var(--dsh-content-font-size, 13px) * 1.15));
@@ -58,23 +58,23 @@
    不再用「另一套等分网格 + margin」去凑，避免首行错位与月份标签黏连。 */
 .yearWrap {
   display: grid;
-  grid-template-columns: 18px repeat(53, minmax(0, 1fr));
-  grid-template-rows: 16px repeat(7, auto);
+  grid-template-columns: 26px repeat(53, minmax(0, 1fr));
+  grid-template-rows: 18px repeat(7, auto);
   column-gap: 3px; row-gap: 3px;
 }
-/* 周几标签占第 1 列、逐行对应 7 行（窄面板时组件只标隔行，防止上下叠字） */
+/* 周几标签占第 1 列、逐行对应 7 行（行高由格子/字号决定，7 个标签始终与网格同行） */
 .yearWeekday {
-  display: flex; align-items: center; justify-content: flex-end;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
+  display: flex; align-items: center; justify-content: flex-start;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body); line-height: 1;
 }
 /* 月份标签贴所在列左缘；只有每月首次出现的那一列有标签，放不下就跳过（见 core/heatmap-axis.ts） */
 .yearAxisLabel {
-  align-self: end; justify-self: start; white-space: nowrap;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
+  align-self: start; justify-self: start; white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body); line-height: 1;
 }
 /* aspect-ratio 保证格子是正方形：一年 53 列，格子不能被拉成竖长条 */
 .yearCell {
-  align-self: start; aspect-ratio: 1 / 1; border-radius: 3px;
+  align-self: start; aspect-ratio: 1 / 1; border-radius: 2px;
   background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .22)); cursor: default;
 }
 .yearActive { cursor: pointer; }
@@ -83,27 +83,32 @@
 .yearFuture { background: transparent; box-shadow: none; }
 
 /* ===== 趋势柱状图 ===== */
-.hist { display: flex; align-items: flex-end; gap: 3px; height: 104px; }
+.hist { display: flex; align-items: flex-end; gap: 4px; height: 104px; }
 .histColumn { flex: 1; display: flex; align-items: flex-end; min-width: 0; height: 100%; cursor: default; }
 .histBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); }
 .histBarPeak { background: var(--dsw-alias-state-business-primary, #5b8cff); }
+/* 横轴日期：原型每个刻度平分宽度并居中（不是两端对齐），保证刻度落在对应柱段中间 */
 .histLabels {
-  display: flex; justify-content: space-between; margin-top: 4px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
+  display: flex; gap: 4px; margin-top: 4px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body);
   font-variant-numeric: tabular-nums;
 }
+.histLabels span { flex: 1; min-width: 0; text-align: center; white-space: nowrap; }
 .trendFoot {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 9px;
   color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body);
 }
-.scale { display: inline-flex; align-items: center; gap: 3px; }
-.scale i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin: 0 1px; }
-.scaleText { color: var(--dsw-alias-label-tertiary, #67676f); }
+/* 图例与原型一致：6 个色块「少 → 多」，首尾色块各自带文字标签 */
+.legend { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legendItem { display: inline-flex; align-items: center; gap: 5px; color: var(--dsw-alias-label-tertiary, #67676f); }
+.legendItem i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .trendStats { margin-left: auto; font-variant-numeric: tabular-nums; }
 
-/* ===== 项目 / 模型排行：横条 + 右侧数值 ===== */
+/* ===== 项目 / 模型排行：横条 + 右侧数值 =====
+   原型列宽 58/56 是按整数示例写的；本插件金额统一 2 位小数（折算还带 ≈ 前缀），
+   数值列放宽到 72px 保证不压到左侧横条。 */
 .rankRow {
-  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) 58px 56px;
+  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) 72px 56px;
   gap: 8px; align-items: center; padding: 4px 0; font-size: var(--ov-body);
 }
 .rankName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dsw-alias-label-secondary, #9a9aa6); }
@@ -111,25 +116,27 @@
 .rankBar { display: block; height: 100%; border-radius: 4px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); }
 .rankBarTop { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 .rankValue { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
+/* 没有价目依据的行：数值位显示「—」并压淡（原型 vv.dim），不参与柱长比例 */
+.rankDim { color: var(--dsw-alias-label-tertiary, #67676f); }
 .rankSub { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
 /* ===== 按时段：7 行 × 24 列 =====
    与年热力图同一套做法：周几标签 / 小时刻度 / 格子放在同一个 grid，用 grid-row 锁定行，避免错位。 */
 .hourWrap {
   display: grid;
-  grid-template-columns: 18px repeat(24, minmax(0, 1fr));
-  grid-template-rows: 16px repeat(7, auto);
+  grid-template-columns: 26px repeat(24, minmax(0, 1fr));
+  grid-template-rows: 18px repeat(7, auto);
   column-gap: 3px; row-gap: 3px;
 }
 .hourWeekday {
-  display: flex; align-items: center; justify-content: flex-end;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
+  display: flex; align-items: center; justify-content: flex-start;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body); line-height: 1;
 }
 .hourAxisLabel {
-  align-self: end; justify-self: start; white-space: nowrap;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
+  align-self: start; justify-self: start; white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body); line-height: 1;
 }
 .hourCell {
-  align-self: start; aspect-ratio: 1 / 1; border-radius: 3px;
+  align-self: start; aspect-ratio: 1 / 1; border-radius: 2px;
   background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .18)); cursor: default;
 }

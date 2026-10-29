@@ -24,7 +24,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tab.words": "提问词云",
 			"tab.quota": "额度与订阅",
 			"section.paged": "分页",
-			"section.modeHint": "分页：一次只显示一个区块；不勾则所有区块竖排滚动",
+			"section.scroll": "滚动式",
+			"section.modeHint": "滚动式：所有区块竖排一次铺开；取消勾选则一次只看一个区块",
 			"action.exportUsage": "导出明细",
 			"action.exportSessions": "导出会话",
 			"refresh.off": "关闭",
@@ -59,12 +60,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"log.search": "搜索",
 			"log.sourceAll": "全部来源",
 			"log.count": "{count} 条",
-			"dist.rangeAll": "统计范围：全部历史",
 			"dist.showTable": "明细",
 			"dist.hideTable": "收起",
-			"dist.words": "提问词云",
-			"dist.noPrompts": "还没有可统计的提问",
-			"dist.tablesHint": "明细表",
 			"dist.modelsDetails": "模型明细",
 			"dist.projectsDetails": "项目明细",
 			"dist.focusScope": "项目图与项目明细只统计该项目",
@@ -76,12 +73,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dist.channelCost": "通道成本",
 			"dist.others": "其它 {count} 个",
 			"dist.countUnit": "{count} 个",
-			"dist.kpiPrompts": "提问",
-			"dist.kpiChars": "字数",
-			"dist.kpiWords": "词表",
-			"dist.kpiTop": "最常提",
-			"dist.colWord": "词",
-			"dist.colCount": "次数",
 			"words.kpiPrompts": "提问",
 			"words.kpiChars": "字数",
 			"words.kpiWords": "词表",
@@ -93,13 +84,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"words.noPrompts": "还没有可统计的提问",
 			"words.colWord": "词",
 			"words.colCount": "次数",
-			"tools.sourceNote": "来源：会话事件 · 全量历史",
 			"tools.empty": "暂无采集",
 			"tools.tools": "工具调用",
 			"tools.skills": "技能",
 			"tools.mcp": "MCP",
 			"tools.share": "工具占比",
-			"tools.shareHint": "近 7 天",
+			"tools.shareTop": "{name} 居首",
 			"tools.callsUnit": "次",
 			"tools.sessionsUnit": "个会话",
 			"tools.skillsUnit": "个",
@@ -246,8 +236,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.source": "来源",
 			"detail.model": "模型",
 			"detail.rows": "{count} 行",
-			"detail.channelCount": "{count} 个通道",
-			"detail.modelCount": "{count} 个模型",
+			"detail.groupCount": "{count} 个",
 			"detail.expand": "展开模型明细",
 			"detail.collapse": "收起模型明细",
 			"detail.barsAria": "{metric}柱状图：{count} 天",
@@ -453,7 +442,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.online": "联网",
 			"quota.members": "成员",
 			"quota.impact": "影响",
-			"quota.impactValue": "用量计入，成本 —",
+			"quota.impactValue": "用量计入，成本显示 —",
 			"quota.channelFilter": "通道筛选",
 			"quota.allChannels": "全部通道",
 			"quota.channelCount": "{count} 个通道",
@@ -479,13 +468,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sessions.scope": "会话范围",
 			"sessions.all": "全部会话",
 			"sessions.hideArchived": "隐藏已归档",
+			"sessions.count": "{count} 个",
+			"sessions.searchPlaceholder": "搜索会话",
+			"sessions.noData": "暂无会话",
 			"sessions.metricTokens": "Token",
 			"sessions.metricCost": "费用",
 			"sessions.metricDuration": "时长",
 			"sessions.metricMessages": "消息",
 			"sessions.metricTools": "工具调用",
 			"sessions.calls": "{count} 次调用",
-			"sessions.crossDays": "跨 {days} 天",
+			"sessions.crossDays": "{days} 天",
 			"sessions.subagents": "{count} 子会话",
 			"sessions.subagentTokens": "子会话合计 {tokens}",
 			"sessions.callsBucket": "按结算样本数分档",
@@ -508,14 +500,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.mTokens": "Token",
 			"overview.mOutTokens": "输出 Token",
 			"overview.mCacheRead": "缓存读",
-			"overview.mSessions": "调用",
+			"overview.mSessions": "会话",
 			"overview.mSpend": "费用",
 			"overview.mCost": "成本",
-			"overview.more": "共 {total} 个 · 还有 {rest} 个 →",
+			"overview.more": "{total} 个 · 还有 {rest} 个 →",
 			"overview.noData": "暂无数据",
 			"overview.noCalls": "无按天调用数",
 			"overview.noHourly": "暂无按时段数据",
-			"overview.busiestHour": "最忙 周{weekday} {hour}",
+			"overview.busiestHour": "最忙：周{weekday} {hour}",
 			"overview.callsUnit": "次",
 			"overview.sessionCount": "{count} 会话",
 			"overview.monthLabel": "{month}月",
@@ -535,7 +527,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tab.words": "Prompt words",
 			"tab.quota": "Quota",
 			"section.paged": "Paged",
-			"section.modeHint": "Paged: show one section at a time; uncheck to stack all sections in one scroll",
+			"section.scroll": "Scroll",
+			"section.modeHint": "Scroll: all sections stacked on one page; uncheck to show one section at a time",
 			"action.exportUsage": "Export details",
 			"action.exportSessions": "Export sessions",
 			"refresh.off": "Off",
@@ -570,12 +563,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"log.search": "Search",
 			"log.sourceAll": "All sources",
 			"log.count": "{count} entries",
-			"dist.rangeAll": "Range: all history",
 			"dist.showTable": "Details",
 			"dist.hideTable": "Hide",
-			"dist.words": "Prompt cloud",
-			"dist.noPrompts": "No prompts to count yet",
-			"dist.tablesHint": "Detail tables",
 			"dist.modelsDetails": "Model details",
 			"dist.projectsDetails": "Project details",
 			"dist.focusScope": "project charts and table are filtered to this project",
@@ -587,12 +576,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dist.channelCost": "Channel cost",
 			"dist.others": "Others ({count})",
 			"dist.countUnit": "{count}",
-			"dist.kpiPrompts": "Prompts",
-			"dist.kpiChars": "Chars",
-			"dist.kpiWords": "Words",
-			"dist.kpiTop": "Top word",
-			"dist.colWord": "Word",
-			"dist.colCount": "Count",
 			"words.kpiPrompts": "Prompts",
 			"words.kpiChars": "Chars",
 			"words.kpiWords": "Words",
@@ -604,13 +587,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"words.noPrompts": "No prompts to count yet",
 			"words.colWord": "Word",
 			"words.colCount": "Count",
-			"tools.sourceNote": "Source: session events · all time",
 			"tools.empty": "No data",
 			"tools.tools": "Tool calls",
 			"tools.skills": "Skills",
 			"tools.mcp": "MCP",
 			"tools.share": "Tool share",
-			"tools.shareHint": "Last 7 days",
+			"tools.shareTop": "{name} leads",
 			"tools.callsUnit": "calls",
 			"tools.sessionsUnit": "sessions",
 			"tools.skillsUnit": "skills",
@@ -757,8 +739,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.source": "Source",
 			"detail.model": "Model",
 			"detail.rows": "{count} rows",
-			"detail.channelCount": "{count} channels",
-			"detail.modelCount": "{count} models",
+			"detail.groupCount": "{count}",
 			"detail.expand": "Show models",
 			"detail.collapse": "Hide models",
 			"detail.barsAria": "{metric} bars: {count} days",
@@ -964,7 +945,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.online": "Online",
 			"quota.members": "Members",
 			"quota.impact": "Impact",
-			"quota.impactValue": "Usage counted, cost —",
+			"quota.impactValue": "Usage counted, cost shows —",
 			"quota.channelFilter": "Filter channels",
 			"quota.allChannels": "All channels",
 			"quota.channelCount": "{count} channels",
@@ -990,6 +971,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sessions.scope": "Session scope",
 			"sessions.all": "All sessions",
 			"sessions.hideArchived": "Hide archived",
+			"sessions.count": "{count}",
+			"sessions.searchPlaceholder": "Search sessions",
+			"sessions.noData": "No sessions",
 			"sessions.metricTokens": "Tokens",
 			"sessions.metricCost": "Cost",
 			"sessions.metricDuration": "Duration",
@@ -1019,14 +1003,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.mTokens": "Tokens",
 			"overview.mOutTokens": "Out tokens",
 			"overview.mCacheRead": "Cache read",
-			"overview.mSessions": "Calls",
+			"overview.mSessions": "Sessions",
 			"overview.mSpend": "Spend",
 			"overview.mCost": "Cost",
 			"overview.more": "{total} total · {rest} more →",
 			"overview.noData": "No data",
 			"overview.noCalls": "No daily call count",
 			"overview.noHourly": "No hourly data",
-			"overview.busiestHour": "Busiest {weekday} {hour}",
+			"overview.busiestHour": "Busiest: {weekday} {hour}",
 			"overview.callsUnit": "calls",
 			"overview.sessionCount": "{count} sessions",
 			"overview.monthLabel": "{month}",
@@ -1368,7 +1352,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const CLIENT_BOOT_AT_MS = typeof performance === "undefined" ? 0 : performance.now();
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$16 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:max(13px, var(--dsh-content-font-size,13px));padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:max(16px, calc(var(--dsh-content-font-size,13px) * 1.3));justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_tabBarSpacer{flex:auto}.d29QNW_modeSwitch{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:inherit;cursor:pointer;white-space:nowrap;align-items:center;gap:5px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:inherit;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 11px),calc(100% - 7px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:6px;padding:2px 20px 2px 8px}.d29QNW_sections{flex-direction:column;gap:12px;margin-top:12px;display:flex}.d29QNW_pageSection{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:10px;min-width:0;padding:12px}.d29QNW_pageSectionTitle{font-size:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));color:var(--dsw-alias-label-primary,#e8e8ec);margin:0 0 10px;font-weight:600;line-height:1.4}.d29QNW_rangeBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;display:flex}.d29QNW_rangeBarSpacer{flex:auto}.d29QNW_rangeTabs{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;height:22px;padding:0 11px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeCustom{align-items:center;gap:4px;display:inline-flex}.d29QNW_rangeDate{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;height:22px;padding:0 4px}.d29QNW_rangeDate::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;width:12px;height:12px}.d29QNW_rangeDate::-webkit-datetime-edit{padding:0}.d29QNW_rangeDate:focus{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTilde{color:var(--dsw-alias-label-tertiary,#8b8b99)}";
+		const css$16 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:max(13px, var(--dsh-content-font-size,13px));padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:max(16px, calc(var(--dsh-content-font-size,13px) * 1.3));flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_brand{white-space:nowrap}.d29QNW_titleRange{flex-wrap:wrap;flex:auto;align-items:center;gap:8px;min-width:0;display:inline-flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_filterBarSpacer{flex:auto}.d29QNW_filterLabel{color:var(--dsw-alias-label-tertiary,#8b8b99);white-space:nowrap}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);margin:-16px -20px 10px;padding:12px 20px 0;position:sticky;top:0}.d29QNW_stickyHead .d29QNW_tabBar{margin-bottom:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-12px -12px 10px;padding:10px 12px 0}}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_tabBarSpacer{flex:auto}.d29QNW_modeSwitch{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:inherit;cursor:pointer;white-space:nowrap;align-items:center;gap:5px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:inherit;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 11px),calc(100% - 7px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:6px;padding:2px 20px 2px 8px}.d29QNW_sections{flex-direction:column;gap:12px;margin-top:12px;display:flex}.d29QNW_pageSection{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:10px;min-width:0;padding:12px}.d29QNW_pageSectionTitle{font-size:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));color:var(--dsw-alias-label-primary,#e8e8ec);margin:0 0 10px;font-weight:600;line-height:1.4}.d29QNW_rangeTabs{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;height:22px;padding:0 11px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeCustom{align-items:center;gap:4px;display:inline-flex}.d29QNW_rangeCustomLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.d29QNW_rangeDate{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;height:22px;padding:0 4px}.d29QNW_rangeDate::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;width:12px;height:12px}.d29QNW_rangeDate::-webkit-datetime-edit{padding:0}.d29QNW_rangeDate:focus{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTilde{color:var(--dsw-alias-label-tertiary,#8b8b99)}";
 		const tagId$16 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1385,12 +1369,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
 			"badgeWarn": "d29QNW_badgeWarn",
+			"brand": "d29QNW_brand",
 			"caliberVersion": "d29QNW_caliberVersion",
 			"card": "d29QNW_card",
 			"cardGrid6": "d29QNW_cardGrid6",
 			"clickable": "d29QNW_clickable",
 			"dim": "d29QNW_dim",
 			"empty": "d29QNW_empty",
+			"filterBar": "d29QNW_filterBar",
+			"filterBarSpacer": "d29QNW_filterBarSpacer",
+			"filterLabel": "d29QNW_filterLabel",
 			"footnoteList": "d29QNW_footnoteList",
 			"ghLink": "d29QNW_ghLink",
 			"legend": "d29QNW_legend",
@@ -1399,9 +1387,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"pageSectionTitle": "d29QNW_pageSectionTitle",
 			"pathLine": "d29QNW_pathLine",
 			"pathsCell": "d29QNW_pathsCell",
-			"rangeBar": "d29QNW_rangeBar",
-			"rangeBarSpacer": "d29QNW_rangeBarSpacer",
 			"rangeCustom": "d29QNW_rangeCustom",
+			"rangeCustomLabel": "d29QNW_rangeCustomLabel",
 			"rangeDate": "d29QNW_rangeDate",
 			"rangeTab": "d29QNW_rangeTab",
 			"rangeTabActive": "d29QNW_rangeTabActive",
@@ -1422,6 +1409,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"statValue": "d29QNW_statValue",
 			"statValueRow": "d29QNW_statValueRow",
 			"statusDot": "d29QNW_statusDot",
+			"stickyHead": "d29QNW_stickyHead",
 			"tabBar": "d29QNW_tabBar",
 			"tabBarSpacer": "d29QNW_tabBarSpacer",
 			"table": "d29QNW_table",
@@ -1435,6 +1423,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tipTitle": "d29QNW_tipTitle",
 			"title": "d29QNW_title",
 			"titleActions": "d29QNW_titleActions",
+			"titleRange": "d29QNW_titleRange",
 			"tooltip": "d29QNW_tooltip",
 			"warning": "d29QNW_warning"
 		};
@@ -3289,7 +3278,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$12 = ".tXjxsq_stack{--ov-body:max(13px, var(--dsh-content-font-size,13px));--ov-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));--ov-kpi:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiRow{grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;display:grid}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;flex-wrap:wrap;gap:6px;display:flex}.tXjxsq_rise{color:var(--dsw-alias-state-error-primary,#e05a5a)}.tXjxsq_fall{color:var(--dsw-alias-state-success-primary,#3fb96f)}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 11px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:7px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:16px repeat(7,auto);grid-template-columns:18px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);justify-content:flex-end;align-items:center;font-size:12px;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);place-self:end start;font-size:12px;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:3px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:3px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;justify-content:space-between;margin-top:4px;font-size:12px;display:flex}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:9px;display:flex}.tXjxsq_scale{align-items:center;gap:3px;display:inline-flex}.tXjxsq_scale i{border-radius:2px;width:10px;height:10px;margin:0 1px;display:inline-block}.tXjxsq_scaleText{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 58px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:16px repeat(7,auto);grid-template-columns:18px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);justify-content:flex-end;align-items:center;font-size:12px;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);place-self:end start;font-size:12px;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:3px;align-self:start}";
+		const css$12 = ".tXjxsq_stack{--ov-body:max(13px, var(--dsh-content-font-size,13px));--ov-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));--ov-kpi:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiRow{grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;display:grid}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;flex-wrap:wrap;gap:6px;display:flex}.tXjxsq_rise{color:var(--dsw-alias-state-error-primary,#e05a5a)}.tXjxsq_fall{color:var(--dsw-alias-state-success-primary,#3fb96f)}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 11px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:7px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:9px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:5px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}";
 		const tagId$12 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3321,6 +3310,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"kpiRow": "tXjxsq_kpiRow",
 			"kpiUnit": "tXjxsq_kpiUnit",
 			"kpiValue": "tXjxsq_kpiValue",
+			"legend": "tXjxsq_legend",
+			"legendItem": "tXjxsq_legendItem",
 			"metricTab": "tXjxsq_metricTab",
 			"metricTabOn": "tXjxsq_metricTabOn",
 			"metricTabs": "tXjxsq_metricTabs",
@@ -3330,14 +3321,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"panelTitle": "tXjxsq_panelTitle",
 			"rankBar": "tXjxsq_rankBar",
 			"rankBarTop": "tXjxsq_rankBarTop",
+			"rankDim": "tXjxsq_rankDim",
 			"rankName": "tXjxsq_rankName",
 			"rankRow": "tXjxsq_rankRow",
 			"rankSub": "tXjxsq_rankSub",
 			"rankTrack": "tXjxsq_rankTrack",
 			"rankValue": "tXjxsq_rankValue",
 			"rise": "tXjxsq_rise",
-			"scale": "tXjxsq_scale",
-			"scaleText": "tXjxsq_scaleText",
 			"stack": "tXjxsq_stack",
 			"trendFoot": "tXjxsq_trendFoot",
 			"trendStats": "tXjxsq_trendStats",
@@ -3358,10 +3348,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		*/
 		const WEEK_COUNT = 53;
 		const DAYS_PER_WEEK = 7;
-		/** 周几标签列宽 / 格子列间距 / 横轴字号：与 overview.module.css 的 .yearWrap、.yearAxisLabel 一致。 */
-		const WEEKDAY_COLUMN_PX = 18;
+		/** 周几标签列宽 / 格子列间距 / 横轴字号：与 overview.module.css 的 .yearWrap、.yearAxisLabel 一致（原型 26px / 3px / 正文 13px）。 */
+		const WEEKDAY_COLUMN_PX = 26;
 		const COLUMN_GAP_PX = 3;
-		const AXIS_FONT_SIZE_PX = 12;
+		const AXIS_FONT_SIZE_PX = 13;
 		const LABEL_MIN_GAP_PX = 4;
 		/** 首帧还没量到面板宽度时的兜底列宽：按窄面板估，宁可少标也不叠字。 */
 		const FALLBACK_COLUMN_WIDTH_PX = 8;
@@ -3376,14 +3366,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"h.wd0"
 		];
 		/**
-		* 五档色阶（浅 → 深）。用 color-mix 按比例混出深浅：直接写实心色会让后三档变成同一个颜色，
-		* 层次看不出来；兜底值给 rgba，color-mix 不可用时仍能显示。
+		* 六档色阶（浅 → 深），与原型图例「少 → 多」的 6 个色块一致。
+		* 用 color-mix 按比例混出深浅：直接写实心色会让后几档变成同一个颜色，层次看不出来；
+		* 兜底值给 rgba，color-mix 不可用时仍能显示。
 		*/
 		const LEVEL_COLORS = [
-			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 18%, transparent)",
-			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 36%, transparent)",
-			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 56%, transparent)",
-			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 76%, transparent)",
+			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 14%, transparent)",
+			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 28%, transparent)",
+			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 42%, transparent)",
+			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 58%, transparent)",
+			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 78%, transparent)",
 			"var(--dsw-alias-state-business-primary, #5b8cff)"
 		];
 		/** 档位颜色；0 = 无用量，返回 undefined 由样式表给底色。 */
@@ -3391,31 +3383,34 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (level < 1 || level > LEVEL_COLORS.length) return void 0;
 			return LEVEL_COLORS[level - 1];
 		}
-		/** 分档阈值：样本足够按分位，否则按峰值固定比例 —— 任何量纲（tokens / 次数 / 金额）都适用。 */
+		/** 分档阈值（6 档 = 5 个门槛）：样本足够按分位，否则按峰值比例 —— 任何量纲（tokens / 次数 / 金额）都适用。 */
 		function levelThresholds(values) {
 			const active = values.filter((value) => Number.isFinite(value) && value > 0).sort((first, second) => first - second);
 			if (active.length === 0) return [
 				1,
 				2,
 				3,
-				4
+				4,
+				5
 			];
 			const peak = active[active.length - 1];
-			if (active.length < 5) return [
-				.2,
-				.4,
-				.6,
-				.8
+			if (active.length < 6) return [
+				.17,
+				.33,
+				.5,
+				.67,
+				.83
 			].map((fraction) => Math.max(peak * fraction, Number.EPSILON));
 			const pick = (fraction) => active[Math.min(active.length - 1, Math.floor(active.length * fraction))];
 			return [
-				pick(.2),
-				pick(.4),
-				pick(.6),
-				pick(.8)
+				pick(1 / 6),
+				pick(2 / 6),
+				pick(3 / 6),
+				pick(4 / 6),
+				pick(5 / 6)
 			];
 		}
-		/** 值 → 档位（0 = 无用量，1..5 = 五档由浅到深）。 */
+		/** 值 → 档位（0 = 无用量，1..6 = 六档由浅到深）。 */
 		function levelOfValue(value, thresholds) {
 			if (!Number.isFinite(value) || value <= 0) return 0;
 			let level = 1;
@@ -3471,12 +3466,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				observer.observe(element);
 				return () => observer.disconnect();
 			}, []);
-			const columnWidthPx = wrapWidth > 0 ? Math.max(1, (wrapWidth - WEEKDAY_COLUMN_PX - 159) / WEEK_COUNT) : FALLBACK_COLUMN_WIDTH_PX;
-			/** 行距放不下 12px 字时只标隔行（一 / 三 / 五 / 日），免得周几标签上下叠字。 */
-			const weekdayLabelEvery = Math.max(1, Math.ceil(AXIS_FONT_SIZE_PX / (columnWidthPx + COLUMN_GAP_PX)));
 			const monthAxis = buildMonthAxis({
 				weekDates,
-				columnWidthPx,
+				columnWidthPx: wrapWidth > 0 ? Math.max(1, (wrapWidth - WEEKDAY_COLUMN_PX - 159) / WEEK_COUNT) : FALLBACK_COLUMN_WIDTH_PX,
 				columnGapPx: COLUMN_GAP_PX,
 				fontSizePx: AXIS_FONT_SIZE_PX,
 				minGapPx: LABEL_MIN_GAP_PX,
@@ -3497,7 +3489,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							gridColumn: 1,
 							gridRow: weekdayIndex + 2
 						},
-						children: weekdayIndex % weekdayLabelEvery === 0 ? t(key) : ""
+						children: t(key)
 					}, key)),
 					monthAxis.map((mark) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: overview_module_css_default.yearAxisLabel,
@@ -3708,7 +3700,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								value: hitRate === null ? "—" : hitRate.toFixed(1),
 								unit: hitRate === null ? void 0 : "%",
 								detail: splitTotals === null ? "—" : t("overview.cacheLine", {
-									value: fmtTokens(splitTotals.cacheReadTokens),
+									value: tokenTextOf(splitTotals.cacheReadTokens),
 									saved: cacheSaved ?? "—"
 								})
 							}),
@@ -3723,7 +3715,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
 								label: t("overview.kpiDaily"),
-								value: dailyAverage === null ? "—" : moneyTextOf(display, dailyAverage),
+								value: dailyAverage === null ? "—" : displaySymbolOf(display) + dailyAverage.toFixed(1),
 								detail: activeDays === 0 ? "—" : t("overview.activeDays", { count: activeDays })
 							})
 						]
@@ -3769,16 +3761,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: overview_module_css_default.trendFoot,
 								children: [isAllRange && hasHeatData && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: overview_module_css_default.scale,
+									className: overview_module_css_default.legend,
 									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: overview_module_css_default.scaleText,
-											children: t("overview.legendLess")
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: overview_module_css_default.legendItem,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), t("overview.legendLess")]
 										}),
-										LEVEL_COLORS.map((color) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: color } }, color)),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: overview_module_css_default.scaleText,
-											children: t("overview.legendMore")
+										LEVEL_COLORS.slice(1, -1).map((color) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: overview_module_css_default.legendItem,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: color } })
+										}, color)),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: overview_module_css_default.legendItem,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[LEVEL_COLORS.length - 1] } }), t("overview.legendMore")]
 										})
 									]
 								}), trendStats !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -3896,7 +3891,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							children: props.unit
 						})]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					props.detail !== void 0 && props.detail !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: overview_module_css_default.kpiDetail,
 						children: props.detail
 					})
@@ -3904,13 +3899,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		/**
-		* 副标题的环比：给得出上期才出现涨跌（涨红跌绿），给不出就留 —。
-		* 服务端目前没有上期字段，所以常态是 —。
+		* 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
+		* 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
 		*/
 		function PrevLine(props) {
-			if (props.previous === null || props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: t("overview.prev", { value: props.previous === null ? "—" : props.format(props.previous) }) });
+			if (props.previous === null) return null;
+			const previousText = t("overview.prev", { value: props.format(props.previous) });
+			if (props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
 			const delta = (props.current - props.previous) / props.previous * 100;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [t("overview.prev", { value: props.format(props.previous) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 				className: delta > 0 ? overview_module_css_default.rise : delta < 0 ? overview_module_css_default.fall : void 0,
 				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
 			})] });
@@ -3945,7 +3942,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
 			const shown = props.items.slice(0, RANK_ROWS);
-			const peak = shown.length === 0 ? 0 : Math.max(...shown.map((item) => item.value));
+			const peak = shown.reduce((maximum, item) => item.value !== null && item.value > maximum ? item.value : maximum, 0);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: overview_module_css_default.panel,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3965,7 +3962,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: t(labelKey)
 							}, metric))
 						}),
-						props.total > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						props.total > shown.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: overview_module_css_default.panelMore,
 							children: t("overview.more", {
 								total: props.total,
@@ -3988,11 +3985,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: overview_module_css_default.rankTrack,
 							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
 								className: index === 0 ? overview_module_css_default.rankBar + " " + overview_module_css_default.rankBarTop : overview_module_css_default.rankBar,
-								style: { width: (peak <= 0 ? 0 : Math.max(2, item.value / peak * 100)) + "%" }
+								style: { width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + "%" }
 							})
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.rankValue,
+							className: item.value === null ? overview_module_css_default.rankValue + " " + overview_module_css_default.rankDim : overview_module_css_default.rankValue,
 							children: item.valueText
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -4002,6 +3999,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					]
 				}, item.key))]
 			});
+		}
+		/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
+		function compareRankValue(first, second) {
+			if (first.value === null && second.value === null) return 0;
+			if (first.value === null) return 1;
+			if (second.value === null) return -1;
+			return second.value - first.value;
 		}
 		/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
 		function monthCostTotalsOf(summary) {
@@ -4060,17 +4064,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}
 			return dates.size;
 		}
-		/** 大数拆成「数值 + 单位」，单位用小字（原型：15.34<small>B</small>）。 */
+		/** KPI 大数：按原型展示 2 位小数（15.34<small>B</small>），与共用 `fmtTokens` 的 1 位小数区分（榜单仍用 1 位）。 */
 		function tokenValueOf(count) {
-			const text = fmtTokens(count);
-			const match = /^([\d.,]+)([KMB])$/.exec(text);
-			return match === null ? {
-				text,
+			for (const [base, unit] of [
+				[1e9, "B"],
+				[1e6, "M"],
+				[1e3, "K"]
+			]) {
+				if (Math.abs(count) < base) continue;
+				const value = count / base;
+				if (value < 1e3) return {
+					text: value.toFixed(2),
+					unit
+				};
+			}
+			return {
+				text: fmtCount(count),
 				unit: ""
-			} : {
-				text: match[1],
-				unit: match[2]
 			};
+		}
+		/** 大数文本（2 位小数 + 单位）：缓存读明细这类 KPI 副标用。 */
+		function tokenTextOf(count) {
+			const value = tokenValueOf(count);
+			return value.text + value.unit;
 		}
 		/** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
 		function trendDaysOf(usage, heatmap) {
@@ -4185,18 +4201,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const items = [];
 			for (const row of rows) {
 				const value = projectValueOf(metric, row);
-				if (value === null || value <= 0) continue;
+				/** 成本口径下没有价目依据的行保留在末尾显示「—」（原型模型榜就有一条 —），不编金额 */
+				const missingCost = metric === "cost" && value === null;
+				if (!missingCost && (value === null || value <= 0)) continue;
 				const name = row.workspaceTitle ?? (row.workspace === "" ? t("p.orphan") : row.workspace);
 				items.push({
 					key: row.workspace === "" ? "__orphan__" : row.workspace,
 					name,
 					title: name,
 					value,
-					valueText: projectValueTextOf(metric, row),
+					valueText: missingCost ? "—" : projectValueTextOf(metric, row),
 					subText: t("overview.sessionCount", { count: row.sessionCount })
 				});
 			}
-			items.sort((first, second) => second.value - first.value);
+			items.sort(compareRankValue);
 			return {
 				items,
 				total: items.length
@@ -4217,17 +4235,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const items = [];
 			for (const row of rows) {
 				const value = modelValueOf(metric, row);
-				if (value === null || value <= 0) continue;
+				/** 成本口径下没有价目依据的模型保留在末尾显示「—」（原型模型榜第 5 行就是这种），不编金额 */
+				const missingCost = metric === "cost" && value === null;
+				if (!missingCost && (value === null || value <= 0)) continue;
 				items.push({
 					key: row.provider + "|" + row.model,
 					name: row.model,
 					title: row.model + " · " + row.providerLabel,
 					value,
-					valueText: modelValueTextOf(metric, row),
+					valueText: missingCost ? "—" : modelValueTextOf(metric, row),
 					subText: fmtTokens(row.tokens)
 				});
 			}
-			items.sort((first, second) => second.value - first.value);
+			items.sort(compareRankValue);
 			return {
 				items,
 				total: items.length
@@ -4316,7 +4336,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
-		const css$11 = "._91PKKq_controls{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;display:flex}._91PKKq_shareBar{border-radius:6px;gap:2px;height:12px;margin:8px 0 2px;display:flex;overflow:hidden}._91PKKq_shareBar>i{cursor:default;height:100%;display:block}._91PKKq_shareBar>i:hover{filter:brightness(1.15)}._91PKKq_chartTitle{flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;display:flex}._91PKKq_chartAxisWrap{gap:6px;display:flex}._91PKKq_chartPane{flex:1;min-width:0}._91PKKq_yAxis{text-align:right;min-width:40px;height:110px;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex-direction:column;justify-content:space-between;margin-top:8px;display:flex}._91PKKq_bars{align-items:flex-end;gap:3px;height:110px;margin-top:8px;display:flex}._91PKKq_barsDense{gap:2px}._91PKKq_barColumn{cursor:default;border-radius:3px;flex-direction:column;flex:1;justify-content:flex-end;gap:1px;height:100%;display:flex;position:relative}._91PKKq_barColumnActive:before{content:\"\";background:var(--dsw-alias-state-business-primary,#5b8cff);opacity:.45;width:1px;position:absolute;top:-4px;bottom:-4px;left:50%;transform:translate(-50%)}._91PKKq_segCache{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:2px 2px 0 0}._91PKKq_segIn{background:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_segOut{background:var(--dsw-alias-state-business-primary,#9a7bff);border-radius:0 0 2px 2px}._91PKKq_barLabels{margin-top:6px;display:flex}._91PKKq_barLabels span{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .87);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:1}._91PKKq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}._91PKKq_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_panelStat{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}._91PKKq_panelGap{margin-top:10px}._91PKKq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);border-radius:7px;gap:2px;padding:2px;display:inline-flex}._91PKKq_metricTabs button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;height:24px;padding:0 9px;font-weight:500}._91PKKq_metricTabs button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_metricTabs button._91PKKq_active{background:var(--dsw-alias-bg-layer-3,#232329);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_metricTabs button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}._91PKKq_costBars{align-items:flex-end;gap:3px;height:104px;display:flex}._91PKKq_costBarsDense{gap:1px}._91PKKq_costBarCol{cursor:default;border-radius:3px;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}._91PKKq_costBarCol:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c14)}._91PKKq_costBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff59);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costAxis{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;justify-content:space-between;gap:4px;margin-top:5px;display:flex}._91PKKq_costAxis span{text-align:center;white-space:nowrap;flex:1}._91PKKq_tableScroll{overflow-x:auto}._91PKKq_detailTable{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%;font-size:calc(var(--dsh-content-font-size,12px) * 1.1)}._91PKKq_detailTable th{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px;font-weight:500}._91PKKq_detailTable td{color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}._91PKKq_detailTable ._91PKKq_alignLeft{text-align:left}._91PKKq_detailTable ._91PKKq_alignRight{text-align:right}._91PKKq_detailTable ._91PKKq_costCell{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_detailTable tr._91PKKq_totalRow td{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;font-weight:600}._91PKKq_deltaUp{color:var(--dsw-alias-state-error-primary,#e05a5a)}._91PKKq_deltaDown{color:var(--dsw-alias-state-success-primary,#3fb96f)}._91PKKq_deltaFlat{color:var(--dsw-alias-label-tertiary,#67676f)}._91PKKq_sortBtn{color:inherit;font:inherit;font-weight:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:3px;padding:0;display:inline-flex}._91PKKq_sortBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:4px}._91PKKq_sortDir{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_expandBtn{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:3px;justify-content:center;align-items:center;padding:0;line-height:1;display:inline-flex}._91PKKq_expandBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}._91PKKq_expandBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}._91PKKq_expandSpacer{width:16px;display:inline-block}._91PKKq_detailTable td._91PKKq_subCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0a);padding:2px 8px 8px 26px}._91PKKq_subTable{border-collapse:collapse;width:100%}._91PKKq_subTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);padding:2px 8px}._91PKKq_subTable td{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;padding:2px 8px}._91PKKq_subTable th._91PKKq_alignLeft,._91PKKq_subTable td._91PKKq_alignLeft{text-align:left}";
+		const css$11 = "._91PKKq_page{--detail-body:max(13px, var(--dsh-content-font-size,13px));--detail-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));font-size:var(--detail-body);flex-direction:column;gap:10px;display:flex}._91PKKq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 11px}._91PKKq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}._91PKKq_panelTitle{font-size:var(--detail-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_panelMore{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}._91PKKq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:7px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}._91PKKq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--detail-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px}._91PKKq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}._91PKKq_costBars{align-items:flex-end;gap:4px;height:104px;display:flex}._91PKKq_costBarsDense{gap:1px}._91PKKq_costBarCol{cursor:default;border-radius:3px;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}._91PKKq_costBarCol:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c14)}._91PKKq_costBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff59);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costAxis{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--detail-body);font-variant-numeric:tabular-nums;justify-content:space-between;gap:4px;margin-top:4px;display:flex}._91PKKq_costAxis span{text-align:center;white-space:nowrap;flex:1}._91PKKq_tableScroll{overflow-x:auto}._91PKKq_detailTable{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%;font-size:var(--detail-body)}._91PKKq_detailTable th{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 7px;font-weight:500}._91PKKq_detailTable td{color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 7px}._91PKKq_detailTable ._91PKKq_alignLeft{text-align:left}._91PKKq_detailTable ._91PKKq_alignRight{text-align:right}._91PKKq_detailTable ._91PKKq_costCell{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_detailTable tr._91PKKq_totalRow td{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;font-weight:600}._91PKKq_deltaUp{color:var(--dsw-alias-state-error-primary,#e05a5a)}._91PKKq_deltaDown{color:var(--dsw-alias-state-success-primary,#3fb96f)}._91PKKq_deltaFlat{color:var(--dsw-alias-label-tertiary,#67676f)}._91PKKq_sortBtn{color:inherit;font:inherit;font-weight:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:3px;padding:0;display:inline-flex}._91PKKq_sortBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:4px}._91PKKq_sortDir{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_expandBtn{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:3px;justify-content:center;align-items:center;padding:0;line-height:1;display:inline-flex}._91PKKq_expandBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}._91PKKq_expandBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}._91PKKq_expandSpacer{width:16px;display:inline-block}._91PKKq_detailTable td._91PKKq_subCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0a);padding:2px 7px 8px 26px}._91PKKq_subTable{border-collapse:collapse;width:100%}._91PKKq_subTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:var(--detail-body);padding:2px 7px}._91PKKq_subTable td{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--detail-body);font-variant-numeric:tabular-nums;padding:2px 7px}._91PKKq_subTable th._91PKKq_alignLeft,._91PKKq_subTable td._91PKKq_alignLeft{text-align:left}";
 		const tagId$11 = "dsh-key-usage/detail.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4331,18 +4351,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$11
 		});
 		var detail_module_css_default = {
-			"active": "_91PKKq_active",
 			"alignLeft": "_91PKKq_alignLeft",
 			"alignRight": "_91PKKq_alignRight",
-			"barColumn": "_91PKKq_barColumn",
-			"barColumnActive": "_91PKKq_barColumnActive",
-			"barLabels": "_91PKKq_barLabels",
-			"bars": "_91PKKq_bars",
-			"barsDense": "_91PKKq_barsDense",
-			"chartAxisWrap": "_91PKKq_chartAxisWrap",
-			"chartPane": "_91PKKq_chartPane",
-			"chartTitle": "_91PKKq_chartTitle",
-			"controls": "_91PKKq_controls",
 			"costAxis": "_91PKKq_costAxis",
 			"costBar": "_91PKKq_costBar",
 			"costBarCol": "_91PKKq_costBarCol",
@@ -4356,30 +4366,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detailTable": "_91PKKq_detailTable",
 			"expandBtn": "_91PKKq_expandBtn",
 			"expandSpacer": "_91PKKq_expandSpacer",
+			"metricTab": "_91PKKq_metricTab",
+			"metricTabOn": "_91PKKq_metricTabOn",
 			"metricTabs": "_91PKKq_metricTabs",
-			"panelGap": "_91PKKq_panelGap",
+			"page": "_91PKKq_page",
+			"panel": "_91PKKq_panel",
 			"panelHead": "_91PKKq_panelHead",
-			"panelStat": "_91PKKq_panelStat",
+			"panelMore": "_91PKKq_panelMore",
 			"panelTitle": "_91PKKq_panelTitle",
-			"segCache": "_91PKKq_segCache",
-			"segIn": "_91PKKq_segIn",
-			"segOut": "_91PKKq_segOut",
-			"shareBar": "_91PKKq_shareBar",
 			"sortBtn": "_91PKKq_sortBtn",
 			"sortDir": "_91PKKq_sortDir",
 			"subCell": "_91PKKq_subCell",
 			"subTable": "_91PKKq_subTable",
 			"tableScroll": "_91PKKq_tableScroll",
-			"totalRow": "_91PKKq_totalRow",
-			"yAxis": "_91PKKq_yAxis"
+			"totalRow": "_91PKKq_totalRow"
 		};
 		//#endregion
 		//#region src/client/tabs/DetailTab.tsx
 		/**
-		* 使用明细：通道筛选 + 每日成本柱状图（费用 · Token · 输出 Token · 会话）
+		* 使用明细：每日成本柱状图（费用 · Token · 输出 Token · 会话）
 		* + 逐日明细表（按天 / 按通道 / 按模型，列可排序、行可展开模型明细、带环比）。
 		* 两张面板的数据都来自同一份 `/usage`，维度聚合与环比全在客户端算；
-		* 范围切换与导出统一由页头承担，本组件不再重复一份。
+		* 范围、通道筛选与导出统一由页头承担，本组件不再重复一份。
 		*/
 		/** 图表最多铺开的列数：超过这个跨度的范围按天全画会挤成一团。 */
 		const MAX_AXIS_DAYS = 366;
@@ -4703,6 +4711,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				text: item.text
 			}));
 		}
+		/** 横轴刻度：固定 `AXIS_LABEL_COUNT` 个等距日期（首尾都含）；跨度不足这个数时逐根标。 */
+		function axisTicksOf(bars) {
+			if (bars.length <= AXIS_LABEL_COUNT) return bars;
+			const step = (bars.length - 1) / 7;
+			return Array.from({ length: AXIS_LABEL_COUNT }, (unused, index) => bars[Math.round(index * step)]);
+		}
 		function DetailTab(props) {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
@@ -4791,14 +4805,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					t("detail.peak") + " " + (peakBar === null ? "—" : fmtShortDate(peakBar.date))
 				].join(" · ");
 			})();
-			const axisLabels = bars.filter((bar, index) => index === 0 || index === bars.length - 1 || index % Math.max(1, Math.ceil(bars.length / AXIS_LABEL_COUNT)) === 0);
+			const axisTicks = axisTicksOf(bars);
 			const totalChannels = /* @__PURE__ */ new Set();
 			const totalModels = /* @__PURE__ */ new Set();
 			for (const day of usage.days) for (const model of day.models) {
 				totalChannels.add(model.provider);
 				totalModels.add(model.provider + "|" + model.model);
 			}
-			const groupCountText = dimension === "model" ? t("detail.modelCount", { count: totalModels.size }) : t("detail.channelCount", { count: totalChannels.size });
+			const groupCount = dimension === "model" ? totalModels.size : totalChannels.size;
 			const toggleSort = (key) => {
 				if (sortKey === key) {
 					setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -4820,256 +4834,259 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					top: box.top + 4
 				};
 			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: shared_module_css_default.card,
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: detail_module_css_default.page,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: detail_module_css_default.panelHead,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: detail_module_css_default.panelTitle,
-							children: t("detail.dailyCost")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: detail_module_css_default.metricTabs,
-							children: METRIC_ORDER.map((key) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: metric === key ? detail_module_css_default.active : "",
-								"aria-pressed": metric === key,
-								onClick: () => setMetric(key),
-								children: t(METRIC_LABEL_KEYS[key])
-							}, key))
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: detail_module_css_default.panelStat,
-							children: summaryText
-						})
-					]
-				}), metric === "sessions" || usage.days.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.empty,
-					children: metric === "sessions" ? "—" : t("empty.noUsage")
-				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: bars.length > 60 ? detail_module_css_default.costBars + " " + detail_module_css_default.costBarsDense : detail_module_css_default.costBars,
-					role: "img",
-					"aria-label": t("detail.barsAria", {
-						metric: t(METRIC_LABEL_KEYS[metric]),
-						count: bars.length
-					}),
-					children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: detail_module_css_default.costBarCol,
-						onMouseMove: bar.value > 0 ? (event) => tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: bar.date }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-							t(METRIC_LABEL_KEYS[metric]),
-							" ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: bar.text })
-						] })] }), pinOf(event.currentTarget)) : void 0,
-						onMouseLeave: tooltip.hide,
-						children: bar.value > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: bar.peak ? detail_module_css_default.costBarPeak : detail_module_css_default.costBar,
-							style: { height: bar.height }
-						})
-					}, bar.date))
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: detail_module_css_default.costAxis,
-					"aria-hidden": "true",
-					children: axisLabels.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: bar.short }, bar.date))
-				})] })]
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: shared_module_css_default.card + " " + detail_module_css_default.panelGap,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: detail_module_css_default.panelHead,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: detail_module_css_default.panelTitle,
-							children: t("detail.dailyDetail")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: detail_module_css_default.metricTabs,
-							children: DIMENSIONS.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: dimension === key ? detail_module_css_default.active : "",
-								"aria-pressed": dimension === key,
-								onClick: () => setDimension(key),
-								children: t(labelKey)
-							}, key))
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: detail_module_css_default.panelStat,
-							children: t("detail.rows", { count: sortedRows.length })
-						})
-					]
-				}), sortedRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.empty,
-					children: t("empty.noUsage")
-				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: detail_module_css_default.tableScroll,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-						className: detail_module_css_default.detailTable,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { scope: "col" }), SORT_COLUMNS.map(([key, labelKey]) => {
-							const active = sortKey === key;
-							return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-								scope: "col",
-								"aria-sort": active ? sortDirection === "asc" ? "ascending" : "descending" : "none",
-								className: RIGHT_ALIGNED.has(key) ? detail_module_css_default.alignRight : detail_module_css_default.alignLeft,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					className: detail_module_css_default.panel,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: detail_module_css_default.panelHead,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: detail_module_css_default.panelTitle,
+								children: t("detail.dailyCost")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: detail_module_css_default.metricTabs,
+								children: METRIC_ORDER.map((key) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: detail_module_css_default.sortBtn,
-									onClick: () => toggleSort(key),
-									children: [t(labelKey), active && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: detail_module_css_default.sortDir,
-										"aria-hidden": "true",
-										children: sortDirection === "asc" ? "↑" : "↓"
-									})]
-								})
-							}, key);
-						})] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [sortedRows.map((row) => {
-							const open = expanded[row.key] === true;
-							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.models.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: detail_module_css_default.expandSpacer,
-									"aria-hidden": "true"
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									className: metric === key ? detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
+									"aria-pressed": metric === key,
+									onClick: () => setMetric(key),
+									children: t(METRIC_LABEL_KEYS[key])
+								}, key))
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: detail_module_css_default.panelMore,
+								children: summaryText
+							})
+						]
+					}), metric === "sessions" || usage.days.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: shared_module_css_default.empty,
+						children: metric === "sessions" ? "—" : t("empty.noUsage")
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: bars.length > 60 ? detail_module_css_default.costBars + " " + detail_module_css_default.costBarsDense : detail_module_css_default.costBars,
+						role: "img",
+						"aria-label": t("detail.barsAria", {
+							metric: t(METRIC_LABEL_KEYS[metric]),
+							count: bars.length
+						}),
+						children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: detail_module_css_default.costBarCol,
+							onMouseMove: bar.value > 0 ? (event) => tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: bar.date }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
+								t(METRIC_LABEL_KEYS[metric]),
+								" ",
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: bar.text })
+							] })] }), pinOf(event.currentTarget)) : void 0,
+							onMouseLeave: tooltip.hide,
+							children: bar.value > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: bar.peak ? detail_module_css_default.costBarPeak : detail_module_css_default.costBar,
+								style: { height: bar.height }
+							})
+						}, bar.date))
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: detail_module_css_default.costAxis,
+						"aria-hidden": "true",
+						children: axisTicks.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: bar.short }, bar.date))
+					})] })]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: detail_module_css_default.panel,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: detail_module_css_default.panelHead,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: detail_module_css_default.panelTitle,
+								children: t("detail.dailyDetail")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: detail_module_css_default.metricTabs,
+								children: DIMENSIONS.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: detail_module_css_default.expandBtn,
-									"aria-expanded": open,
-									"aria-label": open ? t("detail.collapse") : t("detail.expand"),
-									onClick: () => toggleExpanded(row.key),
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										"aria-hidden": "true",
-										children: open ? "▾" : "▸"
+									className: dimension === key ? detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
+									"aria-pressed": dimension === key,
+									onClick: () => setDimension(key),
+									children: t(labelKey)
+								}, key))
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: detail_module_css_default.panelMore,
+								children: t("detail.rows", { count: sortedRows.length })
+							})
+						]
+					}), sortedRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: shared_module_css_default.empty,
+						children: t("empty.noUsage")
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: detail_module_css_default.tableScroll,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+							className: detail_module_css_default.detailTable,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { scope: "col" }), SORT_COLUMNS.map(([key, labelKey]) => {
+								const active = sortKey === key;
+								return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
+									scope: "col",
+									"aria-sort": active ? sortDirection === "asc" ? "ascending" : "descending" : "none",
+									className: RIGHT_ALIGNED.has(key) ? detail_module_css_default.alignRight : detail_module_css_default.alignLeft,
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: detail_module_css_default.sortBtn,
+										onClick: () => toggleSort(key),
+										children: [t(labelKey), active && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: detail_module_css_default.sortDir,
+											"aria-hidden": "true",
+											children: sortDirection === "asc" ? "↑" : "↓"
+										})]
 									})
-								}) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignLeft,
-									children: fmtShortDate(row.date)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
-									className: detail_module_css_default.alignLeft,
-									children: [row.label, row.labelDim !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: shared_module_css_default.dim,
-										children: [" ", row.labelDim]
-									})]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtCalls(row.calls)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(row.input)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(row.output)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(row.cacheRead)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight + " " + detail_module_css_default.costCell,
-									children: row.costText
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: deltaCellOf(row.delta)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight + " " + shared_module_css_default.dim,
-									children: row.source === null || row.source === "none" ? "—" : t(COST_SOURCE_LABELS[row.source] ?? "—")
-								})
-							] }), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-								className: detail_module_css_default.subCell,
-								colSpan: SORT_COLUMNS.length + 1,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-									className: detail_module_css_default.subTable,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-											scope: "col",
-											className: detail_module_css_default.alignLeft,
-											children: t("detail.model")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-											scope: "col",
-											className: detail_module_css_default.alignRight,
-											children: t("c.calls")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-											scope: "col",
-											className: detail_module_css_default.alignRight,
-											children: "Tokens"
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-											scope: "col",
-											className: detail_module_css_default.alignRight,
-											children: t("c.cost")
+								}, key);
+							})] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [sortedRows.map((row) => {
+								const open = expanded[row.key] === true;
+								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.models.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: detail_module_css_default.expandSpacer,
+										"aria-hidden": "true"
+									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: detail_module_css_default.expandBtn,
+										"aria-expanded": open,
+										"aria-label": open ? t("detail.collapse") : t("detail.expand"),
+										onClick: () => toggleExpanded(row.key),
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											"aria-hidden": "true",
+											children: open ? "▾" : "▸"
 										})
-									] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: row.models.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
-											className: detail_module_css_default.alignLeft,
-											children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: shared_module_css_default.dim,
-												children: [" · ", displayNameOf(channels, model.provider)]
-											})]
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-											className: detail_module_css_default.alignRight,
-											children: fmtCalls(model.calls)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-											className: detail_module_css_default.alignRight,
-											children: fmtTokens(model.inputTokens + model.outputTokens + model.cacheReadTokens)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-											className: detail_module_css_default.alignRight,
-											children: costTextOf$1(model, model.costSource ?? null)
-										})
-									] }, model.provider + "|" + model.model)) })]
-								})
-							}) })] }, row.key);
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
-							className: detail_module_css_default.totalRow,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignLeft,
-									children: t("detail.total")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignLeft,
-									children: groupCountText
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtCalls(safeTotals.calls)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(safeTotals.inputTokens)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(safeTotals.outputTokens)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: fmtTokens(safeTotals.cacheReadTokens)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: totalCostText
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: deltaCellOf(totalDelta)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
-									className: detail_module_css_default.alignRight,
-									children: "—"
-								})
-							]
-						})] })]
-					})
+									}) }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignLeft,
+										children: fmtShortDate(row.date)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
+										className: detail_module_css_default.alignLeft,
+										children: [row.label, row.labelDim !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: shared_module_css_default.dim,
+											children: [" ", row.labelDim]
+										})]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtCalls(row.calls)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(row.input)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(row.output)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(row.cacheRead)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight + " " + detail_module_css_default.costCell,
+										children: row.costText
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: deltaCellOf(row.delta)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: row.source === null ? "—" : t(COST_SOURCE_LABELS[row.source] ?? row.source)
+									})
+								] }), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+									className: detail_module_css_default.subCell,
+									colSpan: SORT_COLUMNS.length + 1,
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
+										className: detail_module_css_default.subTable,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
+												scope: "col",
+												className: detail_module_css_default.alignLeft,
+												children: t("detail.model")
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
+												scope: "col",
+												className: detail_module_css_default.alignRight,
+												children: t("c.calls")
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
+												scope: "col",
+												className: detail_module_css_default.alignRight,
+												children: "Tokens"
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
+												scope: "col",
+												className: detail_module_css_default.alignRight,
+												children: t("c.cost")
+											})
+										] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: row.models.map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("td", {
+												className: detail_module_css_default.alignLeft,
+												children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: shared_module_css_default.dim,
+													children: [" · ", displayNameOf(channels, model.provider)]
+												})]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+												className: detail_module_css_default.alignRight,
+												children: fmtCalls(model.calls)
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+												className: detail_module_css_default.alignRight,
+												children: fmtTokens(model.inputTokens + model.outputTokens + model.cacheReadTokens)
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+												className: detail_module_css_default.alignRight,
+												children: costTextOf$1(model, model.costSource ?? null)
+											})
+										] }, model.provider + "|" + model.model)) })]
+									})
+								}) })] }, row.key);
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", {
+								className: detail_module_css_default.totalRow,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignLeft,
+										children: t("detail.total")
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignLeft,
+										children: t("detail.groupCount", { count: groupCount })
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtCalls(safeTotals.calls)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(safeTotals.inputTokens)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(safeTotals.outputTokens)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: fmtTokens(safeTotals.cacheReadTokens)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: totalCostText
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: deltaCellOf(totalDelta)
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
+										className: detail_module_css_default.alignRight,
+										children: "—"
+									})
+								]
+							})] })]
+						})
+					})]
 				})]
-			})] });
+			});
 		}
 		//#endregion
 		//#region src/client/core/rows.ts
@@ -5082,7 +5099,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/distribution.module.css.mjs
-		const css$10 = ".P_kW7q_page{--dist-body:max(13px, var(--dsh-content-font-size,13px));--dist-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));font-size:var(--dist-body);flex-direction:column;gap:10px;display:flex}.P_kW7q_rangeLine{color:var(--dsw-alias-label-tertiary,#67676f)}.P_kW7q_focusNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px}.P_kW7q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 11px}.P_kW7q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.P_kW7q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--dist-title);font-weight:600}.P_kW7q_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.P_kW7q_mekko{border-radius:5px;align-items:stretch;height:132px;display:flex;overflow:hidden}.P_kW7q_mekkoBlock{box-sizing:border-box;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:3px;min-width:0;padding:8px;display:flex;overflow:hidden}.P_kW7q_mekkoBlockCompact{gap:2px;padding:6px 4px}.P_kW7q_mekkoHead{align-items:baseline;gap:4px;min-width:0;max-width:100%;display:flex}.P_kW7q_mekkoName{text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%;font-weight:600;overflow:hidden}.P_kW7q_mekkoAmount{text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:0;max-width:100%;overflow:hidden}.P_kW7q_mekkoHead .P_kW7q_mekkoAmount{flex:none}.P_kW7q_mekkoModel{text-overflow:ellipsis;white-space:nowrap;opacity:.92;max-width:100%;overflow:hidden}.P_kW7q_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.P_kW7q_row{grid-template-columns:minmax(76px,112px) minmax(0,1fr) minmax(58px,auto) minmax(56px,auto);align-items:center;gap:8px;padding:4px 0;display:grid}.P_kW7q_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.P_kW7q_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.P_kW7q_rowFill,.P_kW7q_rowFillTop{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.P_kW7q_rowFill{opacity:.58}.P_kW7q_rowFillTop{opacity:1}.P_kW7q_rowAmount{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_rowMeta{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_stackBar{border-radius:5px;height:22px;display:flex;overflow:hidden}.P_kW7q_stackOutput,.P_kW7q_stackCache{white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);flex-basis:0;justify-content:center;align-items:center;display:flex;overflow:hidden}.P_kW7q_stackOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_stackCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:7px;display:flex}.P_kW7q_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:5px;display:inline-flex}.P_kW7q_legendOutput,.P_kW7q_legendCache{border-radius:2px;width:8px;height:8px;display:inline-block}.P_kW7q_legendOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legendCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_detailsBar{justify-content:space-between;align-items:center;gap:8px;margin-top:4px;display:flex}.P_kW7q_detailsTitle{color:var(--dsw-alias-label-tertiary,#67676f)}.P_kW7q_tables{flex-direction:column;gap:16px;display:flex}.P_kW7q_tableTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px;font-weight:600}";
+		const css$10 = ".P_kW7q_page{--dist-body:max(13px, var(--dsh-content-font-size,13px));--dist-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));font-size:var(--dist-body);flex-direction:column;gap:10px;display:flex}.P_kW7q_focusNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px}.P_kW7q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 11px}.P_kW7q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.P_kW7q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--dist-title);font-weight:600}.P_kW7q_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.P_kW7q_mekko{border-radius:5px;align-items:stretch;height:132px;display:flex;overflow:hidden}.P_kW7q_mekkoBlock{box-sizing:border-box;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:3px;min-width:0;padding:8px;display:flex;overflow:hidden}.P_kW7q_mekkoBlockCompact{gap:2px;padding:6px 4px}.P_kW7q_mekkoHead{align-items:baseline;gap:4px;min-width:0;max-width:100%;display:flex}.P_kW7q_mekkoName{text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%;font-weight:600;overflow:hidden}.P_kW7q_mekkoAmount{text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:.92;min-width:0;max-width:100%;overflow:hidden}.P_kW7q_mekkoHead .P_kW7q_mekkoAmount{opacity:1;flex:none;font-weight:600}.P_kW7q_mekkoModel{text-overflow:ellipsis;white-space:nowrap;opacity:.92;max-width:100%;overflow:hidden}.P_kW7q_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.P_kW7q_row{grid-template-columns:minmax(76px,112px) minmax(0,1fr) minmax(58px,auto) minmax(56px,auto);align-items:center;gap:8px;padding:4px 0;display:grid}.P_kW7q_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.P_kW7q_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.P_kW7q_rowFill,.P_kW7q_rowFillTop{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.P_kW7q_rowFill{opacity:.58}.P_kW7q_rowFillTop{opacity:1}.P_kW7q_rowAmount{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_rowMeta{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_stackBar{border-radius:5px;height:22px;display:flex;overflow:hidden}.P_kW7q_stackOutput,.P_kW7q_stackCache{box-sizing:border-box;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);flex-basis:0;justify-content:center;align-items:center;padding:0 5px;display:flex;overflow:hidden}.P_kW7q_stackOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_stackCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:7px;display:flex}.P_kW7q_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:5px;display:inline-flex}.P_kW7q_legendOutput,.P_kW7q_legendCache{border-radius:2px;width:8px;height:8px;display:inline-block}.P_kW7q_legendOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legendCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_detailsBar{justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;display:flex}.P_kW7q_tables{flex-direction:column;gap:16px;display:flex}.P_kW7q_tableTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px;font-weight:600}";
 		const tagId$10 = "dsh-key-usage/distribution.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$10) + "]") === null) {
 			const tag = document.createElement("style");
@@ -5098,7 +5115,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		});
 		var distribution_module_css_default = {
 			"detailsBar": "P_kW7q_detailsBar",
-			"detailsTitle": "P_kW7q_detailsTitle",
 			"focusNote": "P_kW7q_focusNote",
 			"grid": "P_kW7q_grid",
 			"legend": "P_kW7q_legend",
@@ -5116,7 +5132,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"panelHead": "P_kW7q_panelHead",
 			"panelNote": "P_kW7q_panelNote",
 			"panelTitle": "P_kW7q_panelTitle",
-			"rangeLine": "P_kW7q_rangeLine",
 			"row": "P_kW7q_row",
 			"rowAmount": "P_kW7q_rowAmount",
 			"rowFill": "P_kW7q_rowFill",
@@ -5877,10 +5892,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: distribution_module_css_default.rangeLine,
-						children: t("dist.rangeAll")
-					}),
 					!tableOpen && coverage !== void 0 && coverage.status !== "complete" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.warning,
 						children: coverageTextOf(coverage)
@@ -5908,17 +5919,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: distribution_module_css_default.detailsBar,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: distribution_module_css_default.detailsTitle,
-							children: t("dist.tablesHint")
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 							size: "sm",
 							active: tableOpen,
 							onClick: () => setTableOpen(!tableOpen),
 							children: tableOpen ? t("dist.hideTable") : t("dist.showTable")
-						})]
+						})
 					}),
 					tableOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: distribution_module_css_default.tables,
@@ -6330,7 +6338,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/channelFilter.module.css.mjs
-		const css$6 = ".MLInyG_root{display:inline-flex;position:relative}.MLInyG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);height:30px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 12px;font-size:13px;line-height:1;display:inline-flex}.MLInyG_trigger:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.MLInyG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.MLInyG_caret{opacity:.8;font-size:12px}.MLInyG_popup{z-index:30;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);min-width:240px;max-height:300px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;padding:6px;position:absolute;top:calc(100% + 6px);left:0;overflow-y:auto}.MLInyG_item{color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;border-radius:6px;align-items:center;gap:8px;padding:7px 8px;font-size:13px;display:flex}.MLInyG_item:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.MLInyG_item input{width:14px;height:14px;accent-color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;margin:0}.MLInyG_itemName{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}.MLInyG_itemKind{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:none;font-size:12px}";
+		const css$6 = ".MLInyG_root{display:inline-flex;position:relative}.MLInyG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);height:30px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 12px;font-size:13px;line-height:1;display:inline-flex}.MLInyG_trigger:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.MLInyG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.MLInyG_caret{opacity:.8;font-size:12px}.MLInyG_popup{z-index:30;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);min-width:240px;max-height:300px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;padding:6px;position:absolute;top:calc(100% + 6px);left:0;overflow-y:auto}.MLInyG_item{color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;border-radius:6px;align-items:center;gap:8px;padding:7px 8px;font-size:13px;display:flex}.MLInyG_item:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.MLInyG_item input{width:14px;height:14px;accent-color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;margin:0}.MLInyG_itemName{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}.MLInyG_itemKind{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;flex:none;font-size:13px}";
 		const tagId$6 = "dsh-key-usage/channelFilter.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6430,7 +6438,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
-		const css$5 = ".ohwLxW_cardGrid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));grid-auto-rows:1fr;gap:12px;display:grid}.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}@media (max-width:360px){.ohwLxW_cardGrid,.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}}.ohwLxW_cardToolbar{align-items:center;gap:8px;margin-bottom:12px;display:flex}.ohwLxW_chanCard{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:12px;flex-direction:column;gap:10px;min-width:0;padding:14px 16px;display:flex}.ohwLxW_chanHead{min-width:0;font:inherit;color:inherit;text-align:left;background:0 0;border:0;align-items:center;gap:8px;margin:0;padding:0;display:flex}.ohwLxW_chanHeadButton{cursor:pointer;border-radius:6px;width:100%}.ohwLxW_chanHeadButton:hover .ohwLxW_chanName{color:var(--dsw-alias-state-business-primary,#5b8cff)}.ohwLxW_chanHeadButton:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_chanName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;overflow:hidden}.ohwLxW_chanKind{white-space:nowrap;background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-tertiary,#67676f);border-radius:999px;padding:1px 8px;font-size:12px}.ohwLxW_chanChecked{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:12px}.ohwLxW_chanBody{flex:auto;grid-auto-rows:1fr;align-items:center;gap:6px;min-height:0;font-size:13px;display:grid}.ohwLxW_windowLine{font-variant-numeric:tabular-nums;grid-template-columns:34px minmax(64px,1fr) 52px 102px;align-items:center;gap:8px;display:grid}.ohwLxW_windowName{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_meter{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:8px;display:block;overflow:hidden}.ohwLxW_meter>i{border-radius:4px;height:100%;display:block}.ohwLxW_windowPercent{text-align:right;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:18px;font-weight:600}.ohwLxW_windowReset{text-align:right;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:12px;overflow:hidden}.ohwLxW_cardLine{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;display:flex}.ohwLxW_lineKey{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.ohwLxW_lineValue{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_lineValueNumber{font-size:18px;font-weight:600}.ohwLxW_ratePanel{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:12px;margin-top:12px;padding:14px 16px}.ohwLxW_ratePanelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.ohwLxW_ratePanelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:13px;font-weight:600}.ohwLxW_ratePanelClose{cursor:pointer;font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);background:0 0;border:0;border-radius:4px;margin-left:auto;padding:0 2px;font-size:13px}.ohwLxW_ratePanelClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:8px;font-size:13px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px;font-size:13px;font-weight:500}.ohwLxW_rateTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:13px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:13px}.ohwLxW_rateSourceNone{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;font-size:12px;line-height:1.7;display:inline-block}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);padding:8px 0;font-size:13px}";
+		const css$5 = ".ohwLxW_cardGrid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));grid-auto-rows:1fr;gap:10px;display:grid}.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}@media (max-width:360px){.ohwLxW_cardGrid,.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}}.ohwLxW_cardToolbar{align-items:center;gap:8px;margin-bottom:12px;display:flex}.ohwLxW_chanCard{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;flex-direction:column;gap:10px;min-width:0;padding:14px 16px;display:flex}.ohwLxW_chanHead{min-width:0;font:inherit;color:inherit;text-align:left;background:0 0;border:0;align-items:center;gap:7px;margin:0;padding:0;display:flex}.ohwLxW_chanHeadButton{cursor:pointer;border-radius:6px;width:100%}.ohwLxW_chanHeadButton:hover .ohwLxW_chanName{color:var(--dsw-alias-state-business-primary,#5b8cff)}.ohwLxW_chanHeadButton:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_chanName{min-width:0;color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;overflow:hidden}.ohwLxW_chanKind{white-space:nowrap;background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-tertiary,#67676f);border-radius:999px;padding:0 6px;font-size:13px}.ohwLxW_chanChecked{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);margin-left:auto;font-size:13px}.ohwLxW_chanBody{flex:auto;grid-auto-rows:1fr;align-items:center;gap:5px;min-height:0;font-size:13px;display:grid}.ohwLxW_windowLine{font-variant-numeric:tabular-nums;grid-template-columns:32px minmax(0,1fr) 46px 112px;align-items:center;gap:7px;display:grid}.ohwLxW_windowName{color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_meter{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:8px;display:block;overflow:hidden}.ohwLxW_meter>i{border-radius:4px;height:100%;display:block}.ohwLxW_windowPercent{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:18px;font-weight:600}.ohwLxW_windowReset{text-align:right;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:13px;overflow:hidden}.ohwLxW_cardLine{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;display:flex}.ohwLxW_lineKey{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.ohwLxW_lineValue{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_lineValueNumber{font-size:18px;font-weight:600}.ohwLxW_ratePanel{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;margin-top:10px;padding:14px 16px}.ohwLxW_ratePanelHead{align-items:center;gap:7px;margin-bottom:8px;display:flex}.ohwLxW_ratePanelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:600}.ohwLxW_ratePanelClose{cursor:pointer;font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);background:0 0;border:0;border-radius:4px;margin-left:auto;padding:0 2px;font-size:13px}.ohwLxW_ratePanelClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);margin-bottom:8px;font-size:13px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px;font-size:13px;font-weight:500}.ohwLxW_rateTable td{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px;font-size:13px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:13px}.ohwLxW_rateSourceNone{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;font-size:13px;line-height:1.7;display:inline-block}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);padding:8px 0;font-size:13px}";
 		const tagId$5 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7400,7 +7408,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/sessions.module.css.mjs
-		const css$4 = ".EL9i8q_page{flex-direction:column;gap:10px;font-size:13px;display:flex}.EL9i8q_grid2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));align-items:stretch;gap:10px;display:grid}.EL9i8q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 11px}.EL9i8q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.EL9i8q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:600}.EL9i8q_panelTotal{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-size:13px}.EL9i8q_metrics{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);border-radius:7px;gap:2px;padding:2px;display:inline-flex}.EL9i8q_metricBtn{font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px;font-size:12px}.EL9i8q_metricBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.EL9i8q_metricBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.EL9i8q_metricBtnOn{background:var(--dsw-alias-bg-layer-3,#26262d);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.EL9i8q_topRow{border:0;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;align-items:center;gap:9px;padding:5px 0;font-size:13px;display:flex}.EL9i8q_topRow:last-child{border-bottom:0}.EL9i8q_topRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.EL9i8q_topRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.EL9i8q_rank{width:18px;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none;font-size:13px}.EL9i8q_rowBody{flex:1;min-width:0}.EL9i8q_rowTitle{min-width:0;color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:13px;font-weight:600;overflow:hidden}.EL9i8q_rowSub{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;font-size:12px;display:block;overflow:hidden}.EL9i8q_rowValue{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}.EL9i8q_rowBig{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:18px;font-weight:600;display:block}.EL9i8q_rowSmall{color:var(--dsw-alias-label-tertiary,#67676f);font-size:12px;display:block}.EL9i8q_hist{align-items:flex-end;gap:4px;height:104px;margin-top:2px;display:flex}.EL9i8q_histCol{flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.EL9i8q_histBar{background:var(--dsw-alias-state-business-primary,#5b8cff);opacity:.42;border-radius:3px 3px 1px 1px;width:100%}.EL9i8q_histBarTop{opacity:1}.EL9i8q_histX{color:var(--dsw-alias-label-tertiary,#67676f);gap:4px;margin-top:4px;font-size:12px;display:flex}.EL9i8q_histX span{text-align:center;flex:1}.EL9i8q_row{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);cursor:pointer;align-items:center;gap:12px;padding:6px 0;display:flex}.EL9i8q_row:last-child{border-bottom:0}.EL9i8q_row:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.EL9i8q_archived{opacity:.5}.EL9i8q_titleLine{align-items:center;gap:6px;min-width:0;display:flex}.EL9i8q_titleBtn{min-width:0;font:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;font-size:13px;font-weight:600;overflow:hidden}.EL9i8q_titleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.EL9i8q_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);border-radius:999px;flex:none;padding:0 6px;font-size:12px;font-weight:500}.EL9i8q_tagChildren{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:default}.EL9i8q_tokens{text-align:right;font-variant-numeric:tabular-nums;flex-direction:column;flex:none;align-items:flex-end;gap:1px;min-width:96px;display:flex}.EL9i8q_tokensValue{color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;font-size:18px;font-weight:600}.EL9i8q_tokensSub{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;font-size:12px}.EL9i8q_cost{text-align:right;white-space:nowrap;min-width:86px;color:var(--dsw-alias-state-success-primary,#3fb96f);font-variant-numeric:tabular-nums;flex:none;font-size:13px}.EL9i8q_chev{text-align:right;width:10px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}";
+		const css$4 = ".EL9i8q_page{flex-direction:column;gap:10px;font-size:13px;line-height:1.55;display:flex}.EL9i8q_grid2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));align-items:stretch;gap:10px;display:grid}.EL9i8q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 11px}.EL9i8q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.EL9i8q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:15px;font-weight:600}.EL9i8q_panelTotal{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-size:13px}.EL9i8q_metrics{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);border-radius:7px;gap:2px;padding:2px;display:inline-flex}.EL9i8q_metricBtn{font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px;font-size:13px}.EL9i8q_metricBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.EL9i8q_metricBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.EL9i8q_metricBtnOn{background:var(--dsw-alias-bg-layer-3,#26262d);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.EL9i8q_topRow{border:0;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;align-items:center;gap:9px;padding:5px 0;font-size:13px;display:flex}.EL9i8q_topRow:last-child{border-bottom:0}.EL9i8q_topRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.EL9i8q_topRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.EL9i8q_rank{width:18px;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none;font-size:13px}.EL9i8q_rowBody{flex:1;min-width:0}.EL9i8q_rowTitle{min-width:0;color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:13px;font-weight:400;overflow:hidden}.EL9i8q_rowSub{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;font-size:13px;display:block;overflow:hidden}.EL9i8q_rowValue{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}.EL9i8q_rowBig{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:18px;font-weight:600;display:block}.EL9i8q_rowSmall{color:var(--dsw-alias-label-tertiary,#67676f);font-size:13px;display:block}.EL9i8q_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.EL9i8q_histCol{flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.EL9i8q_histBar{background:var(--dsw-alias-state-business-tertiary,#8c98ff);border-radius:3px 3px 1px 1px;width:100%}.EL9i8q_histBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.EL9i8q_histX{color:var(--dsw-alias-label-tertiary,#67676f);gap:4px;margin-top:4px;font-size:13px;display:flex}.EL9i8q_histX span{text-align:center;flex:1}.EL9i8q_row{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);cursor:pointer;align-items:center;gap:12px;padding:5px 0;display:flex}.EL9i8q_row:last-child{border-bottom:0}.EL9i8q_row:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.EL9i8q_archived{opacity:.5}.EL9i8q_titleLine{align-items:center;gap:6px;min-width:0;display:flex}.EL9i8q_titleBtn{min-width:0;font:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;font-size:13px;font-weight:400;overflow:hidden}.EL9i8q_titleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.EL9i8q_tag{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);border-radius:999px;flex:none;padding:0 6px;font-size:12px;font-weight:500}.EL9i8q_tagChildren{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:default}.EL9i8q_tokens{text-align:right;font-variant-numeric:tabular-nums;flex-direction:column;flex:none;align-items:flex-end;gap:1px;display:flex}.EL9i8q_tokensValue{color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;font-size:18px;font-weight:600}.EL9i8q_tokensSub{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;font-size:13px}.EL9i8q_cost{text-align:right;white-space:nowrap;min-width:86px;color:var(--dsw-alias-state-success-primary,#3fb96f);font-variant-numeric:tabular-nums;flex:none;font-size:13px}.EL9i8q_chev{text-align:right;width:10px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}input.EL9i8q_searchInput{box-sizing:border-box;flex:0 150px;min-width:150px;max-width:150px;font-size:13px}";
 		const tagId$4 = "dsh-key-usage/sessions.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7440,6 +7448,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rowSub": "EL9i8q_rowSub",
 			"rowTitle": "EL9i8q_rowTitle",
 			"rowValue": "EL9i8q_rowValue",
+			"searchInput": "EL9i8q_searchInput",
 			"tag": "EL9i8q_tag",
 			"tagChildren": "EL9i8q_tagChildren",
 			"titleBtn": "EL9i8q_titleBtn",
@@ -7587,12 +7596,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: sessions_module_css_default.panelTotal,
-										children: fmtCount(pool.length) + t("common.sessionSuffix")
+										children: t("sessions.count", { count: fmtCount(pool.length) })
 									})
 								]
 							}), topRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: shared_module_css_default.empty,
-								children: t(topMetric === "cost" ? "s.noCost" : "empty.noUsage")
+								children: t(topMetric === "cost" ? "s.noCost" : "sessions.noData")
 							}) : topRows.map((row, index) => topRowOf(row, index + 1, topMetric, props.channels, () => setDetailId(row.id)))]
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 							className: sessions_module_css_default.panel,
@@ -7625,12 +7634,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: sessions_module_css_default.panelTotal,
-										children: fmtCount(pool.length) + t("common.sessionSuffix")
+										children: t("sessions.count", { count: fmtCount(pool.length) })
 									})
 								]
 							}), pool.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: shared_module_css_default.empty,
-								children: t("empty.noUsage")
+								children: t("sessions.noData")
 							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: sessions_module_css_default.hist,
 								children: histogram.map((count, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -7670,15 +7679,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}]
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										className: lists_module_css_default.searchInput,
-										placeholder: t("s.searchPlaceholder"),
-										"aria-label": t("s.searchPlaceholder"),
+										className: lists_module_css_default.searchInput + " " + sessions_module_css_default.searchInput,
+										placeholder: t("sessions.searchPlaceholder"),
+										"aria-label": t("sessions.searchPlaceholder"),
 										value: query,
 										onChange: (event) => setQuery(event.target.value)
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: sessions_module_css_default.panelTotal,
-										children: fmtCount(recentRows.length) + t("common.sessionSuffix")
+										children: t("sessions.count", { count: fmtCount(recentRows.length) })
 									})
 								]
 							}),
@@ -7946,7 +7955,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/tools.module.css.mjs
-		const css$3 = ".LvMOmq_page{flex-direction:column;gap:10px;display:flex}.LvMOmq_sourceNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:13px}.LvMOmq_grid2{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.LvMOmq_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;min-width:0;padding:10px 11px}.LvMOmq_panelHead{flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:8px;display:flex}.LvMOmq_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);margin:0;font-size:15px;font-weight:600}.LvMOmq_panelMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-size:13px}.LvMOmq_headNum{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:18px;font-weight:650}.LvMOmq_row{grid-template-columns:minmax(72px,112px) 1fr 58px 48px;align-items:center;gap:8px;padding:4px 0;display:grid}.LvMOmq_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:13px;overflow:hidden}.LvMOmq_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.LvMOmq_rowFill,.LvMOmq_rowFillTop,.LvMOmq_rowFillOther{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.LvMOmq_rowFill{opacity:.58}.LvMOmq_rowFillTop{opacity:1}.LvMOmq_rowFillOther{opacity:.34}.LvMOmq_rowValue{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.LvMOmq_rowPercent{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.LvMOmq_stack{border-radius:5px;height:22px;display:flex;overflow:hidden}.LvMOmq_stackSegment{white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);font-variant-numeric:tabular-nums;flex-basis:0;justify-content:center;align-items:center;padding:0 5px;font-size:13px;display:flex;overflow:hidden}.LvMOmq_stack1{background:var(--dsw-alias-state-business-primary,#5b8cff)}.LvMOmq_stack2{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 55%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stack3{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stack4{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary,#e0a13c) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stackOther{background:var(--dsw-alias-interactive-bg-active,#80808c38);color:var(--dsw-alias-label-primary,#e8e8ec)}.LvMOmq_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:7px;font-size:13px;display:flex}.LvMOmq_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:5px;display:inline-flex}.LvMOmq_dot1,.LvMOmq_dot2,.LvMOmq_dot3,.LvMOmq_dot4,.LvMOmq_dotOther{border-radius:2px;width:8px;height:8px;display:inline-block}.LvMOmq_dot1{background:var(--dsw-alias-state-business-primary,#5b8cff)}.LvMOmq_dot2{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 55%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dot3{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dot4{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary,#e0a13c) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dotOther{background:var(--dsw-alias-interactive-bg-active,#80808c38)}.LvMOmq_mini{align-items:flex-end;gap:3px;height:56px;margin-top:8px;display:flex}.LvMOmq_miniItem{flex:1;align-items:flex-end;height:100%;display:flex}.LvMOmq_miniBar{background:var(--dsw-alias-state-business-primary,#5b8cff);opacity:.5;border-radius:2px;width:100%;display:block}.LvMOmq_miniBarTop{opacity:1}.LvMOmq_dimLine{color:var(--dsw-alias-label-tertiary,#67676f);padding:6px 0;font-size:13px}";
+		const css$3 = ".LvMOmq_page{flex-direction:column;gap:10px;display:flex}.LvMOmq_grid2{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.LvMOmq_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 11px}.LvMOmq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.LvMOmq_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);margin:0;font-size:15px;font-weight:600}.LvMOmq_panelMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-size:13px}.LvMOmq_headNum{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;font-size:18px;font-weight:650}.LvMOmq_row{grid-template-columns:minmax(76px,112px) 1fr 58px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.LvMOmq_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:13px;overflow:hidden}.LvMOmq_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.LvMOmq_rowFill,.LvMOmq_rowFillTop,.LvMOmq_rowFillOther{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.LvMOmq_rowFill{opacity:.58}.LvMOmq_rowFillTop{opacity:1}.LvMOmq_rowFillOther{opacity:.34}.LvMOmq_rowValue{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.LvMOmq_rowPercent{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.LvMOmq_stack{border-radius:5px;height:22px;display:flex;overflow:hidden}.LvMOmq_stackSegment{white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);font-variant-numeric:tabular-nums;flex-basis:0;justify-content:center;align-items:center;padding:0 5px;font-size:13px;display:flex;overflow:hidden}.LvMOmq_stack1{background:var(--dsw-alias-state-business-primary,#5b8cff)}.LvMOmq_stack2{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 55%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stack3{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stack4{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary,#e0a13c) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_stackOther{background:var(--dsw-alias-interactive-bg-active,#80808c38);color:var(--dsw-alias-label-primary,#e8e8ec)}.LvMOmq_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:7px;font-size:13px;display:flex}.LvMOmq_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:5px;display:inline-flex}.LvMOmq_dot1,.LvMOmq_dot2,.LvMOmq_dot3,.LvMOmq_dot4,.LvMOmq_dotOther{border-radius:2px;width:8px;height:8px;display:inline-block}.LvMOmq_dot1{background:var(--dsw-alias-state-business-primary,#5b8cff)}.LvMOmq_dot2{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 55%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dot3{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dot4{background:color-mix(in srgb, var(--dsw-alias-state-warn-primary,#e0a13c) 60%, var(--dsw-alias-label-primary,#111))}.LvMOmq_dotOther{background:var(--dsw-alias-interactive-bg-active,#80808c38)}.LvMOmq_mini{align-items:flex-end;gap:3px;height:56px;margin-top:8px;display:flex}.LvMOmq_miniItem{flex:1;align-items:flex-end;height:100%;display:flex}.LvMOmq_miniBar{background:var(--dsw-alias-state-business-primary,#5b8cff);opacity:.5;border-radius:2px;width:100%;display:block}.LvMOmq_miniBarTop{opacity:1}.LvMOmq_dimLine{color:var(--dsw-alias-label-tertiary,#67676f);padding:6px 0;font-size:13px}";
 		const tagId$3 = "dsh-key-usage/tools.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7987,7 +7996,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rowPercent": "LvMOmq_rowPercent",
 			"rowTrack": "LvMOmq_rowTrack",
 			"rowValue": "LvMOmq_rowValue",
-			"sourceNote": "LvMOmq_sourceNote",
 			"stack": "LvMOmq_stack",
 			"stack1": "LvMOmq_stack1",
 			"stack2": "LvMOmq_stack2",
@@ -8055,15 +8063,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [data]);
 			if (data === null || data.calls <= 0 || share === null) {
 				const reason = failureReasonOf(SNAPSHOT_PATH);
-				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: tools_module_css_default.page,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: tools_module_css_default.sourceNote,
-						children: t("tools.sourceNote")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EmptyState, {
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EmptyState, {
 						title: t("tools.empty"),
 						reason
-					})]
+					})
 				});
 			}
 			const maxToolCalls = data.tools.length > 0 ? data.tools[0].calls : 0;
@@ -8077,21 +8082,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}));
 			const skills = data.skills;
 			const skillOtherVisible = skills.other.count > 0 && skills.other.calls > 0;
-			const skillMaxCalls = Math.max(skills.rows[0]?.calls ?? 0, skillOtherVisible ? skills.other.calls : 0);
+			const skillMaxCalls = skills.rows[0]?.calls ?? 0;
 			const skillRows = skills.rows.map((row, index) => ({
 				key: "skill-" + row.name,
 				label: row.name,
 				calls: row.calls,
 				sharePercent: row.sharePercent,
 				barPercent: barPercentOf(row.calls, skillMaxCalls),
-				top: index === 0 && !(skillOtherVisible && skills.other.calls > row.calls)
+				top: index === 0
 			}));
 			if (skillOtherVisible) skillRows.push({
 				key: "skill-other",
 				label: t("tools.otherCount", { count: fmtCount(skills.other.count) }),
 				calls: skills.other.calls,
 				sharePercent: skills.calls > 0 ? skills.other.calls / skills.calls * 100 : 0,
-				barPercent: barPercentOf(skills.other.calls, skillMaxCalls),
+				barPercent: 100,
 				top: false,
 				muted: true
 			});
@@ -8110,177 +8115,170 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const maxDayCalls = Math.max(1, ...data.days.map((day) => day.calls));
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: tools_module_css_default.page,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: tools_module_css_default.sourceNote,
-						children: t("tools.sourceNote")
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: tools_module_css_default.grid2,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							className: tools_module_css_default.panel,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: tools_module_css_default.grid2,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: tools_module_css_default.panel,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: tools_module_css_default.panelHead,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+								className: tools_module_css_default.panelTitle,
+								children: t("tools.tools")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: tools_module_css_default.panelMeta,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtTokens(data.calls)
+									}),
+									" ",
+									t("tools.callsUnit"),
+									" ·",
+									" ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtCount(data.sessions)
+									}),
+									" ",
+									t("tools.sessionsUnit")
+								]
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: toolRows })]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: tools_module_css_default.panel,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: tools_module_css_default.panelHead,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+								className: tools_module_css_default.panelTitle,
+								children: t("tools.skills")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: tools_module_css_default.panelMeta,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtCount(skills.calls)
+									}),
+									" ",
+									t("tools.callsUnit"),
+									" ·",
+									" ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtCount(skills.count)
+									}),
+									" ",
+									t("tools.skillsUnit")
+								]
+							})]
+						}), skillRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: tools_module_css_default.dimLine,
+							children: t("tools.none")
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: skillRows })]
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: tools_module_css_default.grid2,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: tools_module_css_default.panel,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: tools_module_css_default.panelHead,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+								className: tools_module_css_default.panelTitle,
+								children: t("tools.mcp")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: tools_module_css_default.panelMeta,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtCount(mcp.count)
+									}),
+									" ",
+									t("tools.serversUnit"),
+									" ·",
+									" ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: tools_module_css_default.headNum,
+										children: fmtCount(mcp.calls)
+									}),
+									" ",
+									t("tools.callsUnit")
+								]
+							})]
+						}), mcpRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: tools_module_css_default.dimLine,
+							children: t("tools.none")
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: mcpRows })]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: tools_module_css_default.panel,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: tools_module_css_default.panelHead,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
 									className: tools_module_css_default.panelTitle,
-									children: t("tools.tools")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									children: t("tools.share")
+								}), share.topRows.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: tools_module_css_default.panelMeta,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtTokens(data.calls)
-										}),
-										" ",
-										t("tools.callsUnit"),
-										" ·",
-										" ",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtCount(data.sessions)
-										}),
-										" ",
-										t("tools.sessionsUnit")
-									]
+									children: t("tools.shareTop", { name: share.topRows[0].name })
 								})]
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: toolRows })]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							className: tools_module_css_default.panel,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: tools_module_css_default.panelHead,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-									className: tools_module_css_default.panelTitle,
-									children: t("tools.skills")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: tools_module_css_default.panelMeta,
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: tools_module_css_default.stack,
+								children: [share.topRows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: tools_module_css_default.stackSegment + " " + tools_module_css_default["stack" + String(index + 1)],
+									style: { flexGrow: Math.max(1, topDisplayPercents[index]) },
+									title: row.name + " · " + topDisplayPercents[index] + "%",
 									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtCount(skills.calls)
-										}),
-										" ",
-										t("tools.callsUnit"),
-										" ·",
-										" ",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtCount(skills.count)
-										}),
-										" ",
-										t("tools.skillsUnit")
-									]
-								})]
-							}), skillRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: tools_module_css_default.dimLine,
-								children: t("tools.none")
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: skillRows })]
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: tools_module_css_default.grid2,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							className: tools_module_css_default.panel,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: tools_module_css_default.panelHead,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-									className: tools_module_css_default.panelTitle,
-									children: t("tools.mcp")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: tools_module_css_default.panelMeta,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtCount(mcp.count)
-										}),
-										" ",
-										t("tools.serversUnit"),
-										" ·",
-										" ",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: tools_module_css_default.headNum,
-											children: fmtCount(mcp.calls)
-										}),
-										" ",
-										t("tools.callsUnit")
-									]
-								})]
-							}), mcpRows.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: tools_module_css_default.dimLine,
-								children: t("tools.none")
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankRows, { rows: mcpRows })]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							className: tools_module_css_default.panel,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: tools_module_css_default.panelHead,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-										className: tools_module_css_default.panelTitle,
-										children: t("tools.share")
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: tools_module_css_default.panelMeta,
-										children: t("tools.shareHint")
-									})]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: tools_module_css_default.stack,
-									children: [share.topRows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: tools_module_css_default.stackSegment + " " + tools_module_css_default["stack" + String(index + 1)],
-										style: { flexGrow: Math.max(.01, row.calls) },
-										title: row.name + " · " + Math.round(row.sharePercent) + "%",
-										children: [
-											row.name,
-											" ",
-											topDisplayPercents[index],
-											"%"
-										]
-									}, "share-" + row.name)), share.otherCalls > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: tools_module_css_default.stackSegment + " " + tools_module_css_default.stackOther,
-										style: { flexGrow: share.otherCalls },
-										title: t("tools.other") + " · " + otherDisplayPercent + "%",
-										children: [
-											t("tools.other"),
-											" ",
-											otherDisplayPercent,
-											"%"
-										]
-									})]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: tools_module_css_default.legend,
-									children: [share.topRows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: tools_module_css_default["dot" + String(index + 1)] }),
 										row.name,
 										" ",
-										fmtTokens(row.calls)
-									] }, "legend-" + row.name)), share.otherCalls > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: tools_module_css_default.dotOther }),
+										topDisplayPercents[index],
+										"%"
+									]
+								}, "share-" + row.name)), share.otherCalls > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: tools_module_css_default.stackSegment + " " + tools_module_css_default.stackOther,
+									style: { flexGrow: Math.max(1, otherDisplayPercent) },
+									title: t("tools.other") + " · " + otherDisplayPercent + "%",
+									children: [
 										t("tools.other"),
 										" ",
-										fmtTokens(share.otherCalls)
-									] })]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: tools_module_css_default.mini,
-									children: data.days.map((day) => {
-										const heightPercent = day.calls / maxDayCalls * 100;
-										const isTop = day.calls > 0 && day.calls === maxDayCalls;
-										return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-											className: tools_module_css_default.miniItem,
-											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
-												className: isTop ? tools_module_css_default.miniBar + " " + tools_module_css_default.miniBarTop : tools_module_css_default.miniBar,
-												style: { height: (day.calls > 0 ? Math.max(4, heightPercent) : 0) + "%" },
-												title: t("tools.dayBarTitle", {
-													date: fmtShortDate(day.date),
-													calls: fmtCount(day.calls)
-												})
+										otherDisplayPercent,
+										"%"
+									]
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: tools_module_css_default.legend,
+								children: [share.topRows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: tools_module_css_default["dot" + String(index + 1)] }),
+									row.name,
+									" ",
+									fmtTokens(row.calls)
+								] }, "legend-" + row.name)), share.otherCalls > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { className: tools_module_css_default.dotOther }),
+									t("tools.other"),
+									" ",
+									fmtTokens(share.otherCalls)
+								] })]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: tools_module_css_default.mini,
+								children: data.days.map((day) => {
+									const heightPercent = day.calls / maxDayCalls * 100;
+									const isTop = day.calls > 0 && day.calls === maxDayCalls;
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: tools_module_css_default.miniItem,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
+											className: isTop ? tools_module_css_default.miniBar + " " + tools_module_css_default.miniBarTop : tools_module_css_default.miniBar,
+											style: { height: (day.calls > 0 ? Math.max(4, heightPercent) : 0) + "%" },
+											title: t("tools.dayBarTitle", {
+												date: fmtShortDate(day.date),
+												calls: fmtCount(day.calls)
 											})
-										}, "day-" + day.date);
-									})
+										})
+									}, "day-" + day.date);
 								})
-							]
-						})]
-					})
-				]
+							})
+						]
+					})]
+				})]
 			});
 		}
 		//#endregion
@@ -8429,7 +8427,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/words.module.css.mjs
-		const css$1 = ".VeBaIW_page{--words-body:max(13px, var(--dsh-content-font-size,13px));--words-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));--words-kpi:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.VeBaIW_scroll{flex:1;min-height:0;max-height:300px;overflow:auto}.VeBaIW_table{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%}.VeBaIW_table th,.VeBaIW_table td{text-align:right;white-space:nowrap;border-bottom:1px solid var(--dsw-alias-interactive-bg-active,#80808c24);padding:4px 7px}.VeBaIW_table th{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500}.VeBaIW_table td{color:var(--dsw-alias-label-secondary,#9a9aa6)}.VeBaIW_table th:first-child,.VeBaIW_table td:first-child{text-align:left;color:var(--dsw-alias-label-primary,#e8e8ec)}.VeBaIW_table tbody tr:last-child td{border-bottom:0}.VeBaIW_empty{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);padding:24px 0}";
+		const css$1 = ".VeBaIW_page{--words-body:max(13px, var(--dsh-content-font-size,13px));--words-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));--words-kpi:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.VeBaIW_scroll{flex:1;min-height:0;max-height:300px;overflow:auto}.VeBaIW_table{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%}.VeBaIW_table th,.VeBaIW_table td{text-align:right;white-space:nowrap;border-bottom:1px solid var(--dsw-alias-interactive-bg-active,#80808c24);padding:4px 7px}.VeBaIW_table th{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500}.VeBaIW_table td{color:var(--dsw-alias-label-secondary,#9a9aa6)}.VeBaIW_table th:first-child,.VeBaIW_table td:first-child{text-align:left;color:var(--dsw-alias-label-primary,#e8e8ec)}.VeBaIW_table tbody tr:last-child td{border-bottom:0}.VeBaIW_empty{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);padding:24px 0}";
 		const tagId$1 = "dsh-key-usage/words.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -8686,7 +8684,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const lastSnapshotAt = (0, react.useRef)(0);
 			const tooltip = useTooltip();
 			/** 订阅显示币种：金额随它重渲染（币种与汇率本身在设置弹窗里改）。 */
-			useCurrencyDisplay();
+			const currency = useCurrencyDisplay();
 			/** 打开那一刻的页决定首屏要哪些段：切 Tab 不该重跑首屏（会闪 loading），后续段按需取。 */
 			const initialSectionsRef = (0, react.useRef)([]);
 			/** 滚动式下 activeTab 会随滚动变化：首屏 / 轮询只读 ref，避免每滚一下就重跑一遍取数。 */
@@ -9044,175 +9042,208 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				className: shared_module_css_default.section,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: shared_module_css_default.title,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("app.title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: shared_module_css_default.titleActions,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-									className: shared_module_css_default.refreshSelect,
-									value: refreshSeconds,
-									onChange: (event) => setRefreshSeconds(Number(event.target.value)),
-									"aria-label": t("action.refresh"),
-									title: t("action.refresh"),
-									children: REFRESH_OPTIONS.map((seconds) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: seconds,
-										children: refreshLabel(seconds)
-									}, seconds))
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									size: "sm",
-									disabled: usage === null,
-									onClick: () => {
-										if (usage !== null) exportUsageCsv(usage);
-									},
-									ariaLabel: t("action.exportUsage"),
-									title: t("action.exportUsage"),
-									children: t("action.exportUsage")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									size: "sm",
-									disabled: sessions === null,
-									onClick: () => {
-										if (sessions !== null) exportSessionsCsv(sessions);
-									},
-									ariaLabel: t("action.exportSessions"),
-									title: t("action.exportSessions"),
-									children: t("action.exportSessions")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									size: "sm",
-									onClick: () => {
-										setSettingsTab("display");
-										setShowSettings(true);
-									},
-									ariaLabel: t("action.settings"),
-									title: t("action.settings"),
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-										viewBox: "0 0 16 16",
-										width: "15",
-										height: "15",
-										"aria-hidden": "true",
-										focusable: "false",
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-											cx: "8",
-											cy: "8",
-											r: "2.4",
-											fill: "none",
-											stroke: "currentColor",
-											strokeWidth: "1.3"
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-											fill: "none",
-											stroke: "currentColor",
-											strokeWidth: "1.3",
-											"stroke-linecap": "round",
-											d: "M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4"
-										})]
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-									className: shared_module_css_default.ghLink,
-									href: PLUGIN_REPO_URL,
-									target: "_blank",
-									rel: "noreferrer",
-									"aria-label": "GitHub",
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
-										viewBox: "0 0 16 16",
-										width: "15",
-										height: "15",
-										"aria-hidden": "true",
-										focusable: "false",
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-											fill: "currentColor",
-											d: "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
-										})
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									className: shared_module_css_default.refreshBtn,
-									disabled: loading,
-									onClick: refresh,
-									"aria-label": loading ? t("action.refreshing") : t("action.refresh"),
-									"aria-busy": loading,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: loading ? shared_module_css_default.refreshIconSpin : shared_module_css_default.refreshIcon,
-										"aria-hidden": "true",
-										children: "↻"
-									})
-								})
-							]
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: shared_module_css_default.rangeBar,
+						className: shared_module_css_default.stickyHead,
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: shared_module_css_default.rangeTabs,
-								children: [RANGES.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									className: range === key ? shared_module_css_default.rangeTabActive : shared_module_css_default.rangeTab,
-									onClick: () => setRange(key),
-									children: t(labelKey)
-								}, key)), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									className: range === "custom" ? shared_module_css_default.rangeTabActive : shared_module_css_default.rangeTab,
-									onClick: () => setRange("custom"),
-									children: t("r.custom")
-								})]
-							}),
-							range === "custom" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: shared_module_css_default.rangeCustom,
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: shared_module_css_default.title,
 								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										type: "date",
-										className: shared_module_css_default.rangeDate,
-										value: customFrom,
-										"aria-label": t("date.startHint"),
-										onChange: (event) => setCustomFrom(event.target.value)
-									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: shared_module_css_default.rangeTilde,
-										children: "~"
+										className: shared_module_css_default.brand,
+										children: t("app.title")
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-										type: "date",
-										className: shared_module_css_default.rangeDate,
-										value: customTo,
-										"aria-label": t("date.endHint"),
-										onChange: (event) => setCustomTo(event.target.value)
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+										className: shared_module_css_default.titleRange,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: shared_module_css_default.rangeTabs,
+											children: RANGES.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												className: range === key ? shared_module_css_default.rangeTabActive : shared_module_css_default.rangeTab,
+												onClick: () => setRange(key),
+												children: t(labelKey)
+											}, key))
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: shared_module_css_default.rangeCustom,
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: shared_module_css_default.rangeCustomLabel,
+													children: t("r.custom")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+													type: "date",
+													className: shared_module_css_default.rangeDate,
+													value: customFrom,
+													"aria-label": t("date.startHint"),
+													onChange: (event) => {
+														setCustomFrom(event.target.value);
+														setRange("custom");
+													}
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: shared_module_css_default.rangeTilde,
+													children: "~"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+													type: "date",
+													className: shared_module_css_default.rangeDate,
+													value: customTo,
+													"aria-label": t("date.endHint"),
+													onChange: (event) => {
+														setCustomTo(event.target.value);
+														setRange("custom");
+													}
+												})
+											]
+										})]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+										className: shared_module_css_default.titleActions,
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+												className: shared_module_css_default.refreshSelect,
+												value: refreshSeconds,
+												onChange: (event) => setRefreshSeconds(Number(event.target.value)),
+												"aria-label": t("action.refresh"),
+												title: t("action.refresh"),
+												children: REFRESH_OPTIONS.map((seconds) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+													value: seconds,
+													children: refreshLabel(seconds)
+												}, seconds))
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+												size: "sm",
+												disabled: usage === null,
+												onClick: () => {
+													if (usage !== null) exportUsageCsv(usage);
+												},
+												ariaLabel: t("action.exportUsage"),
+												title: t("action.exportUsage"),
+												children: t("action.exportUsage")
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+												size: "sm",
+												disabled: sessions === null,
+												onClick: () => {
+													if (sessions !== null) exportSessionsCsv(sessions);
+												},
+												ariaLabel: t("action.exportSessions"),
+												title: t("action.exportSessions"),
+												children: t("action.exportSessions")
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+												size: "sm",
+												onClick: () => {
+													setSettingsTab("display");
+													setShowSettings(true);
+												},
+												ariaLabel: t("action.settings"),
+												title: t("action.settings"),
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+													viewBox: "0 0 16 16",
+													width: "15",
+													height: "15",
+													"aria-hidden": "true",
+													focusable: "false",
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
+														cx: "8",
+														cy: "8",
+														r: "2.4",
+														fill: "none",
+														stroke: "currentColor",
+														strokeWidth: "1.3"
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+														fill: "none",
+														stroke: "currentColor",
+														strokeWidth: "1.3",
+														"stroke-linecap": "round",
+														d: "M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4"
+													})]
+												})
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+												className: shared_module_css_default.ghLink,
+												href: PLUGIN_REPO_URL,
+												target: "_blank",
+												rel: "noreferrer",
+												"aria-label": "GitHub",
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+													viewBox: "0 0 16 16",
+													width: "15",
+													height: "15",
+													"aria-hidden": "true",
+													focusable: "false",
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+														fill: "currentColor",
+														d: "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+													})
+												})
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												className: shared_module_css_default.refreshBtn,
+												disabled: loading,
+												onClick: refresh,
+												"aria-label": loading ? t("action.refreshing") : t("action.refresh"),
+												"aria-busy": loading,
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: loading ? shared_module_css_default.refreshIconSpin : shared_module_css_default.refreshIcon,
+													"aria-hidden": "true",
+													children: "↻"
+												})
+											})
+										]
 									})
 								]
 							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rangeBarSpacer }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-								className: shared_module_css_default.refreshSelect,
-								value: channelFilter,
-								onChange: (event) => setChannelFilter(event.target.value),
-								"aria-label": t("s.allChannels"),
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-									value: "ALL",
-									children: t("s.allChannels")
-								}), channels.map((channel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-									value: channel.provider,
-									children: channel.displayName ?? channel.provider
-								}, channel.provider))]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: shared_module_css_default.tabBar,
-						children: [
-							TABS.map(([tabId, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								className: activeTab === tabId ? shared_module_css_default.active : "",
-								onClick: () => pickSection(tabId),
-								children: t(labelKey)
-							}, tabId)),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.tabBarSpacer }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: shared_module_css_default.modeSwitch,
-								title: t("section.modeHint"),
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: paged,
-									onChange: (event) => setPaged(event.target.checked)
-								}), t("section.paged")]
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: shared_module_css_default.filterBar,
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+										className: shared_module_css_default.refreshSelect,
+										value: channelFilter,
+										onChange: (event) => setChannelFilter(event.target.value),
+										"aria-label": t("s.allChannels"),
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "ALL",
+											children: t("s.allChannels")
+										}), channels.map((channel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: channel.provider,
+											children: channel.displayName ?? channel.provider
+										}, channel.provider))]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.filterBarSpacer }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: shared_module_css_default.filterLabel,
+										children: t("settings.currency")
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+										className: shared_module_css_default.refreshSelect,
+										value: currency.display,
+										onChange: (event) => setDisplayCurrency(event.target.value),
+										"aria-label": t("settings.currency"),
+										children: DISPLAY_CURRENCIES.map((code) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: code,
+											children: DISPLAY_CURRENCY_SYMBOLS[code]
+										}, code))
+									})
+								]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: shared_module_css_default.tabBar,
+								children: [
+									TABS.map(([tabId, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										className: activeTab === tabId ? shared_module_css_default.active : "",
+										onClick: () => pickSection(tabId),
+										children: t(labelKey)
+									}, tabId)),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.tabBarSpacer }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+										className: shared_module_css_default.modeSwitch,
+										title: t("section.modeHint"),
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+											type: "checkbox",
+											checked: !paged,
+											onChange: (event) => setPaged(!event.target.checked)
+										}), paged ? t("section.paged") : t("section.scroll")]
+									})
+								]
 							})
 						]
 					}),

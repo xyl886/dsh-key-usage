@@ -9,8 +9,27 @@
 /* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
 [data-sidebar-right-open] .section,
 [data-sidebar-right-float-host] .section { padding: 12px; }
-.title { font-size: max(16px, calc(var(--dsh-content-font-size, 13px) * 1.3)); font-weight: 650; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.title { font-size: max(16px, calc(var(--dsh-content-font-size, 13px) * 1.3)); font-weight: 650; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 标题行里塞下范围段与自定义起止（原型一行放完）：标题不换行，右边允许折到第二行 */
+.brand { white-space: nowrap; }
+.titleRange { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; flex-wrap: wrap; min-width: 0; }
 .titleActions { display: inline-flex; align-items: center; gap: 8px; }
+/* 筛选行：通道在左、显示币种在右（与原型 .trow 一致） */
+.filterBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.filterBarSpacer { flex: 1 1 auto; }
+.filterLabel { color: var(--dsw-alias-label-tertiary, #8b8b99); white-space: nowrap; }
+/* 顶部栏吸顶：页面自己滚（.section 是滚动容器），标题行 / 筛选行 / 区块导航一起钉住，
+   负 margin 抵消 .section 的内边距，滚动内容从它下面穿过 */
+.stickyHead {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: -16px -20px 10px;
+  padding: 12px 20px 0;
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+}
+.stickyHead .tabBar { margin-bottom: 0; }
+@media (min-width: 0px) { [data-sidebar-right-open] .stickyHead, [data-sidebar-right-float-host] .stickyHead { margin: -12px -12px 10px; padding: 10px 12px 0; } }
 /* 仓库链接：与「刷新」同排，样式对齐按钮但不抢焦点（跳外站） */
 .ghLink {
   display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
@@ -173,8 +192,6 @@
   color: var(--dsw-alias-label-primary, #e8e8ec);
 }
 /* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
-.rangeBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.rangeBarSpacer { flex: 1 1 auto; }
 /* 范围切换用分段控件（一个外框装按钮）：比散落的按钮更像一组，也省横向空间 */
 .rangeTabs {
   display: inline-flex;
@@ -203,6 +220,7 @@
 }
 .rangeTab:focus-visible, .rangeTabActive:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .rangeCustom { display: inline-flex; align-items: center; gap: 4px; }
+.rangeCustomLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
 /* 日期框：原生控件的字号与日历图标都要压住，否则比同排按钮大一圈 */
 .rangeDate {
   border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));

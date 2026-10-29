@@ -9,9 +9,6 @@
   font-size: var(--dist-body);
 }
 
-/* 统计范围一行小字：分布页图表按全量历史统计，与页级范围口径不同，必须标出来 */
-.rangeLine { color: var(--dsw-alias-label-tertiary, #67676f); }
-
 /* 联动筛选说明：项目块与项目明细只看该项目 */
 .focusNote { margin-left: 8px; color: var(--dsw-alias-label-tertiary, #67676f); }
 
@@ -49,8 +46,11 @@
 .mekkoAmount {
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  /* 窄块里金额单独一行、按原型压到 .92：与加粗的项目名拉开层次 */
+  opacity: .92;
 }
-.mekkoHead .mekkoAmount { flex: none; }
+/* 宽块：名字与金额同一行（原型把这一整行放在 <b> 里），金额不再压暗 */
+.mekkoHead .mekkoAmount { flex: none; opacity: 1; font-weight: 600; }
 .mekkoModel {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   opacity: .92;
@@ -90,6 +90,8 @@
 .stackOutput, .stackCache {
   display: flex; align-items: center; justify-content: center; min-width: 0;
   flex-basis: 0;
+  /* 段内留 5px 侧边距（原型 .stack > div）：窄段靠 overflow 裁剪，box-sizing 保证比例不被 padding 撑歪 */
+  padding: 0 5px; box-sizing: border-box;
   overflow: hidden; white-space: nowrap; color: var(--dsw-alias-label-primary-foreground, #fff);
 }
 .stackOutput { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 85%, var(--dsw-alias-label-primary, #111)); }
@@ -104,8 +106,7 @@
 .legendOutput { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 85%, var(--dsw-alias-label-primary, #111)); }
 .legendCache { background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb96f) 60%, var(--dsw-alias-label-primary, #111)); }
 
-/* ===== 明细表：标题在左、按钮在右；展开后模型表在上、项目表在下 ===== */
-.detailsBar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.detailsTitle { color: var(--dsw-alias-label-tertiary, #67676f); }
+/* ===== 明细表入口：原型没有这一块，收成右上角一个按钮（默认收起） ===== */
+.detailsBar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .tables { display: flex; flex-direction: column; gap: 16px; }
 .tableTitle { margin-bottom: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 600; }
