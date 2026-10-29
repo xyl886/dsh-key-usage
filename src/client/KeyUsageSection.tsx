@@ -69,7 +69,7 @@ const REFRESH_OPTIONS = [0, 10, 30, 60, 300]
 export function KeyUsageSection() {
   const [activeTab, setActiveTab] = useState<TabId>('quota')
   /** false = 滚动式（默认，全部区块铺开）；true = 分页（只显示当前区块）。 */
-  const [paged, setPaged] = useState(false)
+  const [paged, setPaged] = useState(true)
   /** 自动刷新周期（秒）；0 = 关闭。只打本地 /snapshot，不联网。 */
   const [refreshSeconds, setRefreshSeconds] = useState(30)
   const [range, setRange] = useState<RangeKey>('month')

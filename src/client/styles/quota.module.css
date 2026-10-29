@@ -15,7 +15,7 @@
 /* 卡片：标题行 + 正文（同行等高靠外层 grid-auto-rows，正文行等分剩余高度）；
    内边距与行距按「卡片过于紧凑」的反馈放大，原型是 9px 11px / gap 5。 */
 .chanCard {
-  display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px 14px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
   border-radius: 9px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
@@ -37,12 +37,12 @@
 }
 
 /* 正文：正文 13px；行距按原型 5px */
-.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 12px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
+.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 8px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
 
 /* 订阅窗口行：列宽对齐原型 .row4（32px / 1fr / 38px / 112px，gap 7）；
    百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
    进度条吃剩余宽度，卡片越宽越长。 */
-.windowLine { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 1px 0 3px; }
+.windowLine { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .windowTop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meter { display: block; height: 8px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
