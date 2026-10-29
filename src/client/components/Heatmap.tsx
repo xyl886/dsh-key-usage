@@ -1,15 +1,26 @@
 /**
- * 全年热力图：53 周 × 7 天，正方形格子（aspect-ratio: 1/1），横轴按月标注（跨年那格标「2027年1月」）。
+ * 全年热力图：53 个 ISO 周（周一起）× 7 天，正方形格子；横轴只在每月首次出现的列标月份，
+ * 放不下就跳过该月（列位统一用 grid-column / grid-row 精确定位，不靠 margin / 绝对偏移）。
  * 强度值由调用方给（同一套分档吃任意量纲），本组件只管排格、上色与悬停；点击某天交给调用方。
  */
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { isoDate } from '../core/format.ts'
+import { useT } from '../core/i18n.ts'
+import { buildMonthAxis } from '../core/heatmap-axis.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
 import styles from '../styles/overview.module.css'
-import { t, useT } from '../core/i18n.ts'
 
 const WEEK_COUNT = 53
-const DAY_MS = 86400000
+const DAYS_PER_WEEK = 7
+/** 周几标签列宽 / 格子列间距 / 横轴字号：与 overview.module.css 的 .yearWrap、.yearAxisLabel 一致。 */
+const WEEKDAY_COLUMN_PX = 18
+const COLUMN_GAP_PX = 3
+const AXIS_FONT_SIZE_PX = 12
+const LABEL_MIN_GAP_PX = 4
+/** 首帧还没量到面板宽度时的兜底列宽：按窄面板估，宁可少标也不叠字。 */
+const FALLBACK_COLUMN_WIDTH_PX = 8
+/** 周一到周日的标签键（`h.wd0` 是周日）。 */
+const WEEKDAY_KEYS = ['h.wd1', 'h.wd2', 'h.wd3', 'h.wd4', 'h.wd5', 'h.wd6', 'h.wd0']
 
 type CellState = 'future' | 'empty' | 'idle' | 'active'
 
@@ -63,11 +74,11 @@ function isoWeekdayOf(date: Date): number {
   return ((date.getDay() + 6) % 7) + 1
 }
 
-function monthLabelOf(date: Date): string {
-  const month = date.getMonth() + 1
-  return date.getMonth() === 0
-    ? t('overview.monthLabelYear', { year: date.getFullYear(), month })
-    : t('overview.monthLabel', { month })
+/** 本地日历加法：不用毫秒，夏令时那天也不会把日期推歪。 */
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  next.setDate(next.getDate() + days)
+  return next
 }
 
 export interface YearHeatmapProps {
@@ -90,61 +101,94 @@ export function YearHeatmap(props: YearHeatmapProps): ReactNode {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayKey = isoDate(today)
-  // 末列收在本周周日、首列起于 52 周前的周一：53 列正好一年，格子按周对齐
-  const end = new Date(today.getTime() + (7 - isoWeekdayOf(today)) * DAY_MS)
-  const start = new Date(end.getTime() - (WEEK_COUNT * 7 - 1) * DAY_MS)
+  // 末列收在本周周日、首列起于 52 周前的周一：53 列 × 7 天正好盖住一年
+  const end = addDays(today, DAYS_PER_WEEK - isoWeekdayOf(today))
+  const windowStart = addDays(end, -(WEEK_COUNT * DAYS_PER_WEEK - 1))
 
+  const weekDates: string[][] = []
   const columns: HeatCell[][] = []
-  const monthMarks: Array<{ column: number; label: string }> = []
-  let previousMonth = ''
-  for (let offset = 0; offset < WEEK_COUNT * 7; offset += 1) {
-    const date = new Date(start.getTime() + offset * DAY_MS)
-    const dateKey = isoDate(date)
-    const monthKey = dateKey.slice(0, 7)
-    if (monthKey !== previousMonth) {
-      monthMarks.push({ column: Math.floor(offset / 7), label: monthLabelOf(date) })
-      previousMonth = monthKey
+  for (let columnIndex = 0; columnIndex < WEEK_COUNT; columnIndex += 1) {
+    const dates: string[] = []
+    const cells: HeatCell[] = []
+    for (let weekdayIndex = 0; weekdayIndex < DAYS_PER_WEEK; weekdayIndex += 1) {
+      const dateKey = isoDate(addDays(windowStart, columnIndex * DAYS_PER_WEEK + weekdayIndex))
+      const value = props.valuesByDate.get(dateKey) ?? 0
+      const state: CellState = dateKey > todayKey
+        ? 'future'
+        : props.dataStart !== null && dateKey < props.dataStart
+          ? 'empty'
+          : value > 0 ? 'active' : 'idle'
+      dates.push(dateKey)
+      cells.push({ date: dateKey, state, level: state === 'active' ? levelOfValue(value, thresholds) : 0 })
     }
-    const value = props.valuesByDate.get(dateKey) ?? 0
-    const state: CellState = dateKey > todayKey
-      ? 'future'
-      : props.dataStart !== null && dateKey < props.dataStart
-        ? 'empty'
-        : value > 0 ? 'active' : 'idle'
-    const column = Math.floor(offset / 7)
-    if (columns[column] === undefined) columns[column] = []
-    columns[column].push({ date: dateKey, state, level: state === 'active' ? levelOfValue(value, thresholds) : 0 })
+    weekDates.push(dates)
+    columns.push(cells)
   }
 
+  // 列宽决定标签放不放得下：量一次面板宽度，窄面板自动少标几个月
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [wrapWidth, setWrapWidth] = useState(0)
+  useLayoutEffect(() => {
+    const element = wrapRef.current
+    if (element === null) return
+    const measure = (): void => setWrapWidth(element.getBoundingClientRect().width)
+    measure()
+    if (typeof ResizeObserver !== 'function') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const columnWidthPx = wrapWidth > 0
+    ? Math.max(1, (wrapWidth - WEEKDAY_COLUMN_PX - WEEK_COUNT * COLUMN_GAP_PX) / WEEK_COUNT)
+    : FALLBACK_COLUMN_WIDTH_PX
+  /** 行距放不下 12px 字时只标隔行（一 / 三 / 五 / 日），免得周几标签上下叠字。 */
+  const weekdayLabelEvery = Math.max(1, Math.ceil(AXIS_FONT_SIZE_PX / (columnWidthPx + COLUMN_GAP_PX)))
+  const monthAxis = buildMonthAxis({
+    weekDates,
+    columnWidthPx,
+    columnGapPx: COLUMN_GAP_PX,
+    fontSizePx: AXIS_FONT_SIZE_PX,
+    minGapPx: LABEL_MIN_GAP_PX,
+    labelOf: (month, includeYear, year) => includeYear
+      ? t('overview.monthLabelYear', { year, month })
+      : t('overview.monthLabel', { month }),
+  })
+
   return (
-    <div className={styles.yearWrap} role="group" aria-label={props.ariaLabel}>
-      <div className={styles.yearWeekdays}>
-        {[t('h.wd1'), t('h.wd2'), t('h.wd3'), t('h.wd4'), t('h.wd5'), t('h.wd6'), t('h.wd0')].map((label, index) => (
-          <span key={index}>{label}</span>
-        ))}
-      </div>
-      <div className={styles.yearAxis}>
-        {monthMarks.map((mark) => (
-          <span key={mark.column + '-' + mark.label} style={{ gridColumn: String(mark.column + 1) }}>{mark.label}</span>
-        ))}
-      </div>
-      <div className={styles.yearGrid}>
-        {columns.map((week) => week.map((cell) => (
-          <div
-            key={cell.date}
-            className={[
-              styles.yearCell,
-              cell.state === 'active' ? styles.yearActive : '',
-              cell.state === 'empty' ? styles.yearEmpty : '',
-              cell.state === 'future' ? styles.yearFuture : '',
-            ].join(' ').trim()}
-            style={cell.state === 'active' ? { background: levelColorOf(cell.level) } : undefined}
-            onMouseMove={(event) => props.tooltip.show(event, props.tipOf(cell.date))}
-            onMouseLeave={props.tooltip.hide}
-            onClick={cell.state === 'active' ? () => props.onPickDay?.(cell.date) : undefined}
-          />
-        )))}
-      </div>
+    <div className={styles.yearWrap} role="group" aria-label={props.ariaLabel} ref={wrapRef}>
+      {WEEKDAY_KEYS.map((key, weekdayIndex) => (
+        <span
+          key={key}
+          className={styles.yearWeekday}
+          style={{ gridColumn: 1, gridRow: weekdayIndex + 2 }}
+        >{weekdayIndex % weekdayLabelEvery === 0 ? t(key) : ''}</span>
+      ))}
+      {monthAxis.map((mark) => (
+        <span
+          key={mark.column + '-' + mark.month}
+          className={styles.yearAxisLabel}
+          style={{ gridColumn: mark.column + 2, gridRow: 1 }}
+        >{mark.label}</span>
+      ))}
+      {columns.map((week, columnIndex) => week.map((cell, weekdayIndex) => (
+        <div
+          key={cell.date}
+          className={[
+            styles.yearCell,
+            cell.state === 'active' ? styles.yearActive : '',
+            cell.state === 'empty' ? styles.yearEmpty : '',
+            cell.state === 'future' ? styles.yearFuture : '',
+          ].join(' ').trim()}
+          style={{
+            gridColumn: columnIndex + 2,
+            gridRow: weekdayIndex + 2,
+            ...(cell.state === 'active' ? { background: levelColorOf(cell.level) } : {}),
+          }}
+          onMouseMove={(event) => props.tooltip.show(event, props.tipOf(cell.date))}
+          onMouseLeave={props.tooltip.hide}
+          onClick={cell.state === 'active' ? () => props.onPickDay?.(cell.date) : undefined}
+        />
+      )))}
     </div>
   )
 }

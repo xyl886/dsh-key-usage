@@ -16,7 +16,8 @@ const VIEW_WIDTH = 720
 const VIEW_HEIGHT = 300
 const MAX_WORDS = 56
 const MAX_FONT = 34
-const MIN_FONT = 11
+/** 画布按容器宽度等比缩放（约 0.77 倍），17 对应屏幕上约 13px，保证最小一档不小于正文。 */
+const MIN_FONT = 17
 
 interface PlacedWord {
   word: string

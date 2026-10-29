@@ -2,6 +2,7 @@
  * 会话用量：最耗会话 / 会话形态 / 最近会话三块。
  * 口径：服务端只采集结算样本数（calls），消息数与工具调用数没有单独字段，
  * 「会话形态」的消息 / 工具调用两档都按 calls 分档；时长按首末时间差（分钟）分档。
+ * 三个列表都只列主会话：子代理不单独占行（判定只认服务端归一的 origin），父行标子会话数。
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { channelOf, costCellOf } from '../core/channels.ts'
@@ -20,8 +21,8 @@ import sessionsStyles from '../styles/sessions.module.css'
 
 type TopMetric = 'tokens' | 'cost' | 'duration'
 type ShapeMetric = 'messages' | 'duration' | 'tools'
-/** 最近会话的范围：全部 / 只看主会话 / 只看子会话 / 只看已归档（归档与子代理都只在行上打标）。 */
-type Scope = 'all' | 'main' | 'sub' | 'archived'
+/** 范围两档：全部会话 / 隐藏已归档。归档只影响列出与否，统计口径不变。 */
+type Scope = 'all' | 'hideArchived'
 
 /** 榜单条数：与「会话形态」的直方图等高。 */
 const TOP_LIMIT = 5
@@ -64,8 +65,11 @@ export function SessionsTab(props: {
   // 换了范围 / 搜索就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
   useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query])
 
+  /** 只列主会话：子代理不单独占行（详情抽屉里仍可逐个点开）。 */
+  const mainRows = useMemo(() => rows.filter((row) => !isSubagentOf(row)), [rows])
+
   /** 有结算样本的会话才算用量：没有 calls 也没有 tokens 的空壳不进榜单与形态分布。 */
-  const pool = useMemo(() => rows.filter((row) => row.calls > 0 || row.tokens > 0), [rows])
+  const pool = useMemo(() => mainRows.filter((row) => row.calls > 0 || row.tokens > 0), [mainRows])
 
   const topRows = useMemo(() => pool
     .map((row) => ({ row, value: topValueOf(row, topMetric) }))
@@ -82,24 +86,25 @@ export function SessionsTab(props: {
 
   const recentRows = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    return rows.filter((row) => {
+    return mainRows.filter((row) => {
       // 没有人类提问的会话（标题与首条提问都空）是 teammate / 系统会话，列出来只是噪音
       if ((row.title ?? '') === '' && (row.prompt ?? '') === '') return false
-      const matchesScope = scope === 'all'
-        || (scope === 'main' && !isSubagentOf(row))
-        || (scope === 'sub' && isSubagentOf(row))
-        || (scope === 'archived' && row.archived)
-      if (!matchesScope) return false
       if (keyword === '') return true
       // 首条提问正文也参与搜索：系统注入文本已在服务端被跳过，这里拿到的是真实提问
       const haystack = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '') + ' ' + (row.prompt ?? '')
       return haystack.toLowerCase().includes(keyword)
     }).sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
-  }, [rows, query, scope])
+  }, [mainRows, query])
+
+  /** 归档只影响列出的行：会话数与用量统计仍按全部会话算（归档只标注、不剔除）。 */
+  const visibleRows = useMemo(
+    () => (scope === 'hideArchived' ? recentRows.filter((row) => !row.archived) : recentRows),
+    [recentRows, scope],
+  )
 
   if (props.data === null) return <EmptyState title={t('s.loading')} />
 
-  const shownRows = recentRows.slice(0, pageSize)
+  const shownRows = visibleRows.slice(0, pageSize)
   const histogramMax = Math.max(1, ...histogram)
   const detailRow = detailId === null ? null : rows.find((row) => row.id === detailId) ?? null
   const rowOptions: RowOptions = {
@@ -189,9 +194,7 @@ export function SessionsTab(props: {
             onChange={(value) => setScope(value as Scope)}
             options={[
               { value: 'all', labelKey: 'sessions.all' },
-              { value: 'main', labelKey: 'sessions.mainOnly' },
-              { value: 'sub', labelKey: 's.subagentOnly' },
-              { value: 'archived', labelKey: 's.archiveOnly' },
+              { value: 'hideArchived', labelKey: 'sessions.hideArchived' },
             ]}
           />
           <input
@@ -203,15 +206,15 @@ export function SessionsTab(props: {
           />
           <span className={sessionsStyles.panelTotal}>{fmtCount(recentRows.length) + t('common.sessionSuffix')}</span>
         </div>
-        {recentRows.length === 0
+        {visibleRows.length === 0
           ? <div className={styles.empty}>{t('s.empty')}</div>
           : shownRows.map((row) => recentRowOf(row, rowOptions))}
-        {recentRows.length > shownRows.length && (
+        {visibleRows.length > shownRows.length && (
           <div className={listStyles.moreRow}>
             <button type="button" className={listStyles.moreBtn} onClick={() => setPageSize(pageSize + PAGE_SIZE)}>
               {t('s.loadMore', { count: PAGE_SIZE })}
             </button>
-            <span className={listStyles.moreText}>{t('s.shownCount', { shown: shownRows.length, total: recentRows.length })}</span>
+            <span className={listStyles.moreText}>{t('s.shownCount', { shown: shownRows.length, total: visibleRows.length })}</span>
           </div>
         )}
       </section>
@@ -221,8 +224,8 @@ export function SessionsTab(props: {
           sessionId={detailId}
           fallbackTitle={detailRow?.title ?? null}
           channels={props.channels}
-          // 子会话默认与主会话同列，弹窗里仍给出逐个点开的入口（不并进本会话总量）
-          subagents={detailRow === null ? [] : rows.filter((row) => row.parentSessionId === detailRow.id)}
+          // 列表只列主会话，子会话的逐个点开入口留在这里（不并进本会话总量）
+          subagents={detailRow === null ? [] : rows.filter((row) => isSubagentOf(row) && row.parentSessionId === detailRow.id)}
           onOpenSession={setDetailId}
           parentId={detailRow?.parentSessionId ?? null}
           parentTitle={detailRow === null || detailRow.parentSessionId == null ? null : (rows.find((row) => row.id === detailRow.parentSessionId)?.title ?? null)}
@@ -287,7 +290,6 @@ function topRowOf(row: SessionRow, rank: number, metric: TopMetric, channels: Ch
         <span className={sessionsStyles.titleLine}>
           <span className={sessionsStyles.rowTitle}>{titleOf(row)}</span>
           {row.archived && <span className={sessionsStyles.tag}>{t('s.archived')}</span>}
-          {isSubagentOf(row) && <span className={sessionsStyles.tag + ' ' + sessionsStyles.tagSub}>{t('s.subagentTag')}</span>}
         </span>
         <span className={sessionsStyles.rowSub}>{subParts.join(' · ')}</span>
       </span>
@@ -323,7 +325,14 @@ function recentRowOf(row: SessionRow, options: RowOptions): ReactNode {
             {titleOf(row)}
           </button>
           {row.archived && <span className={sessionsStyles.tag}>{t('s.archived')}</span>}
-          {isSubagentOf(row) && <span className={sessionsStyles.tag + ' ' + sessionsStyles.tagSub}>{t('s.subagentTag')}</span>}
+          {(row.subagentCount ?? 0) > 0 && (
+            <span
+              className={sessionsStyles.tag + ' ' + sessionsStyles.tagChildren}
+              title={t('sessions.subagentTokens', { tokens: fmtTokens(row.subagentTokens ?? 0) })}
+            >
+              {t('sessions.subagents', { count: row.subagentCount ?? 0 })}
+            </span>
+          )}
         </div>
         <div className={sessionsStyles.rowSub}>
           {row.workspace === null
@@ -412,8 +421,9 @@ function durationOf(row: SessionRow): number {
   return Math.max(0, row.lastTime - row.firstTime)
 }
 
+/** 子代理只认服务端归一后的 origin（宿主投影 `subagent.identity`）；父会话链接不作为判定依据。 */
 function isSubagentOf(row: SessionRow): boolean {
-  return row.origin === 'subagent' || (row.parentSessionId ?? null) !== null
+  return row.origin === 'subagent'
 }
 
 function titleOf(row: SessionRow): string {

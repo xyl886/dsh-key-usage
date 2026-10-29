@@ -17,6 +17,7 @@ import {
   type SessionFold,
   type SessionSummary,
   type TokenBuckets,
+  type ToolStatsRecord,
 } from './session-usage.js'
 import { normalizeSessionId } from './session-meta.js'
 
@@ -37,7 +38,7 @@ const READ_CONCURRENCY = 2
 /** 超过这个体积的会话改为串行：它们的耗时主要在主线程解压，叠不出等待，却会放大 memo 被第三方挤掉时的重解压代价。 */
 const SERIAL_SESSION_BYTES = 1024 * 1024
 
-export interface SessionUsageRecord {
+export interface SessionUsageRecord extends ToolStatsRecord {
   id: string
   title: string | null
   workspace: string | null
@@ -167,6 +168,12 @@ function recordOf(id: string, metadata: SessionMetadata, fold: SessionFold): Ses
     words: fold.words,
     promptFirstTime: fold.promptFirstTime,
     promptLastTime: fold.promptLastTime,
+    // 工具 / 技能 / MCP 统计跟着折叠缓存走，快照 `tools` 段直接聚合它们
+    toolCalls: fold.toolCalls,
+    toolNameCounts: fold.toolNameCounts,
+    skillNameCounts: fold.skillNameCounts,
+    mcpServerCounts: fold.mcpServerCounts,
+    toolDayCalls: fold.toolDayCalls,
     summary: summarizeSession(fold),
   }
 }

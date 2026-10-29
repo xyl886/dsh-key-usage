@@ -40,7 +40,7 @@ import {
   type SessionRow,
 } from './data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
-import { mergePromptStats } from './data/session-usage.js'
+import { mergePromptStats, mergeToolStats } from './data/session-usage.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-file.js'
 import type { LogQuery } from './storage/db.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
@@ -440,7 +440,7 @@ export function parseRatesLimit(raw: string | null): number {
 }
 
 /** `/snapshot` 可以按需下发的段（= `sections` 的键）；顶层其余字段一律原样保留。 */
-export const SNAPSHOT_SECTION_NAMES = ['overview', 'channels', 'usage', 'heatmap', 'models', 'projects', 'sessions', 'prompts', 'quota'] as const
+export const SNAPSHOT_SECTION_NAMES = ['overview', 'channels', 'usage', 'heatmap', 'models', 'projects', 'sessions', 'prompts', 'tools', 'quota'] as const
 
 /**
  * `?sections=a,b,c` → 要下发的段名集合；trim + 小写比对，未知名字忽略。
@@ -1059,6 +1059,8 @@ export function mountKeyUsageRoutes(
             sessions: await sessionsPayload(Number.MAX_SAFE_INTEGER, quota, collection),
             // 提问词云：词频 Map 跟着会话折叠缓存走，这里只做跨会话合并 + 取 top N
             prompts: mergePromptStats(collection.records),
+            // 工具 / 技能 / MCP：同一份折叠缓存里的计数表，只做跨会话合并（没有工具调用的数据源给 null）
+            tools: mergeToolStats(collection.records),
           },
           issues: [],
         }

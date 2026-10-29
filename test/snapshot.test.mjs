@@ -40,6 +40,7 @@ function createBuilders() {
           projects: { rows: [], coverage: { status: 'complete' }, priced: false },
           sessions: { rows: [], coverage: { status: 'complete' }, priced: false },
           prompts: { words: [], totalPrompts: 0, totalChars: 0, from: null, to: null },
+          tools: null,
         },
         issues: outcome.providers.length === 0 ? [{ kind: 'note', message: '还没有配额结果' }] : [],
       }
@@ -103,7 +104,7 @@ const waitUntil = async (predicate) => {
   const view = await settleBuild(service)
   assert.equal(view.buildSource, 'initial', '首次没有快照 → initial')
   assert.deepEqual(Object.keys(view.sections).sort(), [
-    'channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'usage',
+    'channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'tools', 'usage',
   ])
   assert.deepEqual(
     view.sections.prompts,
@@ -121,6 +122,7 @@ const waitUntil = async (predicate) => {
   assert.equal(readBack.document.buildSource, 'initial')
   assert.deepEqual(readBack.document.sections.usage, view.sections.usage, '读回与内存一致')
   assert.deepEqual(readBack.document.sections.prompts, view.sections.prompts, 'prompts 段读回后不变')
+  assert.equal(readBack.document.sections.tools, null, 'tools 段为 null 时写盘跳过、读回仍是 null（老库兼容）')
 }
 
 // ===== 2. 已有快照：view() 直接读回，不重建（同一个文件，另一个服务实例） =====

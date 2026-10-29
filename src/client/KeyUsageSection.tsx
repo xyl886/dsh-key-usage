@@ -16,6 +16,8 @@ import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
 import { DistributionTab } from './tabs/DistributionTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
+import { ToolsTab } from './tabs/ToolsTab.tsx'
+import { WordsTab } from './tabs/WordsTab.tsx'
 import type {
   Channel,
   HeatmapDay,
@@ -27,12 +29,13 @@ import type {
   SnapshotQuotaOutcome,
   SnapshotResponse,
   SummaryResponse,
+  ToolsResponse,
   UsageResponse,
   WeekdayHours,
 } from './core/types.ts'
 import styles from './styles/shared.module.css'
 
-type TabId = 'quota' | 'overview' | 'detail' | 'distribution' | 'sessions'
+type TabId = 'quota' | 'overview' | 'detail' | 'distribution' | 'sessions' | 'tools' | 'words'
 
 /** 单页顺序：额度在最前（最先想知道「还剩多少」），其余按「总量 → 明细 → 结构 → 会话」展开。 */
 const TABS: Array<[TabId, string]> = [
@@ -41,10 +44,12 @@ const TABS: Array<[TabId, string]> = [
   ['detail', 'tab.detail'],
   ['distribution', 'tab.distribution'],
   ['sessions', 'tab.sessions'],
+  ['tools', 'tab.tools'],
+  ['words', 'tab.words'],
 ]
 
 /** 滚动式下要一次性取的段（不取 usage：它按范围单独请求）。 */
-const ALL_SECTIONS = ['channels', 'overview', 'heatmap', 'quota', 'sessions', 'projects', 'models', 'prompts']
+const ALL_SECTIONS = ['channels', 'overview', 'heatmap', 'quota', 'sessions', 'projects', 'models', 'prompts', 'tools']
 
 /** 页级范围：与明细同一套 RangeKey（90 天按 90 天算，'total' = 全部）。 */
 const RANGES: Array<[RangeKey, string]> = [
@@ -80,6 +85,7 @@ export function KeyUsageSection() {
   const [usage, setUsage] = useState<UsageResponse | null>(null)
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
+  const [tools, setTools] = useState<ToolsResponse | null>(null)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
@@ -114,7 +120,9 @@ export function KeyUsageSection() {
   const sectionsForTab = useCallback((tab: TabId): string[] => {
     const base = ['channels', 'overview', 'heatmap', 'quota']
     if (tab === 'sessions') return [...base, 'sessions']
-    if (tab === 'distribution') return [...base, 'projects', 'models', 'prompts']
+    if (tab === 'distribution') return [...base, 'projects', 'models']
+    if (tab === 'words') return [...base, 'prompts']
+    if (tab === 'tools') return [...base, 'tools']
     return base
   }, [])
 
@@ -125,6 +133,8 @@ export function KeyUsageSection() {
   const wantOverview = wants('overview')
   const wantDistribution = wants('distribution')
   const wantDetail = wants('detail')
+  const wantWords = wants('words')
+  const wantTools = wants('tools')
 
   activeTabRef.current = activeTab
 
@@ -148,6 +158,8 @@ export function KeyUsageSection() {
     if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
     if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
     if (sections.prompts !== undefined && sections.prompts !== null) setPrompts(sections.prompts)
+    // tools 段用 null 表示「暂无采集」：是合法值，只有裁剪没取（undefined）才不许覆盖
+    if (sections.tools !== undefined) setTools(sections.tools)
     const usageSection = sections.usage
     if (usageSection !== undefined && usageIsDefaultRef.current && usageSection !== null) {
       setUsage(usageSection)
@@ -261,10 +273,11 @@ export function KeyUsageSection() {
     if (wantDistribution) {
       if (projects === null) void loadProjects().then(setProjects)
       if (models === null) void loadModels().then(setModels)
-      // prompts 只在首次打开时还没取过：切到本页补一次（服务端已算好，读快照即可）
-      if (prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     }
-  }, [wantSessions, wantDistribution, sessions, projects, models, prompts, applySnapshot])
+    // 词频只在词云页用：切到本页才第一次取（服务端已算好，读快照即可）
+    if (wantWords && prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+    if (wantTools && tools === null) void loadSnapshot(false, ['tools']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+  }, [wantSessions, wantDistribution, wantWords, wantTools, sessions, projects, models, prompts, tools, applySnapshot])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
@@ -402,27 +415,32 @@ export function KeyUsageSection() {
       </div>
 
       <div className={styles.rangeBar}>
-        {RANGES.map(([key, labelKey]) => (
-          <button key={key} className={range === key ? styles.rangeActive : styles.rangeItem} onClick={() => setRange(key)}>{t(labelKey)}</button>
-        ))}
-        <span className={styles.rangeCustom}>
-          <span className={styles.rangeCustomLabel}>{t('r.custom')}</span>
-          <input
-            type="date"
-            className={styles.rangeDate}
-            value={customFrom}
-            aria-label={t('date.startHint')}
-            onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
-          />
-          <span className={styles.rangeTilde}>~</span>
-          <input
-            type="date"
-            className={styles.rangeDate}
-            value={customTo}
-            aria-label={t('date.endHint')}
-            onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
-          />
+        <span className={styles.rangeTabs}>
+          {RANGES.map(([key, labelKey]) => (
+            <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
+          ))}
+          <button className={range === 'custom' ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange('custom')}>{t('r.custom')}</button>
         </span>
+        {range === 'custom' && (
+          <span className={styles.rangeCustom}>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customFrom}
+              aria-label={t('date.startHint')}
+              onChange={(event) => setCustomFrom(event.target.value)}
+            />
+            <span className={styles.rangeTilde}>~</span>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customTo}
+              aria-label={t('date.endHint')}
+              onChange={(event) => setCustomTo(event.target.value)}
+            />
+          </span>
+        )}
+        <span className={styles.rangeBarSpacer} />
         <select
           className={styles.refreshSelect}
           value={channelFilter}
@@ -507,7 +525,6 @@ export function KeyUsageSection() {
             <DistributionTab
               projects={projects}
               models={models}
-              prompts={prompts}
               channels={channels}
               usage={usage}
               tooltip={tooltip}
@@ -525,6 +542,18 @@ export function KeyUsageSection() {
               tooltip={tooltip}
               onOpenProject={(workspace) => { setProjectFilter(workspace); goSection('distribution') }}
             />
+          </section>
+        )}
+        {wants('tools') && (
+          <section className={styles.pageSection} id="sec-tools">
+            <h2 className={styles.pageSectionTitle}>{t('tab.tools')}</h2>
+            <ToolsTab data={tools} />
+          </section>
+        )}
+        {wants('words') && (
+          <section className={styles.pageSection} id="sec-words">
+            <h2 className={styles.pageSectionTitle}>{t('tab.words')}</h2>
+            <WordsTab prompts={prompts} />
           </section>
         )}
       </div>

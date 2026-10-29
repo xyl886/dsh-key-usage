@@ -455,6 +455,61 @@ export interface PromptsResponse {
   to: string | null
 }
 
+/** 工具 / 技能榜单的一行。 */
+export interface ToolUsageRow {
+  name: string
+  calls: number
+  /** 占同类调用总次数的百分比，一位小数。 */
+  sharePercent: number
+}
+
+/** MCP server 榜单的一行。 */
+export interface McpServerUsageRow {
+  server: string
+  calls: number
+  sharePercent: number
+}
+
+/** 迷你柱的一天。 */
+export interface ToolUsageDay {
+  /** 本地日期 `YYYY-MM-DD`。 */
+  date: string
+  calls: number
+}
+
+/**
+ * 快照 `tools` 段：工具 / 技能 / MCP server 调用统计（全部会话、全量历史）。
+ * `null` = 暂无采集（老库 / 读不到会话 / 从未调用工具），界面显示占位。
+ */
+export interface ToolsResponse {
+  /** 工具调用总次数（`tool/call` 事件数）。 */
+  calls: number
+  /** 至少调用过一次工具的会话数。 */
+  sessions: number
+  /** 工具 Top 7（次数降序、同频按名称升序）。 */
+  tools: ToolUsageRow[]
+  /** 近 7 个本地日的工具调用次数（含今天，缺日补 0）。 */
+  days: ToolUsageDay[]
+  skills: {
+    /** 技能调用总次数。 */
+    calls: number
+    /** 不同技能个数。 */
+    count: number
+    /** 技能 Top 6。 */
+    rows: ToolUsageRow[]
+    /** Top 6 之外的技能个数与调用次数合计（界面「其它 N 个」行）。 */
+    other: { count: number; calls: number }
+  }
+  mcp: {
+    /** MCP 调用总次数。 */
+    calls: number
+    /** 不同 MCP server 个数。 */
+    count: number
+    /** server Top 8。 */
+    rows: McpServerUsageRow[]
+  }
+}
+
 export interface SnapshotSections {
   overview: SummaryResponse | null
   channels: { channels: Channel[] } | null
@@ -465,6 +520,7 @@ export interface SnapshotSections {
   sessions: SessionsResponse | null
   quota: { providers: QuotaProvider[] } | null
   prompts: PromptsResponse | null
+  tools: ToolsResponse | null
 }
 
 /** `/snapshot` 与 `POST /refresh` 的同一份响应形状。 */

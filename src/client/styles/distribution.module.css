@@ -1,33 +1,40 @@
-/* 分布页：项目 × 模型（Mekko）、缓存节省、成本构成、通道成本；词云与明细表在末尾。 */
+/* 分布页：项目 × 模型（Mekko）、缓存节省、Token 构成、通道成本；明细表默认收起。
+   布局/间距/圆角对齐原型 #sec-distribution（132px 块高、10px 栅格间距、9px 卡片圆角）。
+   字号：正文 13 / 区块标题 15 —— 跟随宿主机字号缩放但设下限，没有小于 12px 的字。 */
 
-.page { display: flex; flex-direction: column; gap: 12px; }
+.page {
+  --dist-body: max(13px, var(--dsh-content-font-size, 13px));
+  --dist-title: max(15px, calc(var(--dsh-content-font-size, 13px) * 1.15));
+  display: flex; flex-direction: column; gap: 10px;
+  font-size: var(--dist-body);
+}
 
-/* 统计范围一行小字：分布页图表与词云都是全量历史，与「近 30 天」的页面口径不同，必须标出来 */
-.rangeLine { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); }
+/* 统计范围一行小字：分布页图表按全量历史统计，与页级范围口径不同，必须标出来 */
+.rangeLine { color: var(--dsw-alias-label-tertiary, #67676f); }
 
 /* 联动筛选说明：项目块与项目明细只看该项目 */
-.focusNote { margin-left: 8px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.9); }
+.focusNote { margin-left: 8px; color: var(--dsw-alias-label-tertiary, #67676f); }
 
-/* ===== 面板 ===== */
+/* ===== 面板（原型 .panel / .ph） ===== */
 .panel {
   min-width: 0;
   padding: 10px 11px;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  border-radius: 10px;
+  border-radius: 9px;
   box-sizing: border-box;
 }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .panelTitle {
   color: var(--dsw-alias-label-primary, #e8e8ec);
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 600;
+  font-size: var(--dist-title); font-weight: 600;
 }
 .panelNote {
   margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f);
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
 /* ===== 项目 × 模型（Mekko）：块宽 = 项目成本占总成本比例 ===== */
-.mekko { display: flex; align-items: stretch; height: 132px; border-radius: 6px; overflow: hidden; }
+.mekko { display: flex; align-items: stretch; height: 132px; border-radius: 5px; overflow: hidden; }
 .mekkoBlock {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
   gap: 3px; min-width: 0; padding: 8px; overflow: hidden; box-sizing: border-box;
@@ -37,24 +44,24 @@
 .mekkoHead { display: flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; }
 .mekkoName {
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 600;
+  font-weight: 600;
 }
 .mekkoAmount {
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.02); font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 .mekkoHead .mekkoAmount { flex: none; }
 .mekkoModel {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: calc(var(--dsh-content-font-size, 12px) * 0.98); opacity: .92;
+  opacity: .92;
 }
 
 /* ===== 三张排行面板：按宽度自适应列数（≥320px 一列，宽屏并排） ===== */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; align-items: stretch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; align-items: stretch; }
 
-/* 排行行：名字 + 横条 + 金额 + 附注（缓存读 tokens / 占比） */
+/* 排行行（原型 .row）：名字列封顶，金额与附注按最小宽度对齐、长金额不裁 */
 .row {
-  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 84px 58px;
+  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) minmax(58px, auto) minmax(56px, auto);
   gap: 8px; align-items: center; padding: 4px 0;
 }
 .rowName {
@@ -78,20 +85,19 @@
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
-/* ===== 成本构成：输出 / 缓存读堆叠条 + 图例 ===== */
+/* ===== Token 构成：输出 / 缓存读堆叠条 + 图例（原型 .stack / .lg） ===== */
 .stackBar { display: flex; height: 22px; border-radius: 5px; overflow: hidden; }
 .stackOutput, .stackCache {
   display: flex; align-items: center; justify-content: center; min-width: 0;
   flex-basis: 0;
   overflow: hidden; white-space: nowrap; color: var(--dsw-alias-label-primary-foreground, #fff);
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.02);
 }
 .stackOutput { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 85%, var(--dsw-alias-label-primary, #111)); }
 /* 绿在亮色主题里太亮，配前景色会看不清：与 label-primary 混合（亮色压暗、暗色提亮） */
 .stackCache { background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb96f) 60%, var(--dsw-alias-label-primary, #111)); }
 .legend {
   display: flex; flex-wrap: wrap; gap: 12px; margin-top: 7px;
-  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1);
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
 }
 .legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
 .legendOutput, .legendCache { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
@@ -100,18 +106,6 @@
 
 /* ===== 明细表：标题在左、按钮在右；展开后模型表在上、项目表在下 ===== */
 .detailsBar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.detailsTitle { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); }
+.detailsTitle { color: var(--dsw-alias-label-tertiary, #67676f); }
 .tables { display: flex; flex-direction: column; gap: 16px; }
-.tableTitle { margin-bottom: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 600; }
-
-/* ===== 词云：独立一块，放末尾 ===== */
-.cloudCard {
-  padding: 14px 16px;
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-2, #1d1d22);
-}
-/* 头部只有标题与导出按钮：按钮靠右（面板说明一律不留） */
-.panelAction { margin-left: auto; display: inline-flex; align-items: center; }
-/* KPI 行（卡片样式复用 overview 模块）跟在云下方，与上方 SVG 留出标准间距 */
-.cloudKpis { margin-top: 12px; }
+.tableTitle { margin-bottom: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 600; }

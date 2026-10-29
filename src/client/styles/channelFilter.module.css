@@ -1,0 +1,31 @@
+/* 额度与订阅：通道多选下拉（自绘浮层）。只在额度页用，basename 与其它样式文件不重名。 */
+
+.root { position: relative; display: inline-flex; }
+
+/* 触发条：与 ui.module.css 的控件同高（30px），文案显示当前筛选结果 */
+.trigger {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; box-sizing: border-box;
+  padding: 0 12px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px;
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: 13px; line-height: 1; cursor: pointer; white-space: nowrap;
+}
+.trigger:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.trigger:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+.caret { font-size: 12px; opacity: .8; }
+
+/* 浮层：贴在触发条下方；通道多时自身滚动，不把页面撑高 */
+.popup {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+  min-width: 240px; max-height: 300px; overflow-y: auto; padding: 6px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-3, #232329); box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0, 0, 0, .35));
+}
+
+.item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px;
+  font-size: 13px; color: var(--dsw-alias-label-primary, #e8e8ec); cursor: pointer;
+}
+.item:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+.item input { margin: 0; width: 14px; height: 14px; accent-color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }
+.itemName { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.itemKind { flex: none; font-size: 12px; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }

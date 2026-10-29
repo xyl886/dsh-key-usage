@@ -375,32 +375,32 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
           ? <div className={shared.empty}>{t('overview.noHourly')}</div>
           : (
             <div className={styles.hourWrap} role="group" aria-label={t('overview.hourly')}>
-              <div className={styles.hourWeekdays}>
-                {WEEKDAY_KEYS.map((key) => <span key={key}>{t(key)}</span>)}
-              </div>
-              <div className={styles.hourAxis}>
-                {Array.from({ length: 24 }, (_, hour) => <span key={hour}>{hour % 3 === 0 ? String(hour) : ''}</span>)}
-              </div>
-              <div className={styles.hourGrid}>
-                {hourMatrix.map((weekday, weekdayIndex) => weekday.map((cell, hour) => {
-                  const value = hourValues[weekdayIndex][hour]
-                  const level = value === undefined ? 0 : levelOfValue(value, hourThresholds)
-                  return (
-                    <div
-                      key={weekdayIndex + '-' + hour}
-                      className={styles.hourCell}
-                      style={{ background: levelColorOf(level) }}
-                      onMouseMove={(event) => props.tooltip.show(event, (
-                        <>
-                          <TipTitle>{t(WEEKDAY_KEYS[weekdayIndex]) + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
-                          <TipSub>{t(labelKeyOf(HOUR_METRICS, hourMetric))} <b>{value === undefined ? '—' : metricTextOf(hourMetric, value)}</b></TipSub>
-                        </>
-                      ))}
-                      onMouseLeave={props.tooltip.hide}
-                    />
-                  )
-                }))}
-              </div>
+              {WEEKDAY_KEYS.map((key, weekdayIndex) => (
+                <span key={key} className={styles.hourWeekday} style={{ gridColumn: 1, gridRow: weekdayIndex + 2 }}>{t(key)}</span>
+              ))}
+              {Array.from({ length: 24 }, (_, hour) => (
+                hour % 3 === 0
+                  ? <span key={'axis-' + String(hour)} className={styles.hourAxisLabel} style={{ gridColumn: hour + 2, gridRow: 1 }}>{String(hour)}</span>
+                  : null
+              ))}
+              {hourMatrix.map((weekday, weekdayIndex) => weekday.map((cell, hour) => {
+                const value = hourValues[weekdayIndex][hour]
+                const level = value === undefined ? 0 : levelOfValue(value, hourThresholds)
+                return (
+                  <div
+                    key={weekdayIndex + '-' + hour}
+                    className={styles.hourCell}
+                    style={{ gridColumn: hour + 2, gridRow: weekdayIndex + 2, background: levelColorOf(level) }}
+                    onMouseMove={(event) => props.tooltip.show(event, (
+                      <>
+                        <TipTitle>{t(WEEKDAY_KEYS[weekdayIndex]) + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
+                        <TipSub>{t(labelKeyOf(HOUR_METRICS, hourMetric))} <b>{value === undefined ? '—' : metricTextOf(hourMetric, value)}</b></TipSub>
+                      </>
+                    ))}
+                    onMouseLeave={props.tooltip.hide}
+                  />
+                )
+              }))}
             </div>
           )}
       </div>

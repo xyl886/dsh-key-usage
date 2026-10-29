@@ -1,24 +1,21 @@
 /**
- * 分布：项目 × 模型（Mekko 成本占比）、缓存节省、成本构成、通道成本；末尾是提问词云（KPI + 云 + 词表）。
+ * 分布：项目 × 模型（Mekko 成本占比）、缓存节省、Token 构成、通道成本；明细表默认收起。
  * 金额一律走 `currency.ts` 的收口函数；颜色只用宿主 `--dsw-alias-*` 令牌。
  */
 import { useState, type ReactNode } from 'react'
-import { WordCloud } from '../components/WordCloud.tsx'
 import { Button } from '../components/ui/Button.tsx'
 import { channelOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, type CostRowLike } from '../core/currency.ts'
-import { downloadCsv } from '../core/export-csv.ts'
-import { fmtCalls, fmtCount, fmtTokens } from '../core/format.ts'
+import { fmtTokens } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
 import type {
   Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse,
-  PromptsResponse, SessionCoverage, UsageResponse,
+  SessionCoverage, UsageResponse,
 } from '../core/types.ts'
 import styles from '../styles/distribution.module.css'
 import listStyles from '../styles/lists.module.css'
-import overviewStyles from '../styles/overview.module.css'
 import sharedStyles from '../styles/shared.module.css'
 import { ModelsTab } from './ModelsTab.tsx'
 import { ProjectsTab, baseNameOf } from './ProjectsTab.tsx'
@@ -36,8 +33,6 @@ const TINY_BLOCK_PERCENT = 2.5
 const WIDE_BLOCK_PERCENT = 20
 /** 宽块里列几个模型：前二已经能说明「钱花在哪个模型上」，第三行起放不下。 */
 const MAX_BLOCK_MODELS = 2
-/** 词表最多列几行：服务端最多下发 60 个词，页面只列高频的前 30 个（导出仍给全量）。 */
-const MAX_WORD_ROWS = 30
 
 /**
  * 项目块配色：按成本排名轮换。每个色都与 `label-primary` 混合 —— 亮色主题里压暗、暗色主题里提亮，
@@ -91,7 +86,6 @@ interface CacheEntry {
 export function DistributionTab(props: {
   projects: ProjectsResponse | null
   models: ModelsResponse | null
-  prompts: PromptsResponse | null
   channels: Channel[]
   tooltip: TooltipApi
   /** `/usage` 范围合计：缓存节省的「合计」只从它的 `totals` 取；未接线时只给按模型的缓存读排行。 */
@@ -161,8 +155,6 @@ export function DistributionTab(props: {
           </section>
         </div>
       )}
-
-      <PromptCloudPanel prompts={props.prompts} />
     </div>
   )
 }
@@ -283,90 +275,6 @@ function ChannelCostPanel(props: { models: ModelAggregateRow[]; channels: Channe
         : rows.map((row, index) => <RankLine key={row.key} row={row} top={index === 0} />)}
     </div>
   )
-}
-
-/**
- * 提问词云：云 + 4 张 KPI + 词表（可导出）。
- * 数据全在 `/prompts`：占比 = 词频 ÷ 参与统计的提问条数；服务端只下发词与频次，不下发提问原文。
- */
-function PromptCloudPanel(props: { prompts: PromptsResponse | null }): ReactNode {
-  const t = useT()
-  const prompts = props.prompts
-  const words = prompts === null ? [] : [...prompts.words].sort((first, second) => second.count - first.count)
-  const totalPrompts = prompts === null ? null : prompts.totalPrompts
-  const totalChars = prompts === null ? null : prompts.totalChars
-  const topWord = words[0]
-  return (
-    <div className={styles.cloudCard}>
-      <div className={styles.panelHead}>
-        <span className={styles.panelTitle}>{t('dist.words')}</span>
-        <span className={styles.panelAction}>
-          <Button
-            size="sm"
-            disabled={words.length === 0}
-            onClick={() => exportWordCsv(words, totalPrompts)}
-          >{t('export.csv')}</Button>
-        </span>
-      </div>
-      <WordCloud
-        words={words}
-        emptyText={prompts === null ? t('s.loading') : t('dist.noPrompts')}
-      />
-      <div className={overviewStyles.kpiRow + ' ' + styles.cloudKpis}>
-        <CloudKpi label={t('dist.kpiPrompts')} value={totalPrompts === null ? '—' : fmtCalls(totalPrompts)} />
-        <CloudKpi label={t('dist.kpiChars')} value={totalChars === null ? '—' : fmtCount(totalChars)} />
-        <CloudKpi label={t('dist.kpiWords')} value={prompts === null ? '—' : fmtCount(words.length)} />
-        <CloudKpi label={t('dist.kpiTop')} value={topWord === undefined ? '—' : topWord.word} />
-      </div>
-      {words.length > 0 && (
-        <table className={sharedStyles.table}>
-          <thead>
-            <tr>
-              <th scope="col">{t('dist.colWord')}</th>
-              <th scope="col">{t('dist.colCount')}</th>
-              <th scope="col">{t('m.share')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {words.slice(0, MAX_WORD_ROWS).map((entry) => (
-              <tr key={entry.word}>
-                <td>{entry.word}</td>
-                <td>{fmtCalls(entry.count)}</td>
-                <td>{wordShareTextOf(entry.count, totalPrompts)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  )
-}
-
-/** KPI 小卡：与总览同一套卡片样式（标签 + 数值），不加解释行。 */
-function CloudKpi(props: { label: string; value: string }): ReactNode {
-  return (
-    <div className={overviewStyles.kpiCard}>
-      <div className={overviewStyles.kpiLabel}>{props.label}</div>
-      <div className={overviewStyles.kpiValue}>{props.value}</div>
-    </div>
-  )
-}
-
-/** 词频占比：保留一位小数；没有参与统计的提问时给 —（不除零）。 */
-function wordShareTextOf(count: number, totalPrompts: number | null): string {
-  if (totalPrompts === null || totalPrompts <= 0) return '—'
-  return (count / totalPrompts * 100).toFixed(1) + '%'
-}
-
-/** 词表导出：列与页面表格同口径（百分数写在表头，单元格只放数值）；导出全部词。 */
-function exportWordCsv(words: Array<{ word: string; count: number }>, totalPrompts: number | null): void {
-  const header = [t('dist.colWord'), t('dist.colCount'), t('m.share') + '(%)']
-  const rows = words.map((entry) => [
-    entry.word,
-    entry.count,
-    totalPrompts === null || totalPrompts <= 0 ? '' : (entry.count / totalPrompts * 100).toFixed(1),
-  ])
-  downloadCsv('dsh-key-usage-提问词表-' + new Date().toISOString().slice(0, 10) + '.csv', header, rows)
 }
 
 /** 一条排行：名字 + 横条 + 金额 + 右侧附注（缓存读 tokens / 占比）。 */

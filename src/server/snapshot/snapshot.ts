@@ -93,6 +93,8 @@ export interface SnapshotSections {
   sessions: unknown
   /** 用户提问词云（形状 = `sections.prompts` 契约：`{ words, totalPrompts, totalChars, from, to }`）。 */
   prompts: unknown
+  /** 工具 / 技能 / MCP 调用统计（形状 = `ToolsStat`：`{ calls, sessions, tools, days, skills, mcp }`）。 */
+  tools: unknown
   quota: unknown
 }
 
@@ -190,7 +192,7 @@ function emptyOutcome(): SnapshotQuotaOutcome {
 function emptySections(): SnapshotSections {
   return {
     overview: null, channels: null, usage: null, heatmap: null,
-    models: null, projects: null, sessions: null, prompts: null, quota: null,
+    models: null, projects: null, sessions: null, prompts: null, tools: null, quota: null,
   }
 }
 

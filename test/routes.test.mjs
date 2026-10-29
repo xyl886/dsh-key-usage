@@ -95,6 +95,12 @@ const sessionRecords = [{
   words: new Map([['分析', 3], ['snapshot.json', 2], ['ledger', 1]]),
   promptFirstTime: morning,
   promptLastTime: outsideLedger,
+  // 工具 / 技能 / MCP 统计字段（快照 tools 段直接聚合它们；数据源外部注入时也允许缺这些字段）
+  toolCalls: 4,
+  toolNameCounts: new Map([['pwsh', 2], ['skill', 1], ['mcp_call', 1]]),
+  skillNameCounts: new Map([['agent-browser', 1]]),
+  mcpServerCounts: new Map([['playwright', 1]]),
+  toolDayCalls: new Map([[localDayKey(0), 4]]),
 }]
 const sessionSource = {
   collect: async () => ({
@@ -265,7 +271,7 @@ assert.equal(firstSnapshot.body.ok, true)
 assert.equal(firstSnapshot.body.buildSource, 'initial')
 assert.equal(firstSnapshot.body.building, false)
 assert.deepEqual(Object.keys(firstSnapshot.body.sections).sort(), [
-  'channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'usage',
+  'channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'tools', 'usage',
 ])
 assert.equal(firstSnapshot.body.sections.overview.channels.length, 2, '总览段 = /summary 响应体')
 assert.equal(firstSnapshot.body.sections.channels.channels.length, 2, '通道段 = /channels 响应体')
@@ -278,6 +284,30 @@ assert.deepEqual(firstSnapshot.body.sections.prompts, {
   to: sessionOnlyDay,
 }, 'prompts 段 = 跨会话词频合并结果（不含提问原文）')
 assert.equal(JSON.stringify(firstSnapshot.body.sections.prompts).includes('夹具会话'), false, '词云不下发提问原文')
+const toolsSection = firstSnapshot.body.sections.tools
+const { days: toolTrendDays, ...toolsWithoutDays } = toolsSection
+assert.deepEqual(toolsWithoutDays, {
+  calls: 4,
+  sessions: 1,
+  tools: [
+    { name: 'pwsh', calls: 2, sharePercent: 50 },
+    { name: 'mcp_call', calls: 1, sharePercent: 25 },
+    { name: 'skill', calls: 1, sharePercent: 25 },
+  ],
+  skills: {
+    calls: 1,
+    count: 1,
+    rows: [{ name: 'agent-browser', calls: 1, sharePercent: 100 }],
+    other: { count: 0, calls: 0 },
+  },
+  mcp: {
+    calls: 1,
+    count: 1,
+    rows: [{ server: 'playwright', calls: 1, sharePercent: 100 }],
+  },
+}, 'tools 段 = 跨会话工具 / 技能 / MCP 合并结果')
+assert.equal(toolTrendDays.length, 7, '迷你柱固定 7 天（含今天）')
+assert.deepEqual(toolTrendDays[6], { date: sessionOnlyDay, calls: 4 })
 assert.equal(firstSnapshot.body.quotaOutcome.providers.length, 2)
 assert.equal(firstSnapshot.body.stale === undefined, true, 'stale 只出现在 quotaOutcome 的通道条目里')
 assert.ok(firstSnapshot.body.issues.some((issue) => issue.kind === 'build-duration'), '构建耗时进 issues')
@@ -297,7 +327,7 @@ assert.equal(typeof reopened.body.quotaRefreshing, 'boolean', '标记要下发�
 assert.deepEqual(reopened.body.sections.sessions, firstSnapshot.body.sections.sessions, '复用的仍是同一份快照')
 
 // 按需下发（?sections=a,b,c）：只裁剪 sections 段，顶层字段一律保留；不传 = 全量（向后兼容）
-const allSectionNames = ['channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'usage']
+const allSectionNames = ['channels', 'heatmap', 'models', 'overview', 'projects', 'prompts', 'quota', 'sessions', 'tools', 'usage']
 const onlyChannels = await callEndpoint('/dsh-key-usage/snapshot?sections=channels')
 assert.deepEqual(Object.keys(onlyChannels.body.sections), ['channels'], '只回请求的那一段')
 assert.deepEqual(onlyChannels.body.sections.channels, firstSnapshot.body.sections.channels, '裁剪只影响下发，内容不变')
@@ -306,6 +336,11 @@ assert.deepEqual(onlyChannels.body.sections.channels, firstSnapshot.body.section
 const onlyPrompts = await callEndpoint('/dsh-key-usage/snapshot?sections=prompts')
 assert.deepEqual(Object.keys(onlyPrompts.body.sections), ['prompts'], '词云段可按需单独下发')
 assert.deepEqual(onlyPrompts.body.sections.prompts, firstSnapshot.body.sections.prompts, '裁剪只影响下发，内容不变')
+
+// 工具与技能段同样按需下发（切到该 Tab 时才取）
+const onlyTools = await callEndpoint('/dsh-key-usage/snapshot?sections=tools')
+assert.deepEqual(Object.keys(onlyTools.body.sections), ['tools'], '工具段可按需单独下发')
+assert.deepEqual(onlyTools.body.sections.tools, firstSnapshot.body.sections.tools, '裁剪只影响下发，内容不变')
 for (const field of ['ok', 'building', 'quotaRefreshing', 'version', 'updatedAt', 'buildSource', 'quotaOutcome', 'issues']) {
   assert.deepEqual(onlyChannels.body[field], firstSnapshot.body[field], '顶层字段 ' + field + ' 不因裁剪而变')
 }
@@ -990,6 +1025,10 @@ assert.equal(fallbackChannels.body.channels[0].costMode, 'free')
   mountKeyUsageRoutes({ register: (route) => { pricedHandlers.set(route.path, route.handler) } }, pricedSessionSource)
 await warmUp(pricedHandlers)
   const pricedCall = (path, remoteAddress) => callHandler(pricedHandlers, path, remoteAddress)
+
+  // 没有工具调用的会话数据源：tools 段为 null（老库 / 没采集，界面显示「暂无采集」），不许抛错
+  const pricedSnapshot = await pricedCall('/dsh-key-usage/snapshot')
+  assert.equal(pricedSnapshot.body.sections.tools, null, '没有工具统计 → tools 段为 null')
 
   // ---- /rates：三档单价（catalog / model / none）与通道币种 ----
   const rates = await pricedCall('/dsh-key-usage/rates?days=30')

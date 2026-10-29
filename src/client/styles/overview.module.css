@@ -1,23 +1,29 @@
 /* 总览：KPI 卡片行、使用趋势（全年热力图 / 柱状图）、项目与模型排行、按时段热力。
-   颜色一律走宿主 --dsw-alias-* 令牌；金额与数字用等宽数字对齐。 */
-.stack { display: flex; flex-direction: column; gap: 10px; }
+   颜色一律走宿主 --dsw-alias-* 令牌；字号：正文 13 / 区块标题 15 / KPI 数字 18 —— 跟随宿主
+   字号缩放但设下限，图表刻度固定 12px（热力图月份轴按 12px 估算标签宽度，字号改了要同步算法）。 */
+.stack {
+  --ov-body: max(13px, var(--dsh-content-font-size, 13px));
+  --ov-title: max(15px, calc(var(--dsh-content-font-size, 13px) * 1.15));
+  --ov-kpi: max(18px, calc(var(--dsh-content-font-size, 13px) * 1.4));
+  display: flex; flex-direction: column; gap: 10px; font-size: var(--ov-body);
+}
 
 /* ===== KPI 卡片 ===== */
 .kpiRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 8px; }
 .kpiCard { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 8px 10px; min-width: 0; }
 .kpiLabel {
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpiValue {
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.5); font-weight: 700; letter-spacing: -.02em;
+  font-size: var(--ov-kpi); font-weight: 700; letter-spacing: -.02em;
   font-variant-numeric: tabular-nums; margin: 2px 0; color: var(--dsw-alias-label-primary, #e8e8ec);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.kpiUnit { font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 1px; }
+.kpiUnit { font-size: var(--ov-body); font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 1px; }
 .kpiDetail {
   display: flex; gap: 6px; flex-wrap: wrap; color: var(--dsw-alias-label-tertiary, #67676f);
-  font-size: calc(var(--dsh-content-font-size, 12px) * .96); font-variant-numeric: tabular-nums;
+  font-size: var(--ov-body); font-variant-numeric: tabular-nums;
 }
 /* 涨红跌绿（原型口径）：上升用错误色、下降用成功色 */
 .rise { color: var(--dsw-alias-state-error-primary, #e05a5a); }
@@ -26,7 +32,7 @@
 /* ===== 面板 ===== */
 .panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 11px; min-width: 0; }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.panelTitle { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.panelTitle { font-size: var(--ov-title); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .panelMore {
   margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f);
   font-variant-numeric: tabular-nums; white-space: nowrap;
@@ -40,34 +46,40 @@
 }
 .metricTab {
   border: 0; background: transparent; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit;
-  font-size: calc(var(--dsh-content-font-size, 12px) * .96); padding: 2px 8px; border-radius: 5px;
+  font-size: var(--ov-body); padding: 2px 8px; border-radius: 5px;
   cursor: pointer; white-space: nowrap;
 }
 .metricTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .metricTabOn { background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
 .metricTab:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
-/* ===== 全年热力图：53 周 × 7 天，格子固定正方形 ===== */
-.yearWrap { display: grid; grid-template-columns: 16px minmax(0, 1fr); grid-template-rows: 16px auto; gap: 4px 6px; }
-.yearWeekdays {
-  grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+/* ===== 全年热力图：53 个 ISO 周 × 7 天 =====
+   周几标签、月份刻度与格子放在同一个 grid：列号 / 行号都由 grid-column、grid-row 精确指定，
+   不再用「另一套等分网格 + margin」去凑，避免首行错位与月份标签黏连。 */
+.yearWrap {
+  display: grid;
+  grid-template-columns: 18px repeat(53, minmax(0, 1fr));
+  grid-template-rows: 16px repeat(7, auto);
+  column-gap: 3px; row-gap: 3px;
 }
-.yearWeekdays span { display: flex; align-items: center; justify-content: flex-end; }
-.yearAxis {
-  grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(53, minmax(0, 1fr)); gap: 3px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+/* 周几标签占第 1 列、逐行对应 7 行（窄面板时组件只标隔行，防止上下叠字） */
+.yearWeekday {
+  display: flex; align-items: center; justify-content: flex-end;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
 }
-.yearAxis span { white-space: nowrap; }
-.yearGrid {
-  grid-column: 2; grid-row: 2; display: grid; grid-auto-flow: column;
-  grid-template-rows: repeat(7, auto); grid-template-columns: repeat(53, minmax(0, 1fr)); gap: 3px;
+/* 月份标签贴所在列左缘；只有每月首次出现的那一列有标签，放不下就跳过（见 core/heatmap-axis.ts） */
+.yearAxisLabel {
+  align-self: end; justify-self: start; white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
 }
 /* aspect-ratio 保证格子是正方形：一年 53 列，格子不能被拉成竖长条 */
-.yearCell { aspect-ratio: 1 / 1; border-radius: 3px; background: rgba(128, 128, 140, .22); cursor: default; }
+.yearCell {
+  align-self: start; aspect-ratio: 1 / 1; border-radius: 3px;
+  background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .22)); cursor: default;
+}
 .yearActive { cursor: pointer; }
 /* 台账覆盖之前的日子：描边空心，与「无用量」的实心灰区分开 */
-.yearEmpty { background: rgba(128, 128, 140, .10); box-shadow: inset 0 0 0 1px rgba(128, 128, 140, .28); }
+.yearEmpty { background: var(--dsw-alias-bg-layer-2, #1d1d22); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1, #2c2c34); }
 .yearFuture { background: transparent; box-shadow: none; }
 
 /* ===== 趋势柱状图 ===== */
@@ -77,12 +89,12 @@
 .histBarPeak { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 .histLabels {
   display: flex; justify-content: space-between; margin-top: 4px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .trendFoot {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 9px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body);
 }
 .scale { display: inline-flex; align-items: center; gap: 3px; }
 .scale i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin: 0 1px; }
@@ -91,8 +103,8 @@
 
 /* ===== 项目 / 模型排行：横条 + 右侧数值 ===== */
 .rankRow {
-  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) 68px 60px;
-  gap: 8px; align-items: center; padding: 4px 0; font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) 58px 56px;
+  gap: 8px; align-items: center; padding: 4px 0; font-size: var(--ov-body);
 }
 .rankName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dsw-alias-label-secondary, #9a9aa6); }
 .rankTrack { height: 9px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12)); }
@@ -101,17 +113,23 @@
 .rankValue { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
 .rankSub { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
-/* ===== 按时段：7 行 × 24 列，格子同样正方形 ===== */
-.hourWrap { display: grid; grid-template-columns: 16px minmax(0, 1fr); grid-template-rows: 16px auto; gap: 4px 6px; }
-.hourWeekdays {
-  grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+/* ===== 按时段：7 行 × 24 列 =====
+   与年热力图同一套做法：周几标签 / 小时刻度 / 格子放在同一个 grid，用 grid-row 锁定行，避免错位。 */
+.hourWrap {
+  display: grid;
+  grid-template-columns: 18px repeat(24, minmax(0, 1fr));
+  grid-template-rows: 16px repeat(7, auto);
+  column-gap: 3px; row-gap: 3px;
 }
-.hourWeekdays span { display: flex; align-items: center; justify-content: flex-end; }
-.hourAxis {
-  grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+.hourWeekday {
+  display: flex; align-items: center; justify-content: flex-end;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
 }
-.hourAxis span { white-space: nowrap; }
-.hourGrid { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; }
-.hourCell { aspect-ratio: 1 / 1; border-radius: 3px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .18)); cursor: default; }
+.hourAxisLabel {
+  align-self: end; justify-self: start; white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 1;
+}
+.hourCell {
+  align-self: start; aspect-ratio: 1 / 1; border-radius: 3px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .18)); cursor: default;
+}
