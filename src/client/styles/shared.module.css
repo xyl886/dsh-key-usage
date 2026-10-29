@@ -79,7 +79,6 @@
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
 
 /* 口径说明分点分行：每条一句话，避免挤成一段 */
-.footnoteList { margin: 4px 0 0; padding-left: 18px; }
 .footnoteList li { margin: 1px 0; }
 
 /* ===== 浮层 ===== */

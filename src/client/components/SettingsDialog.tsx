@@ -1,6 +1,7 @@
 /**
- * 设置：把「偶尔动一次」的东西从各页面收进来 —— 显示币种、汇率刷新、价目刷新、版本。
- * 页面里只留结论；来源与时间放这里，失败原因仍只进系统日志（`LogHint` 指路）。
+ * 设置：左侧竖排 Tab —— 显示 / 价目 / 日志 / 口径 / 关于。
+ * 把原先散在页头的「日志」「口径」两个弹窗并进来：页头只留「刷新 + 设置」。
+ * 页面里只留结论；来源与时间放这里，失败原因仍只进系统日志（日志页签内可查）。
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { FX_PATH, MODEL_PRICE_REFRESH_PATH, failureReasonOf, loadFxRate, refreshModelPrices } from '../core/api.ts'
@@ -13,20 +14,44 @@ import { logError, logInfo, logWarn } from '../core/log.ts'
 import { modelPriceRefreshTextOf } from '../core/pricing.ts'
 import { PLUGIN_VERSION } from '../core/version.ts'
 import { LogHint } from './LogHint.tsx'
+import { LogPanel } from './LogPanel.tsx'
 import { Button } from './ui/Button.tsx'
 import styles from '../styles/settings.module.css'
+
+const PLUGIN_REPO = 'https://github.com/xyl886/dsh-key-usage'
+
+export type SettingsTab = 'display' | 'pricing' | 'log' | 'caliber' | 'about'
+
+const TAB_KEYS: Array<{ key: SettingsTab; labelKey: string }> = [
+  { key: 'display', labelKey: 'settings.tabDisplay' },
+  { key: 'pricing', labelKey: 'settings.tabPricing' },
+  { key: 'log', labelKey: 'settings.tabLog' },
+  { key: 'caliber', labelKey: 'settings.tabCaliber' },
+  { key: 'about', labelKey: 'settings.tabAbout' },
+]
 
 export function SettingsDialog(props: {
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本口径整体变了） */
   onPricingReload: () => void
+  /** 从「日志提示」或旧入口过来时落地到指定页签 */
+  initialTab?: SettingsTab
+  /** 口径页签的数据来源信息 */
+  todaySource: 'ledger' | 'session' | null
+  sessionDays: number
 }): ReactNode {
   const t = useT()
   const display = useCurrencyDisplay()
+  const [tab, setTab] = useState<SettingsTab>(props.initialTab ?? 'display')
   const [fxLoading, setFxLoading] = useState(false)
   const [fxError, setFxError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshElapsed, setRefreshElapsed] = useState(0)
   const [refreshStatus, setRefreshStatus] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
+
+  // 外部（日志提示 / 入口）要求切页签时跟随
+  useEffect(() => {
+    if (props.initialTab !== undefined) setTab(props.initialTab)
+  }, [props.initialTab])
 
   /** 取一次汇率：服务端 12 小时内走缓存，打上游的只有用户点「刷新汇率」那一下；失败时保留已有汇率。 */
   const fetchFx = useCallback(async (force: boolean): Promise<void> => {
@@ -58,7 +83,7 @@ export function SettingsDialog(props: {
   // 刷新价目最长 20 秒预算：逐秒推进，用户得看到它还在跑
   useEffect(() => {
     if (!refreshing) return
-    const timer = setInterval(() => setRefreshElapsed((previous) => previous + 1), 1000)
+    const timer = setInterval(() => setRefreshElapsed((previous) => Math.min(previous + 1, 20)), 1000)
     return () => clearInterval(timer)
   }, [refreshing])
 
@@ -106,59 +131,128 @@ export function SettingsDialog(props: {
   const fxWarn = display.fx === null || display.fx.source === 'default'
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.block}>
-        <div className={styles.head}>
-          <span className={styles.title}>{t('settings.currency')}</span>
-          <span className={styles.actions}>
-            {DISPLAY_CURRENCIES.map((currency) => (
-              <Button
-                key={currency}
-                size="sm"
-                active={display.display === currency}
-                className={styles.currencyBtn}
-                ariaLabel={currency}
-                onClick={() => switchCurrency(currency)}
-              >
-                {DISPLAY_CURRENCY_SYMBOLS[currency]}
-              </Button>
-            ))}
-          </span>
-        </div>
-        {/* 金额按当前币种折算（带 ≈）；折算率与来源在下面「汇率」里 */}
+    <div className={styles.shell}>
+      <div className={styles.tabs} role="tablist" aria-orientation="vertical">
+        {TAB_KEYS.map((entry) => (
+          <button
+            key={entry.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === entry.key}
+            className={tab === entry.key ? styles.tab + ' ' + styles.tabActive : styles.tab}
+            onClick={() => setTab(entry.key)}
+          >
+            {t(entry.labelKey)}
+          </button>
+        ))}
       </div>
 
-      <div className={styles.block}>
-        <div className={styles.head}>
-          <span className={styles.title}>{t('settings.fx')}</span>
-          <span className={styles.actions}>
-            <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} title={t('quota.fxCacheHint')} onClick={() => void fetchFx(true)}>
-              {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
-            </Button>
-          </span>
-        </div>
-        <div className={fxWarn ? styles.value + ' ' + styles.valueWarn : styles.value}>{fxText}</div>
-      </div>
+      <div className={styles.panel}>
+        {tab === 'display' && (
+          <div className={styles.wrap}>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.currency')}</span>
+                <span className={styles.actions}>
+                  {DISPLAY_CURRENCIES.map((currency) => (
+                    <Button
+                      key={currency}
+                      size="sm"
+                      active={display.display === currency}
+                      className={styles.currencyBtn}
+                      ariaLabel={currency}
+                      onClick={() => switchCurrency(currency)}
+                    >
+                      {DISPLAY_CURRENCY_SYMBOLS[currency]}
+                    </Button>
+                  ))}
+                </span>
+              </div>
+            </div>
 
-      <div className={styles.block}>
-        <div className={styles.head}>
-          <span className={styles.title}>{t('settings.pricing')}</span>
-          <span className={styles.actions}>
-            <Button size="sm" variant="primary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshPrices()}>
-              {refreshing
-                ? t('action.refreshing') + (refreshElapsed > 0 ? ' ' + String(refreshElapsed) + 's' : '')
-                : t('quota.refreshPrices')}
-            </Button>
-          </span>
-        </div>
-        {refreshStatus === null
-          ? <div className={styles.value}>{t('quota.pricingInfoHint')}</div>
-          : refreshStatus.tone === 'ok'
-            ? <div className={styles.value}>{refreshStatus.text}</div>
-            : <LogHint text={refreshStatus.text} tone="error" />}
-      </div>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.fx')}</span>
+                <span className={styles.actions}>
+                  <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} title={t('quota.fxCacheHint')} onClick={() => void fetchFx(true)}>
+                    {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
+                  </Button>
+                </span>
+              </div>
+              <div className={fxWarn ? styles.value + ' ' + styles.valueWarn : styles.value}>{fxText}</div>
+            </div>
+          </div>
+        )}
 
-      <div className={styles.version}>{t('settings.version') + ' ' + PLUGIN_VERSION}</div>
+        {tab === 'pricing' && (
+          <div className={styles.wrap}>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.pricing')}</span>
+                <span className={styles.actions}>
+                  <Button size="sm" variant="primary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshPrices()}>
+                    {refreshing
+                      ? t('action.refreshing') + (refreshElapsed > 0 ? ' ' + String(refreshElapsed) + 's' : '')
+                      : t('quota.refreshPrices')}
+                  </Button>
+                </span>
+              </div>
+              {refreshStatus === null
+                ? <div className={styles.value}>{t('quota.pricingInfoHint')}</div>
+                : refreshStatus.tone === 'ok'
+                  ? <div className={styles.value}>{refreshStatus.text}</div>
+                  : <LogHint text={refreshStatus.text} tone="error" />}
+            </div>
+          </div>
+        )}
+
+        {tab === 'log' && (
+          <div className={styles.logPane}>
+            <LogPanel />
+          </div>
+        )}
+
+        {tab === 'caliber' && (
+          <div className={styles.wrap}>
+            <div className={styles.caliberVersion}>{t('caliber.version', { version: PLUGIN_VERSION })}</div>
+            <ul className={styles.caliberList}>
+              <li>
+                {t('caliber.source', {
+                  days: props.todaySource === 'session' ? t('caliber.sourceDays', { count: props.sessionDays }) : '',
+                })}
+              </li>
+              <li>{t('caliber.cost')}</li>
+              <li>{t('caliber.costHint')}</li>
+              <li>{t('caliber.pricingInfo')}</li>
+              <li>{t('caliber.sessionSource')}</li>
+              <li>{t('caliber.refresh')}</li>
+            </ul>
+          </div>
+        )}
+
+        {tab === 'about' && (
+          <div className={styles.wrap}>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.version')}</span>
+                <span className={styles.value}>{PLUGIN_VERSION}</span>
+              </div>
+            </div>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.license')}</span>
+                <span className={styles.value}>{t('settings.licenseValue')}</span>
+              </div>
+            </div>
+            <div className={styles.block}>
+              <div className={styles.head}>
+                <span className={styles.title}>{t('settings.repo')}</span>
+                <a className={styles.link} href={PLUGIN_REPO} target="_blank" rel="noreferrer">{PLUGIN_REPO.replace(/^https?:\/\//, '')}</a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

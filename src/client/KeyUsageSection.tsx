@@ -4,14 +4,12 @@ import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSes
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
-import { PLUGIN_VERSION } from './core/version.ts'
 import { hydrateLog, logInfo, logWarn, subscribeOpenLog } from './core/log.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
-import { LogPanel } from './components/LogPanel.tsx'
 import { Dialog } from './components/ui/Dialog.tsx'
-import { SettingsDialog } from './components/SettingsDialog.tsx'
+import { SettingsDialog, type SettingsTab } from './components/SettingsDialog.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
 import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
 import { DistributionTab } from './tabs/DistributionTab.tsx'
@@ -66,12 +64,11 @@ export function KeyUsageSection() {
   /** 配额执行结果：哪个通道这次查到实时值、展示值的时间与失败原因（界面据此标「本机快照 + 数据时间」）。 */
   const [quotaOutcome, setQuotaOutcome] = useState<SnapshotQuotaOutcome | null>(null)
   /** 口径说明放进弹窗：内容可以写长，但不再占版面。 */
-  const [showCaliber, setShowCaliber] = useState(false)
   /** 设置弹窗：币种、汇率、价目的来源与刷新都收在这里，页面里只留结论。 */
   const [showSettings, setShowSettings] = useState(false)
   /** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
   const [quotaDialog, setQuotaDialog] = useState<string | null>(null)
-  const [showLog, setShowLog] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('display')
   /** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
   const t = useT()
   const lastSnapshotAt = useRef(0)
@@ -194,7 +191,7 @@ export function KeyUsageSection() {
 
   // 磁盘上的历史日志读回内存（刷新页面后还能看到上次为什么失败），并允许页面里任何组件请求打开日志窗
   useEffect(() => { void hydrateLog() }, [])
-  useEffect(() => subscribeOpenLog(() => setShowLog(true)), [])
+  useEffect(() => subscribeOpenLog(() => { setSettingsTab('log'); setShowSettings(true) }), [])
 
   // 5 分钟本地刷新：服务端每 5 分钟重建一次快照，这里跟着取最新那份；页面隐藏时暂停，切回且已超期立刻补一次
   useEffect(() => {
@@ -271,22 +268,7 @@ export function KeyUsageSection() {
       <div className={styles.title}>
         <span>{t('app.title')}</span>
         <span className={styles.titleActions}>
-          <Button size="sm" ariaLabel={t('log.title')} title={t('log.title')} onClick={() => setShowLog(true)}>
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-              <rect x="1.6" y="2.2" width="12.8" height="11.6" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
-              <rect x="3.6" y="4.6" width="5.2" height="1.4" rx="0.7" fill="currentColor" />
-              <rect x="3.6" y="7.4" width="8.8" height="1.4" rx="0.7" fill="currentColor" />
-              <rect x="3.6" y="10.2" width="6.6" height="1.4" rx="0.7" fill="currentColor" />
-            </svg>
-          </Button>
-          <Button size="sm" onClick={() => setShowCaliber(true)} ariaLabel={t('action.caliber')} title={t('action.caliber')}>
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-              <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
-              <circle cx="8" cy="4.9" r="0.85" fill="currentColor" />
-              <rect x="7.15" y="6.9" width="1.7" height="5" rx="0.85" fill="currentColor" />
-            </svg>
-          </Button>
-          <Button size="sm" onClick={() => setShowSettings(true)} ariaLabel={t('action.settings')} title={t('action.settings')}>
+          <Button size="sm" onClick={() => { setSettingsTab('display'); setShowSettings(true) }} ariaLabel={t('action.settings')} title={t('action.settings')}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
               <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
               <path fill="none" stroke="currentColor" strokeWidth="1.3" stroke-linecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
@@ -363,34 +345,17 @@ export function KeyUsageSection() {
           onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('distribution') }}
         />
       )}
-      {showCaliber && (
-      <Dialog title={t('caliber.title')} closeLabel={t('action.close')} onClose={() => setShowCaliber(false)}>
-        <div className={styles.caliberVersion}>{t('caliber.version', { version: PLUGIN_VERSION })}</div>
-        <ul className={styles.footnoteList}>
-          <li>
-            {t('caliber.source', {
-              days: summary !== null && summary.todaySource === 'session'
-                ? t('caliber.sourceDays', { count: summary.sessionDates.length })
-                : '',
-            })}
-          </li>
-          <li>{t('caliber.cost')}</li>
-        <li>{t('caliber.costHint')}</li>
-        <li>{t('caliber.pricingInfo')}</li>
-          <li>{t('caliber.sessionSource')}</li>
-          <li>{t('caliber.refresh')}</li>
-        </ul>
-      </Dialog>)}
 
       {showSettings && (
         <Dialog title={t('settings.title')} closeLabel={t('action.close')} onClose={() => setShowSettings(false)}>
-          <SettingsDialog onPricingReload={() => setPricingRevision((previous) => previous + 1)} />
+          <SettingsDialog
+            onPricingReload={() => setPricingRevision((previous) => previous + 1)}
+            initialTab={settingsTab}
+            todaySource={summary === null ? null : summary.todaySource}
+            sessionDays={summary === null ? 0 : summary.sessionDates.length}
+          />
         </Dialog>)}
 
-      {showLog && (
-      <Dialog title={t('log.title')} closeLabel={t('action.close')} onClose={() => setShowLog(false)}>
-        <LogPanel />
-      </Dialog>)}
 
       {quotaDialog !== null && (
         <Dialog title={t('nav.quota')} closeLabel={t('action.close')} onClose={() => setQuotaDialog(null)}>
