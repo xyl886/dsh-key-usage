@@ -217,12 +217,14 @@
 /* 分区不再套一层边框卡片：宿主页面是扁平分区，靠标题与留白分隔 */
 .pageSection { min-width: 0; }
 /* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
+/* 分区标题只是锚点标签：比页面标题低两档，避免与顶部导航重名时抢视线 */
 .pageSectionTitle {
-  margin: 0 0 14px;
-  font-size: var(--ku-title);
+  margin: 0 0 12px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--dsw-alias-label-primary, #e8e8ec);
+  letter-spacing: .01em;
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
 }
 /* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
 /* 范围切换用分段控件（一个外框装按钮）：外框 26px 高，与同排控件齐平 */

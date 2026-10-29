@@ -2,7 +2,7 @@
 
 /* 网格：卡片最小 320px、吃满剩余宽度（宽屏 3 列、中屏 2 列、窄屏 1 列）；
    间距对齐原型 .chans（10px）；grid-auto-rows 1fr 让同一行卡片等高。 */
-.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); grid-auto-rows: 1fr; gap: 10px; }
+.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); grid-auto-rows: 1fr; gap: 10px; }
 /* 单通道详情弹窗：只有一张卡，不吃多列网格 */
 .cardGrid.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 360px) {
@@ -37,19 +37,20 @@
 }
 
 /* 正文：正文 13px；行距按原型 5px */
-.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 5px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
+.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 12px; flex: 1 1 auto; min-height: 0; font-size: var(--ku-body, 14px); }
 
 /* 订阅窗口行：列宽对齐原型 .row4（32px / 1fr / 38px / 112px，gap 7）；
    百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
    进度条吃剩余宽度，卡片越宽越长。 */
-.windowLine { display: grid; grid-template-columns: 32px minmax(0, 1fr) 46px 112px; gap: 7px; align-items: center; font-variant-numeric: tabular-nums; }
-.windowName { color: var(--dsw-alias-label-tertiary, #67676f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.windowLine { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 1px 0 3px; }
+.windowTop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meter { display: block; height: 8px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
 .meter > i { display: block; height: 100%; border-radius: 4px; }
-.windowPercent { text-align: right; font-size: var(--ku-kpi, 20px); font-weight: 600; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.windowPercent { font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .windowReset {
-  text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px);
+  text-align: left; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
 /* 键值行：左标签右值（原型 .line：标签 fg3、值 fg2）；金额这类主数字（.lineValueNumber）用 18px */
