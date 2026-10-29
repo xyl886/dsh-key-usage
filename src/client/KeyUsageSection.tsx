@@ -391,33 +391,8 @@ export function KeyUsageSection() {
   return (
     <div className={styles.section}>
       <div className={styles.stickyHead}>
-      <div className={styles.toolbarRow}>
-        <span className={styles.brand}>{t('app.title')}</span>
-        <span className={styles.toolbarGroup}>
-          <span className={styles.rangeTabs}>
-            {RANGES.map(([key, labelKey]) => (
-              <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
-            ))}
-          </span>
-          <span className={styles.rangeCustom}>
-            <span className={styles.rangeCustomLabel}>{t('r.custom')}</span>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customFrom}
-              aria-label={t('date.startHint')}
-              onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
-            />
-            <span className={styles.rangeTilde}>~</span>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customTo}
-              aria-label={t('date.endHint')}
-              onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
-            />
-          </span>
-        </span>
+      <div className={styles.pageHead}>
+        <h1 className={styles.pageTitle}>{t('app.title')}</h1>
         <span className={styles.rowSpacer} />
         <span className={styles.toolbarGroup}>
           <select
@@ -468,6 +443,32 @@ export function KeyUsageSection() {
       </div>
 
       <div className={styles.toolbarRow}>
+        <span className={styles.toolbarGroup}>
+          <span className={styles.rangeTabs}>
+            {RANGES.map(([key, labelKey]) => (
+              <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
+            ))}
+          </span>
+          <span className={styles.rangeCustom}>
+            <span className={styles.rangeCustomLabel}>{t('r.custom')}</span>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customFrom}
+              aria-label={t('date.startHint')}
+              onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
+            />
+            <span className={styles.rangeTilde}>~</span>
+            <input
+              type="date"
+              className={styles.rangeDate}
+              value={customTo}
+              aria-label={t('date.endHint')}
+              onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
+            />
+          </span>
+        </span>
+        <span className={styles.toolbarDivider} aria-hidden="true" />
         <select
           className={styles.refreshSelect}
           value={channelFilter}
