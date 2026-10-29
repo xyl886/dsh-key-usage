@@ -1,14 +1,7 @@
-/* 使用明细：范围条、占比卡、按天/按小时柱状图、每日细目折叠表。 */
-.rangeBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-.rangeLeft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.rangeTabs { display: inline-flex; gap: 2px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px; padding: 2px; }
-.rangeTabs button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); height: 24px; padding: 0 12px; border-radius: 6px; cursor: pointer; }
-.rangeTabs button.active { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
-/* 范围切换是键盘可达控件，焦点必须看得见（outline 不占布局，也跟随圆角） */
-.rangeTabs button:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
-  outline-offset: 2px; border-radius: 6px;
-}
+/* 使用明细：控件行、占比卡、按天/按小时柱状图、每日细目折叠表。 */
+
+/* 明细页控件行：范围与导出在页头，这里只放通道筛选。 */
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 
 .shareBar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 2px; }
 .shareBar > i { display: block; height: 100%; cursor: default; }
@@ -35,8 +28,80 @@
 .barLabels { display: flex; margin-top: 6px; }
 .barLabels span { flex: 1; text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
 
-/* 工具栏里的通道下拉：与范围标签同排，紧跟「自定义」右侧 */
-.channelSelect { display: inline-flex; align-items: center; margin-left: 2px; }
+/* ===== 每日成本 / 逐日明细两张面板 ===== */
+.panelHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.panelTitle { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+/* 右上角结论（合计 · 日均 · 峰值 / 行数）：永远贴右边，窄屏换行后仍靠右 */
+.panelStat { margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.panelGap { margin-top: 10px; }
 
-/* 统一控件尺寸（需求 4）：与 ui.module.css 的 .control 同规格 */
-.rangeTabs button { height: 30px; padding: 0 10px; box-sizing: border-box; font-size: calc(var(--dsh-content-font-size, 12px) * 1); font-weight: 500; border-radius: 6px; }
+/* 指标 / 维度切换：小胶囊，选中项抬到面板底色并加粗（与原型 mtabs 一致） */
+.metricTabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+.metricTabs button {
+  border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 500;
+  height: 24px; padding: 0 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+}
+.metricTabs button:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.metricTabs button.active { background: var(--dsw-alias-bg-layer-3, #232329); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
+.metricTabs button:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+
+/* 单指标柱状图：柱高按峰值归一，峰值那根用主色 */
+.costBars { display: flex; align-items: flex-end; gap: 3px; height: 104px; }
+/* 跨度大时（全部 / 90 天）柱子挨紧一点，否则固定间距会把图表挤到卡片外面 */
+.costBarsDense { gap: 1px; }
+.costBarCol { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; border-radius: 3px; cursor: default; }
+.costBarCol:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .08)); }
+.costBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .35)); }
+.costBarPeak { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); }
+.costAxis { display: flex; justify-content: space-between; gap: 4px; margin-top: 5px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-variant-numeric: tabular-nums; }
+.costAxis span { flex: 1; text-align: center; white-space: nowrap; }
+
+/* 逐日明细：横向滚动 + 数字右对齐等宽 */
+.tableScroll { overflow-x: auto; }
+.detailTable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); }
+.detailTable th {
+  color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; padding: 5px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+}
+.detailTable td {
+  color: var(--dsw-alias-label-secondary, #9a9aa6); padding: 5px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+}
+.detailTable .alignLeft { text-align: left; }
+.detailTable .alignRight { text-align: right; }
+/* 成本是这张表的主指标，比其余数字亮一档 */
+.detailTable .costCell { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.detailTable tr.totalRow td {
+  border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-bottom: 0;
+  color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600;
+}
+/* 环比：涨红跌绿（原型口径），无上期数据用弱化色 */
+.deltaUp { color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.deltaDown { color: var(--dsw-alias-state-success-primary, #3fb96f); }
+.deltaFlat { color: var(--dsw-alias-label-tertiary, #67676f); }
+
+.sortBtn {
+  display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent;
+  color: inherit; font: inherit; font-weight: inherit; padding: 0; cursor: pointer;
+}
+.sortBtn:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.sortBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; border-radius: 4px; }
+.sortDir { color: var(--dsw-alias-state-business-primary, #5b8cff); }
+
+/* 展开箭头：没有模型构成的行留同宽占位，标题列不会左右错位 */
+.expandBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; padding: 0; border: 0; border-radius: 3px; background: transparent;
+  color: var(--dsw-alias-label-tertiary, #67676f); font: inherit; line-height: 1; cursor: pointer;
+}
+.expandBtn:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+.expandBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+.expandSpacer { display: inline-block; width: 16px; }
+
+/* 展开后的模型明细：缩进一层，列宽与上表无关，自己一整套右对齐数字 */
+.detailTable td.subCell { padding: 2px 8px 8px 26px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
+.subTable { width: 100%; border-collapse: collapse; }
+.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 2px 8px; }
+.subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 2px 8px; font-variant-numeric: tabular-nums; }
+.subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }

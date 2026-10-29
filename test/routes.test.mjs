@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { collapseOrphanProjects, mountKeyUsageRoutes, parseDays, parseRatesLimit } from '../lib/routes.js'
+import { collapseOrphanProjects, mountKeyUsageRoutes, parseDays, parseRatesLimit, weekHourlyOf } from '../lib/routes.js'
 import { createSessionSource } from '../lib/data/sessions.js'
 import { foldSessionEvents, summarizeSession } from '../lib/data/session-usage.js'
 
@@ -20,6 +20,13 @@ function localDayKey(offsetDays) {
 function localTimeOf(offsetDays, hour, minute = 0) {
   const date = new Date(Date.now() + offsetDays * 86400000)
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0).getTime()
+}
+
+/** 日期键（YYYY-MM-DD）对应的 ISO 星期：1=周一 … 7=周日（与 routes 的时段矩阵同口径）。 */
+function isoWeekdayOf(dayKey) {
+  const [year, month, day] = dayKey.split('-').map(Number)
+  const weekday = new Date(year, month - 1, day, 12).getDay()
+  return weekday === 0 ? 7 : weekday
 }
 
 const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-routes-'))
@@ -213,6 +220,10 @@ assert.equal(singleDay.body.hours[9].buckets.cacheReadTokens, 8000)
 const filtered = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + ledgerNewerDay + '&provider=local')
 assert.equal(filtered.body.totals.calls, 1)
 
+// 缓存省钱：缓存读 24000 tokens ×（0.15 − 0.03）不足一分钱 → 0；无价目的模型不参与
+assert.equal(usage.body.totals.cacheSaved, 0)
+assert.deepEqual(usage.body.totals.cacheSavedByCurrency, { USD: 0 })
+
 // 热力图：台账两天 + 会话补齐的一天
 const heatmap = await callEndpoint('/dsh-key-usage/heatmap')
 assert.equal(heatmap.body.days.length, 3)
@@ -220,6 +231,18 @@ assert.equal(heatmap.body.days[1].totalTokens, 18400)
 assert.equal(heatmap.body.days[2].date, sessionOnlyDay)
 assert.equal(heatmap.body.days[2].totalTokens, 440, '台账缺的日期由会话事件补进热力图')
 assert.deepEqual(heatmap.body.sessionDates, [sessionOnlyDay])
+
+// 按时段：一周 × 24 小时，每格是该小时的调用数（台账天没有小时槽，只算会话事件那两次）
+assert.deepEqual(heatmap.body.hourly.map((row) => row.weekday), [1, 2, 3, 4, 5, 6, 7])
+assert.deepEqual(heatmap.body.hourly.map((row) => row.hours.length), [24, 24, 24, 24, 24, 24, 24])
+const hoursOfWeekday = (weekday) => heatmap.body.hourly.find((row) => row.weekday === weekday).hours
+assert.equal(hoursOfWeekday(isoWeekdayOf(ledgerNewerDay))[9], 1, '会话事件 9:15 的那次调用')
+assert.equal(hoursOfWeekday(isoWeekdayOf(sessionOnlyDay))[14], 1, '今天 14:30 的那次调用')
+assert.equal(
+  heatmap.body.hourly.reduce((total, row) => total + row.hours.reduce((sum, calls) => sum + calls, 0), 0),
+  2,
+  '矩阵只统计窗口内、有小时槽的那两次调用',
+)
 
 // 余额 / 窗口：按配置的通道逐个返回；首次构建（还没有快照）就把结果写进快照
 const quota = await callEndpoint('/dsh-key-usage/quota')
@@ -1116,6 +1139,89 @@ await warmUp(pricedHandlers)
 
   process.env.DSH_HOME = home
   rmSync(pricedHome, { recursive: true, force: true })
+}
+
+// ---- 缓存省钱：两层价目各算一份、无价目的模型跳过、金额按币种分列 ----
+{
+  const savingsHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-savings-'))
+  mkdirSync(join(savingsHome, 'profiles', 'desktop'), { recursive: true })
+  mkdirSync(join(savingsHome, 'dsh-usage'), { recursive: true })
+  writeFileSync(join(savingsHome, 'profiles', 'desktop', 'cordis.yml'), [
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      moonshotai:',
+    '        apiKeyEnv: MOONSHOT_API_KEY',
+    '        models:',
+    '          - id: kimi-k3',
+    '            name: Kimi K3',
+    '      opencode-go:',
+    '        apiKeyEnv: OPENCODE_GO_API_KEY',
+    '        models:',
+    '          - id: moonshot-v1-8k',
+    '            name: Moonshot v1 8k',
+    '',
+  ].join('\n'), 'utf8')
+
+  const savingsDay = localDayKey(-1)
+  const cacheUsage = (cacheReadTokens) => ({
+    inputTokens: 0, outputTokens: 0, cacheReadTokens, cacheWriteTokens: 0, reasoningTokens: 0, calls: 1, cost: 0,
+  })
+  writeFileSync(join(savingsHome, 'dsh-usage', 'usage-ledger.json'), JSON.stringify({
+    version: 1,
+    days: {
+      [savingsDay]: {
+        // 内置官方价目：CNY 20 / 2 → 1M 缓存读省 ¥18
+        moonshotai: { 'kimi-k3': cacheUsage(1000000) },
+        'opencode-go': {
+          // 聚合价（同模型官方价目）：USD 0.2 / 0 → 1M 缓存读省 $0.2
+          'moonshot-v1-8k': cacheUsage(1000000),
+          // 两层价目都没命中：跳过，不猜价
+          'mystery-model': cacheUsage(1000000),
+        },
+      },
+    },
+  }), 'utf8')
+
+  const savingsHandlers = new Map()
+  process.env.DSH_HOME = savingsHome
+  mountKeyUsageRoutes({ register: (route) => { savingsHandlers.set(route.path, route.handler) } }, {
+    collect: async () => ({ records: [], coverage: { status: 'complete', totalSessions: 0, countedSessions: 0, skippedSessions: 0 } }),
+  })
+  await warmUp(savingsHandlers)
+
+  const savingsUsage = await callHandler(savingsHandlers, '/dsh-key-usage/usage?from=' + savingsDay + '&to=' + savingsDay)
+  assert.equal(savingsUsage.body.totals.cacheSaved, 18.2, '¥18（20 − 2）+ $0.2（0.2 − 0）；无价目的模型不计入')
+  assert.deepEqual(savingsUsage.body.totals.cacheSavedByCurrency, { CNY: 18, USD: 0.2 })
+  // 省钱只挂在范围合计上：逐天行没有这个字段（避免界面在错误粒度展示）
+  assert.equal('cacheSaved' in savingsUsage.body.days[0], false)
+
+  process.env.DSH_HOME = home
+  rmSync(savingsHome, { recursive: true, force: true })
+}
+
+// ---- 时段矩阵：按本地日历日归到 ISO 星期（7 行 × 24 小时，跨周同名格累加） ----
+{
+  // 2026-08-31 是周一，往后 7 天覆盖一整周
+  const week = ['2026-08-31', '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05', '2026-09-06']
+  const byDate = new Map(week.map((date, index) => [
+    date,
+    Array.from({ length: 24 }, (_, hour) => ({ calls: hour === index ? index + 1 : 0 })),
+  ]))
+  const matrix = weekHourlyOf(byDate)
+  assert.deepEqual(matrix.map((row) => row.weekday), [1, 2, 3, 4, 5, 6, 7])
+  assert.deepEqual(matrix.map((row) => row.hours.length), [24, 24, 24, 24, 24, 24, 24])
+  assert.deepEqual(matrix.map((row) => row.hours.reduce((sum, calls) => sum + calls, 0)), [1, 2, 3, 4, 5, 6, 7])
+
+  const twoMondays = weekHourlyOf(new Map([
+    ['2026-08-31', [{ calls: 1 }]],
+    ['2026-09-07', [{ calls: 2 }]],
+  ]))
+  assert.equal(twoMondays[0].hours[0], 3, '两个周一的 0 点调用数相加')
+  assert.equal(twoMondays[0].hours[23], 0, '缺失的小时槽按 0 处理')
+  assert.deepEqual(weekHourlyOf(new Map()).map((row) => row.weekday), [1, 2, 3, 4, 5, 6, 7], '没有会话也要给满 7 行')
+  const withBadDate = weekHourlyOf(new Map([['不是日期', [{ calls: 5 }]], ['2026-08-31', [{ calls: 1 }]]]))
+  assert.equal(withBadDate[0].hours[0], 1, '坏日期键跳过，不影响正常日期')
 }
 
 rmSync(home, { recursive: true, force: true })

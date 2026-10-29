@@ -52,6 +52,7 @@ export interface MergedSeries {
 }
 
 const DAY_MS = 86400000
+/** 单次合并最多铺多少天的骨架；超过时**从 to 往前**取最近这些天（不要丢掉最新数据）。 */
 const MAX_RANGE_DAYS = 400
 
 function dateKeysOf(from: string, to: string): string[] {
@@ -59,9 +60,12 @@ function dateKeysOf(from: string, to: string): string[] {
   const start = new Date(from + 'T00:00:00Z').getTime()
   const end = new Date(to + 'T00:00:00Z').getTime()
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return []
-  const total = Math.min(Math.floor((end - start) / DAY_MS) + 1, MAX_RANGE_DAYS)
+  const span = Math.floor((end - start) / DAY_MS) + 1
+  const total = Math.min(span, MAX_RANGE_DAYS)
+  // 超长区间取「最近」的那一段：用户看「全部」时关心的是最近的量，丢最新数据会直接算错环比
+  const firstOffset = span - total
   const keys: string[] = []
-  for (let offset = 0; offset < total; offset += 1) {
+  for (let offset = firstOffset; offset < span; offset += 1) {
     keys.push(new Date(start + offset * DAY_MS).toISOString().slice(0, 10))
   }
   return keys

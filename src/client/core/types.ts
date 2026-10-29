@@ -102,8 +102,19 @@ export interface HourBucket {
   }
 }
 
+/**
+ * 范围合计：比逐天行多两项「缓存省钱」字段（原型 KPI「缓存读 · 省 ¥X」）。
+ * 只由 `/usage` 的 `totals` 下发，逐天 / 逐模型行没有。
+ */
+export interface UsageTotals extends DaySummary {
+  /** 缓存省下的钱：缓存读 tokens ×（标准输入价 − 标准缓存读价），都对不上价目的模型跳过。 */
+  cacheSaved?: number | null
+  /** 省钱金额的逐币种小计（`cacheSaved` 是混币种直接相加，语义同 `cost`）。 */
+  cacheSavedByCurrency?: CostsByCurrency
+}
+
 export interface UsageResponse {
-  totals: DaySummary | null
+  totals: UsageTotals | null
   days: ChannelDailySummary[]
   availableFrom: string | null
   availableTo: string | null
@@ -117,6 +128,19 @@ export interface HeatmapDay {
   date: string
   totalTokens: number
   models: Array<{ provider: string; model: string; totalTokens: number }>
+}
+
+/** 「按时段」热力图的一行：weekday 1=周一 … 7=周日，hours 长度固定 24（每格是该小时累计调用数）。 */
+export interface WeekdayHours {
+  weekday: number
+  hours: number[]
+}
+
+/** `/heatmap` 与快照 `heatmap` 段：逐日活动 + 一周 × 24 小时的调用数矩阵。 */
+export interface HeatmapResponse {
+  days: HeatmapDay[]
+  /** 旧服务端没有这一项，界面要能只用 `days` 渲染。 */
+  hourly?: WeekdayHours[]
 }
 
 export interface QuotaProvider {
@@ -435,7 +459,7 @@ export interface SnapshotSections {
   overview: SummaryResponse | null
   channels: { channels: Channel[] } | null
   usage: UsageResponse | null
-  heatmap: { days: HeatmapDay[] } | null
+  heatmap: HeatmapResponse | null
   models: ModelsResponse | null
   projects: ProjectsResponse | null
   sessions: SessionsResponse | null

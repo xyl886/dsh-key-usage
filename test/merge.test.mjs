@@ -111,3 +111,15 @@ const empty = mergeDailySeries([], [], '', '')
 assert.deepEqual(empty.days, [])
 
 console.log('merge.test: 全部通过')
+
+// 超长区间（> 400 天）只铺最近 400 天骨架：最新的那天必须在，否则「全部」范围会丢数据
+{
+  const longFrom = '2024-01-01'
+  const longTo = '2026-10-28'
+  const longLedger = [{ date: '2026-10-28', provider: 'opencode-go', calls: 3, inputTokens: 100, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, cost: 1, models: [] }]
+  const longMerged = mergeDailySeries(longLedger, [], longFrom, longTo)
+  const dates = longMerged.days.map((day) => day.date)
+  // 骨架按「最近 400 天」铺：最新那天必须在，最早那端允许被截掉
+  assert.equal(dates.includes(longTo), true, '最新那天的台账行不能被丢掉')
+  assert.equal(dates.includes('2024-01-01'), false, '超长区间不该从最早那端开始铺骨架')
+}

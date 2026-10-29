@@ -5,6 +5,7 @@ import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { t, useT } from './core/i18n.ts'
 import { hydrateLog, logInfo, logWarn, subscribeOpenLog } from './core/log.ts'
+import { exportSessionsCsv, exportUsageCsv } from './core/export-csv.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { Button } from './components/ui/Button.tsx'
@@ -27,20 +28,42 @@ import type {
   SnapshotResponse,
   SummaryResponse,
   UsageResponse,
+  WeekdayHours,
 } from './core/types.ts'
 import styles from './styles/shared.module.css'
 
-type TabId = 'overview' | 'detail' | 'distribution' | 'sessions' | 'quota'
+type TabId = 'quota' | 'overview' | 'detail' | 'distribution' | 'sessions'
 
+/** 单页顺序：额度在最前（最先想知道「还剩多少」），其余按「总量 → 明细 → 结构 → 会话」展开。 */
 const TABS: Array<[TabId, string]> = [
+  ['quota', 'tab.quota'],
   ['overview', 'tab.overview'],
   ['detail', 'tab.detail'],
   ['distribution', 'tab.distribution'],
   ['sessions', 'tab.sessions'],
 ]
 
+/** 滚动式下要一次性取的段（不取 usage：它按范围单独请求）。 */
+const ALL_SECTIONS = ['channels', 'overview', 'heatmap', 'quota', 'sessions', 'projects', 'models', 'prompts']
+
+/** 页级范围：与明细同一套 RangeKey（90 天按 90 天算，'total' = 全部）。 */
+const RANGES: Array<[RangeKey, string]> = [
+  ['today', 'r.today'],
+  ['week', 'r.week'],
+  ['month', 'r.month'],
+  ['quarter', 'r.90days'],
+  ['total', 'r.total'],
+]
+
+/** 刷新周期选项（秒，0 = 关闭）。 */
+const REFRESH_OPTIONS = [0, 10, 30, 60, 300]
+
 export function KeyUsageSection() {
-  const [activeTab, setActiveTab] = useState<TabId>('overview')
+  const [activeTab, setActiveTab] = useState<TabId>('quota')
+  /** false = 滚动式（默认，全部区块铺开）；true = 分页（只显示当前区块）。 */
+  const [paged, setPaged] = useState(false)
+  /** 自动刷新周期（秒）；0 = 关闭。只打本地 /snapshot，不联网。 */
+  const [refreshSeconds, setRefreshSeconds] = useState(30)
   const [range, setRange] = useState<RangeKey>('month')
   const [customFrom, setCustomFrom] = useState(() => shiftedIsoDate(-29))
   const [customTo, setCustomTo] = useState(() => isoDate(new Date()))
@@ -52,6 +75,8 @@ export function KeyUsageSection() {
   const [quotas, setQuotas] = useState<QuotaProvider[]>([])
   const [summary, setSummary] = useState<SummaryResponse | null>(null)
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([])
+  /** 「按时段」7×24 矩阵：/heatmap 的 hourly（服务端只给调用数）。 */
+  const [hourly, setHourly] = useState<WeekdayHours[]>([])
   const [usage, setUsage] = useState<UsageResponse | null>(null)
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
@@ -79,6 +104,8 @@ export function KeyUsageSection() {
 
   /** 打开那一刻的页决定首屏要哪些段：切 Tab 不该重跑首屏（会闪 loading），后续段按需取。 */
   const initialSectionsRef = useRef<string[]>([])
+  /** 滚动式下 activeTab 会随滚动变化：首屏 / 轮询只读 ref，避免每滚一下就重跑一遍取数。 */
+  const activeTabRef = useRef<TabId>('quota')
 
   /**
    * 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
@@ -91,6 +118,16 @@ export function KeyUsageSection() {
     return base
   }, [])
 
+  /** 当前要不要加载/渲染某个区块（分页时只留当前那个）。 */
+  const wants = useCallback((tab: TabId): boolean => !paged || activeTab === tab, [paged, activeTab])
+  /** 布尔化的可见性：effect 依赖它而不是 activeTab，滚动时不会反复重取。 */
+  const wantSessions = wants('sessions')
+  const wantOverview = wants('overview')
+  const wantDistribution = wants('distribution')
+  const wantDetail = wants('detail')
+
+  activeTabRef.current = activeTab
+
   /** 用户是否还在看默认范围（近 30 天 / 全部通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
   const usageIsDefaultRef = useRef(true)
   usageIsDefaultRef.current = range === 'month' && channelFilter === 'ALL'
@@ -102,7 +139,10 @@ export function KeyUsageSection() {
     if (sections.channels !== undefined && sections.channels !== null) setChannels(sections.channels.channels ?? [])
     if (sections.quota !== undefined && sections.quota !== null) setQuotas(sections.quota.providers ?? [])
     if (sections.overview !== undefined) setSummary(sections.overview)
-    if (sections.heatmap !== undefined && sections.heatmap !== null) setHeatmap(sections.heatmap.days ?? [])
+    if (sections.heatmap !== undefined && sections.heatmap !== null) {
+      setHeatmap(sections.heatmap.days ?? [])
+      setHourly(sections.heatmap.hourly ?? [])
+    }
     // 段为 null 说明这次构建失败（sections 全置 null）：此时不能覆盖已按需取来的数据
     if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
     if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
@@ -137,7 +177,8 @@ export function KeyUsageSection() {
     setChannels(channelResult ?? [])
     setQuotas(quotaResult ?? [])
     setSummary(summaryResult)
-    setHeatmap(heatmapResult ?? [])
+    setHeatmap(heatmapResult?.days ?? [])
+    setHourly(heatmapResult?.hourly ?? [])
     if (includeSessionData) {
       const [sessionResult, projectResult, modelResult] = await Promise.all([loadSessions(), loadProjects(), loadModels()])
       setSessions(sessionResult)
@@ -151,7 +192,7 @@ export function KeyUsageSection() {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      if (initialSectionsRef.current.length === 0) initialSectionsRef.current = sectionsForTab(activeTab)
+      if (initialSectionsRef.current.length === 0) initialSectionsRef.current = paged ? sectionsForTab(activeTabRef.current) : ALL_SECTIONS
       const cached = await loadSnapshot(false, initialSectionsRef.current)
       if (cancelled) return
       if (cached !== null) {
@@ -166,7 +207,7 @@ export function KeyUsageSection() {
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [applySnapshot, reloadFromEndpoints, sectionsForTab])
+  }, [applySnapshot, reloadFromEndpoints, sectionsForTab, paged])
 
   /**
    * 打开页面时服务端可能还在重建（`building`）或后台补查配额（`quotaRefreshing`）：
@@ -193,18 +234,20 @@ export function KeyUsageSection() {
   useEffect(() => { void hydrateLog() }, [])
   useEffect(() => subscribeOpenLog(() => { setSettingsTab('log'); setShowSettings(true) }), [])
 
-  // 5 分钟本地刷新：服务端每 5 分钟重建一次快照，这里跟着取最新那份；页面隐藏时暂停，切回且已超期立刻补一次
+  // 自动刷新：按配置周期取本地快照（不联网）；页面隐藏时暂停，切回立刻补一次
   useEffect(() => {
-    const pollMs = 5 * 60 * 1000
+    if (refreshSeconds <= 0) return
+    const pollMs = refreshSeconds * 1000
     const tick = (): void => {
       if (document.visibilityState === 'hidden') return
       if (Date.now() - lastSnapshotAt.current < pollMs) return
-      void loadSnapshot(false, sectionsForTab(activeTab)).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
+      const sections = paged ? sectionsForTab(activeTabRef.current) : ALL_SECTIONS
+      void loadSnapshot(false, sections).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     }
     const timer = setInterval(tick, pollMs)
     document.addEventListener('visibilitychange', tick)
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick) }
-  }, [activeTab, applySnapshot, sectionsForTab])
+  }, [refreshSeconds, paged, applySnapshot, sectionsForTab])
 
   // 价目换了 → 让服务端重算一次（成本按价目算）并取回新快照
   useEffect(() => {
@@ -214,27 +257,28 @@ export function KeyUsageSection() {
 
   // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab；快照已经带了就直接用）
   useEffect(() => {
-    if (activeTab === 'sessions' && sessions === null) void loadSessions().then(setSessions)
-    if (activeTab === 'distribution') {
+    if (wantSessions && sessions === null) void loadSessions().then(setSessions)
+    if (wantDistribution) {
       if (projects === null) void loadProjects().then(setProjects)
       if (models === null) void loadModels().then(setModels)
       // prompts 只在首次打开时还没取过：切到本页补一次（服务端已算好，读快照即可）
       if (prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     }
-  }, [activeTab, sessions, projects, models, prompts, applySnapshot])
+  }, [wantSessions, wantDistribution, sessions, projects, models, prompts, applySnapshot])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
     if (range === 'today') return { from: today, to: today }
     if (range === 'week') return { from: shiftedIsoDate(-6), to: today }
     if (range === 'month') return { from: shiftedIsoDate(-29), to: today }
+    if (range === 'quarter') return { from: shiftedIsoDate(-89), to: today }
     if (range === 'custom') return { from: customFrom, to: customTo < customFrom ? customFrom : customTo }
     return { from: available?.from ?? today, to: available?.to ?? today }
   }, [range, customFrom, customTo, available])
 
-  // 明细数据只在切到「使用明细」时才取：总览 / 分布 / 会话都不需要它
+  // 明细数据只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它
   useEffect(() => {
-    if (activeTab !== 'detail') return
+    if (!wantDetail && !wantDistribution && !wantOverview) return
     let cancelled = false
     void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => {
       if (cancelled || result === null) return
@@ -244,7 +288,56 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [activeTab, bounds.from, bounds.to, channelFilter, pricingRevision])
+  }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, channelFilter, pricingRevision])
+
+  /** 刷新周期文案：0 = 关闭。 */
+  const refreshLabel = useCallback((seconds: number): string => {
+    if (seconds <= 0) return t('refresh.off')
+    if (seconds < 60) return t('refresh.seconds', { count: seconds })
+    return t('refresh.minutes', { count: Math.round(seconds / 60) })
+  }, [t])
+
+  /** 滚到某个区块（滚动式）；分页式直接切过去。 */
+  const goSection = useCallback((tab: TabId): void => {
+    setActiveTab(tab)
+    if (paged) { window.scrollTo({ top: 0 }); return }
+    document.getElementById('sec-' + tab)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [paged])
+
+  /** 点导航：分页式切换区块，滚动式滚过去。 */
+  const pickSection = useCallback((tab: TabId): void => {
+    if (paged) { setActiveTab(tab); window.scrollTo({ top: 0 }); return }
+    goSection(tab)
+  }, [paged, goSection])
+
+  // 滚动式下跟随滚动高亮当前区块（分页式不监听）
+  useEffect(() => {
+    if (paged) return
+    const sections = TABS.map(([tabId]) => ({ tabId, el: document.getElementById('sec-' + tabId) })).filter((item) => item.el !== null)
+    if (sections.length === 0) return
+    let ticking = false
+    const update = (): void => {
+      ticking = false
+      const line = 160
+      let current = sections[0]
+      for (const item of sections) {
+        if (item.el !== null && item.el.getBoundingClientRect().top <= line) current = item
+      }
+      setActiveTab(current.tabId)
+    }
+    const onScroll = (): void => {
+      if (ticking) return
+      ticking = true
+      window.requestAnimationFrame(update)
+    }
+    // 外层容器可能是宿主主区域（不是 window）：两个都挂
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll, { capture: true })
+      document.removeEventListener('scroll', onScroll, { capture: true })
+    }
+  }, [paged])
 
   const refresh = useCallback(() => {
     setLoading(true)
@@ -268,6 +361,23 @@ export function KeyUsageSection() {
       <div className={styles.title}>
         <span>{t('app.title')}</span>
         <span className={styles.titleActions}>
+          <select
+            className={styles.refreshSelect}
+            value={refreshSeconds}
+            onChange={(event) => setRefreshSeconds(Number(event.target.value))}
+            aria-label={t('action.refresh')}
+            title={t('action.refresh')}
+          >
+            {REFRESH_OPTIONS.map((seconds) => (
+              <option key={seconds} value={seconds}>{refreshLabel(seconds)}</option>
+            ))}
+          </select>
+          <Button size="sm" disabled={usage === null} onClick={() => { if (usage !== null) exportUsageCsv(usage) }} ariaLabel={t('action.exportUsage')} title={t('action.exportUsage')}>
+            {t('action.exportUsage')}
+          </Button>
+          <Button size="sm" disabled={sessions === null} onClick={() => { if (sessions !== null) exportSessionsCsv(sessions) }} ariaLabel={t('action.exportSessions')} title={t('action.exportSessions')}>
+            {t('action.exportSessions')}
+          </Button>
           <Button size="sm" onClick={() => { setSettingsTab('display'); setShowSettings(true) }} ariaLabel={t('action.settings')} title={t('action.settings')}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
               <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
@@ -291,60 +401,133 @@ export function KeyUsageSection() {
         </span>
       </div>
 
-      <div className={styles.tabBar}>
-        {TABS.map(([tabId, labelKey]) => (
-          <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => setActiveTab(tabId)}>{t(labelKey)}</button>
+      <div className={styles.rangeBar}>
+        {RANGES.map(([key, labelKey]) => (
+          <button key={key} className={range === key ? styles.rangeActive : styles.rangeItem} onClick={() => setRange(key)}>{t(labelKey)}</button>
         ))}
+        <span className={styles.rangeCustom}>
+          <span className={styles.rangeCustomLabel}>{t('r.custom')}</span>
+          <input
+            type="date"
+            className={styles.rangeDate}
+            value={customFrom}
+            aria-label={t('date.startHint')}
+            onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
+          />
+          <span className={styles.rangeTilde}>~</span>
+          <input
+            type="date"
+            className={styles.rangeDate}
+            value={customTo}
+            aria-label={t('date.endHint')}
+            onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
+          />
+        </span>
+        <select
+          className={styles.refreshSelect}
+          value={channelFilter}
+          onChange={(event) => setChannelFilter(event.target.value)}
+          aria-label={t('s.allChannels')}
+        >
+          <option value="ALL">{t('s.allChannels')}</option>
+          {channels.map((channel) => (
+            <option key={channel.provider} value={channel.provider}>{channel.displayName ?? channel.provider}</option>
+          ))}
+        </select>
       </div>
 
-      {activeTab === 'overview' && (
-        <OverviewTab
-          channels={channels}
-          summary={summary}
-          quotas={quotas}
-          heatmap={heatmap}
-          tooltip={tooltip}
-          onOpenDetail={(provider) => { setChannelFilter(provider); setActiveTab('detail') }}
-          onOpenChannel={setQuotaDialog}
-          onPickDay={(date) => { setRange('custom'); setCustomFrom(date); setCustomTo(date); setActiveTab('detail') }}
-        />
-      )}
-      {activeTab === 'detail' && (
-        <DetailTab
-          usage={usage}
-          channels={channels}
-          range={range}
-          onRange={setRange}
-          customFrom={customFrom}
-          onCustomFrom={setCustomFrom}
-          customTo={customTo}
-          onCustomTo={setCustomTo}
-          channelFilter={channelFilter}
-          onChannelFilter={setChannelFilter}
-          bounds={bounds}
-          tooltip={tooltip}
-          pricingRevision={pricingRevision}
-        />
-      )}
-      {activeTab === 'distribution' && (
-        <DistributionTab
-          projects={projects}
-          models={models}
-          prompts={prompts}
-          channels={channels}
-          tooltip={tooltip}
-          focusWorkspace={projectFilter}
-          onClearFocus={() => setProjectFilter(null)}
-        />
-      )}
-      {activeTab === 'sessions' && (
-        <SessionsTab
-          data={sessions}
-          channels={channels}
-          tooltip={tooltip}
-          onOpenProject={(workspace) => { setProjectFilter(workspace); setActiveTab('distribution') }}
-        />
-      )}
+      <div className={styles.tabBar}>
+        {TABS.map(([tabId, labelKey]) => (
+          <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => pickSection(tabId)}>{t(labelKey)}</button>
+        ))}
+        <span className={styles.tabBarSpacer} />
+        <label className={styles.modeSwitch} title={t('section.modeHint')}>
+          <input type="checkbox" checked={paged} onChange={(event) => setPaged(event.target.checked)} />
+          {t('section.paged')}
+        </label>
+      </div>
+
+      <div className={styles.sections}>
+        {wants('quota') && (
+          <section className={styles.pageSection} id="sec-quota">
+            <h2 className={styles.pageSectionTitle}>{t('tab.quota')}</h2>
+            <QuotaTab
+              channels={channels}
+              quotas={quotas}
+              quotaOutcome={quotaOutcome}
+              reloadToken={pricingRevision}
+              onPricingReload={() => setPricingRevision((previous) => previous + 1)}
+            />
+          </section>
+        )}
+        {wants('overview') && (
+          <section className={styles.pageSection} id="sec-overview">
+            <h2 className={styles.pageSectionTitle}>{t('tab.overview')}</h2>
+            <OverviewTab
+              channels={channels}
+              summary={summary}
+              quotas={quotas}
+              heatmap={heatmap}
+              hourly={hourly}
+              range={range}
+              usage={usage}
+              sessions={sessions}
+              projects={projects}
+              models={models}
+              tooltip={tooltip}
+              onOpenDetail={(provider) => { setChannelFilter(provider); goSection('detail') }}
+              onOpenChannel={setQuotaDialog}
+              onPickDay={(date) => { setRange('custom'); setCustomFrom(date); setCustomTo(date); goSection('detail') }}
+            />
+          </section>
+        )}
+        {wants('detail') && (
+          <section className={styles.pageSection} id="sec-detail">
+            <h2 className={styles.pageSectionTitle}>{t('tab.detail')}</h2>
+            <DetailTab
+              usage={usage}
+              channels={channels}
+              range={range}
+              onRange={setRange}
+              customFrom={customFrom}
+              onCustomFrom={setCustomFrom}
+              customTo={customTo}
+              onCustomTo={setCustomTo}
+              channelFilter={channelFilter}
+              onChannelFilter={setChannelFilter}
+              bounds={bounds}
+              tooltip={tooltip}
+              pricingRevision={pricingRevision}
+            />
+          </section>
+        )}
+        {wants('distribution') && (
+          <section className={styles.pageSection} id="sec-distribution">
+            <h2 className={styles.pageSectionTitle}>{t('tab.distribution')}</h2>
+            <DistributionTab
+              projects={projects}
+              models={models}
+              prompts={prompts}
+              channels={channels}
+              usage={usage}
+              tooltip={tooltip}
+              focusWorkspace={projectFilter}
+              onClearFocus={() => setProjectFilter(null)}
+            />
+          </section>
+        )}
+        {wants('sessions') && (
+          <section className={styles.pageSection} id="sec-sessions">
+            <h2 className={styles.pageSectionTitle}>{t('tab.sessions')}</h2>
+            <SessionsTab
+              data={sessions}
+              channels={channels}
+              tooltip={tooltip}
+              onOpenProject={(workspace) => { setProjectFilter(workspace); goSection('distribution') }}
+            />
+          </section>
+        )}
+      </div>
 
       {showSettings && (
         <Dialog title={t('settings.title')} closeLabel={t('action.close')} onClose={() => setShowSettings(false)}>

@@ -1,62 +1,117 @@
-/* 总览：Key 清单表 + 年度热力图。 */
-.keyTable { width: 100%; border-collapse: collapse; }
-.keyTable th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
-  padding: 6px 10px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+/* 总览：KPI 卡片行、使用趋势（全年热力图 / 柱状图）、项目与模型排行、按时段热力。
+   颜色一律走宿主 --dsw-alias-* 令牌；金额与数字用等宽数字对齐。 */
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+/* ===== KPI 卡片 ===== */
+.kpiRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 8px; }
+.kpiCard { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 8px 10px; min-width: 0; }
+.kpiLabel {
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.keyTable th:first-child { text-align: left; padding-left: 0; }
-.keyTable td {
-  text-align: right; padding: 10px 10px; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15); font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-secondary, #9a9aa6);
-  border-bottom: 1px solid var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.12)); white-space: nowrap;
+.kpiValue {
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.5); font-weight: 700; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; margin: 2px 0; color: var(--dsw-alias-label-primary, #e8e8ec);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.keyTable td:first-child { text-align: left; padding-left: 0; }
-.keyTable tr:last-child td { border-bottom: 0; }
-.keyTable tbody tr.clickable { cursor: pointer; }
-.keyTable tbody tr.clickable:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.07)); }
-.keyTable tr.disabledRow { opacity: .55; }
-
-.cellKey { display: flex; align-items: center; gap: 10px; }
-.keyDisplay { font-size: calc(var(--dsh-content-font-size, 12px) * 1.19); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.tag {
-  display: inline-block; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); padding: 1px 7px; border-radius: 5px;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); color: var(--dsw-alias-label-secondary, #9a9aa6);
-  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+.kpiUnit { font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 1px; }
+.kpiDetail {
+  display: flex; gap: 6px; flex-wrap: wrap; color: var(--dsw-alias-label-tertiary, #67676f);
+  font-size: calc(var(--dsh-content-font-size, 12px) * .96); font-variant-numeric: tabular-nums;
 }
-.tag.free { color: var(--dsw-alias-state-success-primary, #3fb96f); border-color: rgba(63,185,111,.35); }
-.tag.sub { color: var(--dsw-alias-state-business-primary, #5b8cff); border-color: rgba(91,140,255,.35); }
-.tag.off { color: var(--dsw-alias-label-tertiary, #67676f); }
-.rowLink { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
-.keyTable tbody tr.clickable:hover .rowLink { color: var(--dsw-alias-state-business-primary, #5b8cff); }
+/* 涨红跌绿（原型口径）：上升用错误色、下降用成功色 */
+.rise { color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.fall { color: var(--dsw-alias-state-success-primary, #3fb96f); }
 
-.quotaCell { display: inline-flex; align-items: center; gap: 8px; }
-.miniBar { width: 64px; height: 5px; border-radius: 3px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; flex-shrink: 0; }
-.miniBar > i { display: block; height: 100%; border-radius: 3px; }
-.quotaText { min-width: 74px; text-align: left; }
-.quotaText.warn { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-weight: 600; }
-.quotaText.danger { color: var(--dsw-alias-state-error-primary, #e05a5a); font-weight: 600; }
-.quotaText.dim { color: var(--dsw-alias-label-tertiary, #67676f); }
+/* ===== 面板 ===== */
+.panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 11px; min-width: 0; }
+.panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.panelTitle { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.panelMore {
+  margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.gridTwo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
 
-/* ===== 年度热力图 ===== */
-.heatmapCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; margin-top: 24px; }
-.heatmapHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
-.heatmapTitle { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
-/* 热力图：固定 28px 方形格子（三类状态完全等大）；39 周 × 31px ≈ 1233px，
-   超过页面内容宽度上限（1192px），因此默认就会出现横向滚动条 */
-.heatmapScroll { overflow-x: auto; padding-bottom: 4px; }
-.heatmapBody { display: flex; gap: 6px; width: max-content; }
-.heatWeekdays { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; position: sticky; left: 0; z-index: 2; background: var(--dsw-alias-bg-layer-2, #1d1d22); padding-right: 4px; }
-.heatWeekdays span { font-size: calc(var(--dsh-content-font-size, 12px) * 0.87); color: var(--dsw-alias-label-tertiary, #67676f); width: 13px; height: 28px; line-height: 28px; text-align: right; }
-.heatGridCol { display: flex; flex-direction: column; }
-.heatGrid { display: flex; gap: 3px; }
-.heatWeek { display: flex; flex-direction: column; gap: 3px; }
+/* 指标切换：分段控件，选中态吃掉面板底色 */
+.metricTabs {
+  display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; flex-wrap: wrap;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12));
+}
+.metricTab {
+  border: 0; background: transparent; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit;
+  font-size: calc(var(--dsh-content-font-size, 12px) * .96); padding: 2px 8px; border-radius: 5px;
+  cursor: pointer; white-space: nowrap;
+}
+.metricTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
+.metricTabOn { background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
+.metricTab:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
-.heatCell { width: 28px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 5px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.18)); cursor: default; }
-.heatCell.idle { background: rgba(128,128,140,.22); }
-/* 用 inset 描边而不是 border：border 会把格子撑大一圈，导致「无数据」格子比其它格子大 */
-.heatCell.empty { background: rgba(128,128,140,.10); box-shadow: inset 0 0 0 1px rgba(128,128,140,.28); }
-.heatMonths { display: flex; gap: 3px; margin-top: 6px; }
-.heatMonths span { width: 28px; flex-shrink: 0; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-tertiary, #67676f); text-align: left; white-space: nowrap; }
+/* ===== 全年热力图：53 周 × 7 天，格子固定正方形 ===== */
+.yearWrap { display: grid; grid-template-columns: 16px minmax(0, 1fr); grid-template-rows: 16px auto; gap: 4px 6px; }
+.yearWeekdays {
+  grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+}
+.yearWeekdays span { display: flex; align-items: center; justify-content: flex-end; }
+.yearAxis {
+  grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(53, minmax(0, 1fr)); gap: 3px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+}
+.yearAxis span { white-space: nowrap; }
+.yearGrid {
+  grid-column: 2; grid-row: 2; display: grid; grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto); grid-template-columns: repeat(53, minmax(0, 1fr)); gap: 3px;
+}
+/* aspect-ratio 保证格子是正方形：一年 53 列，格子不能被拉成竖长条 */
+.yearCell { aspect-ratio: 1 / 1; border-radius: 3px; background: rgba(128, 128, 140, .22); cursor: default; }
+.yearActive { cursor: pointer; }
+/* 台账覆盖之前的日子：描边空心，与「无用量」的实心灰区分开 */
+.yearEmpty { background: rgba(128, 128, 140, .10); box-shadow: inset 0 0 0 1px rgba(128, 128, 140, .28); }
+.yearFuture { background: transparent; box-shadow: none; }
 
-/* 「明细 →」现在是按钮：清掉按钮默认外观，保持原 span 样式 */
-button.rowLink { background: none; border: none; padding: 0; font: inherit; cursor: pointer; }
+/* ===== 趋势柱状图 ===== */
+.hist { display: flex; align-items: flex-end; gap: 3px; height: 104px; }
+.histColumn { flex: 1; display: flex; align-items: flex-end; min-width: 0; height: 100%; cursor: default; }
+.histBar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); }
+.histBarPeak { background: var(--dsw-alias-state-business-primary, #5b8cff); }
+.histLabels {
+  display: flex; justify-content: space-between; margin-top: 4px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+  font-variant-numeric: tabular-nums;
+}
+.trendFoot {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 9px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+}
+.scale { display: inline-flex; align-items: center; gap: 3px; }
+.scale i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin: 0 1px; }
+.scaleText { color: var(--dsw-alias-label-tertiary, #67676f); }
+.trendStats { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ===== 项目 / 模型排行：横条 + 右侧数值 ===== */
+.rankRow {
+  display: grid; grid-template-columns: minmax(76px, 112px) minmax(0, 1fr) 68px 60px;
+  gap: 8px; align-items: center; padding: 4px 0; font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+}
+.rankName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.rankTrack { height: 9px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12)); }
+.rankBar { display: block; height: 100%; border-radius: 4px; background: var(--dsw-alias-state-business-tertiary, rgba(91, 140, 255, .28)); }
+.rankBarTop { background: var(--dsw-alias-state-business-primary, #5b8cff); }
+.rankValue { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
+.rankSub { text-align: right; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
+
+/* ===== 按时段：7 行 × 24 列，格子同样正方形 ===== */
+.hourWrap { display: grid; grid-template-columns: 16px minmax(0, 1fr); grid-template-rows: 16px auto; gap: 4px 6px; }
+.hourWeekdays {
+  grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+}
+.hourWeekdays span { display: flex; align-items: center; justify-content: flex-end; }
+.hourAxis {
+  grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .87);
+}
+.hourAxis span { white-space: nowrap; }
+.hourGrid { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; }
+.hourCell { aspect-ratio: 1 / 1; border-radius: 3px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .18)); cursor: default; }

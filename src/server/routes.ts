@@ -217,6 +217,38 @@ export function hoursAsPricingRows(hours: Array<{ calls: number; buckets: Record
   }))
 }
 
+/**
+ * 一周 × 24 小时的调用数矩阵（原型「按时段」热力图）：weekday 1=周一 … 7=周日，hours 长度固定 24。
+ * 每格是该星期几在该小时的调用数累加。
+ */
+export function weekHourlyOf(
+  byDate: ReadonlyMap<string, ReadonlyArray<{ calls: number }>>,
+): Array<{ weekday: number; hours: number[] }> {
+  const weeks: number[][] = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+  for (const [date, slots] of byDate) {
+    // 星期取本地日历日：'YYYY-MM-DD' 直接 new Date 会按 UTC 解析，改在正午构造，避免时区把日期挪一天
+    const weekday = isoDayOf(new Date(date + 'T12:00:00'))
+    // 日期键不是合法日历日时跳过这一格：宁可少一格，也不要让整份快照构建失败
+    if (!(weekday >= 1 && weekday <= 7)) continue
+    const hours = weeks[weekday - 1]
+    for (let hour = 0; hour < 24; hour += 1) hours[hour] += slots[hour]?.calls ?? 0
+  }
+  return weeks.map((hours, index) => ({ weekday: index + 1, hours }))
+}
+
+/**
+ * 缓存省下的钱（原型 KPI「缓存读 · 省 ¥X」）：逐天逐模型用「标准输入价 − 标准缓存读价」乘缓存读 tokens。
+ * 价目走同一套两层匹配，都对不上价目的模型跳过（不猜价）；错峰价不参与，与 `/rates` 的单价表同口径。
+ * 币种按价目原样分列，`cacheSaved` 是混币种直接相加（语义同 `cost`）。
+ */
+export function cacheSavingsOf(days: Array<{ models: ModelSummary[] }>): { cacheSaved: number; cacheSavedByCurrency: MoneyByCurrency } {
+  const { savingsByCurrency } = summarizeCoverage(days.flatMap((day) => day.models.map(dayModelPricingRow)))
+  const rounded: MoneyByCurrency = {}
+  for (const [currency, amount] of Object.entries(savingsByCurrency)) rounded[currency] = Math.round(amount * 100) / 100
+  const cacheSaved = Math.round(Object.values(rounded).reduce((sum, amount) => sum + amount, 0) * 100) / 100
+  return { cacheSaved, cacheSavedByCurrency: rounded }
+}
+
 /** 逐行求和；全为 null（无依据）时返回 null，界面显示 —。 */
 export function sumOrNull(costs: Array<{ cost: number | null }>): number | null {
   let total = 0
@@ -713,6 +745,7 @@ export function mountKeyUsageRoutes(
     const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
     const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
     const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
+    const savings = cacheSavingsOf(days)
     return {
       days,
       totals: rawTotals === null ? null : {
@@ -721,6 +754,8 @@ export function mountKeyUsageRoutes(
         costSource: weakestSource(days.map((day) => day.costSource)),
         partial: days.some((day) => day.partial),
         costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(days.map((day) => day.costsByCurrency)), totalsCost),
+        // 缓存省钱只给范围合计：逐天 / 逐模型行不带，避免界面在错误粒度上展示
+        ...savings,
       },
       sessionDates: merged.sessionDates,
       availableFrom,
@@ -742,6 +777,9 @@ export function mountKeyUsageRoutes(
     const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
     const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
     const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
+    // 时段矩阵只取同一窗口内的日期：窗口外的小时槽算进来，会和 days 的数字对不上
+    const hoursByDate = hoursByDateOf(collection.records)
+    const inWindow = new Map([...hoursByDate].filter(([date]) => date >= from && date <= to))
     return {
       days: days
         .map((day) => ({
@@ -757,6 +795,7 @@ export function mountKeyUsageRoutes(
             .sort((first, second) => second.totalTokens - first.totalTokens),
         }))
         .filter((day) => day.totalTokens > 0),
+      hourly: weekHourlyOf(inWindow),
       sessionDates: merged.sessionDates,
     }
   }

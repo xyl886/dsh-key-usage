@@ -1,42 +1,76 @@
-/* 余额与配额：工具条（显示币种 / 刷新汇率 / 刷新价目）、通道卡片、余额条、订阅窗口、可展开的单价表。 */
-.quotaList { display: flex; flex-direction: column; gap: 12px; }
-.quotaCard { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 12px 18px 16px; }
+/* 额度与订阅：通道卡片网格（三列 × N 行等高）、窗口进度行、键值行、展开的单价表。 */
 
-/* 卡片头部是真按钮：整行可点、键盘可展开（aria-expanded / aria-controls 指到下面的单价抽屉） */
-.quotaToggle {
-  display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap;
-  background: none; border: 0; padding: 4px 0; margin: 0; font: inherit; text-align: left; cursor: pointer;
-  color: var(--dsw-alias-label-primary, #e8e8ec); border-radius: 8px;
+/* 网格：三列等宽、行高一致（grid-auto-rows 1fr 让所有卡片同高）；980px 两列、640px 一列。 */
+.cardGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 10px; }
+/* 单通道详情弹窗：只有一张卡，不吃三列网格 */
+.cardGrid.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 980px) {
+  .cardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cardGrid.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
 }
-.quotaToggle:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
-.quotaToggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.quotaTitle { font-size: calc(var(--dsh-content-font-size, 12px) * 1.19); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.quotaProvider { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); margin-left: auto; }
-/* 折叠提示：收起时告诉用户「这里有 N 个模型的单价」 */
-.rateCount { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); white-space: nowrap; }
-.expandArrow { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); }
-/* 非实时值的小标签：只有它出现时才代表「这份数据不是刚查到的」；点它开系统日志看原因 */
-.balanceStrip { display: flex; gap: 10px 44px; flex-wrap: wrap; align-items: baseline; margin-top: 8px; }
-.balanceItem .bsLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); margin-bottom: 2px; }
-.balanceItem .bsValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.47); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.windowRow { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
-.windowItem { flex: 1; min-width: 150px; }
-.windowHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-.windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); }
-.windowValue { font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.windowReset { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); margin-top: 3px; }
-.windowBar { height: 6px; border-radius: 4px; background: var(--dsw-alias-interactive-bg-active, rgba(128,128,140,.18)); overflow: hidden; }
-.windowBar > i { display: block; height: 100%; border-radius: 4px; }
+@media (max-width: 640px) {
+  .cardGrid { grid-template-columns: minmax(0, 1fr); }
+}
 
+/* 卡片：标题行 + 固定三行正文；正文按行等分剩余高度，短卡不会在底部留一大片空白 */
+.chanCard {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 9px 11px;
+  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
+  border-radius: 9px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+}
 
-/* ===== 展开区：单价表（窄屏横向滚动）===== */
-.rateDrawer:empty { display: none; }
-.rateDrawer { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l1, #2c2c34); padding-top: 10px; }
+/* 标题行：通道名 + 类型胶囊 + 右侧更新时间（整行是按钮，点开该通道的单价表） */
+.chanHead { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+.chanHeadButton { width: 100%; cursor: pointer; border-radius: 6px; }
+.chanHeadButton:hover .chanName { color: var(--dsw-alias-state-business-primary, #5b8cff); }
+.chanHeadButton:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+.chanName { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chanKind {
+  padding: 0 6px; border-radius: 999px; white-space: nowrap;
+  background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+}
+.chanChecked {
+  margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+}
+
+.chanBody { display: grid; grid-auto-rows: 1fr; align-items: center; gap: 2px; flex: 1 1 auto; min-height: 0; }
+
+/* 订阅窗口行：标签 + 固定宽度进度条 + 百分比 + 重置时间（进度条不拉满整张卡） */
+.windowLine { display: grid; grid-template-columns: 46px 72px 34px minmax(0, 1fr); gap: 7px; align-items: center; font-variant-numeric: tabular-nums; }
+.windowName { color: var(--dsw-alias-label-tertiary, #67676f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meter { display: block; height: 6px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
+.meter > i { display: block; height: 100%; border-radius: 4px; }
+.windowPercent { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.windowReset {
+  text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
+}
+
+/* 键值行：左标签右值，同一字号（余额三项、通道事实三行都用它） */
+.cardLine { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; font-variant-numeric: tabular-nums; }
+.lineKey { color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap; }
+.lineValue { color: var(--dsw-alias-label-primary, #e8e8ec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== 展开区：单价表（整行铺在卡片网格下面，表格不挤进单张卡） ===== */
+.ratePanel {
+  margin-top: 10px; padding: 9px 11px; border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+}
+.ratePanelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ratePanelTitle { font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
+.ratePanelClose {
+  margin-left: auto; padding: 0 2px; border: 0; border-radius: 4px; background: none; cursor: pointer;
+  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * .96); color: var(--dsw-alias-label-tertiary, #67676f);
+}
+.ratePanelClose:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .rateScroll { overflow-x: auto; }
-.rateHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96); line-height: 1.7; margin-bottom: 6px; }
+.rateHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96); line-height: 1.7; margin-bottom: 6px; }
 .rateTable { width: 100%; border-collapse: collapse; }
 .rateTable th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * .96);
   padding: 4px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .rateTable td {
@@ -49,12 +83,7 @@
 .rateModel { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); }
 
 .rateSourceNone {
-  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); line-height: 1.7;
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: calc(var(--dsh-content-font-size, 12px) * .92); line-height: 1.7;
   border: 1px dashed currentColor; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap;
 }
 .rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); padding: 6px 0; }
-
-/* 汇率兜底/不可用那一行：与普通文本同排版，只是整句可点（点开系统日志看原因） */
-
-/* 派生总余额：从卡片降级成一行小字（充值 + 赠送 = 总余额时不再单列一张卡） */
-.balanceTotal { margin-top: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); font-variant-numeric: tabular-nums; }

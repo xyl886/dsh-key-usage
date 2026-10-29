@@ -128,3 +128,76 @@
 /* 「未归入工作区」展开后的目录清单：等宽、可换行，缩进与列表子行对齐 */
 .pathsCell { padding: 2px 10px 10px 14px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.06)); text-align: left; }
 .pathLine { font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); color: var(--dsw-alias-label-secondary, #5c6572); line-height: 1.7; word-break: break-all; }
+
+/* 单页骨架：顶部区块导航 + 分页/滚动式开关 + 区块卡片 */
+.tabBarSpacer { flex: 1 1 auto; }
+.modeSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dsw-alias-label-tertiary, #8b8b99);
+  font-size: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.modeSwitch input { accent-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+.refreshSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit;
+  font-size: inherit;
+  padding: 2px 20px 2px 8px;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 11px) 50%, calc(100% - 7px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.sections { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.pageSection {
+  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 0;
+}
+/* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
+.pageSectionTitle {
+  margin: 0 0 10px;
+  font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+}
+/* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
+.rangeBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rangeItem, .rangeActive {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit;
+  padding: 3px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.rangeItem:hover { color: var(--dsw-alias-label-primary, #e8e8ec); background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12)); }
+.rangeActive {
+  background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  color: var(--dsw-alias-label-primary, #e8e8ec);
+  font-weight: 600;
+}
+.rangeCustom { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; }
+.rangeCustomLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.rangeDate {
+  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit;
+  padding: 2px 6px;
+}
+.rangeTilde { color: var(--dsw-alias-label-tertiary, #8b8b99); }

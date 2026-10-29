@@ -4,6 +4,7 @@ import type {
   Channel,
   FxResponse,
   HeatmapDay,
+  HeatmapResponse,
   ModelsResponse,
   PricingRefreshResult,
   PricingResponse,
@@ -64,9 +65,8 @@ export async function loadUsage(from: string, to: string, provider: string): Pro
   return fetchJson<UsageResponse>('/dsh-key-usage/usage?' + params.toString())
 }
 
-export async function loadHeatmap(): Promise<HeatmapDay[] | null> {
-  const result = await fetchJson<{ days: HeatmapDay[] }>('/dsh-key-usage/heatmap')
-  return result === null ? null : result.days
+export async function loadHeatmap(): Promise<HeatmapResponse | null> {
+  return fetchJson<HeatmapResponse>('/dsh-key-usage/heatmap')
 }
 
 /** 余额与订阅窗口：服务端实时优先、失败回落本机快照；`fresh` = 用户手动刷新时强制重查官方接口。 */

@@ -1,70 +1,47 @@
-/** 会话用量：按会话列出 tokens / 命中率 / 时长；点行开详情，行内可展开模型构成。 */
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { channelColorOf, channelOf, costCellOf, displayNameOf } from '../core/channels.ts'
-import { fmtDateTime, fmtDuration, fmtTime, fmtTokens, isoDate } from '../core/format.ts'
-import { moneyTotalsTextOf } from '../core/currency.ts'
-import { CSV_MIME, JSON_MIME, downloadFile, exportFileName, toCsv, toJson, type ExportColumn } from '../core/export.ts'
-import { dropEmptyRows, hiddenEmptyRowsText } from '../core/rows.ts'
+/**
+ * 会话用量：最耗会话 / 会话形态 / 最近会话三块。
+ * 口径：服务端只采集结算样本数（calls），消息数与工具调用数没有单独字段，
+ * 「会话形态」的消息 / 工具调用两档都按 calls 分档；时长按首末时间差（分钟）分档。
+ */
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { channelOf, costCellOf } from '../core/channels.ts'
+import { comparableMoneyOf, moneyTotalsTextOf } from '../core/currency.ts'
+import { fmtCount, fmtDuration, fmtRelative, fmtTokens } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
-import { serverText } from '../core/serverText.ts'
-import { CostSourceChip } from '../components/CostSourceChip.tsx'
-import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
-import { Button } from '../components/ui/Button.tsx'
-import { EmptyState } from '../components/ui/EmptyState.tsx'
-import { Select } from '../components/ui/Select.tsx'
 import { COST_SOURCE_LABELS, costSourceHintOf } from '../core/pricing.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
-import type { Channel, SessionRow, SessionsResponse } from '../core/types.ts'
+import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
+import { EmptyState } from '../components/ui/EmptyState.tsx'
+import { Select } from '../components/ui/Select.tsx'
+import type { Channel, CostSource, SessionRow, SessionsResponse } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
-import uiStyles from '../styles/ui.module.css'
-import exportStyles from '../styles/export.module.css'
+import sessionsStyles from '../styles/sessions.module.css'
 
-type SortKey = 'recent' | 'tokensDesc' | 'tokensAsc' | 'durationDesc' | 'costDesc' | 'hitDesc' | 'callsDesc'
-/** 会话归档筛选：与宿主原生「筛选会话」菜单同三档。 */
-type ArchiveFilter = 'hide' | 'all' | 'only'
+type TopMetric = 'tokens' | 'cost' | 'duration'
+type ShapeMetric = 'messages' | 'duration' | 'tools'
+/** 最近会话的范围：全部 / 只看主会话 / 只看子会话 / 只看已归档（归档与子代理都只在行上打标）。 */
+type Scope = 'all' | 'main' | 'sub' | 'archived'
 
-/** 首屏渲染 50 个：本机有 ~130 个会话，一次全渲染会明显卡顿；「加载更多」每次再加这么多。 */
+/** 榜单条数：与「会话形态」的直方图等高。 */
+const TOP_LIMIT = 5
+
+/** 形态分布 6 档，与原型一致。 */
+const SHAPE_BUCKETS: Array<{ min: number; max: number }> = [
+  { min: 1, max: 5 },
+  { min: 6, max: 15 },
+  { min: 16, max: 30 },
+  { min: 31, max: 60 },
+  { min: 61, max: 120 },
+  { min: 121, max: Number.POSITIVE_INFINITY },
+]
+const BUCKET_LABELS = ['1-5', '6-15', '16-30', '31-60', '61-120', '121+']
+
+/** 首屏渲染 50 个：本机上百个会话，一次全渲染会明显卡顿。 */
 const PAGE_SIZE = 50
 
-/** 归档筛选的记忆键：用户选过「全部 / 仅已归档」就记住，下次打开还是那一档。 */
-const ARCHIVE_FILTER_KEY = 'dsh-key-usage-archive-filter'
-
-function readArchiveFilter(): ArchiveFilter {
-  try {
-    const stored = globalThis.localStorage?.getItem(ARCHIVE_FILTER_KEY)
-    if (stored === 'hide' || stored === 'all' || stored === 'only') return stored
-  } catch {
-    // 隐私模式下 localStorage 会抛错：按默认档处理
-  }
-  return 'hide'
-}
-
-function writeArchiveFilter(value: ArchiveFilter): void {
-  try {
-    globalThis.localStorage?.setItem(ARCHIVE_FILTER_KEY, value)
-  } catch {
-    // 存不下就算了，不影响本次筛选
-  }
-}
-
-/** 导出列：标题可能带逗号或换行，由 toCsv 统一转义。 */
-const EXPORT_COLUMNS: Array<ExportColumn<SessionRow>> = [
-  { key: 'id', labelKey: 's.id', value: (row) => row.id },
-  { key: 'title', labelKey: 's.title', value: (row) => row.title },
-  { key: 'prompt', labelKey: 's.prompt', value: (row) => row.prompt },
-  { key: 'workspace', labelKey: 'common.workspace', value: (row) => row.workspace },
-  { key: 'provider', labelKey: 'common.channel', value: (row) => row.provider },
-  { key: 'firstTime', labelKey: 's.first', value: (row) => fmtDateTime(row.firstTime) },
-  { key: 'lastTime', labelKey: 's.last', value: (row) => fmtDateTime(row.lastTime) },
-  { key: 'crossDays', labelKey: 's.crossDays', value: (row) => row.crossDays },
-  { key: 'calls', labelKey: 'common.calls', value: (row) => row.calls },
-  { key: 'tokens', label: 'Tokens', value: (row) => row.tokens },
-  { key: 'cacheHitRate', labelKey: 's.hitRate', value: (row) => row.cacheHitRate },
-  { key: 'cost', labelKey: 's.costNative', value: (row) => row.cost },
-  { key: 'costSource', labelKey: 's.costSource', value: (row) => row.costSource === undefined ? null : row.costSource },
-  { key: 'archived', labelKey: 's.archived', value: (row) => row.archived ? t('s.yes') : t('s.no') },
-]
+/** 价目算出来的金额（内置价目 / 聚合价 / 同模型官方价）不是账单金额，按原型加 ≈ 前缀。 */
+const ESTIMATED_COST_SOURCES: CostSource[] = ['catalog', 'aggregate', 'model']
 
 export function SessionsTab(props: {
   data: SessionsResponse | null
@@ -75,108 +52,66 @@ export function SessionsTab(props: {
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
-  const [query, setQuery] = useState('')
-  const [channelFilter, setChannelFilter] = useState('ALL')
-  const [daysFilter, setDaysFilter] = useState('30')
-  const [sortKey, setSortKey] = useState<SortKey>('recent')
-  /** 归档三档筛选：记住上次选择（localStorage），下次打开不用重新点。 */
-  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>(() => readArchiveFilter())
-  /** 子代理会话默认隐藏（它们是子会话，单独成行会淹没主会话）；可切换显示或只看。 */
-  const [subagentFilter, setSubagentFilter] = useState<'hide' | 'all' | 'only'>('hide')
-  /** 只看某个会话及其子会话（点子会话上的「子代理」标签或父行上的「N 个子会话」时设置）。 */
-  const [parentFocus, setParentFocus] = useState<string | null>(null)
-  const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({})
-  const [detailId, setDetailId] = useState<string | null>(null)
   const [nowMs] = useState(() => Date.now())
+  const [topMetric, setTopMetric] = useState<TopMetric>('tokens')
+  const [shapeMetric, setShapeMetric] = useState<ShapeMetric>('messages')
+  const [scope, setScope] = useState<Scope>('all')
+  const [query, setQuery] = useState('')
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const rows = props.data?.rows ?? []
-  const hiddenEmpty = dropEmptyRows(rows, (row) => row.tokens).hidden
 
-  // 换了筛选 / 搜索 / 排序就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
-  useEffect(() => { setPageSize(PAGE_SIZE) }, [query, channelFilter, daysFilter, sortKey, archiveFilter, subagentFilter, parentFocus])
+  // 换了范围 / 搜索就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
+  useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query])
 
-  const visible = useMemo(() => {
+  /** 有结算样本的会话才算用量：没有 calls 也没有 tokens 的空壳不进榜单与形态分布。 */
+  const pool = useMemo(() => rows.filter((row) => row.calls > 0 || row.tokens > 0), [rows])
+
+  const topRows = useMemo(() => pool
+    .map((row) => ({ row, value: topValueOf(row, topMetric) }))
+    // 成本没有价目依据时是 null：宁可这一档空着，也不把「无依据」当 0 排进榜
+    .filter((entry) => entry.value > 0)
+    .sort((first, second) => second.value - first.value)
+    .slice(0, TOP_LIMIT)
+    .map((entry) => entry.row), [pool, topMetric])
+
+  const histogram = useMemo(() => SHAPE_BUCKETS.map((bucket) => pool.filter((row) => {
+    const value = shapeValueOf(row, shapeMetric)
+    return value >= bucket.min && value <= bucket.max
+  }).length), [pool, shapeMetric])
+
+  const recentRows = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    const maxAgeDays = Number(daysFilter)
-    // 没有人类提问的会话（标题与首条提问都空）不显示：那是 teammate / 系统会话，列出来只是噪音
-    const filtered = rows.filter((row) => (row.title ?? '') !== '' || (row.prompt ?? '') !== '').filter((row) => {
+    return rows.filter((row) => {
+      // 没有人类提问的会话（标题与首条提问都空）是 teammate / 系统会话，列出来只是噪音
+      if ((row.title ?? '') === '' && (row.prompt ?? '') === '') return false
+      const matchesScope = scope === 'all'
+        || (scope === 'main' && !isSubagentOf(row))
+        || (scope === 'sub' && isSubagentOf(row))
+        || (scope === 'archived' && row.archived)
+      if (!matchesScope) return false
+      if (keyword === '') return true
       // 首条提问正文也参与搜索：系统注入文本已在服务端被跳过，这里拿到的是真实提问
       const haystack = (row.title ?? '') + ' ' + row.id + ' ' + (row.workspace ?? '') + ' ' + (row.prompt ?? '')
-      const matchesQuery = keyword === '' || haystack.toLowerCase().includes(keyword)
-      const matchesChannel = channelFilter === 'ALL' || row.provider === channelFilter
-      const matchesAge = maxAgeDays === 0 || row.lastTime === null
-        || (nowMs - row.lastTime) <= maxAgeDays * 86400000
-      const matchesArchive = archiveFilter === 'all' || (archiveFilter === 'only' ? row.archived : !row.archived)
-      // 判定子会话：origin 优先，缺字段时看父会话 id（服务端旧版本 / header 没带 origin 也要能隐藏）
-      const isSubagent = row.origin === 'subagent' || (row.parentSessionId ?? null) !== null
-      const matchesSubagent = subagentFilter === 'all' || (subagentFilter === 'only' ? isSubagent : !isSubagent)
-      // 聚焦某个会话时只留它自己和它的子会话（从子会话标签或父行的小计按钮进来）
-      const matchesFocus = parentFocus === null || row.id === parentFocus || row.parentSessionId === parentFocus
-      return matchesQuery && matchesChannel && matchesAge && matchesArchive && matchesSubagent && matchesFocus
-    })
-    const sorters: Record<SortKey, (first: SessionRow, second: SessionRow) => number> = {
-      recent: (first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0),
-      tokensDesc: (first, second) => second.tokens - first.tokens,
-      tokensAsc: (first, second) => first.tokens - second.tokens,
-      durationDesc: (first, second) => durationOf(second) - durationOf(first),
-      // 成本 / 命中率为 null 的行排在最后：排序是给人找「最贵 / 最省缓存」用的，缺失值不参与比较
-      costDesc: (first, second) => (second.cost ?? -1) - (first.cost ?? -1),
-      hitDesc: (first, second) => (second.cacheHitRate ?? -1) - (first.cacheHitRate ?? -1),
-      callsDesc: (first, second) => second.calls - first.calls,
-    }
-    return [...filtered].sort(sorters[sortKey])
-  }, [rows, query, channelFilter, daysFilter, sortKey, nowMs, archiveFilter, subagentFilter, parentFocus])
-
-  /** 只导当前筛选后的会话行（归档筛选、时间窗口、搜索都算数）；分页不影响导出。 */
-  const exportRows = (format: 'csv' | 'json'): void => {
-    if (format === 'csv') downloadFile(exportFileName('sessions', 'csv'), toCsv(visible, EXPORT_COLUMNS), CSV_MIME)
-    else downloadFile(exportFileName('sessions', 'json'), toJson(visible), JSON_MIME)
-  }
+      return haystack.toLowerCase().includes(keyword)
+    }).sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
+  }, [rows, query, scope])
 
   if (props.data === null) return <EmptyState title={t('s.loading')} />
 
-  // 分组在「最新会话」排序下才有意义（其它排序是全局榜单，日期头会重复出现）
-  const groups: Array<{ label: string; rows: SessionRow[]; tokens: number }> = []
-  if (sortKey === 'recent') {
-    for (const row of visible) {
-      const label = dayLabelOf(row.lastTime, nowMs)
-      const last = groups[groups.length - 1]
-      if (last === undefined || last.label !== label) groups.push({ label, rows: [row], tokens: row.tokens })
-      else {
-        last.rows.push(row)
-        last.tokens += row.tokens
-      }
-    }
-  }
-  // 分页沿分组顺序截断：日期头报的仍是当天全量（条数与 Tokens），被截断的那天另外写明「显示 x / y」
-  let remaining = pageSize
-  const shownGroups = groups.map((group) => {
-    const shown = remaining <= 0 ? [] : group.rows.slice(0, remaining)
-    remaining -= shown.length
-    return { label: group.label, rows: shown, total: group.rows.length, tokens: group.tokens }
-  }).filter((group) => group.rows.length > 0)
-  const shownRows = sortKey === 'recent' ? [] : visible.slice(0, pageSize)
-  const shownCount = sortKey === 'recent'
-    ? shownGroups.reduce((count, group) => count + group.rows.length, 0)
-    : shownRows.length
+  const shownRows = recentRows.slice(0, pageSize)
+  const histogramMax = Math.max(1, ...histogram)
   const detailRow = detailId === null ? null : rows.find((row) => row.id === detailId) ?? null
-
-  const rowOptions = {
+  const rowOptions: RowOptions = {
     channels: props.channels,
     tooltip: props.tooltip,
-    expandedIds,
     nowMs,
-    onToggleModels: (id: string) => setExpandedIds((previous) => ({ ...previous, [id]: previous[id] !== true })),
     onOpenDetail: (id: string) => setDetailId(id),
     onOpenProject: props.onOpenProject,
-    onFocusSession: (id: string) => {
-      setParentFocus(id)
-      setSubagentFilter('all')
-    },
   }
 
   return (
-    <div>
+    <div className={sessionsStyles.page}>
       {props.data.coverage.status !== 'complete' && (
         <div className={styles.warning}>
           {props.data.coverage.status === 'unavailable'
@@ -184,111 +119,109 @@ export function SessionsTab(props: {
             : t('s.partial') + ' ' + String(props.data.coverage.skippedSessions) + t('s.partialTail')}
         </div>
       )}
-      <div className={listStyles.filterBar}>
-        <input className={listStyles.searchInput} placeholder={t('s.searchPlaceholder')} value={query} onChange={(event) => setQuery(event.target.value)} />
-        <Select
-          ariaLabel={t('s.filterChannel')}
-          value={channelFilter}
-          onChange={setChannelFilter}
-          options={[{ value: 'ALL', labelKey: 's.allChannels' }, ...props.channels.map((channel) => ({ value: channel.provider, label: channel.displayName }))]}
-        />
-        <Select
-          ariaLabel={t('s.filterRange')}
-          value={daysFilter}
-          onChange={setDaysFilter}
-          options={[{ value: '7', labelKey: 's.days7' }, { value: '30', labelKey: 's.days30' }, { value: '0', labelKey: 's.rangeAll' }]}
-        />
-        <Select
-          ariaLabel={t('s.sort')}
-          value={sortKey}
-          onChange={(value) => setSortKey(value as SortKey)}
-          options={[
-            { value: 'recent', labelKey: 's.sortRecent' },
-            { value: 'tokensDesc', labelKey: 's.sortTokensDesc' },
-            { value: 'tokensAsc', labelKey: 's.sortTokensAsc' },
-            { value: 'durationDesc', labelKey: 's.sortDuration' },
-            { value: 'costDesc', labelKey: 's.sortCost' },
-            { value: 'hitDesc', labelKey: 's.sortHit' },
-            { value: 'callsDesc', labelKey: 's.sortCalls' },
-          ]}
-        />
-        <Select
-          ariaLabel={t('s.filterArchive')}
-          value={archiveFilter}
-          onChange={(value) => {
-            const next = value as ArchiveFilter
-            setArchiveFilter(next)
-            writeArchiveFilter(next)
-          }}
-          options={[
-            { value: 'hide', labelKey: 's.archiveHide' },
-            { value: 'all', labelKey: 's.archiveAll' },
-            { value: 'only', labelKey: 's.archiveOnly' },
-          ]}
-        />
-        <Select
-          ariaLabel={t('s.filterSubagent')}
-          value={subagentFilter}
-          onChange={(value) => setSubagentFilter(value as 'hide' | 'all' | 'only')}
-          options={[
-            { value: 'hide', labelKey: 's.subagentHide' },
-            { value: 'all', labelKey: 's.subagentAll' },
-            { value: 'only', labelKey: 's.subagentOnly' },
-          ]}
-        />
-        <span className={exportStyles.exportGroup}>
-          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('csv')}>{t('export.csv')}</Button>
-          <Button size="sm" disabled={visible.length === 0} onClick={() => exportRows('json')}>{t('export.json')}</Button>
-        </span>
-      </div>
-      {parentFocus !== null && (
-        <div className={styles.statExtra}>
-          {t('s.parentFocusNote')}·
-          <button className={listStyles.linkBtn} onClick={() => setParentFocus(null)}>{t('p.clearFilter')}</button>
-        </div>
-      )}
 
-      <div className={uiStyles.tableScroll}><table className={styles.table + ' ' + listStyles.sessionTable}>
-        <thead>
-          <tr><th>{t('s.id')}</th><th>{t('common.channel')}</th><th>{t('s.timeDuration')}</th><th>Tokens</th><th>{t('d.hitRate')}</th><th>{t('c.cost')}</th></tr>
-        </thead>
-        <tbody>
-          {sortKey === 'recent' && shownGroups.map((group) => (
-            <Fragment key={'group-' + group.label}>
-              <tr className={listStyles.sessionDay}>
-                <td colSpan={6}>
-                  {group.label}
-                  <span className={listStyles.dayCount}>
-                    {group.rows.length < group.total ? t('s.showPrefix') + String(group.rows.length) + ' / ' + String(group.total) + t('s.showSuffix') : String(group.total) + t('s.showSuffix')}
-                    {' · '}{fmtTokens(group.tokens)}
-                  </span>
-                </td>
-              </tr>
-              {group.rows.map((row) => sessionRowOf(row, rowOptions))}
-            </Fragment>
-          ))}
-          {sortKey !== 'recent' && shownRows.map((row) => sessionRowOf(row, rowOptions))}
-          {visible.length === 0 && <tr><td colSpan={6} className={styles.empty}>{t('s.empty')}</td></tr>}
-        </tbody>
-      </table></div>
-      {visible.length > shownCount && (
-        <div className={listStyles.moreRow}>
-          <button type="button" className={listStyles.moreBtn} onClick={() => setPageSize(pageSize + PAGE_SIZE)}>
-            {t('s.loadMore', { count: PAGE_SIZE })}
-          </button>
-          <span className={listStyles.moreText}>{t('s.shownCount', { shown: shownCount, total: visible.length })}</span>
-        </div>
-      )}
-      <div className={styles.statExtra}>
-        {props.data.priced ? '' : t('s.noCost')}
+      <div className={sessionsStyles.grid2}>
+        <section className={sessionsStyles.panel}>
+          <div className={sessionsStyles.panelHead}>
+            <b className={sessionsStyles.panelTitle}>{t('sessions.top')}</b>
+            <MetricSwitch
+              value={topMetric}
+              onChange={setTopMetric}
+              options={[
+                { value: 'tokens', label: t('sessions.metricTokens') },
+                { value: 'cost', label: t('sessions.metricCost') },
+                { value: 'duration', label: t('sessions.metricDuration') },
+              ]}
+            />
+            <span className={sessionsStyles.panelTotal}>{fmtCount(pool.length) + t('common.sessionSuffix')}</span>
+          </div>
+          {topRows.length === 0
+            ? <div className={styles.empty}>{t(topMetric === 'cost' ? 's.noCost' : 'empty.noUsage')}</div>
+            : topRows.map((row, index) => topRowOf(row, index + 1, topMetric, props.channels, () => setDetailId(row.id)))}
+        </section>
+
+        <section className={sessionsStyles.panel}>
+          <div className={sessionsStyles.panelHead}>
+            <b className={sessionsStyles.panelTitle}>{t('sessions.shape')}</b>
+            <MetricSwitch
+              value={shapeMetric}
+              onChange={setShapeMetric}
+              options={[
+                { value: 'messages', label: t('sessions.metricMessages'), hint: t('sessions.callsBucket') },
+                { value: 'duration', label: t('sessions.metricDuration') },
+                { value: 'tools', label: t('sessions.metricTools'), hint: t('sessions.callsBucket') },
+              ]}
+            />
+            <span className={sessionsStyles.panelTotal}>{fmtCount(pool.length) + t('common.sessionSuffix')}</span>
+          </div>
+          {pool.length === 0
+            ? <div className={styles.empty}>{t('empty.noUsage')}</div>
+            : (
+              <>
+                <div className={sessionsStyles.hist}>
+                  {histogram.map((count, index) => (
+                    <div
+                      className={sessionsStyles.histCol}
+                      key={BUCKET_LABELS[index]}
+                      title={BUCKET_LABELS[index] + ' · ' + fmtCount(count)}
+                    >
+                      <span
+                        className={sessionsStyles.histBar + (count === histogramMax ? ' ' + sessionsStyles.histBarTop : '')}
+                        style={{ height: (count === 0 ? 0 : Math.max(4, count / histogramMax * 100)) + '%' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className={sessionsStyles.histX}>
+                  {BUCKET_LABELS.map((label) => <span key={label}>{label}</span>)}
+                </div>
+              </>
+            )}
+        </section>
       </div>
+
+      <section className={sessionsStyles.panel}>
+        <div className={sessionsStyles.panelHead}>
+          <b className={sessionsStyles.panelTitle}>{t('sessions.recent')}</b>
+          <Select
+            ariaLabel={t('sessions.scope')}
+            value={scope}
+            onChange={(value) => setScope(value as Scope)}
+            options={[
+              { value: 'all', labelKey: 'sessions.all' },
+              { value: 'main', labelKey: 'sessions.mainOnly' },
+              { value: 'sub', labelKey: 's.subagentOnly' },
+              { value: 'archived', labelKey: 's.archiveOnly' },
+            ]}
+          />
+          <input
+            className={listStyles.searchInput}
+            placeholder={t('s.searchPlaceholder')}
+            aria-label={t('s.searchPlaceholder')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <span className={sessionsStyles.panelTotal}>{fmtCount(recentRows.length) + t('common.sessionSuffix')}</span>
+        </div>
+        {recentRows.length === 0
+          ? <div className={styles.empty}>{t('s.empty')}</div>
+          : shownRows.map((row) => recentRowOf(row, rowOptions))}
+        {recentRows.length > shownRows.length && (
+          <div className={listStyles.moreRow}>
+            <button type="button" className={listStyles.moreBtn} onClick={() => setPageSize(pageSize + PAGE_SIZE)}>
+              {t('s.loadMore', { count: PAGE_SIZE })}
+            </button>
+            <span className={listStyles.moreText}>{t('s.shownCount', { shown: shownRows.length, total: recentRows.length })}</span>
+          </div>
+        )}
+      </section>
 
       {detailId !== null && (
         <SessionDetailDrawer
           sessionId={detailId}
           fallbackTitle={detailRow?.title ?? null}
           channels={props.channels}
-          // 子会话在列表里默认隐藏，所以弹窗里给出逐个点开的入口（不并进本会话总量）
+          // 子会话默认与主会话同列，弹窗里仍给出逐个点开的入口（不并进本会话总量）
           subagents={detailRow === null ? [] : rows.filter((row) => row.parentSessionId === detailRow.id)}
           onOpenSession={setDetailId}
           parentId={detailRow?.parentSessionId ?? null}
@@ -303,173 +236,133 @@ export function SessionsTab(props: {
 interface RowOptions {
   channels: Channel[]
   tooltip: TooltipApi
-  expandedIds: Record<string, boolean>
   nowMs: number
-  onToggleModels: (id: string) => void
   onOpenDetail: (id: string) => void
   onOpenProject: (workspace: string) => void
-  /** 聚焦到某个会话及其子会话（父行点「N 个子会话」、子行点「子代理」都用它）。 */
-  onFocusSession: (id: string) => void
 }
 
-function sessionRowOf(row: SessionRow, options: RowOptions): ReactNode {
-  const channel = channelOf(options.channels, row.provider)
-  const costCell = costCellOf(channel, row)
-  const isOpen = options.expandedIds[row.id] === true
-  const workspace = row.workspace
+/** 指标切换：三档分段控件，选中档给 aria-pressed；口径有兜底的档给悬停说明。 */
+function MetricSwitch<TValue extends string>(props: {
+  value: TValue
+  options: Array<{ value: TValue; label: string; hint?: string }>
+  onChange: (value: TValue) => void
+}): ReactNode {
   return (
-    <Fragment key={row.id}>
-      <tr
-        className={(row.archived ? listStyles.rowArchived + ' ' : '') + styles.clickable}
-        onClick={() => options.onOpenDetail(row.id)}
-      >
-        <td>
-          <div className={listStyles.listTitle}>
-            {/* 行点击只方便鼠标；展开与查看详情各给一个真按钮，键盘都能到 */}
-            {row.models.length === 0
-              // 没有模型构成就不给展开入口，但留出同宽的箭头位，避免各行标题左右错位
-              ? <span className={listStyles.sessionToggleArrow} aria-hidden="true" />
-              : (
-                <button
-                  type="button"
-                  className={listStyles.sessionToggle}
-                  aria-expanded={isOpen}
-                  aria-label={isOpen ? t('s.collapseModels') : t('s.expandModels')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    options.onToggleModels(row.id)
-                  }}
-                >
-                  <span className={listStyles.sessionToggleArrow} aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
-                </button>
-              )}
-            <button
-              type="button"
-              className={listStyles.sessionTitleBtn}
-              onClick={(event) => {
-                event.stopPropagation()
-                options.onOpenDetail(row.id)
-              }}
-            >
-              {row.title ?? t('s.noPrompt') + ' · ' + shortIdOf(row.id)}
-            </button>
-            {row.archived && <span className={listStyles.archivedTag}>{t('s.archived')}</span>}
-            {row.origin === 'subagent' && (
-              <button
-                type="button"
-                className={listStyles.subagentTagBtn}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (row.parentSessionId !== null && row.parentSessionId !== undefined) options.onFocusSession(row.parentSessionId)
-                }}
-              >
-                {t('s.subagentTag')}
-              </button>
-            )}
-          </div>
-          <div className={listStyles.listSub}>
-            {workspace === null
-              ? t('s.noWorkspace')
-              : (
-                <button
-                  type="button"
-                  className={listStyles.linkBtn}
-                  title={t('s.gotoProject') + workspace}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    options.onOpenProject(workspace)
-                  }}
-                >
-                  {workspace}
-                </button>
-              )}
-            {row.modelCount !== undefined && row.modelCount > 1 && (
-              <span className={listStyles.sessionMeta}>{row.modelCount}{t('common.modelSuffix')}</span>
-            )}
-            {row.subagentCount !== undefined && row.subagentCount > 0 && (
-              <button
-                type="button"
-                className={listStyles.sessionMetaBtn}
-                title={t('s.focusChildren') + String(row.subagentCount) + t('s.focusChildrenTail')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  options.onFocusSession(row.id)
-                }}
-              >
-                {row.subagentCount}{t('common.subagentSuffix')}
-                {row.subagentTokens !== undefined && row.subagentTokens > 0 ? ' · ' + fmtTokens(row.subagentTokens) : ''}
-              </button>
-            )}
-          </div>
-        </td>
-        <td>{row.providerLabel ?? displayNameOf(options.channels, row.provider ?? '')}</td>
-        <td>
-          <div>{row.lastTime === null ? '—' : dayLabelOf(row.lastTime, options.nowMs) + ' ' + fmtTime(row.lastTime)}</div>
-          <div className={listStyles.listSub}>
-            {t('d.duration')} {fmtDuration(durationOf(row))}
-          </div>
-        </td>
-        <td>{fmtTokens(row.tokens)}</td>
-        <td>{row.cacheHitRate === null ? '—' : row.cacheHitRate.toFixed(1) + '%'}</td>
-        <td
-          onMouseEnter={(event) => options.tooltip.show(event, costTipOf(row))}
-          onMouseMove={(event) => options.tooltip.show(event, costTipOf(row))}
-          onMouseLeave={options.tooltip.hide}
+    <div className={sessionsStyles.metrics} role="group">
+      {props.options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={sessionsStyles.metricBtn + (option.value === props.value ? ' ' + sessionsStyles.metricBtnOn : '')}
+          aria-pressed={option.value === props.value}
+          title={option.hint}
+          onClick={() => props.onChange(option.value)}
         >
-          {row.cost === null || channel === null || channel.costMode !== 'perToken'
-            ? <span className={styles.dim}>{costCell.text}</span>
-            : <>{costCell.text}{costCell.amount && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}
-        </td>
-      </tr>
-      {isOpen && (
-        <tr>
-          <td className={listStyles.composeCell} colSpan={6}>
-            {row.models.length === 0
-              ? <div className={styles.empty}>{t('empty.noUsage')}</div>
-              : (
-                <>
-                  <div className={listStyles.composeRow + ' ' + listStyles.composeHead}>
-                    <span>{t('m.model')}</span>
-                    <span className={listStyles.composeNumber}>Tokens</span>
-                    <span className={listStyles.composeNumber}>{t('m.share')}</span>
-                    <span className={listStyles.composeNumber}>{t('c.cost')}</span>
-                  </div>
-                  {row.models.map((model) => {
-                    const percent = model.sharePercent ?? 0
-                    const modelCost = model.cost ?? null
-                    // 「其它」是服务端把长尾模型合并出来的行，没有自己的通道
-                    const color = model.provider === '' ? 'var(--dsw-alias-label-tertiary, #67676f)' : channelColorOf(options.channels, model.provider)
-                    return (
-                      <div className={listStyles.composeRow} key={model.provider + '|' + model.model}>
-                        <span className={listStyles.composeName}>
-                          {model.model}
-                          {model.provider !== '' && (
-                            <span className={listStyles.composeChannel}>{model.providerLabel ?? displayNameOf(options.channels, model.provider)}</span>
-                          )}
-                        </span>
-                        <span className={listStyles.composeNumber}>{fmtTokens(model.tokens)}</span>
-                        <span className={listStyles.composeNumber}>
-                          <span className={listStyles.listBar}><i style={{ width: Math.max(2, percent) + '%', background: color }} /></span>
-                          {' '}{percent}%
-                        </span>
-                        <span className={listStyles.composeNumber}>
-                          {modelCost === null
-                            ? <span className={styles.dim}>—</span>
-                            : <>{moneyTotalsTextOf(model)}<CostSourceChip source={model.costSource} partial={model.partial} compact /></>}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </>
-              )}
-          </td>
-        </tr>
-      )}
-    </Fragment>
+          {option.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
-/** 成本单元格的悬停说明：这一格钱是怎么来的（角标只写得下两个字）。 */
+/** 最耗会话的一行：排名 + 标题 / 副标 + 右侧大数字与其下的次要数值。 */
+function topRowOf(row: SessionRow, rank: number, metric: TopMetric, channels: Channel[], onOpen: () => void): ReactNode {
+  const channel = channelOf(channels, row.provider)
+  const value = topTextOf(row, metric, channel)
+  const subagentCount = row.subagentCount ?? 0
+  const subParts: string[] = [row.workspace === null ? t('s.noWorkspace') : row.workspace]
+  subParts.push(t('sessions.calls', { count: fmtCount(row.calls) }))
+  // 时长档的大数字已经是时长，副标再写「跨 N 天」就是同一件事说两遍
+  if (metric !== 'duration' && row.crossDays > 0) subParts.push(t('sessions.crossDays', { days: row.crossDays }))
+  if (subagentCount > 0) subParts.push(t('sessions.subagents', { count: subagentCount }))
+  return (
+    <button
+      key={row.id}
+      type="button"
+      className={sessionsStyles.topRow + (row.archived ? ' ' + sessionsStyles.archived : '')}
+      onClick={onOpen}
+    >
+      <span className={sessionsStyles.rank}>{rank}</span>
+      <span className={sessionsStyles.rowBody}>
+        <span className={sessionsStyles.titleLine}>
+          <span className={sessionsStyles.rowTitle}>{titleOf(row)}</span>
+          {row.archived && <span className={sessionsStyles.tag}>{t('s.archived')}</span>}
+          {isSubagentOf(row) && <span className={sessionsStyles.tag + ' ' + sessionsStyles.tagSub}>{t('s.subagentTag')}</span>}
+        </span>
+        <span className={sessionsStyles.rowSub}>{subParts.join(' · ')}</span>
+      </span>
+      <span className={sessionsStyles.rowValue}>
+        <span className={sessionsStyles.rowBig}>{value.big}</span>
+        <span className={sessionsStyles.rowSmall}>{value.small}</span>
+      </span>
+    </button>
+  )
+}
+
+/** 最近会话的一行：标题 + 副标（项目 · 模型 · 时间）｜ Tokens ｜ 成本 ｜ ›。 */
+function recentRowOf(row: SessionRow, options: RowOptions): ReactNode {
+  const channel = channelOf(options.channels, row.provider)
+  const model = dominantModelOf(row)
+  const ioBreakdown = ioBreakdownOf(row)
+  return (
+    <div
+      key={row.id}
+      className={sessionsStyles.row + (row.archived ? ' ' + sessionsStyles.archived : '')}
+      onClick={() => options.onOpenDetail(row.id)}
+    >
+      <div className={sessionsStyles.rowBody}>
+        <div className={sessionsStyles.titleLine}>
+          <button
+            type="button"
+            className={sessionsStyles.titleBtn}
+            onClick={(event) => {
+              event.stopPropagation()
+              options.onOpenDetail(row.id)
+            }}
+          >
+            {titleOf(row)}
+          </button>
+          {row.archived && <span className={sessionsStyles.tag}>{t('s.archived')}</span>}
+          {isSubagentOf(row) && <span className={sessionsStyles.tag + ' ' + sessionsStyles.tagSub}>{t('s.subagentTag')}</span>}
+        </div>
+        <div className={sessionsStyles.rowSub}>
+          {row.workspace === null
+            ? t('s.noWorkspace')
+            : (
+              <button
+                type="button"
+                className={listStyles.linkBtn}
+                title={t('s.gotoProject') + row.workspace}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  options.onOpenProject(row.workspace ?? '')
+                }}
+              >
+                {row.workspace}
+              </button>
+            )}
+          {model === null ? '' : ' · ' + model}
+          {' · ' + fmtRelative(row.lastTime, options.nowMs)}
+        </div>
+      </div>
+      <div className={sessionsStyles.tokens}>
+        <span className={sessionsStyles.tokensValue}>{fmtTokens(row.tokens)}</span>
+        {ioBreakdown === null ? null : <span className={sessionsStyles.tokensSub}>{ioBreakdown}</span>}
+      </div>
+      <div
+        className={sessionsStyles.cost}
+        onMouseEnter={(event) => options.tooltip.show(event, costTipOf(row))}
+        onMouseMove={(event) => options.tooltip.show(event, costTipOf(row))}
+        onMouseLeave={options.tooltip.hide}
+      >
+        {costTextOf(channel, row)}
+      </div>
+      <span className={sessionsStyles.chev} aria-hidden="true">›</span>
+    </div>
+  )
+}
+
+/** 成本单元格的悬停说明：这一格钱是怎么来的（≈ 只写得下「估算」这一个信号）。 */
 function costTipOf(row: SessionRow): ReactNode {
   const source = row.costSource ?? 'none'
   return (
@@ -485,21 +378,80 @@ function costTipOf(row: SessionRow): ReactNode {
   )
 }
 
+/** 成本文案：价目算出来的金额加 ≈（折算已经带 ≈ 的不重复加）。 */
+function costTextOf(channel: Channel | null, row: SessionRow): string {
+  const cell = costCellOf(channel, row)
+  if (!cell.amount) return cell.text
+  const source = row.costSource
+  if (source === undefined || !ESTIMATED_COST_SOURCES.includes(source)) return cell.text
+  return cell.text.startsWith('≈') ? cell.text : '≈' + cell.text
+}
+
+function topValueOf(row: SessionRow, metric: TopMetric): number {
+  // 成本按展示币种折算后比较（逐币种小计优先），折算不了才退回原值
+  if (metric === 'cost') return comparableMoneyOf(row) ?? row.cost ?? 0
+  if (metric === 'duration') return durationOf(row)
+  return row.tokens
+}
+
+function topTextOf(row: SessionRow, metric: TopMetric, channel: Channel | null): { big: string; small: string } {
+  const cost = costTextOf(channel, row)
+  if (metric === 'cost') return { big: cost, small: fmtTokens(row.tokens) }
+  if (metric === 'duration') return { big: fmtDuration(durationOf(row)), small: cost }
+  return { big: fmtTokens(row.tokens), small: cost }
+}
+
+/** 形态分档值：消息 / 工具调用都取结算样本数，时长取分钟（不足 1 分钟按 1 算，落进第一档）。 */
+function shapeValueOf(row: SessionRow, metric: ShapeMetric): number {
+  if (metric === 'duration') return Math.max(1, Math.round(durationOf(row) / 60000))
+  return row.calls
+}
+
 function durationOf(row: SessionRow): number {
   if (row.firstTime === null || row.lastTime === null) return 0
   return Math.max(0, row.lastTime - row.firstTime)
 }
 
-/** 会话头通常不带标题，用 id 的短片段做可读标识。 */
-function shortIdOf(id: string): string {
-  const stripped = id.replace(/^session-/, '')
-  return stripped.slice(0, 8)
+function isSubagentOf(row: SessionRow): boolean {
+  return row.origin === 'subagent' || (row.parentSessionId ?? null) !== null
 }
 
-function dayLabelOf(timeMs: number | null, nowMs: number): string {
-  if (timeMs === null) return t('s.unknownDate')
-  const dateKey = isoDate(new Date(timeMs))
-  if (dateKey === isoDate(new Date(nowMs))) return t('r.today')
-  if (dateKey === isoDate(new Date(nowMs - 86400000))) return t('r.yesterday')
-  return dateKey
+function titleOf(row: SessionRow): string {
+  return row.title ?? t('s.noPrompt') + ' · ' + shortIdOf(row.id)
+}
+
+/** 会话头通常不带标题，用 id 的短片段做可读标识。 */
+function shortIdOf(id: string): string {
+  return id.replace(/^session-/, '').slice(0, 8)
+}
+
+/** 副标只放得下一个模型：取该会话 tokens 最多的那个。 */
+function dominantModelOf(row: SessionRow): string | null {
+  let best: { model: string; tokens: number } | null = null
+  for (const model of row.models) {
+    if (best === null || model.tokens > best.tokens) best = { model: model.model, tokens: model.tokens }
+  }
+  return best === null ? null : best.model
+}
+
+/**
+ * 最近会话 Tokens 下方的第二行：输入 / 输出 / 缓存读按模型分桶求和。
+ * 列表行的 tokens 只有总数，分桶挂在 `models[].buckets` 上；三者全为 0（或老快照没有 buckets）时不显示，
+ * 避免出现「输入 0 · 输出 0」这种没有信息量的行。
+ */
+function ioBreakdownOf(row: SessionRow): string | null {
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  for (const model of row.models) {
+    inputTokens += model.buckets?.inputTokens ?? 0
+    outputTokens += model.buckets?.outputTokens ?? 0
+    cacheReadTokens += model.buckets?.cacheReadTokens ?? 0
+  }
+  if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0) return null
+  return [
+    t('c.input') + ' ' + fmtTokens(inputTokens),
+    t('c.output') + ' ' + fmtTokens(outputTokens),
+    t('c.cacheRead') + ' ' + fmtTokens(cacheReadTokens),
+  ].join(' · ')
 }
