@@ -11,7 +11,7 @@ import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
 import type {
-  Channel, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse,
+  Channel, CostSource, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse,
   SessionCoverage, UsageResponse,
 } from '../core/types.ts'
 import styles from '../styles/distribution.module.css'
@@ -45,6 +45,9 @@ const PROJECT_COLORS = [
   'color-mix(in srgb, var(--dsw-alias-state-error-primary, #e05a5a) 60%, var(--dsw-alias-label-primary, #111))',
   'color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 55%, var(--dsw-alias-label-primary, #111))',
 ]
+
+/** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
+const SOURCE_ORDER: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }
 
 /** 「其它」块 / 合并行用中性底色，避免被误读成某个通道。 */
 const OTHERS_BG = 'var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .22))'
@@ -93,22 +96,36 @@ export function DistributionTab(props: {
   /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看这一个项目（null = 不过滤）。 */
   focusWorkspace?: string | null
   onClearFocus?: () => void
+  /** 全局项目筛选（`'ALL'` = 不过滤）：优先于内部联动，项目块与明细表都收窄到这一个项目。 */
+  projectFilter?: string
+  /** 全局模型筛选（`'ALL'` = 不过滤）：模型块、缓存节省、Token 构成、Mekko 的逐项目金额都按它重算。 */
+  modelFilter?: string
 }): ReactNode {
   const t = useT()
   const [tableOpen, setTableOpen] = useState(false)
-  const focusWorkspace = props.focusWorkspace ?? null
+  const externalProject = props.projectFilter ?? 'ALL'
+  const modelFilter = props.modelFilter ?? 'ALL'
+  // 外部的全局项目筛选优先；没有时才有内部联动（从会话页点工作目录进来）
+  const focusWorkspace = externalProject !== 'ALL' ? externalProject : (props.focusWorkspace ?? null)
 
   const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows
-  const modelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
-  // 项目块与项目明细跟随外部联动筛选（从会话页点工作目录进来时）
-  const scopedProjects = projectRows.filter((row) => (
-    focusWorkspace === null || row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace)
+  const allModelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
+  /** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
+  const modelRows = modelFilter === 'ALL' ? allModelRows : allModelRows.filter((row) => row.model === modelFilter)
+  const scopedProjects = focusWorkspace === null ? projectRows : projectRows.filter((row) => (
+    row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace)
   ))
+  /** Mekko 的项目块：有模型筛选时每个项目只留该模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
+  const mekkoProjects = modelFilter === 'ALL'
+    ? scopedProjects
+    : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row): row is ProjectRow => row !== null)
+  // 缓存节省的合计只能从 `/usage` 合计取；按模型筛后那份合计不可拆，宁可不给（显示 —）也不编
+  const cacheUsage = modelFilter === 'ALL' ? (props.usage ?? null) : null
   const coverage = props.projects?.coverage ?? props.models?.coverage
 
   return (
     <div className={styles.page}>
-      {focusWorkspace !== null && (
+      {externalProject === 'ALL' && focusWorkspace !== null && (
         <div className={listStyles.focusChip}>
           {t('p.focusPrefix')}{focusWorkspace}
           <span className={styles.focusNote}>{t('dist.focusScope')}</span>
@@ -120,10 +137,10 @@ export function DistributionTab(props: {
         <div className={sharedStyles.warning}>{coverageTextOf(coverage)}</div>
       )}
 
-      <MekkoPanel projects={scopedProjects} loading={props.projects === null} />
+      <MekkoPanel projects={mekkoProjects} loading={props.projects === null} />
 
       <div className={styles.grid}>
-        <CacheSavingsPanel models={modelRows} usage={props.usage ?? null} loading={props.models === null} />
+        <CacheSavingsPanel models={modelRows} usage={cacheUsage} loading={props.models === null} />
         <CostMixPanel models={modelRows} loading={props.models === null} />
         <ChannelCostPanel models={modelRows} channels={props.channels} loading={props.models === null} />
       </div>
@@ -139,12 +156,15 @@ export function DistributionTab(props: {
         <div className={styles.tables}>
           <section>
             <div className={styles.tableTitle}>{t('dist.modelsDetails')}</div>
-            <ModelsTab data={props.models} channels={props.channels} />
+            <ModelsTab
+              data={props.models === null ? null : { ...props.models, rows: modelRows }}
+              channels={props.channels}
+            />
           </section>
           <section>
             <div className={styles.tableTitle}>{t('dist.projectsDetails')}</div>
             <ProjectsTab
-              data={props.projects}
+              data={props.projects === null ? null : { ...props.projects, rows: scopedProjects }}
               channels={props.channels}
               focusWorkspace={focusWorkspace}
               hideFocusChip
@@ -155,6 +175,58 @@ export function DistributionTab(props: {
       )}
     </div>
   )
+}
+
+/** 聚合行取最弱的成本来源（与 DetailTab 同一口径，避免明细表里的来源角标与金额对不上）。 */
+function weakestSourceOf(sources: CostSource[]): CostSource | null {
+  let weakest: CostSource | null = null
+  for (const source of sources) {
+    if (weakest === null || SOURCE_ORDER[source] > SOURCE_ORDER[weakest]) weakest = source
+  }
+  return weakest
+}
+
+/**
+ * 项目行按模型收窄（只给 Mekko 用）：模型桶只留该模型，tokens / calls / 金额按剩下的桶重算。
+ * 金额只在每个桶都有价目时才给数（缺一个就 null → 该块不参与占比，不拿部分金额冒充合计）；
+ * 该项目没有这个模型的用量时返回 null（整块不进 Mekko）。
+ */
+function projectOfModel(row: ProjectRow, modelFilter: string): ProjectRow | null {
+  const models = (row.models ?? []).filter((entry) => entry.model === modelFilter)
+  if (models.length === 0) return null
+  const costsByCurrency: CostsByCurrency = {}
+  const sources: CostSource[] = []
+  let calls = 0
+  let tokens = 0
+  let cost = 0
+  let priced = true
+  let partial = false
+  let hasCurrency = true
+  for (const entry of models) {
+    calls += entry.calls
+    tokens += entry.tokens
+    if (typeof entry.cost === 'number' && Number.isFinite(entry.cost)) cost += entry.cost
+    else priced = false
+    const byCurrency = entry.costsByCurrency ?? {}
+    if (Object.keys(byCurrency).length === 0) hasCurrency = false
+    for (const [currency, amount] of Object.entries(byCurrency)) {
+      if (typeof amount === 'number' && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount
+    }
+    if (entry.costSource !== undefined) sources.push(entry.costSource)
+    if (entry.partial === true) partial = true
+  }
+  const costSource = weakestSourceOf(sources)
+  return {
+    ...row,
+    calls,
+    tokens,
+    models,
+    cost: priced ? cost : null,
+    cacheHitRate: null,
+    costSource: costSource ?? undefined,
+    partial,
+    ...(priced && hasCurrency ? { costsByCurrency } : { costsByCurrency: undefined }),
+  }
 }
 
 /** 项目 × 模型：块宽 = 该项目成本占总成本比例；宽块写前二模型占比，窄块只留名字 / 金额。 */

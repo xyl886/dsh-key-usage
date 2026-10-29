@@ -10,31 +10,48 @@
 [data-sidebar-right-open] .section,
 [data-sidebar-right-float-host] .section { padding: 12px; }
 .title { font-size: max(16px, calc(var(--dsh-content-font-size, 13px) * 1.3)); font-weight: 650; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-/* 标题行里塞下范围段与自定义起止（原型一行放完）：标题不换行，右边允许折到第二行 */
-.brand { white-space: nowrap; }
-.titleRange { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; flex-wrap: wrap; min-width: 0; }
-.titleActions { display: inline-flex; align-items: center; gap: 8px; }
-/* 筛选行：通道在左、显示币种在右（与原型 .trow 一致） */
+/* 工具栏：三行（标题+范围+动作 / 筛选 / 区块导航），同类控件成组，窄面板按行换行 */
+.toolbarRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
+.toolbarRow + .toolbarRow { margin-top: 6px; }
+.toolbarGroup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.rowSpacer { flex: 1 1 auto; }
+/* 标题比正文大一档即可，不做成大标题（正文 13px） */
+.brand { white-space: nowrap; font-size: 15px; font-weight: 650; line-height: 26px; }
+/* 按钮类控件统一 26px 高：导出按钮经 Button 的 className 走进来；
+   用 .stickyHead 前缀提高优先级，压住 Button 原语自带的 30px/8px 圆角 */
+.stickyHead .headBtn { height: 26px; padding: 0 10px; border-radius: 6px; font-size: 13px; }
+/* 纯图标控件（刷新 / 设置 / 仓库）：与按钮同高同宽，不抢视觉 */
+.iconBtn {
+  box-sizing: border-box; width: 26px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 6px;
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: 13px; line-height: 1; cursor: pointer; text-decoration: none;
+}
+.iconBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.iconBtn:disabled { opacity: .6; cursor: default; }
+.iconBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
+/* 筛选行：通道 / 项目 / 模型在左、显示币种在右（原型 .trow 第二行） */
 .filterBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-.filterBarSpacer { flex: 1 1 auto; }
 .filterLabel { color: var(--dsw-alias-label-tertiary, #8b8b99); white-space: nowrap; }
-/* 顶部栏吸顶：页面自己滚（.section 是滚动容器），标题行 / 筛选行 / 区块导航一起钉住，
+/* 顶部栏吸顶：页面自己滚（.section 是滚动容器），三行工具栏一起钉住，
    负 margin 抵消 .section 的内边距，滚动内容从它下面穿过 */
 .stickyHead {
   position: sticky;
   top: 0;
   z-index: 6;
   margin: -16px -20px 10px;
-  padding: 12px 20px 0;
+  padding: 10px 20px 8px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
-.stickyHead .tabBar { margin-bottom: 0; }
-@media (min-width: 0px) { [data-sidebar-right-open] .stickyHead, [data-sidebar-right-float-host] .stickyHead { margin: -12px -12px 10px; padding: 10px 12px 0; } }
-/* 仓库链接：与「刷新」同排，样式对齐按钮但不抢焦点（跳外站） */
+@media (min-width: 0px) { [data-sidebar-right-open] .stickyHead, [data-sidebar-right-float-host] .stickyHead { margin: -12px -12px 10px; padding: 8px 12px 6px; } }
+/* 仓库链接：与其它图标控件同规格（跳外站，但外观不特殊） */
 .ghLink {
-  display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 999px;
-  padding: 4px 8px; text-decoration: none; line-height: 0;
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  width: 26px; height: 26px; border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 6px;
+  text-decoration: none; line-height: 0;
 }
 .ghLink:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 .ghLink:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
@@ -51,13 +68,14 @@
 @keyframes refreshSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .refreshIconSpin { animation: none; } }
 
-.tabBar { display: flex; gap: 2px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); margin-bottom: 18px; flex-wrap: wrap; }
+/* 区块导航：胶囊按钮，与筛选控件同高（原型 .tabs） */
+.tabBar { display: inline-flex; gap: 2px; flex-wrap: wrap; }
 .tabBar button {
-  border: 0; background: none; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
-  padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  border: 1px solid transparent; background: none; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: 13px; height: 26px; padding: 0 10px; border-radius: 7px; cursor: pointer; white-space: nowrap;
 }
-.tabBar button:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.tabBar button.active { color: var(--dsw-alias-state-business-primary, #5b8cff); border-bottom-color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
+.tabBar button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.tabBar button.active { background: var(--dsw-alias-interactive-bg-active, rgba(91,140,255,.14)); color: var(--dsw-alias-state-business-primary, #5b8cff); font-weight: 600; }
 
 .card { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
@@ -149,33 +167,40 @@
 .pathLine { font-family: ui-monospace, Consolas, monospace; font-size: inherit; color: var(--dsw-alias-label-secondary, #5c6572); line-height: 1.7; word-break: break-all; }
 
 /* 单页骨架：顶部区块导航 + 分页/滚动式开关 + 区块卡片 */
-.tabBarSpacer { flex: 1 1 auto; }
 .modeSwitch {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  height: 26px;
   color: var(--dsw-alias-label-tertiary, #8b8b99);
-  font-size: inherit;
+  font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
 }
 .modeSwitch input { accent-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+/* 工具栏下拉：与同排控件统一 26px 高、同一套圆角与字号（刷新周期 / 通道 / 项目 / 模型 / 显示币种共用） */
 .refreshSelect {
   appearance: none;
   -webkit-appearance: none;
-  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  box-sizing: border-box;
+  height: 26px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   border-radius: 6px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit;
-  font-size: inherit;
-  padding: 2px 20px 2px 8px;
+  font-size: 13px;
+  padding: 0 22px 0 8px;
+  max-width: 200px;
+  text-overflow: ellipsis;
   cursor: pointer;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: calc(100% - 11px) 50%, calc(100% - 7px) 50%;
+  background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
 }
+.refreshSelect:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+.refreshSelect:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .sections { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .pageSection {
   border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
@@ -192,12 +217,15 @@
   color: var(--dsw-alias-label-primary, #e8e8ec);
 }
 /* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
-/* 范围切换用分段控件（一个外框装按钮）：比散落的按钮更像一组，也省横向空间 */
+/* 范围切换用分段控件（一个外框装按钮）：外框 26px 高，与同排控件齐平 */
 .rangeTabs {
   display: inline-flex;
   gap: 2px;
-  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
-  border-radius: 8px;
+  box-sizing: border-box;
+  height: 26px;
+  align-items: center;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  border-radius: 7px;
   padding: 2px;
   flex-wrap: wrap;
 }
@@ -206,9 +234,10 @@
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit;
-  height: 22px;
-  padding: 0 11px;
-  border-radius: 6px;
+  font-size: 13px;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 5px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -221,18 +250,21 @@
 .rangeTab:focus-visible, .rangeTabActive:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .rangeCustom { display: inline-flex; align-items: center; gap: 4px; }
 .rangeCustomLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
-/* 日期框：原生控件的字号与日历图标都要压住，否则比同排按钮大一圈 */
+/* 日期框：原生控件的字号与日历图标都要压住，与同排控件同高 */
 .rangeDate {
-  border: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
   border-radius: 6px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit;
-  height: 22px;
+  font-size: 13px;
+  height: 26px;
   padding: 0 4px;
   cursor: pointer;
 }
 .rangeDate::-webkit-calendar-picker-indicator { width: 12px; height: 12px; opacity: .55; cursor: pointer; }
 .rangeDate::-webkit-datetime-edit { padding: 0; }
+.rangeDate:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
 .rangeDate:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .rangeTilde { color: var(--dsw-alias-label-tertiary, #8b8b99); }

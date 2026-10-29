@@ -26,6 +26,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"section.paged": "分页",
 			"section.scroll": "滚动式",
 			"section.modeHint": "滚动式：所有区块竖排一次铺开；取消勾选则一次只看一个区块",
+			"filter.channel": "通道筛选",
+			"filter.project": "项目筛选",
+			"filter.model": "模型筛选",
+			"filter.allProjects": "全部项目",
+			"filter.allModels": "全部模型",
+			"filter.refreshCycle": "刷新周期",
 			"action.exportUsage": "导出明细",
 			"action.exportSessions": "导出会话",
 			"refresh.off": "关闭",
@@ -529,6 +535,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"section.paged": "Paged",
 			"section.scroll": "Scroll",
 			"section.modeHint": "Scroll: all sections stacked on one page; uncheck to show one section at a time",
+			"filter.channel": "Channel filter",
+			"filter.project": "Project filter",
+			"filter.model": "Model filter",
+			"filter.allProjects": "All projects",
+			"filter.allModels": "All models",
+			"filter.refreshCycle": "Refresh interval",
 			"action.exportUsage": "Export details",
 			"action.exportSessions": "Export sessions",
 			"refresh.off": "Off",
@@ -1352,7 +1364,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const CLIENT_BOOT_AT_MS = typeof performance === "undefined" ? 0 : performance.now();
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$16 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:max(13px, var(--dsh-content-font-size,13px));padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:max(16px, calc(var(--dsh-content-font-size,13px) * 1.3));flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_brand{white-space:nowrap}.d29QNW_titleRange{flex-wrap:wrap;flex:auto;align-items:center;gap:8px;min-width:0;display:inline-flex}.d29QNW_titleActions{align-items:center;gap:8px;display:inline-flex}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_filterBarSpacer{flex:auto}.d29QNW_filterLabel{color:var(--dsw-alias-label-tertiary,#8b8b99);white-space:nowrap}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);margin:-16px -20px 10px;padding:12px 20px 0;position:sticky;top:0}.d29QNW_stickyHead .d29QNW_tabBar{margin-bottom:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-12px -12px 10px;padding:10px 12px 0}}.d29QNW_ghLink{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:999px;align-items:center;gap:4px;padding:4px 8px;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);flex-wrap:wrap;gap:2px;margin-bottom:18px;display:flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;margin-bottom:-1px;padding:8px 14px}.d29QNW_tabBar button:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{color:var(--dsw-alias-state-business-primary,#5b8cff);border-bottom-color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_tabBarSpacer{flex:auto}.d29QNW_modeSwitch{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:inherit;cursor:pointer;white-space:nowrap;align-items:center;gap:5px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:inherit;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 11px),calc(100% - 7px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:6px;padding:2px 20px 2px 8px}.d29QNW_sections{flex-direction:column;gap:12px;margin-top:12px;display:flex}.d29QNW_pageSection{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:10px;min-width:0;padding:12px}.d29QNW_pageSectionTitle{font-size:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));color:var(--dsw-alias-label-primary,#e8e8ec);margin:0 0 10px;font-weight:600;line-height:1.4}.d29QNW_rangeTabs{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;height:22px;padding:0 11px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeCustom{align-items:center;gap:4px;display:inline-flex}.d29QNW_rangeCustomLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.d29QNW_rangeDate{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;height:22px;padding:0 4px}.d29QNW_rangeDate::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;width:12px;height:12px}.d29QNW_rangeDate::-webkit-datetime-edit{padding:0}.d29QNW_rangeDate:focus{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTilde{color:var(--dsw-alias-label-tertiary,#8b8b99)}";
+		const css$16 = ".d29QNW_section{box-sizing:border-box;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:max(13px, var(--dsh-content-font-size,13px));padding:16px 20px 32px;line-height:1.55;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:12px}.d29QNW_title{font-size:max(16px, calc(var(--dsh-content-font-size,13px) * 1.3));flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px;font-weight:650;display:flex}.d29QNW_toolbarRow{flex-wrap:wrap;align-items:center;gap:6px 8px;display:flex}.d29QNW_toolbarRow+.d29QNW_toolbarRow{margin-top:6px}.d29QNW_toolbarGroup{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:inline-flex}.d29QNW_rowSpacer{flex:auto}.d29QNW_brand{white-space:nowrap;font-size:15px;font-weight:650;line-height:26px}.d29QNW_stickyHead .d29QNW_headBtn{border-radius:6px;height:26px;padding:0 10px;font-size:13px}.d29QNW_iconBtn{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:26px;height:26px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;justify-content:center;align-items:center;padding:0;font-size:13px;line-height:1;text-decoration:none;display:inline-flex}.d29QNW_iconBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_iconBtn:disabled{opacity:.6;cursor:default}.d29QNW_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_filterLabel{color:var(--dsw-alias-label-tertiary,#8b8b99);white-space:nowrap}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);margin:-16px -20px 10px;padding:10px 20px 8px;position:sticky;top:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-12px -12px 10px;padding:8px 12px 6px}}.d29QNW_ghLink{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:26px;height:26px;color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:6px;justify-content:center;align-items:center;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{flex-wrap:wrap;gap:2px;display:inline-flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border:1px solid #0000;border-radius:7px;height:26px;padding:0 10px;font-size:13px}.d29QNW_tabBar button:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_modeSwitch{height:26px;color:var(--dsw-alias-label-tertiary,#8b8b99);cursor:pointer;white-space:nowrap;align-items:center;gap:5px;font-size:13px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);height:26px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;text-overflow:ellipsis;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 12px),calc(100% - 8px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:6px;max-width:200px;padding:0 22px 0 8px;font-size:13px}.d29QNW_refreshSelect:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_sections{flex-direction:column;gap:12px;margin-top:12px;display:flex}.d29QNW_pageSection{border:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:10px;min-width:0;padding:12px}.d29QNW_pageSectionTitle{font-size:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));color:var(--dsw-alias-label-primary,#e8e8ec);margin:0 0 10px;font-weight:600;line-height:1.4}.d29QNW_rangeTabs{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:7px;flex-wrap:wrap;align-items:center;gap:2px;height:26px;padding:2px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;height:20px;padding:0 9px;font-size:13px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#5b8cff24);color:var(--dsw-alias-state-business-primary,#5b8cff);font-weight:600}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeCustom{align-items:center;gap:4px;display:inline-flex}.d29QNW_rangeCustomLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.d29QNW_rangeDate{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border-radius:6px;height:26px;padding:0 4px;font-size:13px}.d29QNW_rangeDate::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;width:12px;height:12px}.d29QNW_rangeDate::-webkit-datetime-edit{padding:0}.d29QNW_rangeDate:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_rangeDate:focus{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTilde{color:var(--dsw-alias-label-tertiary,#8b8b99)}";
 		const tagId$16 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1377,10 +1389,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dim": "d29QNW_dim",
 			"empty": "d29QNW_empty",
 			"filterBar": "d29QNW_filterBar",
-			"filterBarSpacer": "d29QNW_filterBarSpacer",
 			"filterLabel": "d29QNW_filterLabel",
 			"footnoteList": "d29QNW_footnoteList",
 			"ghLink": "d29QNW_ghLink",
+			"headBtn": "d29QNW_headBtn",
+			"iconBtn": "d29QNW_iconBtn",
 			"legend": "d29QNW_legend",
 			"modeSwitch": "d29QNW_modeSwitch",
 			"pageSection": "d29QNW_pageSection",
@@ -1399,6 +1412,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"refreshIconSpin": "d29QNW_refreshIconSpin",
 			"refreshSelect": "d29QNW_refreshSelect",
 			"refreshSpin": "d29QNW_refreshSpin",
+			"rowSpacer": "d29QNW_rowSpacer",
 			"section": "d29QNW_section",
 			"sections": "d29QNW_sections",
 			"statAbove": "d29QNW_statAbove",
@@ -1411,7 +1425,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"statusDot": "d29QNW_statusDot",
 			"stickyHead": "d29QNW_stickyHead",
 			"tabBar": "d29QNW_tabBar",
-			"tabBarSpacer": "d29QNW_tabBarSpacer",
 			"table": "d29QNW_table",
 			"tipAmount": "d29QNW_tipAmount",
 			"tipBar": "d29QNW_tipBar",
@@ -1422,8 +1435,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tipSub": "d29QNW_tipSub",
 			"tipTitle": "d29QNW_tipTitle",
 			"title": "d29QNW_title",
-			"titleActions": "d29QNW_titleActions",
-			"titleRange": "d29QNW_titleRange",
+			"toolbarGroup": "d29QNW_toolbarGroup",
+			"toolbarRow": "d29QNW_toolbarRow",
 			"tooltip": "d29QNW_tooltip",
 			"warning": "d29QNW_warning"
 		};
@@ -3519,822 +3532,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
-		//#region src/client/tabs/OverviewTab.tsx
-		/**
-		* 总览：KPI 卡片行 + 使用趋势（「全部」看全年热力图，其余范围看柱状图）+ 项目 / 模型排行 + 按时段热力。
-		* 按原型不再列通道表：通道余额与配额在「额度与订阅」，这里只留结论。
-		* KPI 口径跟随页头范围：近 30 天取 `summary` 的月列（官方账单），其余范围取 `usage.totals`（同一窗口）；
-		* 拿不到的字段一律显示 —，不编造，也不把两个窗口的数字拼进同一张卡。
-		*/
-		const TREND_METRICS = [
-			["activity", "overview.mActivity"],
-			["tokens", "overview.mTokens"],
-			["outTokens", "overview.mOutTokens"],
-			["cacheRead", "overview.mCacheRead"],
-			["sessions", "overview.mSessions"],
-			["cost", "overview.mSpend"]
-		];
-		const PROJECT_METRICS = [
-			["cost", "overview.mCost"],
-			["tokens", "overview.mTokens"],
-			["sessions", "overview.mSessions"]
-		];
-		const MODEL_METRICS = [
-			["cost", "overview.mCost"],
-			["tokens", "overview.mTokens"],
-			["cacheHit", "overview.kpiCache"]
-		];
-		const HOUR_METRICS = [
-			["sessions", "overview.mSessions"],
-			["tokens", "overview.mTokens"],
-			["cost", "overview.mSpend"]
-		];
-		/** 周一到周日的标签键（`h.wd0` 是周日）。 */
-		const WEEKDAY_KEYS = [
-			"h.wd1",
-			"h.wd2",
-			"h.wd3",
-			"h.wd4",
-			"h.wd5",
-			"h.wd6",
-			"h.wd0"
-		];
-		/** 排行面板最多列出的行数，其余收进「还有 M 个」。 */
-		const RANK_ROWS = 5;
-		/** 柱状图横轴最多标注几个日期。 */
-		const BAR_TICKS = 8;
-		function OverviewTab(props) {
-			/** 取词：宿主切语言时重渲染 */
-			const t = useT();
-			/** 订阅显示币种与汇率：金额随它重渲染（汇率与币种在设置弹窗里改）。 */
-			const { display } = useCurrencyDisplay();
-			const [trendMetric, setTrendMetric] = (0, react.useState)("activity");
-			const [projectMetric, setProjectMetric] = (0, react.useState)("cost");
-			const [modelMetric, setModelMetric] = (0, react.useState)("cost");
-			const [hourMetric, setHourMetric] = (0, react.useState)("sessions");
-			const range = props.range ?? "month";
-			const summary = props.summary;
-			const isMonthRange = range === "month";
-			const monthRows = summary === null ? [] : summary.channels.map((row) => row.month);
-			const monthCost = monthCostTotalsOf(summary);
-			const monthTokens = monthRows.reduce((total, row) => total + row.tokens, 0);
-			const monthFrom = summary === null ? null : summary.range.monthFrom;
-			const monthTo = summary === null ? null : summary.range.today;
-			const activeDaysOfMonth = monthFrom === null || monthTo === null ? 0 : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length;
-			const rangeTotals = isMonthRange ? null : rangeTotalsOf(props.usage, range);
-			/** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。 */
-			const splitTotals = isMonthRange ? props.usage?.totals ?? null : rangeTotals;
-			const costRow = isMonthRange ? summary === null ? null : monthCost : rangeTotals === null ? null : {
-				cost: rangeTotals.cost,
-				costsByCurrency: rangeTotals.costsByCurrency
-			};
-			const costAmount = costRow === null ? null : comparableMoneyOf(costRow);
-			const tokenCount = isMonthRange ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
-			const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount);
-			const hitRate = hitRateOf(splitTotals);
-			const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null ? null : moneyTotalsTextOf({
-				cost: splitTotals.cacheSaved,
-				costsByCurrency: splitTotals.cacheSavedByCurrency
-			});
-			const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(props.usage, range);
-			const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
-			const sessionCount = isMonthRange ? sessionCountOf(props.sessions, monthFrom) : sessionCountOf(props.sessions, sessionFromOf(range));
-			const isAllRange = range === "total";
-			const trendDays = trendDaysOf(props.usage, props.heatmap);
-			/** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
-			const hasDailyCalls = trendDays.some((day) => day.calls !== null);
-			const rangeWindow = windowOfRange(range);
-			const barDays = range === "custom" && props.usage == null || rangeWindow === null ? trendDays : trendDays.filter((day) => day.date >= rangeWindow.from && day.date <= rangeWindow.to);
-			const barValues = barDays.map((day) => metricValueOf$1(trendMetric, day));
-			const hasBarData = barValues.some((value) => value !== null && value > 0);
-			const heatValues = /* @__PURE__ */ new Map();
-			for (const day of trendDays) {
-				const value = metricValueOf$1(trendMetric, day);
-				if (value !== null && value > 0) heatValues.set(day.date, value);
-			}
-			const hasHeatData = heatValues.size > 0;
-			/** 趋势空态：活跃度缺按天调用数时讲清原因，不给笼统的「暂无数据」。 */
-			const trendEmptyText = trendMetric === "activity" && !hasDailyCalls ? t("overview.noCalls") : t("overview.noData");
-			const drawnDates = isAllRange ? [...heatValues.keys()] : barDays.filter((_, index) => (barValues[index] ?? 0) > 0).map((day) => day.date);
-			const busiest = busiestOf(drawnDates, isAllRange ? [...heatValues.values()] : barValues.filter((value) => value !== null && value > 0));
-			const trendStats = [
-				drawnDates.length > 0 ? t("overview.streak", { count: streakOf(drawnDates) }) : null,
-				busiest === null ? null : t("overview.busiest", {
-					date: fmtShortDate(busiest.date),
-					value: metricTextOf$1(trendMetric, busiest.value)
-				}),
-				drawnDates.length > 0 ? t("overview.activeDays", { count: drawnDates.length }) : null
-			].filter((part) => part !== null).join(" · ");
-			const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]));
-			const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null;
-			/** 热力图悬停：先讲当前指标的值，Tokens 类指标再补逐模型占比（模型构成只有 tokens 口径）。 */
-			const tipOfDay = (date) => {
-				const value = heatValues.get(date);
-				if (value === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: dataStart !== null && date >= dataStart ? t("h.noUsage") : t("h.noLedger") })] });
-				const day = heatmapByDate.get(date);
-				const withModels = trendMetric === "activity" || trendMetric === "tokens";
-				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-						t(labelKeyOf(TREND_METRICS, trendMetric)),
-						" ",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: metricTextOf$1(trendMetric, value) })
-					] }),
-					withModels && day !== void 0 && day.models.map((model) => {
-						const percent = day.totalTokens > 0 ? Math.round(model.totalTokens / day.totalTokens * 100) : 0;
-						const color = channelColorOf(props.channels, model.provider);
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
-							color,
-							label: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: shared_module_css_default.dim,
-								children: [" · ", displayNameOf(props.channels, model.provider)]
-							})] }),
-							amount: fmtTokens(model.totalTokens),
-							rate: percent + "%"
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipBar, {
-							percent,
-							color
-						})] }, model.provider + "|" + model.model);
-					})
-				] });
-			};
-			const barTipOf = (date, value) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-				t(labelKeyOf(TREND_METRICS, trendMetric)),
-				" ",
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: value === null ? "—" : metricTextOf$1(trendMetric, value) })
-			] })] });
-			const projectItems = rankItemsOfProjects(props.projects, projectMetric);
-			const modelItems = rankItemsOfModels(props.models, modelMetric);
-			const hourMatrix = hourlyMatrixOf(props.hourly);
-			const hourValues = hourMatrix === null ? null : hourMatrix.map((weekday) => weekday.map((cell) => hourMetricValueOf(hourMetric, cell)));
-			const hourActiveValues = hourValues === null ? [] : hourValues.flat().filter((value) => value !== void 0 && value > 0);
-			const hasHourData = hourActiveValues.length > 0;
-			const hourThresholds = levelThresholds(hourActiveValues);
-			const busiestHour = busiestHourOf(hourValues);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.stack,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiRow,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiCost"),
-								value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
-									previous: props.previousCost ?? null,
-									current: costAmount,
-									format: (value) => moneyTextOf(display, value)
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiTokens"),
-								value: tokenValue === null ? "—" : tokenValue.text,
-								unit: tokenValue === null || tokenValue.unit === "" ? void 0 : tokenValue.unit,
-								detail: splitTotals === null ? "—" : t("overview.ioSplit", {
-									input: fmtTokens(splitTotals.inputTokens),
-									output: fmtTokens(splitTotals.outputTokens)
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiCache"),
-								value: hitRate === null ? "—" : hitRate.toFixed(1),
-								unit: hitRate === null ? void 0 : "%",
-								detail: splitTotals === null ? "—" : t("overview.cacheLine", {
-									value: tokenTextOf(splitTotals.cacheReadTokens),
-									saved: cacheSaved ?? "—"
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiSessions"),
-								value: sessionCount === null ? "—" : fmtCalls(sessionCount),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
-									previous: props.previousSessions ?? null,
-									current: sessionCount,
-									format: fmtCalls
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiDaily"),
-								value: dailyAverage === null ? "—" : displaySymbolOf(display) + dailyAverage.toFixed(1),
-								detail: activeDays === 0 ? "—" : t("overview.activeDays", { count: activeDays })
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.panel,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: overview_module_css_default.panelHead,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
-									className: overview_module_css_default.panelTitle,
-									children: t("overview.trend")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: overview_module_css_default.metricTabs,
-									children: TREND_METRICS.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: metric === trendMetric ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
-										"aria-pressed": metric === trendMetric,
-										onClick: () => setTrendMetric(metric),
-										children: t(labelKey)
-									}, metric))
-								})]
-							}),
-							isAllRange ? hasHeatData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(YearHeatmap, {
-								valuesByDate: heatValues,
-								dataStart,
-								tooltip: props.tooltip,
-								tipOf: tipOfDay,
-								onPickDay: props.onPickDay,
-								ariaLabel: t("overview.trend") + " · " + String(heatValues.size) + t("h.summarySuffix")
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: shared_module_css_default.empty,
-								children: trendEmptyText
-							}) : hasBarData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrendBars, {
-								days: barDays,
-								values: barValues,
-								tooltip: props.tooltip,
-								tipOf: barTipOf
-							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: shared_module_css_default.empty,
-								children: trendEmptyText
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: overview_module_css_default.trendFoot,
-								children: [isAllRange && hasHeatData && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: overview_module_css_default.legend,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-											className: overview_module_css_default.legendItem,
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), t("overview.legendLess")]
-										}),
-										LEVEL_COLORS.slice(1, -1).map((color) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: overview_module_css_default.legendItem,
-											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: color } })
-										}, color)),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-											className: overview_module_css_default.legendItem,
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[LEVEL_COLORS.length - 1] } }), t("overview.legendMore")]
-										})
-									]
-								}), trendStats !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.trendStats,
-									children: trendStats
-								})]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.gridTwo,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankPanel, {
-							title: t("overview.panelProjects"),
-							metrics: PROJECT_METRICS,
-							active: projectMetric,
-							onActive: setProjectMetric,
-							items: projectItems.items,
-							total: projectItems.total
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankPanel, {
-							title: t("overview.panelModels"),
-							metrics: MODEL_METRICS,
-							active: modelMetric,
-							onActive: setModelMetric,
-							items: modelItems.items,
-							total: modelItems.total
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.panel,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: overview_module_css_default.panelHead,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
-									className: overview_module_css_default.panelTitle,
-									children: t("overview.hourly")
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: overview_module_css_default.metricTabs,
-									children: HOUR_METRICS.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: metric === hourMetric ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
-										"aria-pressed": metric === hourMetric,
-										onClick: () => setHourMetric(metric),
-										children: t(labelKey)
-									}, metric))
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.panelMore,
-									children: busiestHour === null ? "" : t("overview.busiestHour", {
-										weekday: t(WEEKDAY_KEYS[busiestHour.weekday]),
-										hour: String(busiestHour.hour).padStart(2, "0") + ":00"
-									})
-								})
-							]
-						}), hourValues === null || hourMatrix === null || !hasHourData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: shared_module_css_default.empty,
-							children: t("overview.noHourly")
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: overview_module_css_default.hourWrap,
-							role: "group",
-							"aria-label": t("overview.hourly"),
-							children: [
-								WEEKDAY_KEYS.map((key, weekdayIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.hourWeekday,
-									style: {
-										gridColumn: 1,
-										gridRow: weekdayIndex + 2
-									},
-									children: t(key)
-								}, key)),
-								Array.from({ length: 24 }, (_, hour) => hour % 3 === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.hourAxisLabel,
-									style: {
-										gridColumn: hour + 2,
-										gridRow: 1
-									},
-									children: String(hour)
-								}, "axis-" + String(hour)) : null),
-								hourMatrix.map((weekday, weekdayIndex) => weekday.map((cell, hour) => {
-									const value = hourValues[weekdayIndex][hour];
-									const level = value === void 0 ? 0 : levelOfValue(value, hourThresholds);
-									return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-										className: overview_module_css_default.hourCell,
-										style: {
-											gridColumn: hour + 2,
-											gridRow: weekdayIndex + 2,
-											background: levelColorOf(level)
-										},
-										onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: t(WEEKDAY_KEYS[weekdayIndex]) + " " + String(hour).padStart(2, "0") + ":00" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
-											t(labelKeyOf(HOUR_METRICS, hourMetric)),
-											" ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: value === void 0 ? "—" : metricTextOf$1(hourMetric, value) })
-										] })] })),
-										onMouseLeave: props.tooltip.hide
-									}, weekdayIndex + "-" + hour);
-								}))
-							]
-						})]
-					})
-				]
-			});
-		}
-		function KpiCard$1(props) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.kpiCard,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.kpiLabel,
-						children: props.label
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiValue,
-						children: [props.value, props.unit !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.kpiUnit,
-							children: props.unit
-						})]
-					}),
-					props.detail !== void 0 && props.detail !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.kpiDetail,
-						children: props.detail
-					})
-				]
-			});
-		}
-		/**
-		* 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
-		* 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
-		*/
-		function PrevLine(props) {
-			if (props.previous === null) return null;
-			const previousText = t("overview.prev", { value: props.format(props.previous) });
-			if (props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
-			const delta = (props.current - props.previous) / props.previous * 100;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: delta > 0 ? overview_module_css_default.rise : delta < 0 ? overview_module_css_default.fall : void 0,
-				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
-			})] });
-		}
-		/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
-		function TrendBars(props) {
-			const peak = Math.max(0, ...props.values.filter((value) => value !== null));
-			const peakIndex = props.values.findIndex((value) => value !== null && value === peak && peak > 0);
-			const ticks = tickIndexesOf(props.days.length, BAR_TICKS);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: overview_module_css_default.hist,
-				children: props.days.map((day, index) => {
-					const value = props.values[index] ?? null;
-					const percent = value === null || peak <= 0 ? 0 : Math.max(2, value / peak * 100);
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.histColumn,
-						onMouseMove: (event) => props.tooltip.show(event, props.tipOf(day.date, value)),
-						onMouseLeave: props.tooltip.hide,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: index === peakIndex ? overview_module_css_default.histBar + " " + overview_module_css_default.histBarPeak : overview_module_css_default.histBar,
-							style: { height: percent + "%" }
-						})
-					}, day.date);
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: overview_module_css_default.histLabels,
-				children: ticks.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtShortDate(props.days[index].date) }, props.days[index].date))
-			})] });
-		}
-		/** 排行面板：横条 + 右侧数值；行数超出「还有 M 个」。 */
-		function RankPanel(props) {
-			/** 取词：宿主切语言时重渲染 */
-			const t = useT();
-			const shown = props.items.slice(0, RANK_ROWS);
-			const peak = shown.reduce((maximum, item) => item.value !== null && item.value > maximum ? item.value : maximum, 0);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.panel,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: overview_module_css_default.panelHead,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
-							className: overview_module_css_default.panelTitle,
-							children: props.title
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: overview_module_css_default.metricTabs,
-							children: props.metrics.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: metric === props.active ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
-								"aria-pressed": metric === props.active,
-								onClick: () => props.onActive(metric),
-								children: t(labelKey)
-							}, metric))
-						}),
-						props.total > shown.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.panelMore,
-							children: t("overview.more", {
-								total: props.total,
-								rest: Math.max(0, props.total - shown.length)
-							})
-						})
-					]
-				}), shown.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: shared_module_css_default.empty,
-					children: t("overview.noData")
-				}) : shown.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: overview_module_css_default.rankRow,
-					title: item.title,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.rankName,
-							children: item.name
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.rankTrack,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
-								className: index === 0 ? overview_module_css_default.rankBar + " " + overview_module_css_default.rankBarTop : overview_module_css_default.rankBar,
-								style: { width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + "%" }
-							})
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: item.value === null ? overview_module_css_default.rankValue + " " + overview_module_css_default.rankDim : overview_module_css_default.rankValue,
-							children: item.valueText
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.rankSub,
-							children: item.subText
-						})
-					]
-				}, item.key))]
-			});
-		}
-		/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
-		function compareRankValue(first, second) {
-			if (first.value === null && second.value === null) return 0;
-			if (first.value === null) return 1;
-			if (second.value === null) return -1;
-			return second.value - first.value;
-		}
-		/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
-		function monthCostTotalsOf(summary) {
-			const totals = {
-				cost: 0,
-				costsByCurrency: {}
-			};
-			for (const row of summary?.channels ?? []) {
-				totals.cost += row.month.cost;
-				for (const [currency, amount] of Object.entries(row.month.costsByCurrency ?? {})) totals.costsByCurrency[currency] = (totals.costsByCurrency[currency] ?? 0) + amount;
-			}
-			return totals;
-		}
-		/** 缓存命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）；没有拆分数据时给 null。 */
-		function hitRateOf(totals) {
-			if (totals === null) return null;
-			const total = totals.inputTokens + totals.outputTokens + totals.cacheReadTokens;
-			return total > 0 ? totals.cacheReadTokens / total * 100 : null;
-		}
-		/**
-		* 本期会话数：最近活动落在当前窗口里的会话行数（`'all'` = 全部会话，不设下限）。
-		* 列表被 limit 截断时不能拿来计数（会少算），Coverage 说读不出来的也不给数字；
-		* `from` 为 null 表示窗口未知（自定义范围只有父级知道起止）→ 显示 —。
-		*/
-		function sessionCountOf(sessions, from) {
-			if (from === null || sessions == null || sessions.coverage.status === "unavailable") return null;
-			if (sessions.rows.length === 0 || sessions.rows.length < sessions.coverage.countedSessions) return null;
-			const active = sessions.rows.filter((row) => row.calls > 0);
-			if (from === "all") return active.length;
-			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			return active.filter((row) => row.lastTime !== null && row.lastTime >= fromTime).length;
-		}
-		/** 会话 KPI 的起点：今天 / 7 天按窗口起点，全部不设下限，自定义范围只有父级知道起止 → null（显示 —）。 */
-		function sessionFromOf(range) {
-			if (range === "total") return "all";
-			return windowOfRange(range)?.from ?? null;
-		}
-		/**
-		* 非近 30 天范围的可信合计：父级按当前范围请求 `/usage`，分页时可能还没跟上；
-		* 逐日明细越出当前窗口就按没有数据处理（宁可显示 —，也不把上一个范围的数字贴到本范围）。
-		*/
-		function rangeTotalsOf(usage, range) {
-			const totals = usage?.totals ?? null;
-			if (totals === null) return null;
-			const window = windowOfRange(range);
-			if (window === null) return totals;
-			return (usage?.days ?? []).some((day) => day.date < window.from || day.date > window.to) ? null : totals;
-		}
-		/** 当前范围里有数据的天数（日均的分母）：`usage.days` 的日期去重，只数窗口内的日子。 */
-		function usageDayCountOf(usage, range) {
-			const window = windowOfRange(range);
-			const dates = /* @__PURE__ */ new Set();
-			for (const day of usage?.days ?? []) {
-				if (window !== null && (day.date < window.from || day.date > window.to)) continue;
-				dates.add(day.date);
-			}
-			return dates.size;
-		}
-		/** KPI 大数：按原型展示 2 位小数（15.34<small>B</small>），与共用 `fmtTokens` 的 1 位小数区分（榜单仍用 1 位）。 */
-		function tokenValueOf(count) {
-			for (const [base, unit] of [
-				[1e9, "B"],
-				[1e6, "M"],
-				[1e3, "K"]
-			]) {
-				if (Math.abs(count) < base) continue;
-				const value = count / base;
-				if (value < 1e3) return {
-					text: value.toFixed(2),
-					unit
-				};
-			}
-			return {
-				text: fmtCount(count),
-				unit: ""
-			};
-		}
-		/** 大数文本（2 位小数 + 单位）：缓存读明细这类 KPI 副标用。 */
-		function tokenTextOf(count) {
-			const value = tokenValueOf(count);
-			return value.text + value.unit;
-		}
-		/** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
-		function trendDaysOf(usage, heatmap) {
-			const usageDays = usage?.days ?? [];
-			if (usageDays.length > 0) return usageDays.map(trendDayOfDay).sort((first, second) => first.date.localeCompare(second.date));
-			return heatmap.map((day) => ({
-				date: day.date,
-				tokens: day.totalTokens,
-				calls: null,
-				outTokens: null,
-				cacheRead: null,
-				cost: null
-			})).sort((first, second) => first.date.localeCompare(second.date));
-		}
-		function trendDayOfDay(day) {
-			return {
-				date: day.date,
-				tokens: day.inputTokens + day.outputTokens + day.cacheReadTokens,
-				calls: day.calls,
-				outTokens: day.outputTokens,
-				cacheRead: day.cacheReadTokens,
-				cost: comparableMoneyOf(day)
-			};
-		}
-		/** 各范围对应的本地窗口；`total` 由热力图覆盖、`custom` 只有父级知道起止，两者返回 null。 */
-		function windowOfRange(range) {
-			const today = isoDate(/* @__PURE__ */ new Date());
-			if (range === "today") return {
-				from: today,
-				to: today
-			};
-			if (range === "week") return {
-				from: shiftedIsoDate(-6),
-				to: today
-			};
-			if (range === "month") return {
-				from: shiftedIsoDate(-29),
-				to: today
-			};
-			return null;
-		}
-		/**
-		* 当前指标在一天上的取值。`activity` 只认按天调用数：`heatmap` 段没有这一项时返回 null（该档不画柱），
-		* 绝不拿 token 量冒充调用数；`sessions` 一律 null：服务端没有按天会话数。
-		*/
-		function metricValueOf$1(metric, day) {
-			if (metric === "activity") return day.calls;
-			if (metric === "tokens") return day.tokens;
-			if (metric === "outTokens") return day.outTokens;
-			if (metric === "cacheRead") return day.cacheRead;
-			if (metric === "cost") return day.cost;
-			return null;
-		}
-		/** 指标数值文本：金额按显示币种，调用次数带单位，其余按 tokens 缩写。 */
-		function metricTextOf$1(metric, value) {
-			if (metric === "cost") return displaySymbolOf() + value.toFixed(2);
-			if (metric === "activity") return fmtCalls(value) + " " + t("overview.callsUnit");
-			if (metric === "sessions") return fmtCalls(value);
-			return fmtTokens(value);
-		}
-		function labelKeyOf(pairs, key) {
-			return pairs.find(([item]) => item === key)?.[1] ?? "";
-		}
-		/** 连续活跃天数：只数有值的日子，中间断一天就重新起算。 */
-		function streakOf(dates) {
-			const sorted = [...dates].sort();
-			let longest = 0;
-			let run = 0;
-			let previous = null;
-			for (const date of sorted) {
-				run = previous !== null && nextDateOf(previous) === date ? run + 1 : 1;
-				longest = Math.max(longest, run);
-				previous = date;
-			}
-			return longest;
-		}
-		function nextDateOf(dateKey) {
-			return isoDate(new Date((/* @__PURE__ */ new Date(dateKey + "T00:00:00")).getTime() + 864e5));
-		}
-		/** 最忙的一天（值最大的那天）；没有值时给 null。 */
-		function busiestOf(dates, values) {
-			let busiest = null;
-			for (let index = 0; index < dates.length; index += 1) {
-				const value = values[index];
-				if (value === void 0 || value <= 0) continue;
-				if (busiest === null || value > busiest.value) busiest = {
-					date: dates[index],
-					value
-				};
-			}
-			return busiest;
-		}
-		function tickIndexesOf(count, wanted) {
-			if (count <= wanted) return Array.from({ length: count }, (_, index) => index);
-			const step = Math.ceil(count / wanted);
-			const indexes = [];
-			for (let index = 0; index < count; index += step) indexes.push(index);
-			return indexes;
-		}
-		function projectValueOf(metric, row) {
-			if (metric === "cost") return comparableMoneyOf(row);
-			if (metric === "tokens") return row.tokens;
-			return row.sessionCount;
-		}
-		function projectValueTextOf(metric, row) {
-			if (metric === "cost") return rowMoneyViewOf(row).text;
-			if (metric === "tokens") return fmtTokens(row.tokens);
-			return fmtCalls(row.sessionCount);
-		}
-		function rankItemsOfProjects(projects, metric) {
-			const rows = projects?.rows ?? [];
-			const items = [];
-			for (const row of rows) {
-				const value = projectValueOf(metric, row);
-				/** 成本口径下没有价目依据的行保留在末尾显示「—」（原型模型榜就有一条 —），不编金额 */
-				const missingCost = metric === "cost" && value === null;
-				if (!missingCost && (value === null || value <= 0)) continue;
-				const name = row.workspaceTitle ?? (row.workspace === "" ? t("p.orphan") : row.workspace);
-				items.push({
-					key: row.workspace === "" ? "__orphan__" : row.workspace,
-					name,
-					title: name,
-					value,
-					valueText: missingCost ? "—" : projectValueTextOf(metric, row),
-					subText: t("overview.sessionCount", { count: row.sessionCount })
-				});
-			}
-			items.sort(compareRankValue);
-			return {
-				items,
-				total: items.length
-			};
-		}
-		function modelValueOf(metric, row) {
-			if (metric === "cost") return comparableMoneyOf(row);
-			if (metric === "tokens") return row.tokens;
-			return row.cacheHitRate;
-		}
-		function modelValueTextOf(metric, row) {
-			if (metric === "cost") return rowMoneyViewOf(row).text;
-			if (metric === "tokens") return fmtTokens(row.tokens);
-			return row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%";
-		}
-		function rankItemsOfModels(models, metric) {
-			const rows = models?.rows ?? [];
-			const items = [];
-			for (const row of rows) {
-				const value = modelValueOf(metric, row);
-				/** 成本口径下没有价目依据的模型保留在末尾显示「—」（原型模型榜第 5 行就是这种），不编金额 */
-				const missingCost = metric === "cost" && value === null;
-				if (!missingCost && (value === null || value <= 0)) continue;
-				items.push({
-					key: row.provider + "|" + row.model,
-					name: row.model,
-					title: row.model + " · " + row.providerLabel,
-					value,
-					valueText: missingCost ? "—" : modelValueTextOf(metric, row),
-					subText: fmtTokens(row.tokens)
-				});
-			}
-			items.sort(compareRankValue);
-			return {
-				items,
-				total: items.length
-			};
-		}
-		function hourCellOf(value) {
-			if (typeof value === "number" && Number.isFinite(value)) return { sessions: value };
-			if (value === null || typeof value !== "object") return {};
-			const record = value;
-			const numberAt = (key) => {
-				const raw = record[key];
-				return typeof raw === "number" && Number.isFinite(raw) ? raw : void 0;
-			};
-			return {
-				sessions: numberAt("sessions") ?? numberAt("calls"),
-				tokens: numberAt("tokens"),
-				cost: numberAt("cost")
-			};
-		}
-		/**
-		* 把 heatmap 段的 `hourly` 归一成「周一到周日 × 24 小时」。
-		* 接受两种写法：`hours` 里是数字（当会话数）或对象（sessions / calls / tokens / cost）；
-		* 周几用 7 或 0 区分「周一 = 1」与「周日 = 0」；外面包一层 `rows` / `weekdays` 也认。
-		* 形状不对时返回 null（面板显示空态，不崩）。
-		*/
-		function hourlyMatrixOf(raw) {
-			const list = hourlyListOf(raw);
-			if (list === null) return null;
-			const rows = [];
-			for (const entry of list) {
-				if (entry === null || typeof entry !== "object") continue;
-				const record = entry;
-				const weekday = typeof record.weekday === "number" ? record.weekday : Number(record.weekday);
-				const hoursRaw = Array.isArray(record.hours) ? record.hours : null;
-				if (!Number.isFinite(weekday) || hoursRaw === null) continue;
-				const hours = [];
-				for (let hour = 0; hour < 24; hour += 1) hours.push(hourCellOf(hoursRaw[hour]));
-				rows.push({
-					weekday,
-					hours
-				});
-			}
-			if (rows.length === 0) return null;
-			const sundayZero = !rows.some((row) => row.weekday === 7) && rows.some((row) => row.weekday === 0);
-			const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({})));
-			for (const row of rows) {
-				const displayIndex = sundayZero ? (row.weekday + 6) % 7 : row.weekday - 1;
-				if (displayIndex < 0 || displayIndex > 6) continue;
-				matrix[displayIndex] = row.hours;
-			}
-			return matrix;
-		}
-		/** 取承载七行的那一层数组：原子数组，或 `{ rows: [...] }` / `{ weekdays: [...] }` 这种包一层的写法。 */
-		function hourlyListOf(raw) {
-			if (Array.isArray(raw)) return raw;
-			if (raw === null || typeof raw !== "object") return null;
-			const record = raw;
-			for (const key of [
-				"rows",
-				"weekdays",
-				"hourly"
-			]) {
-				const value = record[key];
-				if (Array.isArray(value)) return value;
-			}
-			return null;
-		}
-		function hourMetricValueOf(metric, cell) {
-			if (metric === "sessions") return cell.sessions;
-			if (metric === "tokens") return cell.tokens;
-			return cell.cost;
-		}
-		function busiestHourOf(values) {
-			if (values === null) return null;
-			let busiest = null;
-			for (let weekday = 0; weekday < values.length; weekday += 1) for (let hour = 0; hour < values[weekday].length; hour += 1) {
-				const value = values[weekday][hour];
-				if (value === void 0 || value <= 0) continue;
-				if (busiest === null || value > busiest.value) busiest = {
-					weekday,
-					hour,
-					value
-				};
-			}
-			return busiest;
-		}
-		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
 		const css$11 = "._91PKKq_page{--detail-body:max(13px, var(--dsh-content-font-size,13px));--detail-title:max(15px, calc(var(--dsh-content-font-size,13px) * 1.15));font-size:var(--detail-body);flex-direction:column;gap:10px;display:flex}._91PKKq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 11px}._91PKKq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}._91PKKq_panelTitle{font-size:var(--detail-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_panelMore{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}._91PKKq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:7px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}._91PKKq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--detail-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:5px;padding:2px 8px}._91PKKq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}._91PKKq_costBars{align-items:flex-end;gap:4px;height:104px;display:flex}._91PKKq_costBarsDense{gap:1px}._91PKKq_costBarCol{cursor:default;border-radius:3px;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}._91PKKq_costBarCol:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c14)}._91PKKq_costBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff59);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costAxis{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--detail-body);font-variant-numeric:tabular-nums;justify-content:space-between;gap:4px;margin-top:4px;display:flex}._91PKKq_costAxis span{text-align:center;white-space:nowrap;flex:1}._91PKKq_tableScroll{overflow-x:auto}._91PKKq_detailTable{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%;font-size:var(--detail-body)}._91PKKq_detailTable th{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 7px;font-weight:500}._91PKKq_detailTable td{color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 7px}._91PKKq_detailTable ._91PKKq_alignLeft{text-align:left}._91PKKq_detailTable ._91PKKq_alignRight{text-align:right}._91PKKq_detailTable ._91PKKq_costCell{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_detailTable tr._91PKKq_totalRow td{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;font-weight:600}._91PKKq_deltaUp{color:var(--dsw-alias-state-error-primary,#e05a5a)}._91PKKq_deltaDown{color:var(--dsw-alias-state-success-primary,#3fb96f)}._91PKKq_deltaFlat{color:var(--dsw-alias-label-tertiary,#67676f)}._91PKKq_sortBtn{color:inherit;font:inherit;font-weight:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:3px;padding:0;display:inline-flex}._91PKKq_sortBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:4px}._91PKKq_sortDir{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_expandBtn{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:3px;justify-content:center;align-items:center;padding:0;line-height:1;display:inline-flex}._91PKKq_expandBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}._91PKKq_expandBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}._91PKKq_expandSpacer{width:16px;display:inline-block}._91PKKq_detailTable td._91PKKq_subCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0a);padding:2px 7px 8px 26px}._91PKKq_subTable{border-collapse:collapse;width:100%}._91PKKq_subTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:var(--detail-body);padding:2px 7px}._91PKKq_subTable td{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--detail-body);font-variant-numeric:tabular-nums;padding:2px 7px}._91PKKq_subTable th._91PKKq_alignLeft,._91PKKq_subTable td._91PKKq_alignLeft{text-align:left}";
 		const tagId$11 = "dsh-key-usage/detail.module.css";
@@ -4434,7 +3631,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"source"
 		]);
 		/** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
-		const SOURCE_ORDER = {
+		const SOURCE_ORDER$1 = {
 			official: 0,
 			catalog: 1,
 			aggregate: 2,
@@ -4516,8 +3713,108 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/** 聚合行取最弱的成本来源。 */
 		function weakSourceOf(sources) {
 			let weakest = null;
-			for (const source of sources) if (weakest === null || SOURCE_ORDER[source] > SOURCE_ORDER[weakest]) weakest = source;
+			for (const source of sources) if (weakest === null || SOURCE_ORDER$1[source] > SOURCE_ORDER$1[weakest]) weakest = source;
 			return weakest;
+		}
+		/** 把若干模型桶并成一天：调用 / tokens 相加，金额按逐币种小计合并，来源取最弱那一格。 */
+		function mergedDayOf(models, date, provider) {
+			const costsByCurrency = {};
+			const sources = [];
+			let calls = 0;
+			let inputTokens = 0;
+			let outputTokens = 0;
+			let cacheReadTokens = 0;
+			let cacheWriteTokens = 0;
+			let reasoningTokens = 0;
+			let cost = 0;
+			let partial = false;
+			for (const model of models) {
+				calls += model.calls;
+				inputTokens += model.inputTokens;
+				outputTokens += model.outputTokens;
+				cacheReadTokens += model.cacheReadTokens;
+				cacheWriteTokens += model.cacheWriteTokens;
+				reasoningTokens += model.reasoningTokens;
+				if (typeof model.cost === "number" && Number.isFinite(model.cost)) cost += model.cost;
+				for (const [currency, amount] of Object.entries(model.costsByCurrency ?? {})) if (typeof amount === "number" && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount;
+				if (model.costSource !== void 0) sources.push(model.costSource);
+				if (model.partial === true) partial = true;
+			}
+			const costSource = weakSourceOf(sources);
+			return {
+				date,
+				provider,
+				calls,
+				inputTokens,
+				outputTokens,
+				cacheReadTokens,
+				cacheWriteTokens,
+				reasoningTokens,
+				cost,
+				models,
+				...Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {},
+				...costSource === null ? {} : { costSource },
+				...partial ? { partial: true } : {}
+			};
+		}
+		/** 范围合计：由过滤后的逐日行相加；`cacheSaved` 无法从模型桶反推，不给（界面显示 —，不编）。 */
+		function totalsOfDays(days, date) {
+			const costsByCurrency = {};
+			const sources = [];
+			let calls = 0;
+			let inputTokens = 0;
+			let outputTokens = 0;
+			let cacheReadTokens = 0;
+			let cacheWriteTokens = 0;
+			let reasoningTokens = 0;
+			let cost = 0;
+			let partial = false;
+			for (const day of days) {
+				calls += day.calls;
+				inputTokens += day.inputTokens;
+				outputTokens += day.outputTokens;
+				cacheReadTokens += day.cacheReadTokens;
+				cacheWriteTokens += day.cacheWriteTokens;
+				reasoningTokens += day.reasoningTokens;
+				cost += day.cost;
+				for (const [currency, amount] of Object.entries(day.costsByCurrency ?? {})) if (typeof amount === "number" && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount;
+				if (day.costSource !== void 0) sources.push(day.costSource);
+				if (day.partial === true) partial = true;
+			}
+			const costSource = weakSourceOf(sources);
+			return {
+				date,
+				calls,
+				inputTokens,
+				outputTokens,
+				cacheReadTokens,
+				cacheWriteTokens,
+				reasoningTokens,
+				cost,
+				...Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {},
+				...costSource === null ? {} : { costSource },
+				...partial ? { partial: true } : {}
+			};
+		}
+		/**
+		* 按模型过滤 `/usage`：逐日只留该模型的桶，当天合计与范围合计都按剩下的桶重算（分页/汇总口径一致）。
+		* `'ALL'`、空串或没有这个模型的任何数据时原样返回（引用不变，零回归）；
+		* `hours`（按时段）没有模型维度，保持原样、不二次聚合。
+		*/
+		function filterUsageByModel(usage, modelFilter) {
+			const raw = usage ?? null;
+			if (raw === null || modelFilter === void 0 || modelFilter === "" || modelFilter === "ALL") return raw;
+			const days = [];
+			for (const day of raw.days) {
+				const models = day.models.filter((model) => model.model === modelFilter);
+				if (models.length === 0) continue;
+				days.push(mergedDayOf(models, day.date, day.provider));
+			}
+			return {
+				...raw,
+				days,
+				totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? "")
+			};
 		}
 		/** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
 		function deltaOf(current, previous) {
@@ -4661,7 +3958,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (sortKey === "cacheRead") return row.cacheRead;
 			if (sortKey === "cost") return row.costAmount;
 			if (sortKey === "delta") return row.delta;
-			return row.source === null ? null : SOURCE_ORDER[row.source];
+			return row.source === null ? null : SOURCE_ORDER$1[row.source];
 		}
 		/** 排序：无值（没价目 / 没上期）永远排最后，不跟方向翻转；同值时按日期倒序。 */
 		function sortDetailRows(rows, sortKey, direction) {
@@ -4678,13 +3975,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return second.date.localeCompare(first.date);
 			});
 		}
-		function metricValueOf(day, metric) {
+		function metricValueOf$1(day, metric) {
 			if (metric === "tokens") return day.inputTokens + day.outputTokens + day.cacheReadTokens;
 			if (metric === "output") return day.outputTokens;
 			if (metric === "cost") return comparableMoneyOf(day) ?? 0;
 			return 0;
 		}
-		function metricTextOf(day, metric) {
+		function metricTextOf$1(day, metric) {
 			if (metric === "cost") return costTextOf$1(day, day.costSource ?? null);
 			if (metric === "tokens") return fmtTokens(day.inputTokens + day.outputTokens + day.cacheReadTokens);
 			if (metric === "output") return fmtTokens(day.outputTokens);
@@ -4696,8 +3993,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const day = byDate.get(date) ?? null;
 				return {
 					date,
-					value: day === null ? 0 : metricValueOf(day, props.metric),
-					text: day === null ? "—" : metricTextOf(day, props.metric)
+					value: day === null ? 0 : metricValueOf$1(day, props.metric),
+					text: day === null ? "—" : metricTextOf$1(day, props.metric)
 				};
 			});
 			let peak = 0;
@@ -4721,6 +4018,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
 			const { usage, channels, bounds, tooltip, channelFilter } = props;
+			const modelFilter = props.modelFilter ?? "ALL";
 			const currency = useCurrencyDisplay();
 			const [metric, setMetric] = (0, react.useState)("cost");
 			const [dimension, setDimension] = (0, react.useState)("day");
@@ -4734,14 +4032,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				channelFilter,
 				pricingRevision: props.pricingRevision
 			});
+			/** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致 */
+			const scopedUsage = (0, react.useMemo)(() => filterUsageByModel(usage, modelFilter), [usage, modelFilter]);
+			const scopedPrevious = (0, react.useMemo)(() => filterUsageByModel(previousUsage, modelFilter), [previousUsage, modelFilter]);
 			/** 显示币种或汇率一变，金额文本就得重算（模块级状态变了，memo 自己发现不了）。 */
 			const moneyKey = currency.display + "|" + (currency.fx === null ? "" : String(currency.fx.rate));
-			const rows = (0, react.useMemo)(() => usage === null ? [] : buildDetailRows({
-				usage,
+			const rows = (0, react.useMemo)(() => scopedUsage === null ? [] : buildDetailRows({
+				usage: scopedUsage,
 				channels,
 				dimension
 			}), [
-				usage,
+				scopedUsage,
 				channels,
 				dimension,
 				moneyKey
@@ -4751,23 +4052,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				sortKey,
 				sortDirection
 			]);
-			const bars = (0, react.useMemo)(() => usage === null || metric === "sessions" ? [] : buildDailyBars({
-				usage,
+			const bars = (0, react.useMemo)(() => scopedUsage === null || metric === "sessions" ? [] : buildDailyBars({
+				usage: scopedUsage,
 				from: bounds.from,
 				to: bounds.to,
 				metric
 			}), [
-				usage,
+				scopedUsage,
 				metric,
 				bounds.from,
 				bounds.to,
 				moneyKey
 			]);
-			if (usage === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			if (scopedUsage === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: shared_module_css_default.empty,
 				children: t("d.ledgerLoading")
 			});
-			const safeTotals = usage.totals ?? {
+			const safeTotals = scopedUsage.totals ?? {
 				date: "",
 				calls: 0,
 				inputTokens: 0,
@@ -4779,10 +4080,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens;
 			/** 日均分母：有数据的天（拿日历天数去除会把空闲日算成用量偏低）。 */
-			const activeDays = usage.days.length;
+			const activeDays = scopedUsage.days.length;
 			const totalCostText = costTextOf$1(safeTotals, safeTotals.costSource ?? null);
 			const totalAmount = comparableMoneyOf(safeTotals);
-			const previousTotal = previousUsage === null ? null : previousUsage.totals;
+			const previousTotal = scopedPrevious === null ? null : scopedPrevious.totals;
 			const totalDelta = totalCostText === "—" || previousTotal === null || previousTotal === void 0 ? null : deltaOf(totalAmount, comparableMoneyOf(previousTotal));
 			const summaryText = (() => {
 				if (metric === "sessions") return "—";
@@ -4808,7 +4109,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const axisTicks = axisTicksOf(bars);
 			const totalChannels = /* @__PURE__ */ new Set();
 			const totalModels = /* @__PURE__ */ new Set();
-			for (const day of usage.days) for (const model of day.models) {
+			for (const day of scopedUsage.days) for (const model of day.models) {
 				totalChannels.add(model.provider);
 				totalModels.add(model.provider + "|" + model.model);
 			}
@@ -4860,7 +4161,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: summaryText
 							})
 						]
-					}), metric === "sessions" || usage.days.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					}), metric === "sessions" || scopedUsage.days.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: shared_module_css_default.empty,
 						children: metric === "sessions" ? "—" : t("empty.noUsage")
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -5087,6 +4388,862 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					})]
 				})]
 			});
+		}
+		//#endregion
+		//#region src/client/tabs/OverviewTab.tsx
+		/**
+		* 总览：KPI 卡片行 + 使用趋势（「全部」看全年热力图，其余范围看柱状图）+ 项目 / 模型排行 + 按时段热力。
+		* 按原型不再列通道表：通道余额与配额在「额度与订阅」，这里只留结论。
+		* KPI 口径跟随页头范围：近 30 天取 `summary` 的月列（官方账单），其余范围取 `usage.totals`（同一窗口）；
+		* 拿不到的字段一律显示 —，不编造，也不把两个窗口的数字拼进同一张卡。
+		*/
+		const TREND_METRICS = [
+			["activity", "overview.mActivity"],
+			["tokens", "overview.mTokens"],
+			["outTokens", "overview.mOutTokens"],
+			["cacheRead", "overview.mCacheRead"],
+			["sessions", "overview.mSessions"],
+			["cost", "overview.mSpend"]
+		];
+		const PROJECT_METRICS = [
+			["cost", "overview.mCost"],
+			["tokens", "overview.mTokens"],
+			["sessions", "overview.mSessions"]
+		];
+		const MODEL_METRICS = [
+			["cost", "overview.mCost"],
+			["tokens", "overview.mTokens"],
+			["cacheHit", "overview.kpiCache"]
+		];
+		const HOUR_METRICS = [
+			["sessions", "overview.mSessions"],
+			["tokens", "overview.mTokens"],
+			["cost", "overview.mSpend"]
+		];
+		/** 周一到周日的标签键（`h.wd0` 是周日）。 */
+		const WEEKDAY_KEYS = [
+			"h.wd1",
+			"h.wd2",
+			"h.wd3",
+			"h.wd4",
+			"h.wd5",
+			"h.wd6",
+			"h.wd0"
+		];
+		/** 排行面板最多列出的行数，其余收进「还有 M 个」。 */
+		const RANK_ROWS = 5;
+		/** 柱状图横轴最多标注几个日期。 */
+		const BAR_TICKS = 8;
+		function OverviewTab(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
+			/** 订阅显示币种与汇率：金额随它重渲染（汇率与币种在设置弹窗里改）。 */
+			const { display } = useCurrencyDisplay();
+			const [trendMetric, setTrendMetric] = (0, react.useState)("activity");
+			const [projectMetric, setProjectMetric] = (0, react.useState)("cost");
+			const [modelMetric, setModelMetric] = (0, react.useState)("cost");
+			const [hourMetric, setHourMetric] = (0, react.useState)("sessions");
+			const range = props.range ?? "month";
+			const summary = props.summary;
+			const modelFilter = props.modelFilter ?? "ALL";
+			const projectFilter = props.projectFilter ?? "ALL";
+			/** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
+			const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter);
+			const isMonthRange = range === "month";
+			const monthRows = summary === null ? [] : summary.channels.map((row) => row.month);
+			const monthCost = monthCostTotalsOf(summary);
+			const monthTokens = monthRows.reduce((total, row) => total + row.tokens, 0);
+			const monthFrom = summary === null ? null : summary.range.monthFrom;
+			const monthTo = summary === null ? null : summary.range.today;
+			const activeDaysOfMonth = monthFrom === null || monthTo === null ? 0 : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length;
+			const rangeTotals = isMonthRange ? null : rangeTotalsOf(scopedUsage, range);
+			/** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
+			*  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
+			const splitTotals = isMonthRange ? props.usage?.totals ?? null : rangeTotals;
+			const costRow = isMonthRange ? summary === null ? null : monthCost : rangeTotals === null ? null : {
+				cost: rangeTotals.cost,
+				costsByCurrency: rangeTotals.costsByCurrency
+			};
+			const costAmount = costRow === null ? null : comparableMoneyOf(costRow);
+			const tokenCount = isMonthRange ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
+			const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount);
+			const hitRate = hitRateOf(splitTotals);
+			const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null ? null : moneyTotalsTextOf({
+				cost: splitTotals.cacheSaved,
+				costsByCurrency: splitTotals.cacheSavedByCurrency
+			});
+			const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range);
+			const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
+			/** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
+			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter);
+			const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length;
+			const sessionCount = isMonthRange ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount) : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount);
+			const isAllRange = range === "total";
+			/** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
+			*  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
+			const rawTrendDays = trendDaysOf(props.usage, props.heatmap);
+			const trendDays = isAllRange ? rawTrendDays : modelFilter === "ALL" ? rawTrendDays : trendDaysOf(scopedUsage, []);
+			/** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
+			const hasDailyCalls = trendDays.some((day) => day.calls !== null);
+			const rangeWindow = windowOfRange(range);
+			const barDays = range === "custom" && props.usage == null || rangeWindow === null ? trendDays : trendDays.filter((day) => day.date >= rangeWindow.from && day.date <= rangeWindow.to);
+			const barValues = barDays.map((day) => metricValueOf(trendMetric, day));
+			const hasBarData = barValues.some((value) => value !== null && value > 0);
+			const heatValues = /* @__PURE__ */ new Map();
+			for (const day of trendDays) {
+				const value = metricValueOf(trendMetric, day);
+				if (value !== null && value > 0) heatValues.set(day.date, value);
+			}
+			const hasHeatData = heatValues.size > 0;
+			/** 趋势空态：活跃度缺按天调用数时讲清原因，不给笼统的「暂无数据」。 */
+			const trendEmptyText = trendMetric === "activity" && !hasDailyCalls ? t("overview.noCalls") : t("overview.noData");
+			const drawnDates = isAllRange ? [...heatValues.keys()] : barDays.filter((_, index) => (barValues[index] ?? 0) > 0).map((day) => day.date);
+			const busiest = busiestOf(drawnDates, isAllRange ? [...heatValues.values()] : barValues.filter((value) => value !== null && value > 0));
+			const trendStats = [
+				drawnDates.length > 0 ? t("overview.streak", { count: streakOf(drawnDates) }) : null,
+				busiest === null ? null : t("overview.busiest", {
+					date: fmtShortDate(busiest.date),
+					value: metricTextOf(trendMetric, busiest.value)
+				}),
+				drawnDates.length > 0 ? t("overview.activeDays", { count: drawnDates.length }) : null
+			].filter((part) => part !== null).join(" · ");
+			const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]));
+			const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null;
+			/** 热力图悬停：先讲当前指标的值，Tokens 类指标再补逐模型占比（模型构成只有 tokens 口径）。 */
+			const tipOfDay = (date) => {
+				const value = heatValues.get(date);
+				if (value === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipSub, { children: dataStart !== null && date >= dataStart ? t("h.noUsage") : t("h.noLedger") })] });
+				const day = heatmapByDate.get(date);
+				const withModels = trendMetric === "activity" || trendMetric === "tokens";
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
+						t(labelKeyOf(TREND_METRICS, trendMetric)),
+						" ",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: metricTextOf(trendMetric, value) })
+					] }),
+					withModels && day !== void 0 && day.models.map((model) => {
+						const percent = day.totalTokens > 0 ? Math.round(model.totalTokens / day.totalTokens * 100) : 0;
+						const color = channelColorOf(props.channels, model.provider);
+						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
+							color,
+							label: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [model.model, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: shared_module_css_default.dim,
+								children: [" · ", displayNameOf(props.channels, model.provider)]
+							})] }),
+							amount: fmtTokens(model.totalTokens),
+							rate: percent + "%"
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipBar, {
+							percent,
+							color
+						})] }, model.provider + "|" + model.model);
+					})
+				] });
+			};
+			const barTipOf = (date, value) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: date }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
+				t(labelKeyOf(TREND_METRICS, trendMetric)),
+				" ",
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: value === null ? "—" : metricTextOf(trendMetric, value) })
+			] })] });
+			const projectItems = rankItemsOfProjects(projectsOfScope(props.projects, projectFilter), projectMetric);
+			const modelItems = rankItemsOfModels(modelsOfScope(props.models, modelFilter), modelMetric);
+			const hourMatrix = hourlyMatrixOf(props.hourly);
+			const hourValues = hourMatrix === null ? null : hourMatrix.map((weekday) => weekday.map((cell) => hourMetricValueOf(hourMetric, cell)));
+			const hourActiveValues = hourValues === null ? [] : hourValues.flat().filter((value) => value !== void 0 && value > 0);
+			const hasHourData = hourActiveValues.length > 0;
+			const hourThresholds = levelThresholds(hourActiveValues);
+			const busiestHour = busiestHourOf(hourValues);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.stack,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiRow,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
+								label: t("overview.kpiCost"),
+								value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
+								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+									previous: props.previousCost ?? null,
+									current: costAmount,
+									format: (value) => moneyTextOf(display, value)
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
+								label: t("overview.kpiTokens"),
+								value: tokenValue === null ? "—" : tokenValue.text,
+								unit: tokenValue === null || tokenValue.unit === "" ? void 0 : tokenValue.unit,
+								detail: splitTotals === null ? "—" : t("overview.ioSplit", {
+									input: fmtTokens(splitTotals.inputTokens),
+									output: fmtTokens(splitTotals.outputTokens)
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
+								label: t("overview.kpiCache"),
+								value: hitRate === null ? "—" : hitRate.toFixed(1),
+								unit: hitRate === null ? void 0 : "%",
+								detail: splitTotals === null ? "—" : t("overview.cacheLine", {
+									value: tokenTextOf(splitTotals.cacheReadTokens),
+									saved: cacheSaved ?? "—"
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
+								label: t("overview.kpiSessions"),
+								value: sessionCount === null ? "—" : fmtCalls(sessionCount),
+								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+									previous: props.previousSessions ?? null,
+									current: sessionCount,
+									format: fmtCalls
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
+								label: t("overview.kpiDaily"),
+								value: dailyAverage === null ? "—" : displaySymbolOf(display) + dailyAverage.toFixed(1),
+								detail: activeDays === 0 ? "—" : t("overview.activeDays", { count: activeDays })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.panel,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: overview_module_css_default.panelHead,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
+									className: overview_module_css_default.panelTitle,
+									children: t("overview.trend")
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: overview_module_css_default.metricTabs,
+									children: TREND_METRICS.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: metric === trendMetric ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
+										"aria-pressed": metric === trendMetric,
+										onClick: () => setTrendMetric(metric),
+										children: t(labelKey)
+									}, metric))
+								})]
+							}),
+							isAllRange ? hasHeatData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(YearHeatmap, {
+								valuesByDate: heatValues,
+								dataStart,
+								tooltip: props.tooltip,
+								tipOf: tipOfDay,
+								onPickDay: props.onPickDay,
+								ariaLabel: t("overview.trend") + " · " + String(heatValues.size) + t("h.summarySuffix")
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: shared_module_css_default.empty,
+								children: trendEmptyText
+							}) : hasBarData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrendBars, {
+								days: barDays,
+								values: barValues,
+								tooltip: props.tooltip,
+								tipOf: barTipOf
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: shared_module_css_default.empty,
+								children: trendEmptyText
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: overview_module_css_default.trendFoot,
+								children: [isAllRange && hasHeatData && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: overview_module_css_default.legend,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: overview_module_css_default.legendItem,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[0] } }), t("overview.legendLess")]
+										}),
+										LEVEL_COLORS.slice(1, -1).map((color) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: overview_module_css_default.legendItem,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: color } })
+										}, color)),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: overview_module_css_default.legendItem,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { background: LEVEL_COLORS[LEVEL_COLORS.length - 1] } }), t("overview.legendMore")]
+										})
+									]
+								}), trendStats !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.trendStats,
+									children: trendStats
+								})]
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.gridTwo,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankPanel, {
+							title: t("overview.panelProjects"),
+							metrics: PROJECT_METRICS,
+							active: projectMetric,
+							onActive: setProjectMetric,
+							items: projectItems.items,
+							total: projectItems.total
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankPanel, {
+							title: t("overview.panelModels"),
+							metrics: MODEL_METRICS,
+							active: modelMetric,
+							onActive: setModelMetric,
+							items: modelItems.items,
+							total: modelItems.total
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.panel,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: overview_module_css_default.panelHead,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
+									className: overview_module_css_default.panelTitle,
+									children: t("overview.hourly")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: overview_module_css_default.metricTabs,
+									children: HOUR_METRICS.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: metric === hourMetric ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
+										"aria-pressed": metric === hourMetric,
+										onClick: () => setHourMetric(metric),
+										children: t(labelKey)
+									}, metric))
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.panelMore,
+									children: busiestHour === null ? "" : t("overview.busiestHour", {
+										weekday: t(WEEKDAY_KEYS[busiestHour.weekday]),
+										hour: String(busiestHour.hour).padStart(2, "0") + ":00"
+									})
+								})
+							]
+						}), hourValues === null || hourMatrix === null || !hasHourData ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: shared_module_css_default.empty,
+							children: t("overview.noHourly")
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: overview_module_css_default.hourWrap,
+							role: "group",
+							"aria-label": t("overview.hourly"),
+							children: [
+								WEEKDAY_KEYS.map((key, weekdayIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.hourWeekday,
+									style: {
+										gridColumn: 1,
+										gridRow: weekdayIndex + 2
+									},
+									children: t(key)
+								}, key)),
+								Array.from({ length: 24 }, (_, hour) => hour % 3 === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.hourAxisLabel,
+									style: {
+										gridColumn: hour + 2,
+										gridRow: 1
+									},
+									children: String(hour)
+								}, "axis-" + String(hour)) : null),
+								hourMatrix.map((weekday, weekdayIndex) => weekday.map((cell, hour) => {
+									const value = hourValues[weekdayIndex][hour];
+									const level = value === void 0 ? 0 : levelOfValue(value, hourThresholds);
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: overview_module_css_default.hourCell,
+										style: {
+											gridColumn: hour + 2,
+											gridRow: weekdayIndex + 2,
+											background: levelColorOf(level)
+										},
+										onMouseMove: (event) => props.tooltip.show(event, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipTitle, { children: t(WEEKDAY_KEYS[weekdayIndex]) + " " + String(hour).padStart(2, "0") + ":00" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(TipSub, { children: [
+											t(labelKeyOf(HOUR_METRICS, hourMetric)),
+											" ",
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", { children: value === void 0 ? "—" : metricTextOf(hourMetric, value) })
+										] })] })),
+										onMouseLeave: props.tooltip.hide
+									}, weekdayIndex + "-" + hour);
+								}))
+							]
+						})]
+					})
+				]
+			});
+		}
+		function KpiCard$1(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.kpiCard,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: overview_module_css_default.kpiLabel,
+						children: props.label
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiValue,
+						children: [props.value, props.unit !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiUnit,
+							children: props.unit
+						})]
+					}),
+					props.detail !== void 0 && props.detail !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: overview_module_css_default.kpiDetail,
+						children: props.detail
+					})
+				]
+			});
+		}
+		/**
+		* 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
+		* 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
+		*/
+		function PrevLine(props) {
+			if (props.previous === null) return null;
+			const previousText = t("overview.prev", { value: props.format(props.previous) });
+			if (props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
+			const delta = (props.current - props.previous) / props.previous * 100;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				className: delta > 0 ? overview_module_css_default.rise : delta < 0 ? overview_module_css_default.fall : void 0,
+				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
+			})] });
+		}
+		/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
+		function TrendBars(props) {
+			const peak = Math.max(0, ...props.values.filter((value) => value !== null));
+			const peakIndex = props.values.findIndex((value) => value !== null && value === peak && peak > 0);
+			const ticks = tickIndexesOf(props.days.length, BAR_TICKS);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: overview_module_css_default.hist,
+				children: props.days.map((day, index) => {
+					const value = props.values[index] ?? null;
+					const percent = value === null || peak <= 0 ? 0 : Math.max(2, value / peak * 100);
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: overview_module_css_default.histColumn,
+						onMouseMove: (event) => props.tooltip.show(event, props.tipOf(day.date, value)),
+						onMouseLeave: props.tooltip.hide,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: index === peakIndex ? overview_module_css_default.histBar + " " + overview_module_css_default.histBarPeak : overview_module_css_default.histBar,
+							style: { height: percent + "%" }
+						})
+					}, day.date);
+				})
+			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: overview_module_css_default.histLabels,
+				children: ticks.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtShortDate(props.days[index].date) }, props.days[index].date))
+			})] });
+		}
+		/** 排行面板：横条 + 右侧数值；行数超出「还有 M 个」。 */
+		function RankPanel(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
+			const shown = props.items.slice(0, RANK_ROWS);
+			const peak = shown.reduce((maximum, item) => item.value !== null && item.value > maximum ? item.value : maximum, 0);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.panel,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: overview_module_css_default.panelHead,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
+							className: overview_module_css_default.panelTitle,
+							children: props.title
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: overview_module_css_default.metricTabs,
+							children: props.metrics.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: metric === props.active ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
+								"aria-pressed": metric === props.active,
+								onClick: () => props.onActive(metric),
+								children: t(labelKey)
+							}, metric))
+						}),
+						props.total > shown.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.panelMore,
+							children: t("overview.more", {
+								total: props.total,
+								rest: Math.max(0, props.total - shown.length)
+							})
+						})
+					]
+				}), shown.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: shared_module_css_default.empty,
+					children: t("overview.noData")
+				}) : shown.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: overview_module_css_default.rankRow,
+					title: item.title,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.rankName,
+							children: item.name
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.rankTrack,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
+								className: index === 0 ? overview_module_css_default.rankBar + " " + overview_module_css_default.rankBarTop : overview_module_css_default.rankBar,
+								style: { width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + "%" }
+							})
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: item.value === null ? overview_module_css_default.rankValue + " " + overview_module_css_default.rankDim : overview_module_css_default.rankValue,
+							children: item.valueText
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.rankSub,
+							children: item.subText
+						})
+					]
+				}, item.key))]
+			});
+		}
+		/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
+		function compareRankValue(first, second) {
+			if (first.value === null && second.value === null) return 0;
+			if (first.value === null) return 1;
+			if (second.value === null) return -1;
+			return second.value - first.value;
+		}
+		/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
+		function monthCostTotalsOf(summary) {
+			const totals = {
+				cost: 0,
+				costsByCurrency: {}
+			};
+			for (const row of summary?.channels ?? []) {
+				totals.cost += row.month.cost;
+				for (const [currency, amount] of Object.entries(row.month.costsByCurrency ?? {})) totals.costsByCurrency[currency] = (totals.costsByCurrency[currency] ?? 0) + amount;
+			}
+			return totals;
+		}
+		/** 缓存命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）；没有拆分数据时给 null。 */
+		function hitRateOf(totals) {
+			if (totals === null) return null;
+			const total = totals.inputTokens + totals.outputTokens + totals.cacheReadTokens;
+			return total > 0 ? totals.cacheReadTokens / total * 100 : null;
+		}
+		/**
+		* 本期会话数：最近活动落在当前窗口里的会话行数（`'all'` = 全部会话，不设下限）。
+		* 列表被 limit 截断时不能拿来计数（会少算）—— 截断判定用**未过滤**的原始行数 `rawRowCount`，
+		* 因为按项目 / 模型筛选后行数本来就比 `countedSessions` 少，不能拿它当截断证据；
+		* `from` 为 null 表示窗口未知（自定义范围只有父级知道起止）→ 显示 —。
+		*/
+		function sessionCountOf(sessions, from, rawRowCount) {
+			if (from === null || sessions == null || sessions.coverage.status === "unavailable") return null;
+			if (rawRowCount === 0 || rawRowCount < sessions.coverage.countedSessions) return null;
+			const active = sessions.rows.filter((row) => row.calls > 0);
+			if (from === "all") return active.length;
+			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
+			return active.filter((row) => row.lastTime !== null && row.lastTime >= fromTime).length;
+		}
+		/** 会话 KPI 的起点：今天 / 7 天按窗口起点，全部不设下限，自定义范围只有父级知道起止 → null（显示 —）。 */
+		function sessionFromOf(range) {
+			if (range === "total") return "all";
+			return windowOfRange(range)?.from ?? null;
+		}
+		/**
+		* 非近 30 天范围的可信合计：父级按当前范围请求 `/usage`，分页时可能还没跟上；
+		* 逐日明细越出当前窗口就按没有数据处理（宁可显示 —，也不把上一个范围的数字贴到本范围）。
+		*/
+		function rangeTotalsOf(usage, range) {
+			const totals = usage?.totals ?? null;
+			if (totals === null) return null;
+			const window = windowOfRange(range);
+			if (window === null) return totals;
+			return (usage?.days ?? []).some((day) => day.date < window.from || day.date > window.to) ? null : totals;
+		}
+		/** 当前范围里有数据的天数（日均的分母）：`usage.days` 的日期去重，只数窗口内的日子。 */
+		function usageDayCountOf(usage, range) {
+			const window = windowOfRange(range);
+			const dates = /* @__PURE__ */ new Set();
+			for (const day of usage?.days ?? []) {
+				if (window !== null && (day.date < window.from || day.date > window.to)) continue;
+				dates.add(day.date);
+			}
+			return dates.size;
+		}
+		/** KPI 大数：按原型展示 2 位小数（15.34<small>B</small>），与共用 `fmtTokens` 的 1 位小数区分（榜单仍用 1 位）。 */
+		function tokenValueOf(count) {
+			for (const [base, unit] of [
+				[1e9, "B"],
+				[1e6, "M"],
+				[1e3, "K"]
+			]) {
+				if (Math.abs(count) < base) continue;
+				const value = count / base;
+				if (value < 1e3) return {
+					text: value.toFixed(2),
+					unit
+				};
+			}
+			return {
+				text: fmtCount(count),
+				unit: ""
+			};
+		}
+		/** 大数文本（2 位小数 + 单位）：缓存读明细这类 KPI 副标用。 */
+		function tokenTextOf(count) {
+			const value = tokenValueOf(count);
+			return value.text + value.unit;
+		}
+		/** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
+		function trendDaysOf(usage, heatmap) {
+			const usageDays = usage?.days ?? [];
+			if (usageDays.length > 0) return usageDays.map(trendDayOfDay).sort((first, second) => first.date.localeCompare(second.date));
+			return heatmap.map((day) => ({
+				date: day.date,
+				tokens: day.totalTokens,
+				calls: null,
+				outTokens: null,
+				cacheRead: null,
+				cost: null
+			})).sort((first, second) => first.date.localeCompare(second.date));
+		}
+		function trendDayOfDay(day) {
+			return {
+				date: day.date,
+				tokens: day.inputTokens + day.outputTokens + day.cacheReadTokens,
+				calls: day.calls,
+				outTokens: day.outputTokens,
+				cacheRead: day.cacheReadTokens,
+				cost: comparableMoneyOf(day)
+			};
+		}
+		/** 各范围对应的本地窗口；`total` 由热力图覆盖、`custom` 只有父级知道起止，两者返回 null。 */
+		function windowOfRange(range) {
+			const today = isoDate(/* @__PURE__ */ new Date());
+			if (range === "today") return {
+				from: today,
+				to: today
+			};
+			if (range === "week") return {
+				from: shiftedIsoDate(-6),
+				to: today
+			};
+			if (range === "month") return {
+				from: shiftedIsoDate(-29),
+				to: today
+			};
+			return null;
+		}
+		/**
+		* 当前指标在一天上的取值。`activity` 只认按天调用数：`heatmap` 段没有这一项时返回 null（该档不画柱），
+		* 绝不拿 token 量冒充调用数；`sessions` 一律 null：服务端没有按天会话数。
+		*/
+		function metricValueOf(metric, day) {
+			if (metric === "activity") return day.calls;
+			if (metric === "tokens") return day.tokens;
+			if (metric === "outTokens") return day.outTokens;
+			if (metric === "cacheRead") return day.cacheRead;
+			if (metric === "cost") return day.cost;
+			return null;
+		}
+		/** 指标数值文本：金额按显示币种，调用次数带单位，其余按 tokens 缩写。 */
+		function metricTextOf(metric, value) {
+			if (metric === "cost") return displaySymbolOf() + value.toFixed(2);
+			if (metric === "activity") return fmtCalls(value) + " " + t("overview.callsUnit");
+			if (metric === "sessions") return fmtCalls(value);
+			return fmtTokens(value);
+		}
+		function labelKeyOf(pairs, key) {
+			return pairs.find(([item]) => item === key)?.[1] ?? "";
+		}
+		/** 连续活跃天数：只数有值的日子，中间断一天就重新起算。 */
+		function streakOf(dates) {
+			const sorted = [...dates].sort();
+			let longest = 0;
+			let run = 0;
+			let previous = null;
+			for (const date of sorted) {
+				run = previous !== null && nextDateOf(previous) === date ? run + 1 : 1;
+				longest = Math.max(longest, run);
+				previous = date;
+			}
+			return longest;
+		}
+		function nextDateOf(dateKey) {
+			return isoDate(new Date((/* @__PURE__ */ new Date(dateKey + "T00:00:00")).getTime() + 864e5));
+		}
+		/** 最忙的一天（值最大的那天）；没有值时给 null。 */
+		function busiestOf(dates, values) {
+			let busiest = null;
+			for (let index = 0; index < dates.length; index += 1) {
+				const value = values[index];
+				if (value === void 0 || value <= 0) continue;
+				if (busiest === null || value > busiest.value) busiest = {
+					date: dates[index],
+					value
+				};
+			}
+			return busiest;
+		}
+		function tickIndexesOf(count, wanted) {
+			if (count <= wanted) return Array.from({ length: count }, (_, index) => index);
+			const step = Math.ceil(count / wanted);
+			const indexes = [];
+			for (let index = 0; index < count; index += step) indexes.push(index);
+			return indexes;
+		}
+		function projectValueOf(metric, row) {
+			if (metric === "cost") return comparableMoneyOf(row);
+			if (metric === "tokens") return row.tokens;
+			return row.sessionCount;
+		}
+		function projectValueTextOf(metric, row) {
+			if (metric === "cost") return rowMoneyViewOf(row).text;
+			if (metric === "tokens") return fmtTokens(row.tokens);
+			return fmtCalls(row.sessionCount);
+		}
+		/** 项目榜按全局项目筛选收窄（`''` 命中的是「未归入工作区」那一行）；`'ALL'` 原样返回。 */
+		function projectsOfScope(projects, projectFilter) {
+			if (projects == null || projectFilter === "ALL") return projects ?? null;
+			return {
+				...projects,
+				rows: projects.rows.filter((row) => row.workspace === projectFilter || (row.paths ?? []).includes(projectFilter))
+			};
+		}
+		/** 模型榜按全局模型筛选收窄；`'ALL'` 原样返回。 */
+		function modelsOfScope(models, modelFilter) {
+			if (models == null || modelFilter === "ALL") return models ?? null;
+			return {
+				...models,
+				rows: models.rows.filter((row) => row.model === modelFilter)
+			};
+		}
+		/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个都是 `'ALL'` 时原样返回。 */
+		function sessionsOfScope(sessions, projectFilter, modelFilter) {
+			if (sessions == null || projectFilter === "ALL" && modelFilter === "ALL") return sessions ?? null;
+			return {
+				...sessions,
+				rows: sessions.rows.filter((row) => {
+					if (projectFilter !== "ALL" && (row.workspace ?? "") !== projectFilter) return false;
+					if (modelFilter !== "ALL" && !row.models.some((model) => model.model === modelFilter)) return false;
+					return true;
+				})
+			};
+		}
+		function rankItemsOfProjects(projects, metric) {
+			const rows = projects?.rows ?? [];
+			const items = [];
+			for (const row of rows) {
+				const value = projectValueOf(metric, row);
+				/** 成本口径下没有价目依据的行保留在末尾显示「—」（原型模型榜就有一条 —），不编金额 */
+				const missingCost = metric === "cost" && value === null;
+				if (!missingCost && (value === null || value <= 0)) continue;
+				const name = row.workspaceTitle ?? (row.workspace === "" ? t("p.orphan") : row.workspace);
+				items.push({
+					key: row.workspace === "" ? "__orphan__" : row.workspace,
+					name,
+					title: name,
+					value,
+					valueText: missingCost ? "—" : projectValueTextOf(metric, row),
+					subText: t("overview.sessionCount", { count: row.sessionCount })
+				});
+			}
+			items.sort(compareRankValue);
+			return {
+				items,
+				total: items.length
+			};
+		}
+		function modelValueOf(metric, row) {
+			if (metric === "cost") return comparableMoneyOf(row);
+			if (metric === "tokens") return row.tokens;
+			return row.cacheHitRate;
+		}
+		function modelValueTextOf(metric, row) {
+			if (metric === "cost") return rowMoneyViewOf(row).text;
+			if (metric === "tokens") return fmtTokens(row.tokens);
+			return row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%";
+		}
+		function rankItemsOfModels(models, metric) {
+			const rows = models?.rows ?? [];
+			const items = [];
+			for (const row of rows) {
+				const value = modelValueOf(metric, row);
+				/** 成本口径下没有价目依据的模型保留在末尾显示「—」（原型模型榜第 5 行就是这种），不编金额 */
+				const missingCost = metric === "cost" && value === null;
+				if (!missingCost && (value === null || value <= 0)) continue;
+				items.push({
+					key: row.provider + "|" + row.model,
+					name: row.model,
+					title: row.model + " · " + row.providerLabel,
+					value,
+					valueText: missingCost ? "—" : modelValueTextOf(metric, row),
+					subText: fmtTokens(row.tokens)
+				});
+			}
+			items.sort(compareRankValue);
+			return {
+				items,
+				total: items.length
+			};
+		}
+		function hourCellOf(value) {
+			if (typeof value === "number" && Number.isFinite(value)) return { sessions: value };
+			if (value === null || typeof value !== "object") return {};
+			const record = value;
+			const numberAt = (key) => {
+				const raw = record[key];
+				return typeof raw === "number" && Number.isFinite(raw) ? raw : void 0;
+			};
+			return {
+				sessions: numberAt("sessions") ?? numberAt("calls"),
+				tokens: numberAt("tokens"),
+				cost: numberAt("cost")
+			};
+		}
+		/**
+		* 把 heatmap 段的 `hourly` 归一成「周一到周日 × 24 小时」。
+		* 接受两种写法：`hours` 里是数字（当会话数）或对象（sessions / calls / tokens / cost）；
+		* 周几用 7 或 0 区分「周一 = 1」与「周日 = 0」；外面包一层 `rows` / `weekdays` 也认。
+		* 形状不对时返回 null（面板显示空态，不崩）。
+		*/
+		function hourlyMatrixOf(raw) {
+			const list = hourlyListOf(raw);
+			if (list === null) return null;
+			const rows = [];
+			for (const entry of list) {
+				if (entry === null || typeof entry !== "object") continue;
+				const record = entry;
+				const weekday = typeof record.weekday === "number" ? record.weekday : Number(record.weekday);
+				const hoursRaw = Array.isArray(record.hours) ? record.hours : null;
+				if (!Number.isFinite(weekday) || hoursRaw === null) continue;
+				const hours = [];
+				for (let hour = 0; hour < 24; hour += 1) hours.push(hourCellOf(hoursRaw[hour]));
+				rows.push({
+					weekday,
+					hours
+				});
+			}
+			if (rows.length === 0) return null;
+			const sundayZero = !rows.some((row) => row.weekday === 7) && rows.some((row) => row.weekday === 0);
+			const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({})));
+			for (const row of rows) {
+				const displayIndex = sundayZero ? (row.weekday + 6) % 7 : row.weekday - 1;
+				if (displayIndex < 0 || displayIndex > 6) continue;
+				matrix[displayIndex] = row.hours;
+			}
+			return matrix;
+		}
+		/** 取承载七行的那一层数组：原子数组，或 `{ rows: [...] }` / `{ weekdays: [...] }` 这种包一层的写法。 */
+		function hourlyListOf(raw) {
+			if (Array.isArray(raw)) return raw;
+			if (raw === null || typeof raw !== "object") return null;
+			const record = raw;
+			for (const key of [
+				"rows",
+				"weekdays",
+				"hourly"
+			]) {
+				const value = record[key];
+				if (Array.isArray(value)) return value;
+			}
+			return null;
+		}
+		function hourMetricValueOf(metric, cell) {
+			if (metric === "sessions") return cell.sessions;
+			if (metric === "tokens") return cell.tokens;
+			return cell.cost;
+		}
+		function busiestHourOf(values) {
+			if (values === null) return null;
+			let busiest = null;
+			for (let weekday = 0; weekday < values.length; weekday += 1) for (let hour = 0; hour < values[weekday].length; hour += 1) {
+				const value = values[weekday][hour];
+				if (value === void 0 || value <= 0) continue;
+				if (busiest === null || value > busiest.value) busiest = {
+					weekday,
+					hour,
+					value
+				};
+			}
+			return busiest;
 		}
 		//#endregion
 		//#region src/client/core/rows.ts
@@ -5861,20 +6018,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"color-mix(in srgb, var(--dsw-alias-state-error-primary, #e05a5a) 60%, var(--dsw-alias-label-primary, #111))",
 			"color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 55%, var(--dsw-alias-label-primary, #111))"
 		];
+		/** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
+		const SOURCE_ORDER = {
+			official: 0,
+			catalog: 1,
+			aggregate: 2,
+			model: 3,
+			none: 4
+		};
 		/** 「其它」块 / 合并行用中性底色，避免被误读成某个通道。 */
 		const OTHERS_BG = "var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .22))";
 		function DistributionTab(props) {
 			const t = useT();
 			const [tableOpen, setTableOpen] = (0, react.useState)(false);
-			const focusWorkspace = props.focusWorkspace ?? null;
+			const externalProject = props.projectFilter ?? "ALL";
+			const modelFilter = props.modelFilter ?? "ALL";
+			const focusWorkspace = externalProject !== "ALL" ? externalProject : props.focusWorkspace ?? null;
 			const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows;
-			const modelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows;
-			const scopedProjects = projectRows.filter((row) => focusWorkspace === null || row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace));
+			const allModelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows;
+			/** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
+			const modelRows = modelFilter === "ALL" ? allModelRows : allModelRows.filter((row) => row.model === modelFilter);
+			const scopedProjects = focusWorkspace === null ? projectRows : projectRows.filter((row) => row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace));
+			/** Mekko 的项目块：有模型筛选时每个项目只留该模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
+			const mekkoProjects = modelFilter === "ALL" ? scopedProjects : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row) => row !== null);
+			const cacheUsage = modelFilter === "ALL" ? props.usage ?? null : null;
 			const coverage = props.projects?.coverage ?? props.models?.coverage;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: distribution_module_css_default.page,
 				children: [
-					focusWorkspace !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					externalProject === "ALL" && focusWorkspace !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: lists_module_css_default.focusChip,
 						children: [
 							t("p.focusPrefix"),
@@ -5897,7 +6069,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: coverageTextOf(coverage)
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MekkoPanel, {
-						projects: scopedProjects,
+						projects: mekkoProjects,
 						loading: props.projects === null
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -5905,7 +6077,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(CacheSavingsPanel, {
 								models: modelRows,
-								usage: props.usage ?? null,
+								usage: cacheUsage,
 								loading: props.models === null
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostMixPanel, {
@@ -5934,13 +6106,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: distribution_module_css_default.tableTitle,
 							children: t("dist.modelsDetails")
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelsTab, {
-							data: props.models,
+							data: props.models === null ? null : {
+								...props.models,
+								rows: modelRows
+							},
 							channels: props.channels
 						})] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: distribution_module_css_default.tableTitle,
 							children: t("dist.projectsDetails")
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProjectsTab, {
-							data: props.projects,
+							data: props.projects === null ? null : {
+								...props.projects,
+								rows: scopedProjects
+							},
 							channels: props.channels,
 							focusWorkspace,
 							hideFocusChip: true,
@@ -5949,6 +6127,52 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					})
 				]
 			});
+		}
+		/** 聚合行取最弱的成本来源（与 DetailTab 同一口径，避免明细表里的来源角标与金额对不上）。 */
+		function weakestSourceOf(sources) {
+			let weakest = null;
+			for (const source of sources) if (weakest === null || SOURCE_ORDER[source] > SOURCE_ORDER[weakest]) weakest = source;
+			return weakest;
+		}
+		/**
+		* 项目行按模型收窄（只给 Mekko 用）：模型桶只留该模型，tokens / calls / 金额按剩下的桶重算。
+		* 金额只在每个桶都有价目时才给数（缺一个就 null → 该块不参与占比，不拿部分金额冒充合计）；
+		* 该项目没有这个模型的用量时返回 null（整块不进 Mekko）。
+		*/
+		function projectOfModel(row, modelFilter) {
+			const models = (row.models ?? []).filter((entry) => entry.model === modelFilter);
+			if (models.length === 0) return null;
+			const costsByCurrency = {};
+			const sources = [];
+			let calls = 0;
+			let tokens = 0;
+			let cost = 0;
+			let priced = true;
+			let partial = false;
+			let hasCurrency = true;
+			for (const entry of models) {
+				calls += entry.calls;
+				tokens += entry.tokens;
+				if (typeof entry.cost === "number" && Number.isFinite(entry.cost)) cost += entry.cost;
+				else priced = false;
+				const byCurrency = entry.costsByCurrency ?? {};
+				if (Object.keys(byCurrency).length === 0) hasCurrency = false;
+				for (const [currency, amount] of Object.entries(byCurrency)) if (typeof amount === "number" && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount;
+				if (entry.costSource !== void 0) sources.push(entry.costSource);
+				if (entry.partial === true) partial = true;
+			}
+			const costSource = weakestSourceOf(sources);
+			return {
+				...row,
+				calls,
+				tokens,
+				models,
+				cost: priced ? cost : null,
+				cacheHitRate: null,
+				costSource: costSource ?? void 0,
+				partial,
+				...priced && hasCurrency ? { costsByCurrency } : { costsByCurrency: void 0 }
+			};
 		}
 		/** 项目 × 模型：块宽 = 该项目成本占总成本比例；宽块写前二模型占比，窄块只留名字 / 金额。 */
 		function MekkoPanel(props) {
@@ -7521,10 +7745,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [query, setQuery] = (0, react.useState)("");
 			const [pageSize, setPageSize] = (0, react.useState)(PAGE_SIZE);
 			const [detailId, setDetailId] = (0, react.useState)(null);
-			const rows = props.data?.rows ?? [];
+			const projectFilter = props.projectFilter ?? "ALL";
+			const modelFilter = props.modelFilter ?? "ALL";
+			/** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
+			const allRows = props.data?.rows ?? [];
+			/** 两个筛选都作用在行上：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
+			const rows = (0, react.useMemo)(() => allRows.filter((row) => {
+				if (projectFilter !== "ALL" && (row.workspace ?? "") !== projectFilter) return false;
+				if (modelFilter !== "ALL" && !row.models.some((model) => model.model === modelFilter)) return false;
+				return true;
+			}), [
+				allRows,
+				projectFilter,
+				modelFilter
+			]);
 			(0, react.useEffect)(() => {
 				setPageSize(PAGE_SIZE);
-			}, [scope, query]);
+			}, [
+				scope,
+				query,
+				projectFilter,
+				modelFilter
+			]);
 			/** 只列主会话：子代理不单独占行（详情抽屉里仍可逐个点开）。 */
 			const mainRows = (0, react.useMemo)(() => rows.filter((row) => !isSubagentOf(row)), [rows]);
 			/** 有结算样本的会话才算用量：没有 calls 也没有 tokens 的空壳不进榜单与形态分布。 */
@@ -7550,7 +7792,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (props.data === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EmptyState, { title: t("s.loading") });
 			const shownRows = visibleRows.slice(0, pageSize);
 			const histogramMax = Math.max(1, ...histogram);
-			const detailRow = detailId === null ? null : rows.find((row) => row.id === detailId) ?? null;
+			const detailRow = detailId === null ? null : allRows.find((row) => row.id === detailId) ?? null;
 			const rowOptions = {
 				channels: props.channels,
 				tooltip: props.tooltip,
@@ -7716,10 +7958,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						sessionId: detailId,
 						fallbackTitle: detailRow?.title ?? null,
 						channels: props.channels,
-						subagents: detailRow === null ? [] : rows.filter((row) => isSubagentOf(row) && row.parentSessionId === detailRow.id),
+						subagents: detailRow === null ? [] : allRows.filter((row) => isSubagentOf(row) && row.parentSessionId === detailRow.id),
 						onOpenSession: setDetailId,
 						parentId: detailRow?.parentSessionId ?? null,
-						parentTitle: detailRow === null || detailRow.parentSessionId == null ? null : rows.find((row) => row.id === detailRow.parentSessionId)?.title ?? null,
+						parentTitle: detailRow === null || detailRow.parentSessionId == null ? null : allRows.find((row) => row.id === detailRow.parentSessionId)?.title ?? null,
 						onClose: () => setDetailId(null)
 					})
 				]
@@ -8653,8 +8895,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [customFrom, setCustomFrom] = (0, react.useState)(() => shiftedIsoDate(-29));
 			const [customTo, setCustomTo] = (0, react.useState)(() => isoDate(/* @__PURE__ */ new Date()));
 			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
-			/** 跨 Tab 联动：从「会话用量」点工作目录进来时只看那一个项目（不做全局路由） */
-			const [projectFilter, setProjectFilter] = (0, react.useState)(null);
+			/** 项目 / 模型筛选：'ALL' = 不过滤；项目值取 `projects` 段的 workspace（'' = 未归入工作区）。 */
+			const [projectFilter, setProjectFilter] = (0, react.useState)("ALL");
+			const [modelFilter, setModelFilter] = (0, react.useState)("ALL");
 			const [channels, setChannels] = (0, react.useState)([]);
 			const [quotas, setQuotas] = (0, react.useState)([]);
 			const [summary, setSummary] = (0, react.useState)(null);
@@ -8691,6 +8934,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const activeTabRef = (0, react.useRef)("quota");
 			/**
 			* 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
+			* 项目 / 模型两段挂在底座上：顶部「全部项目 / 全部模型」下拉要随时有选项可列。
 			* 服务端只裁剪下发，构建仍是全量一份，所以不可能出现「两个数据源」。
 			*/
 			const sectionsForTab = (0, react.useCallback)((tab) => {
@@ -8698,14 +8942,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					"channels",
 					"overview",
 					"heatmap",
-					"quota"
-				];
-				if (tab === "sessions") return [...base, "sessions"];
-				if (tab === "distribution") return [
-					...base,
+					"quota",
 					"projects",
 					"models"
 				];
+				if (tab === "sessions") return [...base, "sessions"];
 				if (tab === "words") return [...base, "prompts"];
 				if (tab === "tools") return [...base, "tools"];
 				return base;
@@ -8952,6 +9193,25 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				channelFilter,
 				pricingRevision
 			]);
+			/** 项目下拉：值取 workspace（'' = 未归入工作区），文案取宿主工作区标题。 */
+			const projectOptions = (0, react.useMemo)(() => (projects?.rows ?? []).map((row) => ({
+				value: row.workspace,
+				label: row.workspace === "" ? t("p.orphan") : row.workspaceTitle ?? row.workspace
+			})), [projects, t]);
+			/** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
+			const modelOptions = (0, react.useMemo)(() => {
+				const seen = /* @__PURE__ */ new Set();
+				const options = [];
+				for (const row of models?.rows ?? []) {
+					if (seen.has(row.model)) continue;
+					seen.add(row.model);
+					options.push({
+						value: row.model,
+						label: row.model === "" ? t("m.others") : row.model
+					});
+				}
+				return options;
+			}, [models, t]);
 			/** 刷新周期文案：0 = 关闭。 */
 			const refreshLabel = (0, react.useCallback)((seconds) => {
 				if (seconds <= 0) return t("refresh.off");
@@ -9045,14 +9305,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						className: shared_module_css_default.stickyHead,
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: shared_module_css_default.title,
+								className: shared_module_css_default.toolbarRow,
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: shared_module_css_default.brand,
 										children: t("app.title")
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: shared_module_css_default.titleRange,
+										className: shared_module_css_default.toolbarGroup,
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: shared_module_css_default.rangeTabs,
 											children: RANGES.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -9094,22 +9354,37 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											]
 										})]
 									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rowSpacer }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: shared_module_css_default.titleActions,
+										className: shared_module_css_default.toolbarGroup,
 										children: [
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
 												className: shared_module_css_default.refreshSelect,
 												value: refreshSeconds,
 												onChange: (event) => setRefreshSeconds(Number(event.target.value)),
-												"aria-label": t("action.refresh"),
-												title: t("action.refresh"),
+												"aria-label": t("filter.refreshCycle"),
+												title: t("filter.refreshCycle"),
 												children: REFRESH_OPTIONS.map((seconds) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 													value: seconds,
 													children: refreshLabel(seconds)
 												}, seconds))
 											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: shared_module_css_default.iconBtn,
+												disabled: loading,
+												onClick: refresh,
+												"aria-label": loading ? t("action.refreshing") : t("action.refresh"),
+												"aria-busy": loading,
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: loading ? shared_module_css_default.refreshIconSpin : shared_module_css_default.refreshIcon,
+													"aria-hidden": "true",
+													children: "↻"
+												})
+											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 												size: "sm",
+												className: shared_module_css_default.headBtn,
 												disabled: usage === null,
 												onClick: () => {
 													if (usage !== null) exportUsageCsv(usage);
@@ -9120,6 +9395,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 												size: "sm",
+												className: shared_module_css_default.headBtn,
 												disabled: sessions === null,
 												onClick: () => {
 													if (sessions !== null) exportSessionsCsv(sessions);
@@ -9128,13 +9404,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												title: t("action.exportSessions"),
 												children: t("action.exportSessions")
 											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-												size: "sm",
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: shared_module_css_default.iconBtn,
 												onClick: () => {
 													setSettingsTab("display");
 													setShowSettings(true);
 												},
-												ariaLabel: t("action.settings"),
+												"aria-label": t("action.settings"),
 												title: t("action.settings"),
 												children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
 													viewBox: "0 0 16 16",
@@ -9175,31 +9452,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 														d: "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
 													})
 												})
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-												className: shared_module_css_default.refreshBtn,
-												disabled: loading,
-												onClick: refresh,
-												"aria-label": loading ? t("action.refreshing") : t("action.refresh"),
-												"aria-busy": loading,
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: loading ? shared_module_css_default.refreshIconSpin : shared_module_css_default.refreshIcon,
-													"aria-hidden": "true",
-													children: "↻"
-												})
 											})
 										]
 									})
 								]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: shared_module_css_default.filterBar,
+								className: shared_module_css_default.toolbarRow,
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
 										className: shared_module_css_default.refreshSelect,
 										value: channelFilter,
 										onChange: (event) => setChannelFilter(event.target.value),
-										"aria-label": t("s.allChannels"),
+										"aria-label": t("filter.channel"),
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 											value: "ALL",
 											children: t("s.allChannels")
@@ -9208,7 +9473,33 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											children: channel.displayName ?? channel.provider
 										}, channel.provider))]
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.filterBarSpacer }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+										className: shared_module_css_default.refreshSelect,
+										value: projectFilter,
+										onChange: (event) => setProjectFilter(event.target.value),
+										"aria-label": t("filter.project"),
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "ALL",
+											children: t("filter.allProjects")
+										}), projectOptions.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: option.value,
+											children: option.label
+										}, option.value === "" ? "__orphan" : option.value))]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+										className: shared_module_css_default.refreshSelect,
+										value: modelFilter,
+										onChange: (event) => setModelFilter(event.target.value),
+										"aria-label": t("filter.model"),
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "ALL",
+											children: t("filter.allModels")
+										}), modelOptions.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: option.value,
+											children: option.label
+										}, option.value))]
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rowSpacer }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: shared_module_css_default.filterLabel,
 										children: t("settings.currency")
@@ -9226,14 +9517,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: shared_module_css_default.tabBar,
+								className: shared_module_css_default.toolbarRow,
 								children: [
-									TABS.map(([tabId, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										className: activeTab === tabId ? shared_module_css_default.active : "",
-										onClick: () => pickSection(tabId),
-										children: t(labelKey)
-									}, tabId)),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.tabBarSpacer }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: shared_module_css_default.tabBar,
+										children: TABS.map(([tabId, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											className: activeTab === tabId ? shared_module_css_default.active : "",
+											onClick: () => pickSection(tabId),
+											children: t(labelKey)
+										}, tabId))
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rowSpacer }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
 										className: shared_module_css_default.modeSwitch,
 										title: t("section.modeHint"),
@@ -9292,7 +9586,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										setCustomFrom(date);
 										setCustomTo(date);
 										goSection("detail");
-									}
+									},
+									projectFilter,
+									modelFilter
 								})]
 							}),
 							wants("detail") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
@@ -9314,7 +9610,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									onChannelFilter: setChannelFilter,
 									bounds,
 									tooltip,
-									pricingRevision
+									pricingRevision,
+									modelFilter
 								})]
 							}),
 							wants("distribution") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
@@ -9329,8 +9626,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									channels,
 									usage,
 									tooltip,
-									focusWorkspace: projectFilter,
-									onClearFocus: () => setProjectFilter(null)
+									projectFilter,
+									modelFilter
 								})]
 							}),
 							wants("sessions") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
@@ -9346,7 +9643,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									onOpenProject: (workspace) => {
 										setProjectFilter(workspace);
 										goSection("distribution");
-									}
+									},
+									projectFilter,
+									modelFilter
 								})]
 							}),
 							wants("tools") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {

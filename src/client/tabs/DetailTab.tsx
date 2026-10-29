@@ -10,7 +10,7 @@ import { displayNameOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, useCurrencyDisplay, type CostRowLike } from '../core/currency.ts'
 import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../core/format.ts'
 import { useT } from '../core/i18n.ts'
-import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse } from '../core/types.ts'
+import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse, UsageTotals } from '../core/types.ts'
 import { COST_SOURCE_LABELS } from '../core/pricing.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import detailStyles from '../styles/detail.module.css'
@@ -161,6 +161,109 @@ function weakSourceOf(sources: CostSource[]): CostSource | null {
     if (weakest === null || SOURCE_ORDER[source] > SOURCE_ORDER[weakest]) weakest = source
   }
   return weakest
+}
+
+/** 把若干模型桶并成一天：调用 / tokens 相加，金额按逐币种小计合并，来源取最弱那一格。 */
+function mergedDayOf(models: ModelSummary[], date: string, provider: string): ChannelDailySummary {
+  const costsByCurrency: Record<string, number> = {}
+  const sources: CostSource[] = []
+  let calls = 0
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let cacheWriteTokens = 0
+  let reasoningTokens = 0
+  let cost = 0
+  let partial = false
+  for (const model of models) {
+    calls += model.calls
+    inputTokens += model.inputTokens
+    outputTokens += model.outputTokens
+    cacheReadTokens += model.cacheReadTokens
+    cacheWriteTokens += model.cacheWriteTokens
+    reasoningTokens += model.reasoningTokens
+    if (typeof model.cost === 'number' && Number.isFinite(model.cost)) cost += model.cost
+    for (const [currency, amount] of Object.entries(model.costsByCurrency ?? {})) {
+      if (typeof amount === 'number' && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount
+    }
+    if (model.costSource !== undefined) sources.push(model.costSource)
+    if (model.partial === true) partial = true
+  }
+  const costSource = weakSourceOf(sources)
+  return {
+    date,
+    provider,
+    calls,
+    inputTokens,
+    outputTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
+    reasoningTokens,
+    cost,
+    models,
+    ...(Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {}),
+    ...(costSource === null ? {} : { costSource }),
+    ...(partial ? { partial: true } : {}),
+  }
+}
+
+/** 范围合计：由过滤后的逐日行相加；`cacheSaved` 无法从模型桶反推，不给（界面显示 —，不编）。 */
+function totalsOfDays(days: ChannelDailySummary[], date: string): UsageTotals {
+  const costsByCurrency: Record<string, number> = {}
+  const sources: CostSource[] = []
+  let calls = 0
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let cacheWriteTokens = 0
+  let reasoningTokens = 0
+  let cost = 0
+  let partial = false
+  for (const day of days) {
+    calls += day.calls
+    inputTokens += day.inputTokens
+    outputTokens += day.outputTokens
+    cacheReadTokens += day.cacheReadTokens
+    cacheWriteTokens += day.cacheWriteTokens
+    reasoningTokens += day.reasoningTokens
+    cost += day.cost
+    for (const [currency, amount] of Object.entries(day.costsByCurrency ?? {})) {
+      if (typeof amount === 'number' && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount
+    }
+    if (day.costSource !== undefined) sources.push(day.costSource)
+    if (day.partial === true) partial = true
+  }
+  const costSource = weakSourceOf(sources)
+  return {
+    date,
+    calls,
+    inputTokens,
+    outputTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
+    reasoningTokens,
+    cost,
+    ...(Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {}),
+    ...(costSource === null ? {} : { costSource }),
+    ...(partial ? { partial: true } : {}),
+  }
+}
+
+/**
+ * 按模型过滤 `/usage`：逐日只留该模型的桶，当天合计与范围合计都按剩下的桶重算（分页/汇总口径一致）。
+ * `'ALL'`、空串或没有这个模型的任何数据时原样返回（引用不变，零回归）；
+ * `hours`（按时段）没有模型维度，保持原样、不二次聚合。
+ */
+export function filterUsageByModel(usage: UsageResponse | null | undefined, modelFilter: string | undefined): UsageResponse | null {
+  const raw = usage ?? null
+  if (raw === null || modelFilter === undefined || modelFilter === '' || modelFilter === 'ALL') return raw
+  const days: ChannelDailySummary[] = []
+  for (const day of raw.days) {
+    const models = day.models.filter((model) => model.model === modelFilter)
+    if (models.length === 0) continue
+    days.push(mergedDayOf(models, day.date, day.provider))
+  }
+  return { ...raw, days, totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? '') }
 }
 
 /** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
@@ -424,10 +527,13 @@ export function DetailTab(props: {
   tooltip: TooltipApi
   /** 价目版本号：成本在服务端按价目算，价目一换这里要重取上期数据。 */
   pricingRevision: number
+  /** 全局模型筛选（`'ALL'` = 不过滤）：只作用于 `/usage` 的模型桶，页头通道筛选照旧生效。 */
+  modelFilter?: string
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const { usage, channels, bounds, tooltip, channelFilter } = props
+  const modelFilter = props.modelFilter ?? 'ALL'
   const currency = useCurrencyDisplay()
   const [metric, setMetric] = useState<MetricKey>('cost')
   const [dimension, setDimension] = useState<Dimension>('day')
@@ -438,29 +544,32 @@ export function DetailTab(props: {
   const previousUsage = usePreviousUsage({
     from: bounds.from, to: bounds.to, range: props.range, channelFilter, pricingRevision: props.pricingRevision,
   })
+  /** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致 */
+  const scopedUsage = useMemo(() => filterUsageByModel(usage, modelFilter), [usage, modelFilter])
+  const scopedPrevious = useMemo(() => filterUsageByModel(previousUsage, modelFilter), [previousUsage, modelFilter])
   /** 显示币种或汇率一变，金额文本就得重算（模块级状态变了，memo 自己发现不了）。 */
   const moneyKey = currency.display + '|' + (currency.fx === null ? '' : String(currency.fx.rate))
   const rows = useMemo(
-    () => (usage === null ? [] : buildDetailRows({ usage, channels, dimension })),
-    [usage, channels, dimension, moneyKey],
+    () => (scopedUsage === null ? [] : buildDetailRows({ usage: scopedUsage, channels, dimension })),
+    [scopedUsage, channels, dimension, moneyKey],
   )
   const sortedRows = useMemo(() => sortDetailRows(rows, sortKey, sortDirection), [rows, sortKey, sortDirection])
   const bars = useMemo(
-    () => (usage === null || metric === 'sessions' ? [] : buildDailyBars({ usage, from: bounds.from, to: bounds.to, metric })),
-    [usage, metric, bounds.from, bounds.to, moneyKey],
+    () => (scopedUsage === null || metric === 'sessions' ? [] : buildDailyBars({ usage: scopedUsage, from: bounds.from, to: bounds.to, metric })),
+    [scopedUsage, metric, bounds.from, bounds.to, moneyKey],
   )
-  if (usage === null) return <div className={styles.empty}>{t('d.ledgerLoading')}</div>
+  if (scopedUsage === null) return <div className={styles.empty}>{t('d.ledgerLoading')}</div>
 
-  const safeTotals: DaySummary = usage.totals ?? {
+  const safeTotals: DaySummary = scopedUsage.totals ?? {
     date: '', calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, cost: 0,
   }
   const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens
   /** 日均分母：有数据的天（拿日历天数去除会把空闲日算成用量偏低）。 */
-  const activeDays = usage.days.length
+  const activeDays = scopedUsage.days.length
 
   const totalCostText = costTextOf(safeTotals, safeTotals.costSource ?? null)
   const totalAmount = comparableMoneyOf(safeTotals)
-  const previousTotal = previousUsage === null ? null : previousUsage.totals
+  const previousTotal = scopedPrevious === null ? null : scopedPrevious.totals
   const totalDelta = totalCostText === '—' || previousTotal === null || previousTotal === undefined
     ? null
     : deltaOf(totalAmount, comparableMoneyOf(previousTotal))
@@ -495,7 +604,7 @@ export function DetailTab(props: {
 
   const totalChannels = new Set<string>()
   const totalModels = new Set<string>()
-  for (const day of usage.days) {
+  for (const day of scopedUsage.days) {
     for (const model of day.models) {
       totalChannels.add(model.provider)
       totalModels.add(model.provider + '|' + model.model)
@@ -543,7 +652,7 @@ export function DetailTab(props: {
           </div>
           <span className={detailStyles.panelMore}>{summaryText}</span>
         </div>
-        {metric === 'sessions' || usage.days.length === 0
+        {metric === 'sessions' || scopedUsage.days.length === 0
           ? <div className={styles.empty}>{metric === 'sessions' ? '—' : t('empty.noUsage')}</div>
           : (
             <>

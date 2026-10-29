@@ -26,7 +26,7 @@ import type {
   WeekdayHours,
 } from '../core/types.ts'
 import { LEVEL_COLORS, YearHeatmap, levelColorOf, levelOfValue, levelThresholds } from '../components/Heatmap.tsx'
-import type { RangeKey } from './DetailTab.tsx'
+import { filterUsageByModel, type RangeKey } from './DetailTab.tsx'
 import shared from '../styles/shared.module.css'
 import styles from '../styles/overview.module.css'
 
@@ -117,6 +117,10 @@ export interface OverviewTabProps {
   previousCost?: number | null
   /** 上期会话数：同上。 */
   previousSessions?: number | null
+  /** 全局项目筛选（`'ALL'` = 不过滤）：只有会话与项目聚合有项目维度，台账类面板不跟。 */
+  projectFilter?: string
+  /** 全局模型筛选（`'ALL'` = 不过滤）：只作用于 `/usage` 的逐日模型桶与模型排行，热力图 / 按时段保持全量。 */
+  modelFilter?: string
 }
 
 export function OverviewTab(props: OverviewTabProps): ReactNode {
@@ -131,6 +135,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
 
   const range: RangeKey = props.range ?? 'month'
   const summary = props.summary
+  const modelFilter = props.modelFilter ?? 'ALL'
+  const projectFilter = props.projectFilter ?? 'ALL'
+  /** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
+  const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter)
 
   // ===== KPI：近 30 天那一列（summary 的第二列，有官方账单）=====
   const isMonthRange = range === 'month'
@@ -144,8 +152,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length
 
   // ===== KPI：其余范围整行改由 usage.totals 算，一行里不混两个窗口 =====
-  const rangeTotals = isMonthRange ? null : rangeTotalsOf(props.usage, range)
-  /** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。 */
+  const rangeTotals = isMonthRange ? null : rangeTotalsOf(scopedUsage, range)
+  /** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
+   *  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
   const splitTotals: UsageTotals | null = isMonthRange ? (props.usage?.totals ?? null) : rangeTotals
   const costRow: CostRowLike | null = isMonthRange
     ? (summary === null ? null : monthCost)
@@ -159,15 +168,23 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null
     ? null
     : moneyTotalsTextOf({ cost: splitTotals.cacheSaved, costsByCurrency: splitTotals.cacheSavedByCurrency })
-  const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(props.usage, range)
+  const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range)
   const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays
+  /** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
+  const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter)
+  const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length
   const sessionCount = isMonthRange
-    ? sessionCountOf(props.sessions, monthFrom)
-    : sessionCountOf(props.sessions, sessionFromOf(range))
+    ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount)
+    : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount)
 
   // ===== 使用趋势 =====
   const isAllRange = range === 'total'
-  const trendDays = trendDaysOf(props.usage, props.heatmap)
+  /** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
+   *  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
+  const rawTrendDays = trendDaysOf(props.usage, props.heatmap)
+  const trendDays = isAllRange
+    ? rawTrendDays
+    : (modelFilter === 'ALL' ? rawTrendDays : trendDaysOf(scopedUsage, []))
   /** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
   const hasDailyCalls = trendDays.some((day) => day.calls !== null)
   const rangeWindow = windowOfRange(range)
@@ -236,9 +253,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     </>
   )
 
-  // ===== 项目 / 模型排行 =====
-  const projectItems = rankItemsOfProjects(props.projects, projectMetric)
-  const modelItems = rankItemsOfModels(props.models, modelMetric)
+  // ===== 项目 / 模型排行：各自跟随对应维度的全局筛选（项目榜不按模型拆，模型榜不按项目拆）=====
+  const projectItems = rankItemsOfProjects(projectsOfScope(props.projects, projectFilter), projectMetric)
+  const modelItems = rankItemsOfModels(modelsOfScope(props.models, modelFilter), modelMetric)
 
   // ===== 按时段 =====
   const hourMatrix = hourlyMatrixOf(props.hourly)
@@ -580,12 +597,13 @@ function hitRateOf(totals: DaySummary | null): number | null {
 
 /**
  * 本期会话数：最近活动落在当前窗口里的会话行数（`'all'` = 全部会话，不设下限）。
- * 列表被 limit 截断时不能拿来计数（会少算），Coverage 说读不出来的也不给数字；
+ * 列表被 limit 截断时不能拿来计数（会少算）—— 截断判定用**未过滤**的原始行数 `rawRowCount`，
+ * 因为按项目 / 模型筛选后行数本来就比 `countedSessions` 少，不能拿它当截断证据；
  * `from` 为 null 表示窗口未知（自定义范围只有父级知道起止）→ 显示 —。
  */
-function sessionCountOf(sessions: SessionsResponse | null | undefined, from: string | 'all' | null): number | null {
+function sessionCountOf(sessions: SessionsResponse | null | undefined, from: string | 'all' | null, rawRowCount: number): number | null {
   if (from === null || sessions == null || sessions.coverage.status === 'unavailable') return null
-  if (sessions.rows.length === 0 || sessions.rows.length < sessions.coverage.countedSessions) return null
+  if (rawRowCount === 0 || rawRowCount < sessions.coverage.countedSessions) return null
   const active = sessions.rows.filter((row) => row.calls > 0)
   if (from === 'all') return active.length
   const fromTime = new Date(from + 'T00:00:00').getTime()
@@ -747,6 +765,38 @@ function projectValueTextOf(metric: ProjectMetric, row: ProjectRow): string {
   if (metric === 'cost') return rowMoneyViewOf(row).text
   if (metric === 'tokens') return fmtTokens(row.tokens)
   return fmtCalls(row.sessionCount)
+}
+
+/** 项目榜按全局项目筛选收窄（`''` 命中的是「未归入工作区」那一行）；`'ALL'` 原样返回。 */
+function projectsOfScope(projects: ProjectsResponse | null | undefined, projectFilter: string): ProjectsResponse | null {
+  if (projects == null || projectFilter === 'ALL') return projects ?? null
+  return {
+    ...projects,
+    rows: projects.rows.filter((row) => row.workspace === projectFilter || (row.paths ?? []).includes(projectFilter)),
+  }
+}
+
+/** 模型榜按全局模型筛选收窄；`'ALL'` 原样返回。 */
+function modelsOfScope(models: ModelsResponse | null | undefined, modelFilter: string): ModelsResponse | null {
+  if (models == null || modelFilter === 'ALL') return models ?? null
+  return { ...models, rows: models.rows.filter((row) => row.model === modelFilter) }
+}
+
+/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个都是 `'ALL'` 时原样返回。 */
+function sessionsOfScope(
+  sessions: SessionsResponse | null | undefined,
+  projectFilter: string,
+  modelFilter: string,
+): SessionsResponse | null {
+  if (sessions == null || (projectFilter === 'ALL' && modelFilter === 'ALL')) return sessions ?? null
+  return {
+    ...sessions,
+    rows: sessions.rows.filter((row) => {
+      if (projectFilter !== 'ALL' && (row.workspace ?? '') !== projectFilter) return false
+      if (modelFilter !== 'ALL' && !row.models.some((model) => model.model === modelFilter)) return false
+      return true
+    }),
+  }
 }
 
 function rankItemsOfProjects(projects: ProjectsResponse | null | undefined, metric: ProjectMetric): { items: RankItem[]; total: number } {

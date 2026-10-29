@@ -50,6 +50,10 @@ export function SessionsTab(props: {
   tooltip: TooltipApi
   /** 点工作目录：切到「项目用量」并只看这个项目（筛选状态提升在 KeyUsageSection） */
   onOpenProject: (workspace: string) => void
+  /** 全局项目筛选（`'ALL'` = 不过滤）：按会话行的 workspace 匹配；`''` 表示未归入工作区。 */
+  projectFilter?: string
+  /** 全局模型筛选（`'ALL'` = 不过滤）：会话行的 `models` 桶里出现该模型才保留。 */
+  modelFilter?: string
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
@@ -60,10 +64,19 @@ export function SessionsTab(props: {
   const [query, setQuery] = useState('')
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [detailId, setDetailId] = useState<string | null>(null)
-  const rows = props.data?.rows ?? []
+  const projectFilter = props.projectFilter ?? 'ALL'
+  const modelFilter = props.modelFilter ?? 'ALL'
+  /** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
+  const allRows = props.data?.rows ?? []
+  /** 两个筛选都作用在行上：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
+  const rows = useMemo(() => allRows.filter((row) => {
+    if (projectFilter !== 'ALL' && (row.workspace ?? '') !== projectFilter) return false
+    if (modelFilter !== 'ALL' && !row.models.some((model) => model.model === modelFilter)) return false
+    return true
+  }), [allRows, projectFilter, modelFilter])
 
-  // 换了范围 / 搜索就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
-  useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query])
+  // 换了范围 / 搜索 / 全局筛选就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
+  useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query, projectFilter, modelFilter])
 
   /** 只列主会话：子代理不单独占行（详情抽屉里仍可逐个点开）。 */
   const mainRows = useMemo(() => rows.filter((row) => !isSubagentOf(row)), [rows])
@@ -106,7 +119,7 @@ export function SessionsTab(props: {
 
   const shownRows = visibleRows.slice(0, pageSize)
   const histogramMax = Math.max(1, ...histogram)
-  const detailRow = detailId === null ? null : rows.find((row) => row.id === detailId) ?? null
+  const detailRow = detailId === null ? null : allRows.find((row) => row.id === detailId) ?? null
   const rowOptions: RowOptions = {
     channels: props.channels,
     tooltip: props.tooltip,
@@ -225,10 +238,10 @@ export function SessionsTab(props: {
           fallbackTitle={detailRow?.title ?? null}
           channels={props.channels}
           // 列表只列主会话，子会话的逐个点开入口留在这里（不并进本会话总量）
-          subagents={detailRow === null ? [] : rows.filter((row) => isSubagentOf(row) && row.parentSessionId === detailRow.id)}
+          subagents={detailRow === null ? [] : allRows.filter((row) => isSubagentOf(row) && row.parentSessionId === detailRow.id)}
           onOpenSession={setDetailId}
           parentId={detailRow?.parentSessionId ?? null}
-          parentTitle={detailRow === null || detailRow.parentSessionId == null ? null : (rows.find((row) => row.id === detailRow.parentSessionId)?.title ?? null)}
+          parentTitle={detailRow === null || detailRow.parentSessionId == null ? null : (allRows.find((row) => row.id === detailRow.parentSessionId)?.title ?? null)}
           onClose={() => setDetailId(null)}
         />
       )}

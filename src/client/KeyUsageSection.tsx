@@ -73,8 +73,9 @@ export function KeyUsageSection() {
   const [customFrom, setCustomFrom] = useState(() => shiftedIsoDate(-29))
   const [customTo, setCustomTo] = useState(() => isoDate(new Date()))
   const [channelFilter, setChannelFilter] = useState('ALL')
-  /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看那一个项目（不做全局路由） */
-  const [projectFilter, setProjectFilter] = useState<string | null>(null)
+  /** 项目 / 模型筛选：'ALL' = 不过滤；项目值取 `projects` 段的 workspace（'' = 未归入工作区）。 */
+  const [projectFilter, setProjectFilter] = useState('ALL')
+  const [modelFilter, setModelFilter] = useState('ALL')
 
   const [channels, setChannels] = useState<Channel[]>([])
   const [quotas, setQuotas] = useState<QuotaProvider[]>([])
@@ -115,12 +116,12 @@ export function KeyUsageSection() {
 
   /**
    * 快照段按当前页取：总览要的三段是底座，其余段切到对应 Tab 时才要（会话段近 200 KB）。
+   * 项目 / 模型两段挂在底座上：顶部「全部项目 / 全部模型」下拉要随时有选项可列。
    * 服务端只裁剪下发，构建仍是全量一份，所以不可能出现「两个数据源」。
    */
   const sectionsForTab = useCallback((tab: TabId): string[] => {
-    const base = ['channels', 'overview', 'heatmap', 'quota']
+    const base = ['channels', 'overview', 'heatmap', 'quota', 'projects', 'models']
     if (tab === 'sessions') return [...base, 'sessions']
-    if (tab === 'distribution') return [...base, 'projects', 'models']
     if (tab === 'words') return [...base, 'prompts']
     if (tab === 'tools') return [...base, 'tools']
     return base
@@ -303,6 +304,24 @@ export function KeyUsageSection() {
     return () => { cancelled = true }
   }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, channelFilter, pricingRevision])
 
+  /** 项目下拉：值取 workspace（'' = 未归入工作区），文案取宿主工作区标题。 */
+  const projectOptions = useMemo(() => (projects?.rows ?? []).map((row) => ({
+    value: row.workspace,
+    label: row.workspace === '' ? t('p.orphan') : (row.workspaceTitle ?? row.workspace),
+  })), [projects, t])
+
+  /** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
+  const modelOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const options: Array<{ value: string; label: string }> = []
+    for (const row of models?.rows ?? []) {
+      if (seen.has(row.model)) continue
+      seen.add(row.model)
+      options.push({ value: row.model, label: row.model === '' ? t('m.others') : row.model })
+    }
+    return options
+  }, [models, t])
+
   /** 刷新周期文案：0 = 关闭。 */
   const refreshLabel = useCallback((seconds: number): string => {
     if (seconds <= 0) return t('refresh.off')
@@ -372,9 +391,9 @@ export function KeyUsageSection() {
   return (
     <div className={styles.section}>
       <div className={styles.stickyHead}>
-      <div className={styles.title}>
+      <div className={styles.toolbarRow}>
         <span className={styles.brand}>{t('app.title')}</span>
-        <span className={styles.titleRange}>
+        <span className={styles.toolbarGroup}>
           <span className={styles.rangeTabs}>
             {RANGES.map(([key, labelKey]) => (
               <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
@@ -399,37 +418,22 @@ export function KeyUsageSection() {
             />
           </span>
         </span>
-        <span className={styles.titleActions}>
+        <span className={styles.rowSpacer} />
+        <span className={styles.toolbarGroup}>
           <select
             className={styles.refreshSelect}
             value={refreshSeconds}
             onChange={(event) => setRefreshSeconds(Number(event.target.value))}
-            aria-label={t('action.refresh')}
-            title={t('action.refresh')}
+            aria-label={t('filter.refreshCycle')}
+            title={t('filter.refreshCycle')}
           >
             {REFRESH_OPTIONS.map((seconds) => (
               <option key={seconds} value={seconds}>{refreshLabel(seconds)}</option>
             ))}
           </select>
-          <Button size="sm" disabled={usage === null} onClick={() => { if (usage !== null) exportUsageCsv(usage) }} ariaLabel={t('action.exportUsage')} title={t('action.exportUsage')}>
-            {t('action.exportUsage')}
-          </Button>
-          <Button size="sm" disabled={sessions === null} onClick={() => { if (sessions !== null) exportSessionsCsv(sessions) }} ariaLabel={t('action.exportSessions')} title={t('action.exportSessions')}>
-            {t('action.exportSessions')}
-          </Button>
-          <Button size="sm" onClick={() => { setSettingsTab('display'); setShowSettings(true) }} ariaLabel={t('action.settings')} title={t('action.settings')}>
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-              <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
-              <path fill="none" stroke="currentColor" strokeWidth="1.3" stroke-linecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
-            </svg>
-          </Button>
-          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-    <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-  </svg>
-</a>
           <button
-            className={styles.refreshBtn}
+            type="button"
+            className={styles.iconBtn}
             disabled={loading}
             onClick={refresh}
             aria-label={loading ? t('action.refreshing') : t('action.refresh')}
@@ -437,22 +441,67 @@ export function KeyUsageSection() {
           >
             <span className={loading ? styles.refreshIconSpin : styles.refreshIcon} aria-hidden="true">↻</span>
           </button>
+          <Button size="sm" className={styles.headBtn} disabled={usage === null} onClick={() => { if (usage !== null) exportUsageCsv(usage) }} ariaLabel={t('action.exportUsage')} title={t('action.exportUsage')}>
+            {t('action.exportUsage')}
+          </Button>
+          <Button size="sm" className={styles.headBtn} disabled={sessions === null} onClick={() => { if (sessions !== null) exportSessionsCsv(sessions) }} ariaLabel={t('action.exportSessions')} title={t('action.exportSessions')}>
+            {t('action.exportSessions')}
+          </Button>
+          <button
+            type="button"
+            className={styles.iconBtn}
+            onClick={() => { setSettingsTab('display'); setShowSettings(true) }}
+            aria-label={t('action.settings')}
+            title={t('action.settings')}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <path fill="none" stroke="currentColor" strokeWidth="1.3" stroke-linecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
+            </svg>
+          </button>
+          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+  </svg>
+</a>
         </span>
       </div>
 
-      <div className={styles.filterBar}>
+      <div className={styles.toolbarRow}>
         <select
           className={styles.refreshSelect}
           value={channelFilter}
           onChange={(event) => setChannelFilter(event.target.value)}
-          aria-label={t('s.allChannels')}
+          aria-label={t('filter.channel')}
         >
           <option value="ALL">{t('s.allChannels')}</option>
           {channels.map((channel) => (
             <option key={channel.provider} value={channel.provider}>{channel.displayName ?? channel.provider}</option>
           ))}
         </select>
-        <span className={styles.filterBarSpacer} />
+        <select
+          className={styles.refreshSelect}
+          value={projectFilter}
+          onChange={(event) => setProjectFilter(event.target.value)}
+          aria-label={t('filter.project')}
+        >
+          <option value="ALL">{t('filter.allProjects')}</option>
+          {projectOptions.map((option) => (
+            <option key={option.value === '' ? '__orphan' : option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <select
+          className={styles.refreshSelect}
+          value={modelFilter}
+          onChange={(event) => setModelFilter(event.target.value)}
+          aria-label={t('filter.model')}
+        >
+          <option value="ALL">{t('filter.allModels')}</option>
+          {modelOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <span className={styles.rowSpacer} />
         <span className={styles.filterLabel}>{t('settings.currency')}</span>
         <select
           className={styles.refreshSelect}
@@ -466,11 +515,13 @@ export function KeyUsageSection() {
         </select>
       </div>
 
-      <div className={styles.tabBar}>
-        {TABS.map(([tabId, labelKey]) => (
-          <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => pickSection(tabId)}>{t(labelKey)}</button>
-        ))}
-        <span className={styles.tabBarSpacer} />
+      <div className={styles.toolbarRow}>
+        <div className={styles.tabBar}>
+          {TABS.map(([tabId, labelKey]) => (
+            <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => pickSection(tabId)}>{t(labelKey)}</button>
+          ))}
+        </div>
+        <span className={styles.rowSpacer} />
         <label className={styles.modeSwitch} title={t('section.modeHint')}>
           <input type="checkbox" checked={!paged} onChange={(event) => setPaged(!event.target.checked)} />
           {paged ? t('section.paged') : t('section.scroll')}
@@ -509,6 +560,8 @@ export function KeyUsageSection() {
               onOpenDetail={(provider) => { setChannelFilter(provider); goSection('detail') }}
               onOpenChannel={setQuotaDialog}
               onPickDay={(date) => { setRange('custom'); setCustomFrom(date); setCustomTo(date); goSection('detail') }}
+              projectFilter={projectFilter}
+              modelFilter={modelFilter}
             />
           </section>
         )}
@@ -529,6 +582,7 @@ export function KeyUsageSection() {
               bounds={bounds}
               tooltip={tooltip}
               pricingRevision={pricingRevision}
+              modelFilter={modelFilter}
             />
           </section>
         )}
@@ -541,8 +595,8 @@ export function KeyUsageSection() {
               channels={channels}
               usage={usage}
               tooltip={tooltip}
-              focusWorkspace={projectFilter}
-              onClearFocus={() => setProjectFilter(null)}
+              projectFilter={projectFilter}
+              modelFilter={modelFilter}
             />
           </section>
         )}
@@ -554,6 +608,8 @@ export function KeyUsageSection() {
               channels={channels}
               tooltip={tooltip}
               onOpenProject={(workspace) => { setProjectFilter(workspace); goSection('distribution') }}
+              projectFilter={projectFilter}
+              modelFilter={modelFilter}
             />
           </section>
         )}
