@@ -292,7 +292,14 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
           unit={hitRate === null ? undefined : '%'}
           detail={splitTotals === null
             ? '—'
-            : t('overview.cacheLine', { value: tokenTextOf(splitTotals.cacheReadTokens), saved: cacheSaved ?? '—' })}
+            : t('overview.cacheReadOnly', { value: tokenTextOf(splitTotals.cacheReadTokens) })}
+        />
+        <KpiCard
+          label={t('overview.kpiCacheSaved')}
+          value={cacheSaved ?? '—'}
+          detail={splitTotals?.cacheSaved == null || costAmount === null || costAmount <= 0
+            ? undefined
+            : t('overview.ofCost', { percent: Math.round((splitTotals.cacheSaved / costAmount) * 100) })}
         />
         <KpiCard
           label={t('overview.kpiSessions')}
