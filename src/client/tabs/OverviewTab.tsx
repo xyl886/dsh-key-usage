@@ -611,7 +611,10 @@ function hitRateOf(totals: DaySummary | null): number | null {
  */
 function sessionCountOf(sessions: SessionsResponse | null | undefined, from: string | 'all' | null, rawRowCount: number): number | null {
   if (from === null || sessions == null || sessions.coverage.status === 'unavailable') return null
-  if (rawRowCount === 0 || rawRowCount < sessions.coverage.countedSessions) return null
+  if (rawRowCount === 0) return null
+  // 行数被截断时不放弃：全部范围退回服务端统计的会话总数，其余范围按已有行的活跃数（宁可保守也不显示 —）
+  const truncated = rawRowCount < sessions.coverage.countedSessions
+  if (truncated && from === 'all') return sessions.coverage.countedSessions
   const active = sessions.rows.filter((row) => row.calls > 0)
   if (from === 'all') return active.length
   const fromTime = new Date(from + 'T00:00:00').getTime()

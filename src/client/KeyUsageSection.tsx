@@ -486,8 +486,8 @@ export function KeyUsageSection() {
             ))}
           </span>
           <DateRangePicker
-            from={customFrom}
-            to={customTo}
+            from={range === 'custom' ? customFrom : bounds.from}
+            to={range === 'custom' ? customTo : bounds.to}
             onChange={(from, to) => { setCustomFrom(from); setCustomTo(to); setRange('custom') }}
           />
         </span>

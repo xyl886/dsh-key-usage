@@ -2,7 +2,7 @@
 /* 外层内边距对齐宿主页面（与「上下文洞察」dsh-context 的根容器同值）：
    宿主 main 容器本身不带内边距，页面自己负责，所以这里必须给。 */
 .section {
-  box-sizing: border-box; height: 100%; overflow-y: auto;
+  box-sizing: border-box; min-height: 0; overflow: visible;
   padding: 24px 32px 48px;
   /* 页面字号刻度：正文 / 小字 / 区块标题 / 数字 / 控件高 —— 一处定义，全页与各区块共用 */
   --ku-body: max(14px, var(--dsh-content-font-size, 14px));
