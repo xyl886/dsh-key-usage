@@ -603,7 +603,10 @@ export function DetailTab(props: {
   /** 日均分母：有数据的天（拿日历天数去除会把空闲日算成用量偏低）。 */
   const activeDays = scopedUsage.days.length
 
-  const totalCostText = costTextOf(safeTotals, safeTotals.costSource ?? null)
+  // 合计只要有金额就显示；存在未定价的行时标「部分」，不再整行退回 —（与概览口径对齐）
+  const totalCostText = safeTotals.cost > 0
+    ? rowMoneyViewOf(safeTotals).text + ((safeTotals.costSource ?? null) === 'none' ? ' · ' + t('detail.partialCost') : '')
+    : costTextOf(safeTotals, safeTotals.costSource ?? null)
   const totalAmount = comparableMoneyOf(safeTotals)
   const previousTotal = scopedPrevious === null ? null : scopedPrevious.totals
   const totalDelta = totalCostText === '—' || previousTotal === null || previousTotal === undefined

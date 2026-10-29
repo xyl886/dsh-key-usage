@@ -245,6 +245,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.peak": "峰值",
 			"detail.delta": "环比",
 			"detail.source": "来源",
+			"detail.partialCost": "部分",
 			"detail.model": "模型",
 			"detail.rows": "{count} 行",
 			"detail.groupCount": "{count} 个",
@@ -764,6 +765,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.peak": "Peak",
 			"detail.delta": "Change",
 			"detail.source": "Source",
+			"detail.partialCost": "partial",
 			"detail.model": "Model",
 			"detail.rows": "{count} rows",
 			"detail.groupCount": "{count}",
@@ -4633,7 +4635,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const totalTokens = safeTotals.inputTokens + safeTotals.outputTokens + safeTotals.cacheReadTokens;
 			/** 日均分母：有数据的天（拿日历天数去除会把空闲日算成用量偏低）。 */
 			const activeDays = scopedUsage.days.length;
-			const totalCostText = costTextOf$1(safeTotals, safeTotals.costSource ?? null);
+			const totalCostText = safeTotals.cost > 0 ? rowMoneyViewOf(safeTotals).text + ((safeTotals.costSource ?? null) === "none" ? " · " + t("detail.partialCost") : "") : costTextOf$1(safeTotals, safeTotals.costSource ?? null);
 			const totalAmount = comparableMoneyOf(safeTotals);
 			const previousTotal = scopedPrevious === null ? null : scopedPrevious.totals;
 			const totalDelta = totalCostText === "—" || previousTotal === null || previousTotal === void 0 ? null : deltaOf(totalAmount, comparableMoneyOf(previousTotal));
