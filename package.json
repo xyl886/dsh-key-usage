@@ -91,6 +91,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "jieba-wasm": "^2.4.0"
+    "jieba-wasm": "^2.4.0",
+    "node-sqlite3-wasm": "^0.8.61"
   }
 }

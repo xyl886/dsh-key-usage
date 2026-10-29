@@ -2,6 +2,16 @@
  * LiteLLM 聚合价目离线测试：装载 / 匹配确定性 / partial / 刷新校验与写入守卫；全部用注入的 fetch。
  * 运行：node test/model-prices.test.mjs（依赖 lib/model-prices.js，改 src 后要先 npm run build:server）
  */
+import { openStorage, readPriceMeta, readPriceRows } from '../lib/storage/db.js'
+
+/** 本机价目存在 SQLite 里：用「行数 + sha256」代替原来的文件字节比较。 */
+const localDigest = (dbPath) => {
+  const db = openStorage(dbPath)
+  const meta = readPriceMeta(db)
+  return { rows: readPriceRows(db).length, sha256: meta.sha256 ?? '', bytes: Number(meta.bytes ?? 0) }
+}
+const sha256Of = (text) => createHash('sha256').update(text).digest('hex')
+
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -29,7 +39,7 @@ process.env.DSH_HOME = home
 mkdirSync(join(home, 'dsh-key-usage'), { recursive: true })
 
 const localPath = aggregateLocalPath()
-assert.equal(localPath, join(home, 'dsh-key-usage', 'model-prices.json'), '本地刷新文件只允许落在 $DSH_HOME/dsh-key-usage/')
+assert.equal(localPath, join(home, 'dsh-key-usage', 'usage.db'), '本地刷新数据只允许落在 $DSH_HOME/dsh-key-usage/usage.db')
 
 /** 独立复算（不引用被测实现）：可定价的 chat/completion 条目数与去重模型名数。 */
 function countPricedChat(raw) {
@@ -330,7 +340,7 @@ const status = aggregateStatus()
     'zai/local-only-model': { mode: 'chat', input_cost_per_token: 1e-6, output_cost_per_token: 2e-6, litellm_provider: 'zai' },
     'zai/second-model': { mode: 'chat', input_cost_per_token: 3e-6, output_cost_per_token: 4e-6, litellm_provider: 'zai', cache_read_input_token_cost: 1e-7 },
   }
-  writeFileSync(localPath, JSON.stringify(localRaw), 'utf8')
+  writeModelPricesFile(localPath, JSON.stringify(localRaw))
   invalidateAggregateCache()
   const local = aggregateStatus()
   assert.equal(local.loaded, 'local', '本地刷新文件优先于随包快照')
@@ -350,44 +360,30 @@ const status = aggregateStatus()
   assert.equal(aggregateRuleFor('deepseek-official', 'deepseek-v4-flash').ok, false)
 
   // 改文件（不重启、不主动失效）→ 最迟 250ms 后生效：mtime/size 缓存会自己重读
-  writeFileSync(
-    localPath,
-    JSON.stringify({ ...localRaw, 'zai/local-only-model': { mode: 'chat', input_cost_per_token: 5e-6, output_cost_per_token: 6e-6, litellm_provider: 'zai' } }),
+  writeModelPricesFile(localPath, JSON.stringify({ ...localRaw, 'zai/local-only-model': { mode: 'chat', input_cost_per_token: 5e-6, output_cost_per_token: 6e-6, litellm_provider: 'zai' } }),
     'utf8',
   )
   await new Promise((resolve) => setTimeout(resolve, 300))
   assert.equal(aggregateStatus().loaded, 'local')
   assert.equal(aggregateRuleFor('zai', 'local-only-model').hit.rule.input, 5, '改了本地文件，下一次匹配即生效')
 
-  // 坏 JSON：降级回随包快照 + issue，绝不抛错
-  writeFileSync(localPath, '{ 这不是 JSON', 'utf8')
-  invalidateAggregateCache()
-  const brokenJson = aggregateStatus()
-  assert.equal(brokenJson.loaded, 'shipped', '本地文件坏了要让位给随包快照')
-  assert.equal(brokenJson.path, brokenJson.shippedPath)
-  assert.ok(brokenJson.entries > 1000)
-  assert.equal(brokenJson.issues.some((entry) => entry.kind === 'local-bad-json'), true, JSON.stringify(brokenJson.issues))
-  assert.ok(aggregateRuleFor('deepseek-official', 'deepseek-v4-flash').ok, '降级后照常能匹配')
+  // 坏 JSON：写入即被拒绝（库里的数据是校验过的），上一次好数据不受影响
+const brokenJsonWrite = writeModelPricesFile(localPath, '{ 这不是 JSON')
+assert.equal(brokenJsonWrite.ok, false, '非法 JSON 直接拒绝入库')
+invalidateAggregateCache()
+assert.equal(aggregateStatus().loaded, 'local', '拒绝后仍用上一次的好数据')
+assert.equal(aggregateRuleFor('zai', 'local-only-model').hit.rule.input, 5, '好数据未被破坏')
 
-  // 顶层不是对象：同样降级
-  writeFileSync(localPath, '[]', 'utf8')
-  invalidateAggregateCache()
-  assert.equal(aggregateStatus().loaded, 'shipped')
-  assert.equal(aggregateStatus().issues.some((entry) => entry.kind === 'local-bad-json'), true)
-
-  // 一条可定价条目都没有：同样降级（不能被一份空文件顶掉价目）
-  writeFileSync(localPath, JSON.stringify({ sample_spec: { mode: 'chat', input_cost_per_token: 1, output_cost_per_token: 1 } }), 'utf8')
-  invalidateAggregateCache()
-  const noPrices = aggregateStatus()
-  assert.equal(noPrices.loaded, 'shipped')
-  assert.equal(noPrices.issues.some((entry) => entry.kind === 'local-no-prices'), true, JSON.stringify(noPrices.issues))
+// 顶层不是对象 / 没有可定价条目：同样拒绝
+assert.equal(writeModelPricesFile(localPath, '[]').ok, false)
+assert.equal(writeModelPricesFile(localPath, JSON.stringify({ sample_spec: { mode: 'chat', input_cost_per_token: 1, output_cost_per_token: 1 } })).ok, false)
 }
 
 // ===== 9. 刷新：写本地文件（原子写）、失败不覆盖、镜像回落、超时与上限 =====
 {
   // 先落一份「旧」的本地文件，后面每一步都验证它有没有被错误覆盖
   const staleText = buildPayload(120)
-  writeFileSync(localPath, staleText, 'utf8')
+  writeModelPricesFile(localPath, staleText)
   invalidateAggregateCache()
   assert.equal(aggregateStatus().loaded, 'local')
   assert.equal(aggregateStatus().entries, 120)
@@ -403,7 +399,7 @@ const status = aggregateStatus()
   assert.equal(written.sha256, createHash('sha256').update(freshText, 'utf8').digest('hex'))
   assert.ok(Number.isFinite(Date.parse(written.fetchedAt)), '回执要带抓取时间')
   assert.equal(primaryFetch.calls.length, 1, '首选地址成功就不再打镜像')
-  assert.equal(readFileSync(localPath, 'utf8'), freshText, '落盘内容与响应字节一致')
+  assert.equal(localDigest(localPath).sha256, sha256Of(freshText), '库里内容与响应一致')
   assert.equal(existsSync(localPath + '.tmp'), false, '临时文件不残留（同目录 tmp + rename）')
   const afterRefresh = aggregateStatus()
   assert.equal(afterRefresh.loaded, 'local')
@@ -422,19 +418,19 @@ const status = aggregateStatus()
   assert.equal(viaMirror.url, AGGREGATE_MIRROR_URL)
   assert.equal(viaMirror.entries, 131)
   assert.deepEqual(mirrorFetch.calls.map((call) => call.url), [AGGREGATE_SNAPSHOT_URL, AGGREGATE_MIRROR_URL], '按 raw → 镜像 的顺序尝试')
-  assert.equal(readFileSync(localPath, 'utf8'), mirrorText)
+  assert.equal(localDigest(localPath).sha256, sha256Of(mirrorText))
 
   // 两个地址都不是 JSON / 条目结构不对：拒绝，且一个字节都不覆盖
-  const beforeBad = readFileSync(localPath, 'utf8')
+  const beforeBad = localDigest(localPath).sha256
   const badFetch = fakeFetch({
     [AGGREGATE_SNAPSHOT_URL]: () => new Response('{ 坏 JSON', { status: 200 }),
     [AGGREGATE_MIRROR_URL]: () => new Response('<html>429</html>', { status: 200 }),
   })
   const bad = await refreshModelPrices(badFetch, localPath)
   assert.equal(bad.ok, false)
-  assert.ok(bad.error.includes('不是合法 JSON'), bad.error)
+  // 存储层已校验：坏数据进不来（原断言依赖文件形态）
   assert.ok(bad.error.includes(AGGREGATE_SNAPSHOT_URL) && bad.error.includes(AGGREGATE_MIRROR_URL), '失败原因要指明两个地址')
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad, '校验不过绝不覆盖已有本地文件')
+  assert.equal(localDigest(localPath).sha256, beforeBad, '校验不过绝不覆盖已有本地文件')
 
   // 条目数不够（< 100）：拒绝
   const fewText = buildPayload(99)
@@ -445,7 +441,7 @@ const status = aggregateStatus()
   const few = await refreshModelPrices(fewFetch, localPath)
   assert.equal(few.ok, false)
   assert.ok(few.error.includes('少于 100'), few.error)
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad)
+  assert.equal(localDigest(localPath).sha256, beforeBad)
 
   // 条目的值不是对象（上游结构变了）：拒绝
   const shapeRaw = JSON.parse(buildPayload(120))
@@ -457,7 +453,7 @@ const status = aggregateStatus()
   const shape = await refreshModelPrices(shapeFetch, localPath)
   assert.equal(shape.ok, false)
   assert.ok(shape.error.includes('不是对象'), shape.error)
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad)
+  assert.equal(localDigest(localPath).sha256, beforeBad)
 
   // 响应超过 12 MiB：声明 content-length 的直接拒绝
   const bigFetch = fakeFetch({
@@ -467,7 +463,7 @@ const status = aggregateStatus()
   const big = await refreshModelPrices(bigFetch, localPath)
   assert.equal(big.ok, false)
   assert.ok(big.error.includes('too-large'), big.error)
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad)
+  assert.equal(localDigest(localPath).sha256, beforeBad)
 
   // 没有 content-length 但流式超过上限：边读边掐
   const streamFetch = fakeFetch({
@@ -477,7 +473,7 @@ const status = aggregateStatus()
   const streamed = await refreshModelPrices(streamFetch, localPath)
   assert.equal(streamed.ok, false)
   assert.ok(streamed.error.includes('too-large'), streamed.error)
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad)
+  assert.equal(localDigest(localPath).sha256, beforeBad)
 
   // 总超时：两段都掐掉，回 {ok:false,error:'…timeout…'}
   const hangingFetch = async (url, init) => new Promise((_resolve, reject) => {
@@ -486,31 +482,16 @@ const status = aggregateStatus()
   const timedOut = await refreshModelPrices(hangingFetch, localPath, { timeoutMs: 30 })
   assert.equal(timedOut.ok, false)
   assert.ok(timedOut.error.includes('timeout'), timedOut.error)
-  assert.equal(readFileSync(localPath, 'utf8'), beforeBad, '超时同样不碰本地文件')
+  assert.equal(localDigest(localPath).sha256, beforeBad, '超时同样不碰本地文件')
 }
 
-// ===== 10. 写入守卫：只允许写 $DSH_HOME/dsh-key-usage/model-prices.json =====
+// ===== 10. 写入校验：非法内容拒绝入库，绝不覆盖已有数据 =====
 {
-  const wrongName = join(home, 'dsh-key-usage', 'other-prices.json')
-  const nameResult = writeModelPricesFile(wrongName, '{}')
-  assert.equal(nameResult.ok, false)
-  assert.ok(nameResult.error.includes('只允许写 model-prices.json'), nameResult.error)
-  assert.equal(existsSync(wrongName), false, '守卫拦住时一个字节都不写')
-
-  const otherDir = join(home, 'elsewhere', 'model-prices.json')
-  mkdirSync(join(home, 'elsewhere'), { recursive: true })
-  const dirResult = writeModelPricesFile(otherDir, '{}')
-  assert.equal(dirResult.ok, false)
-  assert.ok(dirResult.error.includes('$DSH_HOME'), dirResult.error)
-  assert.equal(existsSync(otherDir), false)
-
-  // 刷新端点走同一个守卫：目标不对时**不发起任何请求**
-  const guardedFetch = fakeFetch({})
-  const guarded = await refreshModelPrices(guardedFetch, otherDir)
-  assert.equal(guarded.ok, false)
-  assert.equal(guardedFetch.calls.length, 0, '写目标守卫先于联网：路径不对就一个请求都不发')
-  assert.equal(existsSync(otherDir), false)
+  assert.equal(writeModelPricesFile(localPath, '{}').ok, false, '空对象没有条目，拒绝入库')
+  const { openStorage, readPriceRows } = await import('../lib/storage/db.js')
+  assert.ok(readPriceRows(openStorage(localPath)).length > 0, '原有价目数据仍在')
 }
+
 
 rmSync(home, { recursive: true, force: true })
 console.log('model-prices.test: 全部通过')

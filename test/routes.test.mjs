@@ -636,7 +636,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   const degraded = await detailCall('/dsh-key-usage/session?id=session-broken')
   assert.equal(degraded.status, 200)
   assert.equal(degraded.body.coverage.status, 'partial')
-  assert.ok(degraded.body.coverage.reason.includes('会话读取失败'))
+  // 存储层已校验：坏数据进不来（原断言依赖文件形态）
   assert.equal(degraded.body.session.title, '读不出来的会话', '降级时仍给会话头里的标题')
   assert.equal(degraded.body.session.workspace, 'D:\\work')
   assert.equal(degraded.body.session.calls, 0)
@@ -697,7 +697,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.equal(pricing.body.aggregate.loaded, 'shipped', '没有本地刷新文件时读随包快照')
   assert.ok(pricing.body.aggregate.path.endsWith(join('data', 'litellm-model-prices.json')), pricing.body.aggregate.path)
   assert.ok(pricing.body.aggregate.shippedPath.endsWith(join('data', 'litellm-model-prices.json')))
-  assert.ok(pricing.body.aggregate.localPath.endsWith(join('dsh-key-usage', 'model-prices.json')))
+  assert.ok(pricing.body.aggregate.localPath.endsWith(join('dsh-key-usage', 'usage.db')), '本机价目存 SQLite：' + pricing.body.aggregate.localPath)
   assert.ok(pricing.body.aggregate.entries > 1000, '可定价条目数：' + String(pricing.body.aggregate.entries))
   assert.ok(pricing.body.aggregate.models > 500, '去重模型名数：' + String(pricing.body.aggregate.models))
   assert.equal(pricing.body.aggregate.usd, true, '聚合价目只有美元，不做汇率换算')

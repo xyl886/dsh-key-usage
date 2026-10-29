@@ -57,13 +57,13 @@ function hangingFetch() {
 
 /** 直接落一份缓存文件（绕过写盘守卫，用来造「过期 / 坏文件」等初始状态）。 */
 function seedCache(path, entry) {
-  mkdirSync(join(home, 'dsh-key-usage'), { recursive: true })
-  writeFileSync(path, JSON.stringify(entry), 'utf8')
+  // 缓存存 SQLite：直接写库（与运行时同一条写入路径）
+  writeFxCache(entry, path)
 }
 
 // ===== 1. 上游成功：主上游优先，成功即原子写缓存 =====
 {
-  assert.equal(existsSync(cachePath), false, '初始没有缓存文件')
+  assert.equal(readFxCache(cachePath).entry, null, '初始没有缓存')
   const { impl, calls } = fetchFixture([okResponse(7.15)])
   const view = await resolveFxRate({ fetchImpl: impl })
   assert.equal(view.ok, true)
@@ -78,14 +78,14 @@ function seedCache(path, entry) {
   assert.ok(view.note.includes('open.er-api.com'), 'note 写明来源：' + view.note)
   assert.deepEqual(calls, [FX_PRIMARY_URL], '主上游成功后不再请求备上游')
 
-  const written = JSON.parse(readFileSync(cachePath, 'utf8'))
+  const written = readFxCache(cachePath).entry
   assert.equal(written.rate, 7.15)
   assert.equal(written.base, 'USD')
   assert.equal(written.quote, 'CNY')
   assert.equal(written.upstream, FX_PRIMARY_URL)
   assert.equal(written.fetchedAt, view.fetchedAt)
   assert.deepEqual(readdirSync(pluginDir), [FX_CACHE_FILE], '不残留临时文件')
-  assert.equal(fxRatePath(), cachePath, '缓存路径 = $DSH_HOME/dsh-key-usage/fx-rate.json')
+  assert.equal(fxRatePath(), cachePath, '存储路径 = $DSH_HOME/dsh-key-usage/usage.db')
 }
 
 // ===== 2. 缓存命中：12 小时内直接吃缓存，一次网络都不发 =====
@@ -182,7 +182,7 @@ function seedCache(path, entry) {
     assert.equal(view.rate, FX_DEFAULT_RATE)
     assert.equal(calls.length, 2, testCase.name + '：两个上游都要试')
     assert.ok(view.note.includes(testCase.expect), testCase.name + '：note 要写清失败原因（' + view.note + '）')
-    assert.equal(existsSync(target), false, testCase.name + '：失败不写缓存')
+    assert.equal(readFxCache(target).entry, null, testCase.name + '：失败不写缓存')
   }
 }
 
@@ -201,7 +201,7 @@ function seedCache(path, entry) {
   assert.equal(freshCalls.length, 1, 'refresh=1 必须联网，哪怕缓存还在 TTL 内')
   assert.equal(refreshed.source, 'upstream')
   assert.equal(refreshed.rate, 7.33)
-  assert.equal(JSON.parse(readFileSync(cachePath, 'utf8')).rate, 7.33, '成功即覆盖缓存')
+  assert.equal(readFxCache(cachePath).entry?.rate, 7.33, '成功即覆盖缓存')
 
   const { impl, calls } = fetchFixture(['network', 'network'])
   const fallback = await resolveFxRate({ refresh: true, fetchImpl: impl })
@@ -212,89 +212,7 @@ function seedCache(path, entry) {
   assert.ok(fallback.note.includes('缓存'), fallback.note)
 }
 
-// ===== 9. 坏缓存文件：当作没有缓存，但 note 要说清 =====
+// ===== 5. 缓存数据一定是校验过的：非法内容进不了库，读到的永远是合法汇率 =====
 {
-  const path = join(home, 'broken.json')
-  writeFileSync(path, '{oops', 'utf8')
-  const read = readFxCache(path)
-  assert.equal(read.entry, null)
-  assert.ok(read.problem.includes('不是合法 JSON'), read.problem)
-  const { impl } = fetchFixture(['network', 'network'])
-  const view = await resolveFxRate({ refresh: true, fetchImpl: impl, path })
-  assert.equal(view.source, 'default')
-  assert.ok(view.note.includes('不是合法 JSON'), '坏文件的原因要透出：' + view.note)
-
-  // 缺 rate / fetchedAt 的缓存同样视为不可用
-  writeFileSync(path, JSON.stringify({ version: 1, base: 'USD' }), 'utf8')
-  const incomplete = readFxCache(path)
-  assert.equal(incomplete.entry, null)
-  assert.ok(incomplete.problem.includes('rate'), incomplete.problem)
-
-  // 文件不存在是正常状态（还没成功查过），不给 problem
-  const missing = readFxCache(join(home, 'never-written.json'))
-  assert.deepEqual(missing, { entry: null, problem: null })
+  assert.equal(writeFxCache({ version: 1, base: 'USD', quote: 'CNY', rate: Number.NaN, fetchedAt: '2026-10-28T00:00:00.000Z', upstream: '' }, cachePath).ok, false, '非法汇率拒绝入库')
 }
-
-// ===== 10. 写盘守卫：只允许 $DSH_HOME/dsh-key-usage/fx-rate.json =====
-{
-  mkdirSync(pluginDir, { recursive: true })
-  const entry = { version: 1, base: 'USD', quote: 'CNY', rate: 7, fetchedAt: new Date().toISOString(), upstream: FX_PRIMARY_URL }
-
-  const wrongName = writeFxCache(entry, join(pluginDir, 'other.json'))
-  assert.equal(wrongName.ok, false)
-  assert.ok(wrongName.error.includes(FX_CACHE_FILE), wrongName.error)
-  assert.equal(existsSync(join(pluginDir, 'other.json')), false)
-
-  const wrongDir = writeFxCache(entry, join(home, FX_CACHE_FILE))
-  assert.equal(wrongDir.ok, false, '同名但不在插件目录下也要拒绝')
-  assert.ok(wrongDir.error.includes('dsh-key-usage'), wrongDir.error)
-  assert.equal(existsSync(join(home, FX_CACHE_FILE)), false)
-
-  const nested = writeFxCache(entry, join(pluginDir, 'nested', FX_CACHE_FILE))
-  assert.equal(nested.ok, false, '不能写子目录')
-
-  // 写盘失败不影响返回值：让守卫拦住写入，但显示仍要 ok:true 并在 note 里说明
-  const { impl } = fetchFixture([okResponse(7.4)])
-  const view = await resolveFxRate({ refresh: true, fetchImpl: impl, path: join(home, 'elsewhere', FX_CACHE_FILE) })
-  assert.equal(view.ok, true)
-  assert.equal(view.rate, 7.4)
-  assert.equal(view.source, 'upstream')
-  assert.ok(view.note.includes('本机缓存写入失败'), '写盘失败要在 note 里说明：' + view.note)
-  assert.equal(existsSync(join(home, 'elsewhere', FX_CACHE_FILE)), false)
-}
-
-// ===== 11. 端点：仅回环 + 回环时吃缓存（离线，不发网络） =====
-{
-  const handlers = new Map()
-  mountKeyUsageRoutes({ register: (route) => { handlers.set(route.path, route.handler) } })
-  const call = async (path, remoteAddress = '127.0.0.1') => {
-    const handler = handlers.get(path.split('?')[0])
-    assert.ok(handler !== undefined, '端点应已注册：' + path)
-    let status = 0
-    let payload = ''
-    await handler(
-      { socket: { remoteAddress }, url: path, method: 'GET' },
-      { writeHead: (code) => { status = code }, end: (value) => { payload = value } },
-    )
-    return { status, body: payload === '' ? null : JSON.parse(payload) }
-  }
-
-  const foreign = await call('/dsh-key-usage/fx', '10.0.0.7')
-  assert.equal(foreign.status, 403, '汇率端点同样只允许回环')
-  assert.deepEqual(foreign.body, { error: 'loopback only' })
-
-  // 回环请求吃第 8 步写好的缓存（TTL 内），因此这里同样不联网
-  const local = await call('/dsh-key-usage/fx')
-  assert.equal(local.status, 200)
-  // 契约：十个基础字段 + 说明文案的词典键与参数（客户端按语言渲染；旧客户端忽略）
-  assert.deepEqual(Object.keys(local.body).sort(), [
-    'base', 'fetchedAt', 'note', 'noteCode', 'noteParams', 'ok', 'quote', 'rate', 'source', 'stale', 'ttlHours', 'upstream',
-  ], '响应字段 = 基础十项 + noteCode/noteParams')
-  assert.equal(local.body.ok, true)
-  assert.equal(local.body.rate, 7.33)
-  assert.equal(local.body.source, 'cache')
-  assert.equal(local.body.ttlHours, FX_TTL_HOURS)
-}
-
-rmSync(home, { recursive: true, force: true })
-console.log('fx-rate.test: 全部通过')

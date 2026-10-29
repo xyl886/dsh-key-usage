@@ -1,5 +1,5 @@
 /**
- * 统一快照（`$DSH_HOME/dsh-key-usage/snapshot.json`）：6 个 tab 的**唯一数据来源**。
+ * 统一快照（`$DSH_HOME/dsh-key-usage/usage.db` 的 `snapshot_section` 表）：6 个 tab 的**唯一数据来源**。
  *
  * 为什么要有它：此前每个 Tab 各自现算，同一条通道的数字会走不同路径（最典型的是「总览的窗口百分比」
  * 读宿主快照 + 60 秒内存缓存，「余额与配额」页读插件自己的快照）—— 两页显示不同值，且旧值没有时间标注。
@@ -17,11 +17,17 @@
  *
  * 读写约定：只有本文件是快照来源；构建失败**不覆盖**上一份好快照；写盘走写目标守卫 + tmp + rename。
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import {
+  metaGet,
+  metaSet,
+  openStorage,
+  readSnapshotSections,
+  storagePath,
+  writeSnapshotSections,
+  type StoredSection,
+} from '../storage/db.js'
 
-/** 快照文件名（`$DSH_HOME/dsh-key-usage/` 下，唯一的快照目标）。 */
+/** 旧快照文件名（迁移来源；运行时只写 usage.db）。 */
 export const SNAPSHOT_FILE = 'snapshot.json'
 /** 本地段默认重算周期：5 分钟（只算本地数据，不联网）。 */
 export const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
@@ -169,7 +175,7 @@ export interface SnapshotService {
 }
 
 export function snapshotPath(): string {
-  return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-key-usage', SNAPSHOT_FILE)
+  return storagePath()
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -187,63 +193,75 @@ function emptySections(): SnapshotSections {
   }
 }
 
-/** 读快照文件：文件缺失（还没建过）返回 `document: null`，坏了额外给出 problem。 */
+/** 读快照：还没有任何段（还没建过）返回 `document: null`，读库失败额外给出 problem。 */
 export function readSnapshotFile(path: string = snapshotPath()): { document: SnapshotDocument | null; problem: string | null } {
-  let text: string
+  let rows: StoredSection[]
+  let db: ReturnType<typeof openStorage>
   try {
-    text = readFileSync(path, 'utf8')
-  } catch {
-    return { document: null, problem: null }
+    db = openStorage(path)
+    rows = readSnapshotSections(db)
+  } catch (error) {
+    const where = '（path=' + path + '，DSH_HOME=' + String(process.env.DSH_HOME ?? '<未设置>') + '）'
+    return { document: null, problem: '快照库读取失败，已忽略：' + (error instanceof Error ? error.message : String(error)) + where }
   }
-  let raw: unknown
-  try {
-    raw = JSON.parse(text)
-  } catch {
-    return { document: null, problem: '快照文件不是合法 JSON，已忽略：' + path }
+  if (rows.length === 0) return { document: null, problem: null }
+  const sections = emptySections()
+  let outcome = emptyOutcome()
+  let issues: SnapshotIssue[] = []
+  for (const row of rows) {
+    let value: unknown
+    try {
+      value = JSON.parse(row.payload)
+    } catch {
+      continue
+    }
+    if (row.section === 'quotaOutcome') {
+      if (isObject(value)) outcome = value as unknown as SnapshotQuotaOutcome
+      continue
+    }
+    if (row.section === 'issues') {
+      if (Array.isArray(value)) issues = value as SnapshotIssue[]
+      continue
+    }
+    if (row.section in sections) (sections as unknown as Record<string, unknown>)[row.section] = value
   }
-  if (!isObject(raw) || !isObject(raw.sections) || typeof raw.updatedAt !== 'string') {
-    return { document: null, problem: '快照文件结构不符，已忽略：' + path }
-  }
-  const outcome = isObject(raw.quotaOutcome) ? raw.quotaOutcome as unknown as SnapshotQuotaOutcome : emptyOutcome()
+  const versionText = metaGet(db, 'document_version')
+  const sourceText = metaGet(db, 'document_build_source')
   return {
     document: {
-      version: typeof raw.version === 'number' ? raw.version : 1,
-      updatedAt: raw.updatedAt,
-      buildSource: raw.buildSource === 'manual' || raw.buildSource === 'scheduled' ? raw.buildSource : 'initial',
-      sections: { ...emptySections(), ...(raw.sections as Partial<SnapshotSections>) },
+      version: versionText === null ? 1 : Number(versionText) || 1,
+      updatedAt: metaGet(db, 'document_updated_at') ?? new Date().toISOString(),
+      buildSource: sourceText === 'manual' || sourceText === 'scheduled' ? sourceText : 'initial',
+      sections,
       quotaOutcome: {
         refreshedAt: typeof outcome.refreshedAt === 'string' ? outcome.refreshedAt : null,
         providers: Array.isArray(outcome.providers) ? outcome.providers : [],
       },
-      issues: Array.isArray(raw.issues) ? raw.issues as SnapshotIssue[] : [],
+      issues,
     },
     problem: null,
   }
 }
 
-/** 写目标守卫：文件名 + 绝对路径都要对得上（Windows 路径大小写不敏感）。 */
-function writableTargetProblem(path: string): string | null {
-  if (basename(path) !== SNAPSHOT_FILE) return '只允许写 ' + SNAPSHOT_FILE + '（当前目标：' + path + '）'
-  if (resolve(path).toLowerCase() !== resolve(snapshotPath()).toLowerCase()) {
-    return '只允许写 $DSH_HOME/dsh-key-usage/' + SNAPSHOT_FILE + '（当前目标：' + path + '）'
-  }
-  return null
-}
-
-/** 原子写：同目录临时文件 + rename；失败只返回原因，绝不抛错。 */
+/** 逐段写入（一个事务）：非 null 的段 + quotaOutcome + issues 各一行；失败只返回原因，绝不抛错。 */
 export function writeSnapshotFile(
   document: SnapshotDocument,
   path: string = snapshotPath(),
 ): { ok: true; path: string } | { ok: false; error: string } {
-  const problem = writableTargetProblem(path)
-  if (problem !== null) return { ok: false, error: problem }
   try {
-    mkdirSync(dirname(path), { recursive: true })
-    const temporaryPath = path + '.tmp'
-    writeFileSync(temporaryPath, JSON.stringify(document, null, 2) + '\n', 'utf8')
-    renameSync(temporaryPath, path)
+    const db = openStorage(path)
+    const entries = Object.entries(document.sections)
+      .filter(([, value]) => value !== null && value !== undefined)
+      .map(([section, value]) => ({ section, payload: JSON.stringify(value) }))
+    entries.push({ section: 'quotaOutcome', payload: JSON.stringify(document.quotaOutcome) })
+    entries.push({ section: 'issues', payload: JSON.stringify(document.issues) })
+    writeSnapshotSections(db, entries, document.updatedAt)
+    metaSet(db, 'document_version', String(document.version))
+    metaSet(db, 'document_updated_at', document.updatedAt)
+    metaSet(db, 'document_build_source', document.buildSource)
   } catch (error) {
-    return { ok: false, error: '写入快照失败：' + (error instanceof Error ? error.message : String(error)) }
+    const where = '（path=' + path + '，默认=' + snapshotPath() + '，DSH_HOME=' + String(process.env.DSH_HOME ?? '<未设置>') + '）'
+    return { ok: false, error: '写入快照失败：' + (error instanceof Error ? error.message : String(error)) + where }
   }
   return { ok: true, path }
 }

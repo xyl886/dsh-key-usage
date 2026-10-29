@@ -15,6 +15,7 @@ import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PricingRule } from './pricing.js'
+import { openStorage, readPriceMeta, readPriceRows, replacePriceRows, storagePath, type StoredPriceRow } from '../storage/db.js'
 
 /** 来源页（给人看）；刷新时先 raw、不可达再回落 jsDelivr 镜像。 */
 export const AGGREGATE_SOURCE_URL = 'https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json'
@@ -26,6 +27,8 @@ export const AGGREGATE_UPSTREAM_COMMIT = '30b8db325e85740eb86901d08597da845b2065
 /** 随包快照的抓取日期（更详细的来源信息见 data/README.md）。 */
 export const AGGREGATE_FETCHED_ON = '2026-10-14'
 export const AGGREGATE_CURRENCY = 'USD'
+
+/** 本机刷新副本存 SQLite（`litellm_price` 行级表）：构建时只查命中的模型，不再每次解析 2.7 MB。 */
 
 /** 刷新端点：两次尝试的总超时 / 响应上限 / 最少条目数（不满足就拒绝，绝不覆盖已有本地文件）。 */
 export const AGGREGATE_REFRESH_TIMEOUT_MS = 20000
@@ -54,7 +57,7 @@ const SHIPPED_PATH = fileURLToPath(new URL('../../data/litellm-model-prices.json
 
 /** 本机刷新文件的唯一可写目标。 */
 export function aggregateLocalPath(): string {
-  return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-key-usage', 'model-prices.json')
+  return storagePath()
 }
 
 export interface AggregateIssue {
@@ -228,6 +231,39 @@ function isoOrNull(milliseconds: number): string | null {
 
 function readCandidate(path: string, label: 'local' | 'shipped'): CandidateFile {
   const empty: CandidateFile = { usable: false, path, entries: [], bytes: 0, sha256: '', fetchedAt: null, issues: [] }
+  // 本机刷新副本在 SQLite 里：读出行级价目，重建成上游同形状后走同一套 buildEntries
+  if (label === 'local') {
+    let rows: StoredPriceRow[]
+    let meta: Record<string, string>
+    try {
+      const db = openStorage(path)
+      rows = readPriceRows(db)
+      meta = readPriceMeta(db)
+    } catch {
+      return empty
+    }
+    if (rows.length === 0) return empty
+    const raw: Record<string, unknown> = {}
+    for (const row of rows) {
+      try {
+        raw[row.modelKey] = JSON.parse(row.raw)
+      } catch { /* 坏行跳过 */ }
+    }
+    const entries = buildEntries(raw)
+    if (entries.length === 0) {
+      empty.issues.push({ kind: 'local-no-prices', message: '本机价目库里没有可定价条目' })
+      return empty
+    }
+    return {
+      usable: true,
+      path,
+      entries,
+      bytes: Number(meta.bytes ?? 0) || 0,
+      sha256: meta.sha256 ?? '',
+      fetchedAt: typeof meta.fetchedAt === 'string' ? meta.fetchedAt : null,
+      issues: [],
+    }
+  }
   let stamp: { mtimeMs: number }
   try {
     const stats = statSync(path)
@@ -458,30 +494,52 @@ export type AggregateRefreshResult =
   | { ok: false; error: string }
 
 /** 写目标守卫：文件名 + 绝对路径都要对得上（Windows 路径大小写不敏感）。 */
-function writableTargetProblem(path: string): string | null {
-  if (basename(path) !== 'model-prices.json') {
-    return '只允许写 model-prices.json（当前目标：' + path + '）'
-  }
-  if (resolve(path).toLowerCase() !== resolve(aggregateLocalPath()).toLowerCase()) {
-    return '只允许写 $DSH_HOME/dsh-key-usage/model-prices.json（当前目标：' + path + '）'
-  }
+function writableTargetProblem(_path: string): string | null {
+  // 数据统一写 SQLite（usage.db），不再有「只允许写某个文件名」的守卫
   return null
 }
 
-/** 原子写：同目录临时文件 + rename（避免读到半截文件）。 */
+/** 解析校验后写库（行级 + meta）：解析失败或没有可定价条目就不覆盖已有数据。 */
 export function writeModelPricesFile(path: string, text: string): { ok: true; bytes: number } | { ok: false; error: string } {
-  const problem = writableTargetProblem(path)
-  if (problem !== null) return { ok: false, error: problem }
+  let raw: unknown
   try {
-    mkdirSync(dirname(path), { recursive: true })
-    const temporaryPath = path + '.tmp'
-    writeFileSync(temporaryPath, text, 'utf8')
-    renameSync(temporaryPath, path)
+    raw = JSON.parse(text)
   } catch (error) {
-    return { ok: false, error: '写入价目文件失败：' + describeError(error) }
+    return { ok: false, error: '价目内容不是合法 JSON：' + describeError(error) }
+  }
+  if (!isObject(raw)) return { ok: false, error: '价目内容顶层必须是 JSON 对象' }
+  // 只要求「除 sample_spec 外至少有一个条目对象」：可定价判断在上游 validatePricesText 已做过
+  const hasEntry = Object.keys(raw).some((key) => key !== 'sample_spec' && isObject(raw[key]))
+  if (!hasEntry) return { ok: false, error: '价目内容里没有条目' }
+  const rows: StoredPriceRow[] = []
+  for (const [modelKey, value] of Object.entries(raw)) {
+    if (!isObject(value)) continue
+    const slash = modelKey.indexOf('/')
+    const numberAt = (key: string): number | null => (typeof value[key] === 'number' ? value[key] as number : null)
+    rows.push({
+      modelKey,
+      vendor: slash > 0 ? modelKey.slice(0, slash) : null,
+      modelName: slash > 0 ? modelKey.slice(slash + 1) : modelKey,
+      inputPerToken: numberAt('input_cost_per_token'),
+      outputPerToken: numberAt('output_cost_per_token'),
+      cacheReadPerToken: numberAt('cache_read_input_token_cost'),
+      cacheWritePerToken: numberAt('cache_creation_input_token_cost'),
+      raw: JSON.stringify(value),
+    })
+  }
+  const bytes = Buffer.byteLength(text, 'utf8')
+  try {
+    replacePriceRows(openStorage(path), rows, {
+      bytes: String(bytes),
+      sha256: createHash('sha256').update(text).digest('hex'),
+      fetchedAt: new Date().toISOString(),
+      count: String(rows.length),
+    })
+  } catch (error) {
+    return { ok: false, error: '写入价目库失败：' + describeError(error) }
   }
   invalidateAggregateCache()
-  return { ok: true, bytes: Buffer.byteLength(text, 'utf8') }
+  return { ok: true, bytes }
 }
 
 interface PricesValidation {

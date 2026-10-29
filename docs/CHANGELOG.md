@@ -4,6 +4,13 @@
 
 > 0.1.0 ～ 0.1.2 是发布当日的快速迭代，此处只记要点；逐条改动见仓库提交历史。发布时间取自 npm registry。
 
+## [0.1.11] —— 未发布
+
+### 变更
+
+- **存储改为单个 SQLite 库（`usage.db`）**：快照按「段」存、LiteLLM 价目拆成行级表（构建时只查命中的模型，不再每次解析 2.7 MB）、系统日志进 `log_entry`（保留 30 天，替代 JSONL + 512 KB 截断）、汇率与历史配额种子各一张表。驱动 `node-sqlite3-wasm`（MIT，wasm 1.3 MB，由安装方按 dependencies 解析、不进 tarball）—— 插件服务端跑在宿主 Electron 里，原生 sqlite 模块 ABI 不匹配，`node:sqlite` 在 Node 22 需实验 flag。
+- 首次启动自动迁移：旧 5 个文件导入后移入 `.trash`；端点响应结构一字未改，客户端零改动。
+
 ## [0.1.10] —— 未发布
 
 ### 变更

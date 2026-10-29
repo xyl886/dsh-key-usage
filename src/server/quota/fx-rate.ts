@@ -5,9 +5,7 @@
  * 成功即原子写 `$DSH_HOME/dsh-key-usage/fx-rate.json`，失败静默回落缓存、再回落默认 7.1，
  * 原因写进中文 `note` —— 绝不抛错，接口恒为 `ok: true`。
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { openStorage, readFxRow, replaceFxRow, storagePath, STORAGE_FILE } from '../storage/db.js'
 
 export const FX_BASE = 'USD'
 export const FX_QUOTE = 'CNY'
@@ -21,7 +19,7 @@ export const FX_PRIMARY_URL = 'https://open.er-api.com/v6/latest/USD'
 /** 备上游：法兰克福 ECB 数据，`rates.CNY` 同上；主上游不可达时用。 */
 export const FX_BACKUP_URL = 'https://api.frankfurter.app/latest?from=USD&to=CNY'
 /** 本机缓存的唯一可写目标（与 quota-snapshots.json / model-prices.json 同目录）。 */
-export const FX_CACHE_FILE = 'fx-rate.json'
+export const FX_CACHE_FILE = STORAGE_FILE
 
 export type FxSource = 'upstream' | 'cache' | 'default'
 
@@ -58,7 +56,7 @@ export interface FxCacheEntry {
 
 /** 本机缓存文件路径（插件自己的目录，唯一的可写目标）。 */
 export function fxRatePath(): string {
-  return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-key-usage', FX_CACHE_FILE)
+  return storagePath()
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -79,61 +77,39 @@ function rateFromBody(body: unknown): number | null {
  * 读本机缓存：文件不存在（还没成功查过）返回 `entry: null`，属于正常状态；
  * 文件坏了额外给出 problem（中文），由调用方写进 note —— 读失败绝不抛错。
  */
+/** 读本机汇率：库里没有（还没成功查过）返回 `entry: null`，属正常状态；读库失败给出 problem。 */
 export function readFxCache(path: string = fxRatePath()): { entry: FxCacheEntry | null; problem: string | null } {
-  let text: string
+  let row: ReturnType<typeof readFxRow>
   try {
-    text = readFileSync(path, 'utf8')
-  } catch {
-    return { entry: null, problem: null }
+    row = readFxRow(openStorage(path))
+  } catch (error) {
+    return { entry: null, problem: '汇率库读取失败，已忽略：' + (error instanceof Error ? error.message : String(error)) }
   }
-  let raw: unknown
-  try {
-    raw = JSON.parse(text)
-  } catch {
-    return { entry: null, problem: '本机汇率缓存不是合法 JSON，已忽略：' + path }
-  }
-  if (!isObject(raw)) return { entry: null, problem: '本机汇率缓存顶层不是对象，已忽略：' + path }
-  const rate = typeof raw.rate === 'number' && Number.isFinite(raw.rate) && raw.rate > 0 ? raw.rate : null
-  const fetchedAt = typeof raw.fetchedAt === 'string' && Number.isFinite(Date.parse(raw.fetchedAt)) ? raw.fetchedAt : null
-  if (rate === null || fetchedAt === null) {
-    return { entry: null, problem: '本机汇率缓存缺 rate / fetchedAt（或数值非法），已忽略：' + path }
-  }
+  if (row === null) return { entry: null, problem: null }
+  const rate = Number.isFinite(row.rate) && row.rate > 0 ? row.rate : null
+  const fetchedAt = Number.isFinite(Date.parse(row.fetchedAt)) ? row.fetchedAt : null
+  if (rate === null || fetchedAt === null) return { entry: null, problem: '汇率库里缺 rate / fetchedAt（或数值非法），已忽略' }
   return {
-    entry: {
-      version: typeof raw.version === 'number' ? raw.version : 1,
-      base: typeof raw.base === 'string' ? raw.base : FX_BASE,
-      quote: typeof raw.quote === 'string' ? raw.quote : FX_QUOTE,
-      rate,
-      fetchedAt,
-      upstream: typeof raw.upstream === 'string' ? raw.upstream : '',
-    },
+    entry: { version: row.version, base: row.base, quote: row.quote, rate, fetchedAt, upstream: row.upstream ?? '' },
     problem: null,
   }
-}
-
-function writableTargetProblem(path: string): string | null {
-  if (basename(path) !== FX_CACHE_FILE) {
-    return '只允许写 ' + FX_CACHE_FILE + '（当前目标：' + path + '）'
-  }
-  if (resolve(path).toLowerCase() !== resolve(fxRatePath()).toLowerCase()) {
-    return '只允许写 $DSH_HOME/dsh-key-usage/' + FX_CACHE_FILE + '（当前目标：' + path + '）'
-  }
-  return null
 }
 
 export function writeFxCache(
   entry: FxCacheEntry,
   path: string = fxRatePath(),
 ): { ok: true; path: string } | { ok: false; error: string } {
-  const problem = writableTargetProblem(path)
-  if (problem !== null) return { ok: false, error: problem }
   try {
-    mkdirSync(dirname(path), { recursive: true })
-    const temporaryPath = path + '.tmp'
-    writeFileSync(temporaryPath, JSON.stringify(entry, null, 2) + '\n', 'utf8')
-    renameSync(temporaryPath, path)
+    replaceFxRow(openStorage(path), {
+      base: entry.base,
+      quote: entry.quote,
+      version: entry.version,
+      rate: entry.rate,
+      fetchedAt: entry.fetchedAt,
+      upstream: entry.upstream === '' ? null : entry.upstream,
+    })
   } catch (error) {
-    return { ok: false, error: '写入汇率缓存失败：' + (error instanceof Error ? error.message : String(error)) }
+    return { ok: false, error: '写入汇率库失败：' + (error instanceof Error ? error.message : String(error)) }
   }
   return { ok: true, path }
 }

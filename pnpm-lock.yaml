@@ -14,6 +14,9 @@ importers:
       jieba-wasm:
         specifier: ^2.4.0
         version: 2.4.0
+      node-sqlite3-wasm:
+        specifier: ^0.8.61
+        version: 0.8.61
     devDependencies:
       '@types/node':
         specifier: 24.13.3
@@ -558,6 +561,9 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
+  node-sqlite3-wasm@0.8.61:
+    resolution: {integrity: sha512-Yqp6mz/CqmoUU4dCQOda9KtxC0+ToDX2w7p9/bv0hwaIXNbcGiGnfrkzE22reefoBvB1gYAUpJImsf0L7NQ9wg==}
+
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
@@ -961,6 +967,8 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  node-sqlite3-wasm@0.8.61: {}
 
   obug@2.2.1: {}
 

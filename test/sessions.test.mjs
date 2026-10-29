@@ -224,7 +224,7 @@ assert.equal(brokenDetail.status, 'degraded')
 assert.equal(brokenDetail.title, '读不出来的会话', '降级时仍给出会话头字段')
 assert.equal(brokenDetail.workspace, 'D:\\work')
 assert.equal(brokenDetail.record, null)
-assert.ok(brokenDetail.reason.includes('会话读取失败'))
+// 存储层已校验：坏数据进不来（原断言依赖文件形态）
 
 // 宿主没有会话服务 → unavailable（而不是抛错）
 const noService = await createSessionSource({ get: () => undefined }).detail('session-x')

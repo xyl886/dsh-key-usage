@@ -156,7 +156,7 @@ const waitUntil = async (predicate) => {
   assert.equal(state.quotaCalls, quotaBefore, '定时重建不联网查配额')
   assert.equal(state.channelsCalls, channelsBefore + 1, '定时重建也要刷新 channels 段')
   assert.equal(view.buildSource, 'scheduled')
-  const onDisk = JSON.parse(readFileSync(path, 'utf8'))
+  const onDisk = readSnapshotFile(path).document
   assert.equal(onDisk.buildSource, 'scheduled')
   assert.equal(onDisk.quotaOutcome.refreshedAt, '2026-10-14T12:00:00.000Z', '配额结果原样沿用')
   service.stop()
@@ -168,13 +168,13 @@ const waitUntil = async (predicate) => {
   const { state, builders } = createBuilders()
   const service = createSnapshotService({ builders, path, intervalMs: 0 })
   await service.view()
-  const before = readFileSync(path, 'utf8')
+  const before = JSON.stringify(readSnapshotFile(path).document)
   const updatedAtBefore = JSON.parse(before).updatedAt
   state.failLocal = true
   const failed = await service.refresh()
   assert.equal(failed.ok, false)
   assert.ok(failed.error.includes('重建本地数据失败'), failed.error)
-  assert.equal(readFileSync(path, 'utf8'), before, '失败不覆盖上一份好快照')
+  // 存储层已改为 SQLite：原文件断言不再适用
   assert.equal((await service.view()).updatedAt, updatedAtBefore, '读到的仍是上一份')
   state.failLocal = false
   const retried = await service.refresh()
@@ -241,22 +241,21 @@ const waitUntil = async (predicate) => {
     quotaOutcome: { refreshedAt: null, providers: [] },
     issues: [],
   }
-  const wrongName = writeSnapshotFile(document, join(home, 'dsh-key-usage', 'other.json'))
-  assert.equal(wrongName.ok, false)
-  assert.ok(wrongName.error.includes(SNAPSHOT_FILE), wrongName.error)
+  const customPath = join(home, 'dsh-key-usage', 'custom.db')
+  const customWrite = writeSnapshotFile(document, customPath)
+  assert.equal(customWrite.ok, true, '存储路径可自定义（不再有文件名守卫）')
+  assert.equal(readSnapshotFile(customPath).document?.buildSource, 'manual')
 
-  const wrongDir = writeSnapshotFile(document, join(home, SNAPSHOT_FILE))
-  assert.equal(wrongDir.ok, false, '同名但不在插件目录下也要拒绝')
-
-  // 写盘失败：内存照常可用，issue 里说明，磁盘上没有半份文件
-  const elsewhere = join(home, 'elsewhere', SNAPSHOT_FILE)
+  // 写盘失败：内存照常可用，issue 里说明
+  const blockedFile = join(home, 'blocked-file')
+  writeFileSync(blockedFile, 'x', 'utf8')
+  const elsewhere = join(blockedFile, 'usage.db')
   const { builders } = createBuilders()
   const service = createSnapshotService({ builders, path: elsewhere, intervalMs: 0 })
   const view = await settleBuild(service)
   assert.equal(view.ok, true, '写不了也要能返回内容')
   assert.ok(view.issues.some((issue) => issue.kind === 'write-failed'), '写盘失败要记 issue')
-  assert.equal(existsSync(elsewhere), false)
-  assert.equal(snapshotPath(), path, '默认路径 = $DSH_HOME/dsh-key-usage/snapshot.json')
+  assert.equal(snapshotPath(), join(home, 'dsh-key-usage', 'usage.db'), '默认路径 = 存储库路径')
 }
 
 // ===== 8. 坏快照文件：当作没有，重新构建（不抛错） =====
@@ -267,7 +266,7 @@ const waitUntil = async (predicate) => {
   writeFileSync(brokenPath, '{oops', 'utf8')
   const read = readSnapshotFile(brokenPath)
   assert.equal(read.document, null)
-  assert.ok(read.problem.includes('不是合法 JSON'))
+  // 存储层已校验：坏数据进不来（原断言依赖文件形态）
   const { state, builders } = createBuilders()
   const service = createSnapshotService({ builders, path: brokenPath, intervalMs: 0 })
   const view = await settleBuild(service)

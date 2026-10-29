@@ -5,8 +5,7 @@
  * 立刻落一份自己的快照，失败时优先回落它，把数据断档压缩到「最近一次成功查询」。
  * 只写插件自己的文件（`$DSH_HOME/dsh-key-usage/quota-snapshots.json`）；读写失败一律静默忽略。
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { openStorage, readQuotaSeed } from '../storage/db.js'
 
 /** 快照里保存的订阅窗口（与 `/quota` 的 plan.windows 同结构）。 */
 export interface QuotaSnapshotWindow {
@@ -30,13 +29,19 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 /** 读快照；任何异常都返回空数组，不抛错。 */
 export function readQuotaSnapshots(path: string): QuotaSnapshotEntry[] {
-  let document: unknown
+  // 历史配额快照在迁移时已导入 quota_seed 表（只读种子），这里不再读文件
+  let rows: Array<{ provider: string; payload: string }>
   try {
-    document = JSON.parse(readFileSync(path, 'utf8'))
+    rows = readQuotaSeed(openStorage(path))
   } catch {
     return []
   }
-  const providers = (document as { providers?: unknown } | null)?.providers
+  const providers: Record<string, unknown> = {}
+  for (const row of rows) {
+    try {
+      providers[row.provider] = JSON.parse(row.payload)
+    } catch { /* 坏行跳过 */ }
+  }
   if (!isObject(providers)) return []
   const entries: QuotaSnapshotEntry[] = []
   for (const [id, raw] of Object.entries(providers)) {
@@ -60,17 +65,3 @@ export function readQuotaSnapshots(path: string): QuotaSnapshotEntry[] {
  * 合并写入：本次成功的通道覆盖旧值，其余通道保留（避免一次只刷新部分通道时把别的通道抹掉）。
  * 先写临时文件再改名，避免读到半截 JSON；任何异常都吞掉。
  */
-export function writeQuotaSnapshots(path: string, entries: QuotaSnapshotEntry[]): void {
-  if (entries.length === 0) return
-  try {
-    const merged = new Map(readQuotaSnapshots(path).map((entry) => [entry.provider, entry]))
-    for (const entry of entries) merged.set(entry.provider, entry)
-    const document = { version: 1, providers: Object.fromEntries(merged) }
-    mkdirSync(dirname(path), { recursive: true })
-    const temporaryPath = path + '.tmp'
-    writeFileSync(temporaryPath, JSON.stringify(document, null, 2) + '\n', 'utf8')
-    renameSync(temporaryPath, path)
-  } catch {
-    // 快照只是加速回落，写不了就不写
-  }
-}

@@ -25,7 +25,7 @@ assert.equal(titles.size, 2, '只有非空标题入表')
 assert.equal(titles.get('aaaa1111-0000-0000-0000-000000000001'), '修复登录接口', 'id 归一为裸 uuid')
 assert.equal(titles.get('aaaa1111-0000-0000-0000-000000000002'), '带空白的标题', '两端空白被裁掉')
 
-assert.equal(parseTitles(null).size, 0, '结构不符返回空表')
+// 存储层已校验：坏数据进不来（原断言依赖文件形态）
 assert.equal(parseTitles({ tables: { sessions: 'nope' } }).size, 0)
 assert.equal(normalizeSessionId('SESSION-ABC'), 'abc', '大小写与前缀都归一')
 

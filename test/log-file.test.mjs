@@ -10,7 +10,6 @@ import { join } from 'node:path'
 import {
   LOG_DETAIL_LIMIT,
   LOG_FILE,
-  LOG_MAX_BYTES,
   appendLogRecords,
   clearLogFile,
   logFilePath,
@@ -31,7 +30,7 @@ function check(name, run) {
   console.log('  ✓ ' + name)
 }
 
-check('默认路径落在 $DSH_HOME/dsh-key-usage/plugin.log', () => {
+check('默认路径落在 $DSH_HOME/dsh-key-usage/usage.db', () => {
   assert.equal(logFilePath(), path)
 })
 
@@ -51,7 +50,7 @@ check('回读只取最近 limit 条', () => {
 check('清空后没有记录，文件也真的空了', () => {
   assert.deepEqual(clearLogFile(), { ok: true })
   assert.deepEqual(readLogRecords(10), [])
-  assert.equal(readFileSync(path, 'utf8'), '')
+  assert.equal(readLogRecords(10, path).length, 0)
 })
 
 check('形状不对的记录被丢掉，不写坏文件', () => {
@@ -74,33 +73,26 @@ check('消息与详情按上限裁剪', () => {
   assert.equal(stored.detail.length, LOG_DETAIL_LIMIT + 1)
 })
 
-check('单行坏 JSON 被跳过，好行照读', () => {
-  writeFileSync(path, '{"time":"2026-10-15T10:00:00.000Z","level":"warn","source":"fx","message":"好行"}\n不是 JSON\n\n', 'utf8')
-  assert.deepEqual(readLogRecords(10).map((item) => item.message), ['好行'])
+check('坏形状的记录进不了库（写入即校验）', () => {
+  assert.deepEqual(appendLogRecords([null, 'text', { message: '' }]), { ok: true, written: 0 })
 })
 
-check('写目标守卫：换文件名 / 换目录都被拒', () => {
-  const wrongName = appendLogRecords([record('x')], join(home, 'dsh-key-usage', 'other.log'))
-  assert.equal(wrongName.ok, false)
-  assert.match(wrongName.error, /只允许写 plugin\.log/)
-  const wrongDir = appendLogRecords([record('x')], join(home, 'elsewhere', LOG_FILE))
-  assert.equal(wrongDir.ok, false)
-  assert.match(wrongDir.error, /只允许写 \$DSH_HOME\/dsh-key-usage\/plugin\.log/)
-  assert.equal(clearLogFile(join(home, 'elsewhere', LOG_FILE)).ok, false)
+check('存储路径可自定义（测试与迁移用）', () => {
+  const customPath = join(home, 'dsh-key-usage', 'custom.db')
+  assert.equal(appendLogRecords([record('自定义路径')], customPath).ok, true)
+  assert.deepEqual(readLogRecords(10, customPath).map((item) => item.message), ['自定义路径'])
+  assert.equal(clearLogFile(customPath).ok, true)
+  assert.deepEqual(readLogRecords(10, customPath), [])
 })
 
-check('超过上限只保留后半段', () => {
-  const filler = 'z'.repeat(100)
-  const total = Math.ceil((LOG_MAX_BYTES + 4096) / (filler.length + 75))
-  const batch = Array.from({ length: total }, (unused, index) => record(filler + '-' + String(index)))
-  // 一次批量最多 200 条，分批灌到超过上限
-  for (let index = 0; index < batch.length; index += 100) {
-    assert.equal(appendLogRecords(batch.slice(index, index + 100)).ok, true)
-  }
-  const records = readLogRecords(2000)
-  assert.ok(records.length < total, '轮转后条数必须变少')
-  assert.ok(readFileSync(path, 'utf8').length <= LOG_MAX_BYTES, '轮转后文件不该还超上限')
-  assert.equal(records[records.length - 1].message.endsWith('-' + String(total - 1)), true, '最新一条必须留住')
+check('超过 30 天的日志在写入后清理', () => {
+  const oldTime = new Date(Date.now() - 40 * 86400000).toISOString()
+  appendLogRecords([{ time: oldTime, level: 'info', source: 'fx', message: '老记录' }])
+  appendLogRecords([record('新记录')])
+  const messages = readLogRecords(2000).map((item) => item.message)
+  assert.ok(messages.includes('新记录'), '新记录要保留')
+  assert.ok(!messages.includes('老记录'), '超过 30 天的记录应被清掉')
 })
+
 
 console.log('log-file: ' + String(passed) + ' 项通过')
