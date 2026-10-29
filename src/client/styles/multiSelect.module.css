@@ -18,7 +18,7 @@
 .triggerText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .caret { margin-left: auto; font-size: 10px; opacity: .7; }
 .panel {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+  position: fixed; z-index: 60;
   width: 260px; padding: 8px;
   display: flex; flex-direction: column; gap: 6px;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34);

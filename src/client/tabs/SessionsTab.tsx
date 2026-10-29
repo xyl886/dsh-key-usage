@@ -10,7 +10,7 @@ import { comparableMoneyOf, moneyTotalsTextOf } from '../core/currency.ts'
 import { fmtCount, fmtDuration, fmtRelative, fmtTokens } from '../core/format.ts'
 import { selectionMatches } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
-import { COST_SOURCE_LABELS, costSourceHintOf } from '../core/pricing.ts'
+import { costSourceHintOf, costSourceLabelOf } from '../core/pricing.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
 import { EmptyState } from '../components/ui/EmptyState.tsx'
@@ -395,7 +395,7 @@ function costTipOf(row: SessionRow): ReactNode {
       <TipRow
         label={t('s.amount')}
         amount={row.cost === null ? '—' : moneyTotalsTextOf(row)}
-        rate={t(COST_SOURCE_LABELS[source] ?? source)}
+        rate={costSourceLabelOf(source, t)}
       />
     </>
   )

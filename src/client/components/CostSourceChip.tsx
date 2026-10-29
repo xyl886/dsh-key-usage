@@ -3,7 +3,7 @@
  * `partial`（聚合价目缺一个缓存价、按未命中价代）是口径说明不是错误，不用告警色。
  */
 import type { ReactNode } from 'react'
-import { COST_SOURCE_LABELS, PARTIAL_PRICE_TEXT, costSourceHintOf, type CostSource } from '../core/pricing.ts'
+import { PARTIAL_PRICE_TEXT, costSourceHintOf, costSourceLabelOf, type CostSource } from '../core/pricing.ts'
 import { t, useT } from '../core/i18n.ts'
 import styles from '../styles/pricing.module.css'
 
@@ -20,7 +20,7 @@ export function CostSourceChip(props: {
   return (
     <span className={styles.sourceChip + ' ' + sourceClass(source)} title={costSourceHintOf(source, partial)}>
       {/* 服务端将来加了新档位时，原样显示取值而不是渲染成空白 */}
-      {t(COST_SOURCE_LABELS[source] ?? source)}
+      {costSourceLabelOf(source, t)}
       {partial && <span className={styles.sourcePartial}>{t(PARTIAL_PRICE_TEXT)}</span>}
     </span>
   )

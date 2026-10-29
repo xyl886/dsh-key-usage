@@ -12,7 +12,7 @@ import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../core/format.ts'
 import { useT } from '../core/i18n.ts'
 import { selectionOf } from '../core/filter-selection.ts'
 import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse, UsageTotals } from '../core/types.ts'
-import { COST_SOURCE_LABELS } from '../core/pricing.ts'
+import { costSourceLabelOf } from '../core/pricing.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import detailStyles from '../styles/detail.module.css'
 import styles from '../styles/shared.module.css'
@@ -802,7 +802,7 @@ export function DetailTab(props: {
                           <td className={detailStyles.alignRight}>{fmtTokens(row.cacheRead)}</td>
                           <td className={detailStyles.alignRight + ' ' + detailStyles.costCell}>{row.costText}</td>
                           <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>
-                          <td className={detailStyles.alignRight}>{row.source === null ? '—' : t(COST_SOURCE_LABELS[row.source] ?? row.source)}</td>
+                          <td className={detailStyles.alignRight}>{costSourceLabelOf(row.source, t)}</td>
                         </tr>
                         {open && (
                           <tr>

@@ -37,3 +37,7 @@
 .panelTitle { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: var(--words-title); font-weight: 600; }
 .panelAction { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
 .panelNote { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 持平：只补间距不染色 */
+.flat { margin-left: 4px; color: var(--dsw-alias-label-tertiary, #67676f); }
+

@@ -159,8 +159,15 @@ export const COST_SOURCE_LABELS: Partial<Record<CostSource, string>> = {
   official: 'cso.official',
   catalog: 'cso.catalog',
   aggregate: 'cso.aggregate',
-  model: 'cso.model',
-  none: 'cso.none',
+  none: '—',
+}
+
+/** 来源 → 可见文案：未收录档与语言无关符号（—）不再交给 t()，避免日志里出现缺词告警。 */
+export function costSourceLabelOf(source: CostSource | null, translate: (key: string) => string): string {
+  if (source === null) return '—'
+  const label = COST_SOURCE_LABELS[source]
+  if (label === undefined || label === '—') return '—'
+  return translate(label)
 }
 
 /** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */

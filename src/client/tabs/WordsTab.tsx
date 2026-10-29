@@ -97,7 +97,7 @@ function TrendPercent(props: { previous: number | null; current: number | null }
   if (props.previous === null || props.previous <= 0 || props.current === null) return null
   const delta = (props.current - props.previous) / props.previous * 100
   return (
-    <span className={delta > 0 ? styles.rise : delta < 0 ? styles.fall : undefined}>
+    <span className={delta > 0 ? styles.rise : delta < 0 ? styles.fall : styles.flat}>
       {(delta > 0 ? '+' : '') + delta.toFixed(1) + '%'}
     </span>
   )

@@ -327,9 +327,10 @@ export function KeyUsageSection() {
   const channelUsage = useMemo(() => {
     const map = new Map<string, number>()
     for (const day of usage?.days ?? []) {
-      let tokens = 0
-      for (const model of day.models) tokens += model.inputTokens + model.outputTokens + model.cacheReadTokens
-      map.set(day.provider, (map.get(day.provider) ?? 0) + tokens)
+      for (const model of day.models) {
+        const tokens = model.inputTokens + model.outputTokens + model.cacheReadTokens
+        map.set(model.provider, (map.get(model.provider) ?? 0) + tokens)
+      }
     }
     return map
   }, [usage])
@@ -513,6 +514,7 @@ export function KeyUsageSection() {
           searchLabel={t('filter.searchChannel')}
         />
         <MultiSelect
+          usageOf={(value) => projectUsage.get(value) ?? 0}
           options={projectOptions}
           selected={selectionOf(projectFilter)}
           onChange={(next) => setProjectFilter(next.join(','))}
@@ -521,6 +523,7 @@ export function KeyUsageSection() {
           searchLabel={t('filter.searchProject')}
         />
         <MultiSelect
+          usageOf={(value) => modelUsage.get(value) ?? 0}
           options={modelOptions}
           selected={selectionOf(modelFilter)}
           onChange={(next) => setModelFilter(next.join(','))}

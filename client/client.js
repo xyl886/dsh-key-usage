@@ -338,8 +338,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"src.unknown": "未知",
 			"cso.official": "官方",
 			"cso.catalog": "官方价",
-			"cso.model": "同模型官方价",
-			"cso.none": "—",
 			"cso.aggregate": "聚合",
 			"csh.official": "官方：台账记录的厂商账单金额",
 			"csh.catalog": "官方价：按内置厂商官方价目算出",
@@ -858,8 +856,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"src.unknown": "Unknown",
 			"cso.official": "Official",
 			"cso.catalog": "Catalog",
-			"cso.model": "同模型官方价",
-			"cso.none": "—",
 			"cso.aggregate": "Aggregate",
 			"csh.official": "Official: vendor bill from the ledger",
 			"csh.catalog": "Catalog: built-in vendor price list",
@@ -2123,9 +2119,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			official: "cso.official",
 			catalog: "cso.catalog",
 			aggregate: "cso.aggregate",
-			model: "cso.model",
-			none: "cso.none"
+			none: "—"
 		};
+		/** 来源 → 可见文案：未收录档与语言无关符号（—）不再交给 t()，避免日志里出现缺词告警。 */
+		function costSourceLabelOf(source, translate) {
+			if (source === null) return "—";
+			const label = COST_SOURCE_LABELS[source];
+			if (label === void 0 || label === "—") return "—";
+			return translate(label);
+		}
 		/** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
 		const COST_SOURCE_HINTS = {
 			official: "csh.official",
@@ -2559,7 +2561,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/multiSelect.module.css.mjs
-		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}";
+		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:60;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:fixed}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}";
 		const tagId$16 = "dsh-key-usage/multiSelect.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3568,7 +3570,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 													children: t("settings.version")
 												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 													className: settings_module_css_default.value,
-													children: "0.1.9"
+													children: "0.2.0"
 												})]
 											})
 										}),
@@ -3613,7 +3615,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: settings_module_css_default.wrap,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: settings_module_css_default.caliberVersion,
-								children: t("caliber.version", { version: "0.1.9" })
+								children: t("caliber.version", { version: "0.2.0" })
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 								className: settings_module_css_default.caliberList,
 								children: [
@@ -4845,7 +4847,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 										className: detail_module_css_default.alignRight,
-										children: row.source === null ? "—" : t(COST_SOURCE_LABELS[row.source] ?? row.source)
+										children: costSourceLabelOf(row.source, t)
 									})
 								] }), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: detail_module_css_default.subCell,
@@ -5967,7 +5969,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				className: pricing_module_css_default.sourceChip + " " + sourceClass(source),
 				title: costSourceHintOf(source, partial),
-				children: [t(COST_SOURCE_LABELS[source] ?? source), partial && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				children: [costSourceLabelOf(source, t), partial && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 					className: pricing_module_css_default.sourcePartial,
 					children: t("part.suffix")
 				})]
@@ -8669,7 +8671,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TipRow, {
 					label: t("s.amount"),
 					amount: row.cost === null ? "—" : moneyTotalsTextOf(row),
-					rate: t(COST_SOURCE_LABELS[source] ?? source)
+					rate: costSourceLabelOf(source, t)
 				})
 			] });
 		}
@@ -9225,7 +9227,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/words.module.css.mjs
-		const css$1 = ".VeBaIW_page{--words-body:var(--ku-body,14px);--words-title:var(--ku-title,17px);--words-kpi:var(--ku-kpi,20px);font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_rise{color:var(--dsw-alias-state-error-primary,#e05a5a);margin-left:4px}.VeBaIW_fall{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:4px}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}";
+		const css$1 = ".VeBaIW_page{--words-body:var(--ku-body,14px);--words-title:var(--ku-title,17px);--words-kpi:var(--ku-kpi,20px);font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_rise{color:var(--dsw-alias-state-error-primary,#e05a5a);margin-left:4px}.VeBaIW_fall{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:4px}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.VeBaIW_flat{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:4px}";
 		const tagId$1 = "dsh-key-usage/words.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -9241,6 +9243,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		});
 		var words_module_css_default = {
 			"fall": "VeBaIW_fall",
+			"flat": "VeBaIW_flat",
 			"kpi": "VeBaIW_kpi",
 			"kpiDetail": "VeBaIW_kpiDetail",
 			"kpiLabel": "VeBaIW_kpiLabel",
@@ -9364,7 +9367,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (props.previous === null || props.previous <= 0 || props.current === null) return null;
 			const delta = (props.current - props.previous) / props.previous * 100;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: delta > 0 ? words_module_css_default.rise : delta < 0 ? words_module_css_default.fall : void 0,
+				className: delta > 0 ? words_module_css_default.rise : delta < 0 ? words_module_css_default.fall : words_module_css_default.flat,
 				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
 			});
 		}
@@ -9763,10 +9766,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 通道用量：通道没有聚合接口，用 /usage 的逐日模型 token 相加，供筛选下拉排序 */
 			const channelUsage = (0, react.useMemo)(() => {
 				const map = /* @__PURE__ */ new Map();
-				for (const day of usage?.days ?? []) {
-					let tokens = 0;
-					for (const model of day.models) tokens += model.inputTokens + model.outputTokens + model.cacheReadTokens;
-					map.set(day.provider, (map.get(day.provider) ?? 0) + tokens);
+				for (const day of usage?.days ?? []) for (const model of day.models) {
+					const tokens = model.inputTokens + model.outputTokens + model.cacheReadTokens;
+					map.set(model.provider, (map.get(model.provider) ?? 0) + tokens);
 				}
 				return map;
 			}, [usage]);
@@ -9777,7 +9779,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				value: channel.provider,
 				label: channel.displayName ?? channel.provider
 			})), [channels]);
-			(0, react.useMemo)(() => {
+			/** 项目下拉：值取 workspace（未归入工作区的那行用 sentinel），文案取宿主工作区标题。 */
+			const projectUsage = (0, react.useMemo)(() => {
 				const map = /* @__PURE__ */ new Map();
 				for (const row of projects?.rows ?? []) {
 					const key = row.workspace === "" ? ORPHAN_PROJECT_VALUE : row.workspace;
@@ -9789,7 +9792,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				value: row.workspace === "" ? ORPHAN_PROJECT_VALUE : row.workspace,
 				label: row.workspace === "" ? t("p.orphan") : row.workspaceTitle ?? row.workspace
 			})), [projects, t]);
-			(0, react.useMemo)(() => {
+			/** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
+			const modelUsage = (0, react.useMemo)(() => {
 				const map = /* @__PURE__ */ new Map();
 				for (const row of models?.rows ?? []) map.set(row.model, (map.get(row.model) ?? 0) + row.tokens);
 				return map;
@@ -10022,6 +10026,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										searchLabel: t("filter.searchChannel")
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MultiSelect, {
+										usageOf: (value) => projectUsage.get(value) ?? 0,
 										options: projectOptions,
 										selected: selectionOf(projectFilter),
 										onChange: (next) => setProjectFilter(next.join(",")),
@@ -10030,6 +10035,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										searchLabel: t("filter.searchProject")
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MultiSelect, {
+										usageOf: (value) => modelUsage.get(value) ?? 0,
 										options: modelOptions,
 										selected: selectionOf(modelFilter),
 										onChange: (next) => setModelFilter(next.join(",")),
