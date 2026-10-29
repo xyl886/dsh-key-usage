@@ -309,6 +309,20 @@ export function KeyUsageSection() {
     return () => { cancelled = true }
   }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, pricingRevision])
 
+  /** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
+  const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)
+  useEffect(() => {
+    const dayMs = 86400000
+    const fromMs = Date.parse(bounds.from)
+    const toMs = Date.parse(bounds.to)
+    if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) { setPreviousUsage(null); return }
+    const length = Math.round((toMs - fromMs) / dayMs) + 1
+    const previousFrom = isoDate(new Date(fromMs - dayMs * length))
+    const previousTo = isoDate(new Date(fromMs - dayMs))
+    let cancelled = false
+    void loadUsage(previousFrom, previousTo, 'ALL').then((result) => { if (!cancelled) setPreviousUsage(result) })
+    return () => { cancelled = true }
+  }, [bounds.from, bounds.to, pricingRevision])
   /** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
   const scopedUsage = useMemo(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter])
 
@@ -528,6 +542,7 @@ export function KeyUsageSection() {
           <section className={styles.pageSection} id="sec-overview">
             <h2 className={styles.pageSectionTitle}>{t('tab.overview')}</h2>
             <OverviewTab
+              previousCost={previousUsage === null || previousUsage.totals === null ? null : previousUsage.totals.cost}
               channels={channels}
               summary={summary}
               quotas={quotas}

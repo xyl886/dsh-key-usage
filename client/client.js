@@ -9698,6 +9698,31 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				bounds.to,
 				pricingRevision
 			]);
+			/** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
+			const [previousUsage, setPreviousUsage] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				const dayMs = 864e5;
+				const fromMs = Date.parse(bounds.from);
+				const toMs = Date.parse(bounds.to);
+				if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) {
+					setPreviousUsage(null);
+					return;
+				}
+				const length = Math.round((toMs - fromMs) / dayMs) + 1;
+				const previousFrom = isoDate(/* @__PURE__ */ new Date(fromMs - dayMs * length));
+				const previousTo = isoDate(/* @__PURE__ */ new Date(fromMs - dayMs));
+				let cancelled = false;
+				loadUsage(previousFrom, previousTo, "ALL").then((result) => {
+					if (!cancelled) setPreviousUsage(result);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				bounds.from,
+				bounds.to,
+				pricingRevision
+			]);
 			/** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
 			const scopedUsage = (0, react.useMemo)(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter]);
 			/** 通道下拉：值取 provider，文案取显示名。 */
@@ -10026,6 +10051,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.pageSectionTitle,
 									children: t("tab.overview")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OverviewTab, {
+									previousCost: previousUsage === null || previousUsage.totals === null ? null : previousUsage.totals.cost,
 									channels,
 									summary,
 									quotas,
