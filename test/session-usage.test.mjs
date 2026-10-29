@@ -9,6 +9,7 @@ import {
   preparePromptSegmenter,
   isInjectedPromptText,
   mergePromptStats,
+  mergePromptStatsInWindow,
   normalizeProvider,
   promptSnippetOf,
   summarizeSession,
@@ -291,6 +292,31 @@ assert.deepEqual(
   mergePromptStats([{ words: new Map([['分析', 4]]) }]),
   { words: [{ word: '分析', count: 4 }], totalPrompts: 0, totalChars: 0, from: null, to: null },
   '旧数据源没有统计字段时按空值合并，不抛错',
+)
+
+// 按天窗口合并（词云环比用）：同一会话跨窗口时按天各计各的，不重复也不近似
+const windowFirstDayOnly = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-13')
+assert.equal(windowFirstDayOnly.totalPrompts, 2, '窗口只算 10-13 的提问')
+assert.equal(windowFirstDayOnly.totalChars, mergeFirst.promptChars, '字数按窗口切分')
+assert.equal(windowFirstDayOnly.days, 1, '窗口内有数据的天数')
+assert.deepEqual(
+  windowFirstDayOnly.words.map((entry) => entry.word),
+  ['分析', '插件', 'snapshot.json'],
+  '窗口内 top 词（同频按词升序）',
+)
+const windowBothDays = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-15')
+assert.equal(windowBothDays.totalPrompts, merged.totalPrompts, '覆盖两天的窗口等于整体合计')
+assert.equal(windowBothDays.days, 2)
+const windowEmpty = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-01', '2026-10-05')
+assert.deepEqual(
+  { prompts: windowEmpty.totalPrompts, chars: windowEmpty.totalChars, words: windowEmpty.words, days: windowEmpty.days },
+  { prompts: 0, chars: 0, words: [], days: 0 },
+  '窗口内没有任何提问：用 days=0 表示「没数据」，界面不能拿 0 编环比',
+)
+assert.equal(
+  mergePromptStatsInWindow([{ words: new Map([['分析', 4]]) }], '2026-10-01', '2026-10-31').days,
+  0,
+  '旧数据源没有按天桶时窗口按无数据处理，不抛错',
 )
 
 // ===== 场景八：剥离宿主注入（来源 kind + 标签段）与英文停用词 =====

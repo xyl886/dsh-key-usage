@@ -1,5 +1,5 @@
-/* 系统日志面板：筛选条 + 可滚动条目列表 + 等宽详情。
-   颜色只吃宿主 --dsw-alias-* 令牌，字号以 --dsh-content-font-size 为基准。
+/* 系统日志面板：筛选条 + 可滚动平铺条目（message 与详情全量展示）。
+   颜色只吃宿主 --dsw-alias-* 令牌；字号正文 --ku-body、时间 / 来源 --ku-sub。
    （CSS basename 必须全局唯一：tsdown 用 basename 做 <style> 去重键。） */
 
 .panel { display: flex; flex-direction: column; gap: 10px; }
@@ -7,7 +7,7 @@
 /* 顶部一条：左边条数，右边四个操作 */
 .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .count {
-  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 1.05);
+  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-body, 14px);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .headActions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
@@ -19,71 +19,52 @@
   flex: 1 1 140px; min-width: 120px; height: 30px; box-sizing: border-box; padding: 0 10px;
   border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 6px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec);
-  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1);
+  font: inherit; font-size: var(--ku-body, 14px);
 }
 .searchInput::placeholder { color: var(--dsw-alias-label-tertiary, #67676f); }
 .searchInput:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
-/* 列表本体：只有它滚动，筛选条和操作始终可见 */
-.listScroll {
-  max-height: min(52vh, 520px); overflow-y: auto;
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
-}
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* 列表本体：只有它滚动，筛选条和操作始终可见；条与条之间只靠间距分隔，不套边框 */
+.listScroll { max-height: min(46vh, 440px); overflow-y: auto; padding-right: 4px; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 
-.row {
-  display: flex; flex-direction: column; gap: 3px; padding: 7px 10px;
-  border-left: 2px solid transparent; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); line-height: 1.5;
-}
-.row:last-child { border-bottom: 0; }
-.row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
-/* 警告 / 错误整行带左侧色条：一眼看出哪几条是坏消息 */
-.rowWarn { border-left-color: var(--dsw-alias-state-warn-primary, #e0a13c); }
-.rowError { border-left-color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.row { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; }
+.row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .08)); }
 
-.meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 第一行：完整时间 + 级别（色点 + 色字）+ 来源（弱化）+ 重试 */
+.meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .time {
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.badge {
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 999px; padding: 0 6px;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87);
-  font-weight: 600; letter-spacing: .04em; line-height: 1.7; white-space: nowrap;
+.level {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px);
+  font-weight: 600; letter-spacing: .03em; white-space: nowrap;
 }
-.levelWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); border-color: currentColor; }
-.levelError { color: var(--dsw-alias-state-error-primary, #e05a5a); border-color: currentColor; }
+.levelDot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
+.levelWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+.levelError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
 
 .source {
-  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 999px; padding: 0 6px;
-  color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 0.87);
-  line-height: 1.7; white-space: nowrap; font-family: ui-monospace, Consolas, monospace;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px);
+  font-family: ui-monospace, Consolas, monospace; white-space: nowrap;
 }
 
 .retry {
   border: 0; background: none; padding: 0; font: inherit;
-  font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  font-size: var(--ku-sub, 13px);
   color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer;
 }
 .retry:hover { text-decoration: underline; }
 .retry:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 
-.message { color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-word; overflow-wrap: anywhere; }
-/* 有详情的消息整行可点展开；焦点环与按钮一致 */
-.messageBtn {
-  display: block; width: 100%; border: 0; background: none; padding: 0; font: inherit; text-align: left;
-  color: var(--dsw-alias-label-primary, #e8e8ec); word-break: break-word; overflow-wrap: anywhere; cursor: pointer;
-}
-.messageBtn:hover { text-decoration: underline; }
-.messageBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
-.caret { margin-right: 5px; color: var(--dsw-alias-label-tertiary, #67676f); }
-
-/* 详情：等宽字体、保留换行、可折行（上游 URL / 堆栈一行可以很长） */
+/* 消息（主色）+ 详情（等宽、弱化、多行缩进换行，不截断） */
+.content { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.message { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: var(--ku-body, 14px); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
 .detail {
-  margin: 2px 0 0; padding: 6px 8px; border-left: 2px solid var(--dsw-alias-border-l2, #2c2c34);
-  border-radius: 0 6px 6px 0; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  margin: 0; padding-left: 12px;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font-family: ui-monospace, Consolas, monospace; font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--ku-sub, 13px);
   line-height: 1.55; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
 }

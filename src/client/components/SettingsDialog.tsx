@@ -1,6 +1,6 @@
 /**
- * 设置：左侧竖排 Tab —— 显示 / 价目 / 日志 / 口径 / 关于。
- * 把原先散在页头的「日志」「口径」两个弹窗并进来：页头只留「刷新 + 设置」。
+ * 设置：左侧竖排 Tab —— 设置 / 日志 / 口径。
+ * 「设置」把显示偏好、价目、关于三块按小节平铺；日志与口径各占一个 Tab。
  * 页面里只留结论；来源与时间放这里，失败原因仍只进系统日志（日志页签内可查）。
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
@@ -20,14 +20,12 @@ import styles from '../styles/settings.module.css'
 
 const PLUGIN_REPO = 'https://github.com/xyl886/dsh-key-usage'
 
-export type SettingsTab = 'display' | 'pricing' | 'log' | 'caliber' | 'about'
+export type SettingsTab = 'general' | 'log' | 'caliber'
 
 const TAB_KEYS: Array<{ key: SettingsTab; labelKey: string }> = [
-  { key: 'display', labelKey: 'settings.tabDisplay' },
-  { key: 'pricing', labelKey: 'settings.tabPricing' },
+  { key: 'general', labelKey: 'settings.tabGeneral' },
   { key: 'log', labelKey: 'settings.tabLog' },
   { key: 'caliber', labelKey: 'settings.tabCaliber' },
-  { key: 'about', labelKey: 'settings.tabAbout' },
 ]
 
 export function SettingsDialog(props: {
@@ -41,7 +39,7 @@ export function SettingsDialog(props: {
 }): ReactNode {
   const t = useT()
   const display = useCurrencyDisplay()
-  const [tab, setTab] = useState<SettingsTab>(props.initialTab ?? 'display')
+  const [tab, setTab] = useState<SettingsTab>(props.initialTab ?? 'general')
   const [fxLoading, setFxLoading] = useState(false)
   const [fxError, setFxError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -148,61 +146,81 @@ export function SettingsDialog(props: {
       </div>
 
       <div className={styles.panel}>
-        {tab === 'display' && (
-          <div className={styles.wrap}>
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.currency')}</span>
-                <span className={styles.actions}>
-                  {DISPLAY_CURRENCIES.map((currency) => (
-                    <Button
-                      key={currency}
-                      size="sm"
-                      active={display.display === currency}
-                      className={styles.currencyBtn}
-                      ariaLabel={currency}
-                      onClick={() => switchCurrency(currency)}
-                    >
-                      {DISPLAY_CURRENCY_SYMBOLS[currency]}
+        {tab === 'general' && (
+          <div className={styles.sections}>
+            <section className={styles.section}>
+              <div className={styles.sectionTitle}>{t('settings.sectionDisplay')}</div>
+              <div className={styles.block}>
+                <div className={styles.head}>
+                  <span className={styles.rowLabel}>{t('settings.currency')}</span>
+                  <span className={styles.actions}>
+                    {DISPLAY_CURRENCIES.map((currency) => (
+                      <Button
+                        key={currency}
+                        size="sm"
+                        active={display.display === currency}
+                        className={styles.currencyBtn}
+                        ariaLabel={currency}
+                        onClick={() => switchCurrency(currency)}
+                      >
+                        {DISPLAY_CURRENCY_SYMBOLS[currency]}
+                      </Button>
+                    ))}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.block}>
+                <div className={styles.head}>
+                  <span className={styles.rowLabel}>{t('settings.fx')}</span>
+                  <span className={styles.actions}>
+                    <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} title={t('quota.fxCacheHint')} onClick={() => void fetchFx(true)}>
+                      {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
                     </Button>
-                  ))}
-                </span>
+                  </span>
+                </div>
+                <div className={fxWarn ? styles.value + ' ' + styles.valueWarn : styles.value}>{fxText}</div>
               </div>
-            </div>
+            </section>
 
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.fx')}</span>
-                <span className={styles.actions}>
-                  <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} title={t('quota.fxCacheHint')} onClick={() => void fetchFx(true)}>
-                    {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
-                  </Button>
-                </span>
-              </div>
-              <div className={fxWarn ? styles.value + ' ' + styles.valueWarn : styles.value}>{fxText}</div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'pricing' && (
-          <div className={styles.wrap}>
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.pricing')}</span>
-                <span className={styles.actions}>
+            <section className={styles.section}>
+              <div className={styles.sectionTitle}>{t('settings.pricing')}</div>
+              <div className={styles.block}>
+                <div className={styles.actions}>
                   <Button size="sm" variant="primary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshPrices()}>
                     {refreshing
                       ? t('action.refreshing') + (refreshElapsed > 0 ? ' ' + String(refreshElapsed) + 's' : '')
                       : t('quota.refreshPrices')}
                   </Button>
-                </span>
+                </div>
+                {refreshStatus === null
+                  ? <div className={styles.value}>{t('quota.pricingInfoHint')}</div>
+                  : refreshStatus.tone === 'ok'
+                    ? <div className={styles.value}>{refreshStatus.text}</div>
+                    : <LogHint text={refreshStatus.text} tone="error" />}
               </div>
-              {refreshStatus === null
-                ? <div className={styles.value}>{t('quota.pricingInfoHint')}</div>
-                : refreshStatus.tone === 'ok'
-                  ? <div className={styles.value}>{refreshStatus.text}</div>
-                  : <LogHint text={refreshStatus.text} tone="error" />}
-            </div>
+            </section>
+
+            <section className={styles.section}>
+              <div className={styles.sectionTitle}>{t('settings.sectionAbout')}</div>
+              <div className={styles.block}>
+                <div className={styles.head}>
+                  <span className={styles.rowLabel}>{t('settings.version')}</span>
+                  <span className={styles.value}>{PLUGIN_VERSION}</span>
+                </div>
+              </div>
+              <div className={styles.block}>
+                <div className={styles.head}>
+                  <span className={styles.rowLabel}>{t('settings.license')}</span>
+                  <span className={styles.value}>{t('settings.licenseValue')}</span>
+                </div>
+              </div>
+              <div className={styles.block}>
+                <div className={styles.head}>
+                  <span className={styles.rowLabel}>{t('settings.repo')}</span>
+                  <a className={styles.link} href={PLUGIN_REPO} target="_blank" rel="noreferrer">{PLUGIN_REPO.replace(/^https?:\/\//, '')}</a>
+                </div>
+              </div>
+            </section>
           </div>
         )}
 
@@ -227,29 +245,6 @@ export function SettingsDialog(props: {
               <li>{t('caliber.sessionSource')}</li>
               <li>{t('caliber.refresh')}</li>
             </ul>
-          </div>
-        )}
-
-        {tab === 'about' && (
-          <div className={styles.wrap}>
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.version')}</span>
-                <span className={styles.value}>{PLUGIN_VERSION}</span>
-              </div>
-            </div>
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.license')}</span>
-                <span className={styles.value}>{t('settings.licenseValue')}</span>
-              </div>
-            </div>
-            <div className={styles.block}>
-              <div className={styles.head}>
-                <span className={styles.title}>{t('settings.repo')}</span>
-                <a className={styles.link} href={PLUGIN_REPO} target="_blank" rel="noreferrer">{PLUGIN_REPO.replace(/^https?:\/\//, '')}</a>
-              </div>
-            </div>
           </div>
         )}
       </div>

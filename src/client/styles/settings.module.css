@@ -1,53 +1,45 @@
-/* 设置弹窗：币种、汇率、价目的来源与刷新都收在这里，页面里只留结论。 */
+/* 设置弹窗：三个 Tab（设置 / 日志 / 口径）。
+   「设置」按小节平铺（显示偏好 / 价目 / 关于）：小节之间 12px，不套卡片边框。
+   颜色只吃宿主 --dsw-alias-* 令牌；字号正文 --ku-body、次级 --ku-sub。 */
 
-.wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 420px; }
-
-.block { display: flex; flex-direction: column; gap: 6px; }
-
-.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-
-.title {
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.02);
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary, #e8e8ec);
-}
-
-.actions { display: flex; align-items: center; gap: 6px; }
-
-/* 币种切换：选中态靠边框 + 主色 + 实底三重表达，不只靠颜色深浅 */
-.currencyBtn {
-  min-width: 34px;
-  font-size: calc(var(--dsh-content-font-size, 12px) * 1.15);
-  line-height: 1.2;
-}
-
-.value {
-  font-size: calc(var(--dsh-content-font-size, 12px) * 0.96);
-  color: var(--dsw-alias-label-tertiary, #67676f);
-  word-break: break-all;
-}
-
-.valueWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
-
-.version {
-  font-size: calc(var(--dsh-content-font-size, 12px) * 0.9);
-  color: var(--dsw-alias-label-tertiary, #67676f);
-}
-
-/* 竖排 Tab（左列）+ 内容区：设置把显示 / 价目 / 日志 / 口径 / 关于收在一个弹窗里 */
+/* ===== 左侧竖排 Tab + 右侧内容区 ===== */
 .shell { display: flex; align-items: stretch; gap: 16px; min-width: 620px; }
 .tabs { display: flex; flex-direction: column; gap: 2px; flex: 0 0 92px; border-right: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); padding-right: 8px; }
 .tab {
   appearance: none; border: 0; background: transparent; cursor: pointer;
   text-align: left; padding: 6px 8px; border-radius: 6px;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1);
+  font: inherit; font-size: var(--ku-body, 14px);
 }
 .tab:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 .tabActive { background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
 .panel { flex: 1 1 auto; min-width: 0; max-height: 62vh; overflow: auto; }
+
+/* ===== 「设置」页：三小节平铺，12px 间距、无卡片边框 ===== */
+.sections { display: flex; flex-direction: column; gap: 12px; min-width: 300px; max-width: 420px; }
+.section { display: flex; flex-direction: column; gap: 8px; }
+/* 小节标题：15px 次级色，比正文大一号、比页内面板标题弱一档 */
+.sectionTitle { font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+
+/* 小节内的一行（标签 + 右侧控件 / 值） */
+.block { display: flex; flex-direction: column; gap: 6px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rowLabel { font-size: var(--ku-body, 14px); color: var(--dsw-alias-label-secondary, #9a9aa6); }
+
+.actions { display: flex; align-items: center; gap: 6px; }
+
+/* 币种切换：选中态靠边框 + 主色 + 实底三重表达，不只靠颜色深浅 */
+.currencyBtn { min-width: 34px; font-size: var(--ku-body, 14px); line-height: 1.2; }
+
+.value { font-size: var(--ku-sub, 13px); color: var(--dsw-alias-label-tertiary, #67676f); word-break: break-all; }
+.valueWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+
+/* ===== 「日志」页 ===== */
 .logPane { min-height: 240px; }
-.caliberVersion { color: var(--dsw-alias-label-tertiary, #67676f); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); }
-.caliberList { margin: 8px 0 0; padding-left: 18px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: calc(var(--dsh-content-font-size, 12px) * 0.95); line-height: 1.7; }
+
+/* ===== 「口径」页（保持原样） ===== */
+.wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 420px; }
+.caliberVersion { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); }
+.caliberList { margin: 8px 0 0; padding-left: 18px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-sub, 13px); line-height: 1.7; }
 .link { color: var(--dsw-alias-state-business-primary, #5b8cff); text-decoration: none; }
 .link:hover { text-decoration: underline; }

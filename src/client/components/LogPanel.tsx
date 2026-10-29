@@ -1,6 +1,7 @@
 /**
- * 系统日志面板：条数统计 + 级别 / 来源 / 搜索筛选 + 级别配色 + 可展开的等宽详情。
- * 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧的内联实现一致：刷新 / 复制 / 导出 / 清空。
+ * 系统日志面板：条数统计 + 级别 / 来源 / 搜索筛选 + 平铺条目。
+ * 每条的 message 与详情直接展示（详情多行缩进、保留换行、不截断），不再需要点击展开。
+ * 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧实现一致：刷新 / 复制 / 导出 / 清空。
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { clearLog, logEntries, logTextOf, logWarn, refreshLog, subscribeLog, type LogEntry, type LogLevel } from '../core/log.ts'
@@ -29,7 +30,6 @@ export function LogPanel(): ReactNode {
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [sourceFilter, setSourceFilter] = useState('')
   const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [refreshing, setRefreshing] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const newestRef = useRef<number | null>(null)
@@ -68,10 +68,6 @@ export function LogPanel(): ReactNode {
     newestRef.current = newest
   }, [visible])
 
-  const toggle = (id: number): void => {
-    setExpanded((previous) => ({ ...previous, [id]: previous[id] !== true }))
-  }
-
   const onRefresh = (): void => {
     setRefreshing(true)
     // 刷新时把当前筛选带给服务端：筛选在库里生效，能查到最近 500 条之外的更早记录
@@ -92,7 +88,6 @@ export function LogPanel(): ReactNode {
 
   const onClear = (): void => {
     clearLog()
-    setExpanded({})
     setSourceFilter('')
   }
 
@@ -144,38 +139,25 @@ export function LogPanel(): ReactNode {
         : (
           <div className={styles.listScroll} ref={listRef}>
             <ul className={styles.list}>
-              {visible.map((entry) => {
-                const open = expanded[entry.id] === true
-                return (
-                  <li key={entry.id} className={styles.row + levelRowClass(entry.level)}>
-                    <div className={styles.meta}>
-                      <span className={styles.time}>{formatTime(entry.time)}</span>
-                      <span className={styles.badge + levelBadgeClass(entry.level)}>{entry.level.toUpperCase()}</span>
-                      <span className={styles.source}>{entry.source}</span>
-                      {entry.retry === undefined ? null : (
-                        <button type="button" className={styles.retry} onClick={() => { entry.retry?.() }}>{t('log.retry')}</button>
-                      )}
-                    </div>
-                    {entry.detail === undefined
-                      ? <span className={styles.message}>{messageTextOf(entry)}</span>
-                      : (
-                        <>
-                          <button
-                            type="button"
-                            className={styles.messageBtn}
-                            aria-expanded={open}
-                            aria-controls={'log-detail-' + String(entry.id)}
-                            onClick={() => toggle(entry.id)}
-                          >
-                            <span className={styles.caret} aria-hidden="true">{open ? '▾' : '▸'}</span>
-                            {messageTextOf(entry)}
-                          </button>
-                          {open && <pre className={styles.detail} id={'log-detail-' + String(entry.id)}>{entry.detail}</pre>}
-                        </>
-                      )}
-                  </li>
-                )
-              })}
+              {visible.map((entry) => (
+                <li key={entry.id} className={styles.row}>
+                  <div className={styles.meta}>
+                    <span className={styles.time}>{formatTime(entry.time)}</span>
+                    <span className={styles.level + levelClass(entry.level)}>
+                      <span className={styles.levelDot} aria-hidden="true" />
+                      {entry.level.toUpperCase()}
+                    </span>
+                    <span className={styles.source}>{entry.source}</span>
+                    {entry.retry === undefined ? null : (
+                      <button type="button" className={styles.retry} onClick={() => { entry.retry?.() }}>{t('log.retry')}</button>
+                    )}
+                  </div>
+                  <div className={styles.content}>
+                    <span className={styles.message}>{messageTextOf(entry)}</span>
+                    {entry.detail === undefined ? null : <pre className={styles.detail}>{entry.detail}</pre>}
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
         )}
@@ -196,14 +178,9 @@ function messageTextOf(entry: LogEntry): string {
   return entry.message + (entry.count > 1 ? ' ×' + String(entry.count) : '')
 }
 
-function levelBadgeClass(level: LogLevel): string {
+/** 级别配色：错误红、警告黄、信息弱化（色点与色字同色）。 */
+function levelClass(level: LogLevel): string {
   if (level === 'error') return ' ' + styles.levelError
   if (level === 'warn') return ' ' + styles.levelWarn
-  return ''
-}
-
-function levelRowClass(level: LogLevel): string {
-  if (level === 'error') return ' ' + styles.rowError
-  if (level === 'warn') return ' ' + styles.rowWarn
   return ''
 }

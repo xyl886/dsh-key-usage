@@ -451,8 +451,18 @@ export interface PromptsResponse {
   words: Array<{ word: string; count: number }>
   totalPrompts: number
   totalChars: number
+  /** 当前窗口起点（本地 `YYYY-MM-DD`） */
   from: string | null
+  /** 当前窗口终点（本地 `YYYY-MM-DD`） */
   to: string | null
+  /** 上期（同长度、紧邻前一窗口）的提问条数；服务端没给（上期无数据 / 旧版本）时为 null，界面不显示环比。 */
+  prevTotalPrompts?: number | null
+  /** 上期的提问字符数。 */
+  prevTotalChars?: number | null
+  /** 上期的词表条数（与本期同样取 top 60 后计数）。 */
+  prevWordCount?: number | null
+  /** 上期最高频词的次数（本期「最常提」的环比基准）。 */
+  prevTopWordCount?: number | null
 }
 
 /** 工具 / 技能榜单的一行。 */

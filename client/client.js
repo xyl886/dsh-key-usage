@@ -17,12 +17,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"nav.usage": "使用情况",
 			"app.title": "使用情况",
 			"tab.overview": "概览",
-			"tab.detail": "使用明细",
+			"tab.detail": "明细",
 			"tab.distribution": "分布",
 			"tab.sessions": "会话",
-			"tab.tools": "工具与技能",
-			"tab.words": "提问词云",
-			"tab.quota": "额度与订阅",
+			"tab.tools": "工具",
+			"tab.words": "提问",
+			"tab.quota": "额度",
 			"section.paged": "分页",
 			"section.scroll": "滚动式",
 			"section.modeHint": "滚动式：所有区块竖排一次铺开；取消勾选则一次只看一个区块",
@@ -32,6 +32,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"filter.allProjects": "全部项目",
 			"filter.allModels": "全部模型",
 			"filter.refreshCycle": "刷新周期",
+			"filter.searchChannel": "搜索通道",
+			"filter.searchProject": "搜索项目",
+			"filter.searchModel": "搜索模型",
+			"multi.count": "已选 {count} 项",
+			"multi.all": "全选",
+			"multi.none": "清空",
+			"multi.empty": "没有匹配项",
 			"action.exportUsage": "导出明细",
 			"action.exportSessions": "导出会话",
 			"refresh.off": "关闭",
@@ -47,11 +54,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"action.close": "关闭",
 			"log.title": "系统日志",
 			"settings.title": "设置",
-			"settings.tabDisplay": "显示",
-			"settings.tabPricing": "价目",
+			"settings.tabGeneral": "设置",
 			"settings.tabLog": "日志",
 			"settings.tabCaliber": "口径",
-			"settings.tabAbout": "关于",
+			"settings.sectionDisplay": "显示偏好",
+			"settings.sectionAbout": "关于",
 			"settings.license": "许可",
 			"settings.licenseValue": "MIT（含第三方 MIT 组件）",
 			"settings.repo": "仓库",
@@ -85,11 +92,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"words.kpiTop": "最常提",
 			"words.times": "{count} 次",
 			"words.cloud": "词云",
-			"words.table": "词表",
 			"words.wordCount": "{count} 词",
+			"words.cloudTip": "{word} · {count} 次 · 占比 {share}%",
 			"words.noPrompts": "还没有可统计的提问",
-			"words.colWord": "词",
-			"words.colCount": "次数",
 			"tools.empty": "暂无采集",
 			"tools.tools": "工具调用",
 			"tools.skills": "技能",
@@ -529,8 +534,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tab.detail": "Details",
 			"tab.distribution": "Distribution",
 			"tab.sessions": "Sessions",
-			"tab.tools": "Tools & skills",
-			"tab.words": "Prompt words",
+			"tab.tools": "Tools",
+			"tab.words": "Prompts",
 			"tab.quota": "Quota",
 			"section.paged": "Paged",
 			"section.scroll": "Scroll",
@@ -541,6 +546,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"filter.allProjects": "All projects",
 			"filter.allModels": "All models",
 			"filter.refreshCycle": "Refresh interval",
+			"filter.searchChannel": "Search channels",
+			"filter.searchProject": "Search projects",
+			"filter.searchModel": "Search models",
+			"multi.count": "{count} selected",
+			"multi.all": "All",
+			"multi.none": "Clear",
+			"multi.empty": "No match",
 			"action.exportUsage": "Export details",
 			"action.exportSessions": "Export sessions",
 			"refresh.off": "Off",
@@ -556,11 +568,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"action.close": "Close",
 			"log.title": "System log",
 			"settings.title": "Settings",
-			"settings.tabDisplay": "Display",
-			"settings.tabPricing": "Pricing",
+			"settings.tabGeneral": "Settings",
 			"settings.tabLog": "Logs",
 			"settings.tabCaliber": "Method",
-			"settings.tabAbout": "About",
+			"settings.sectionDisplay": "Display preferences",
+			"settings.sectionAbout": "About",
 			"settings.license": "License",
 			"settings.licenseValue": "MIT (with third-party MIT components)",
 			"settings.repo": "Repository",
@@ -594,11 +606,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"words.kpiTop": "Top word",
 			"words.times": "{count} times",
 			"words.cloud": "Word cloud",
-			"words.table": "Words",
 			"words.wordCount": "{count} words",
+			"words.cloudTip": "{word} · {count} · {share}%",
 			"words.noPrompts": "No prompts to count yet",
-			"words.colWord": "Word",
-			"words.colCount": "Count",
 			"tools.empty": "No data",
 			"tools.tools": "Tool calls",
 			"tools.skills": "Skills",
@@ -1364,19 +1374,19 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const CLIENT_BOOT_AT_MS = typeof performance === "undefined" ? 0 : performance.now();
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$16 = ".d29QNW_section{box-sizing:border-box;--ku-body:max(14px, var(--dsh-content-font-size,14px));--ku-sub:max(13px, calc(var(--dsh-content-font-size,14px) * .92));--ku-title:max(17px, calc(var(--dsh-content-font-size,14px) * 1.2));--ku-kpi:max(20px, calc(var(--dsh-content-font-size,14px) * 1.42));--ku-control:32px;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-body);padding:24px 32px 48px;line-height:1.6;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:16px}.d29QNW_pageHead{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;display:flex}.d29QNW_pageTitle{font-size:max(24px, calc(var(--dsh-content-font-size,14px) * 1.7));letter-spacing:-.01em;white-space:nowrap;margin:0;font-weight:650;line-height:1.25}.d29QNW_headActions{flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;display:inline-flex}.d29QNW_toolbarRow{flex-wrap:wrap;align-items:center;gap:8px 10px;display:flex}.d29QNW_toolbarRow+.d29QNW_toolbarRow{margin-top:8px}.d29QNW_toolbarGroup{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:inline-flex}.d29QNW_rowSpacer{flex:auto}.d29QNW_toolbarDivider{background:var(--dsw-alias-border-l1,#2c2c34);flex:none;width:1px;height:18px}.d29QNW_stickyHead .d29QNW_headBtn{height:var(--ku-control);font-size:var(--ku-body);border-radius:8px;padding:0 12px}.d29QNW_iconBtn{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;background:0 0;border-radius:8px;justify-content:center;align-items:center;padding:0;line-height:1;text-decoration:none;display:inline-flex}.d29QNW_iconBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_iconBtn:disabled{opacity:.6;cursor:default}.d29QNW_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_filterLabel{color:var(--dsw-alias-label-tertiary,#8b8b99);white-space:nowrap;font-size:var(--ku-body)}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);margin:-24px -32px 0;padding:20px 32px 12px;position:sticky;top:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-16px -16px 0;padding:14px 16px 10px}}.d29QNW_ghLink{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:8px;justify-content:center;align-items:center;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{background:var(--dsw-alias-interactive-bg-active,#80808c24);border-radius:10px;flex-wrap:wrap;gap:2px;padding:3px;display:inline-flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:8px;height:28px;padding:0 13px}.d29QNW_tabBar button:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;box-shadow:0 1px 2px #00000024}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_modeSwitch{height:var(--ku-control);color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-body);cursor:pointer;white-space:nowrap;align-items:center;gap:6px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;box-sizing:border-box;height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);text-overflow:ellipsis;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 12px),calc(100% - 8px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:8px;max-width:200px;padding:0 24px 0 10px}.d29QNW_refreshSelect:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_sections{flex-direction:column;gap:32px;margin-top:24px;display:flex}.d29QNW_pageSection{min-width:0}.d29QNW_pageSectionTitle{letter-spacing:.01em;color:var(--dsw-alias-label-secondary,#9a9aa6);margin:0 0 12px;font-size:15px;font-weight:600;line-height:1.35}.d29QNW_rangeTabs{box-sizing:border-box;height:var(--ku-control);background:var(--dsw-alias-interactive-bg-active,#80808c24);border-radius:10px;flex-wrap:wrap;align-items:center;gap:2px;padding:3px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:8px;height:26px;padding:0 12px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;box-shadow:0 1px 2px #00000024}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeCustom{align-items:center;gap:4px;display:inline-flex}.d29QNW_rangeCustomLabel{color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.d29QNW_rangeDate{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);height:var(--ku-control);cursor:pointer;background:0 0;border-radius:8px;padding:0 6px}.d29QNW_rangeDate::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;width:14px;height:14px}.d29QNW_rangeDate::-webkit-datetime-edit{padding:0}.d29QNW_rangeDate:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_rangeDate:focus{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTilde{color:var(--dsw-alias-label-tertiary,#8b8b99)}";
-		const tagId$16 = "dsh-key-usage/shared.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
+		const css$18 = ".d29QNW_section{box-sizing:border-box;--ku-body:max(14px, var(--dsh-content-font-size,14px));--ku-sub:max(13px, calc(var(--dsh-content-font-size,14px) * .92));--ku-title:max(17px, calc(var(--dsh-content-font-size,14px) * 1.2));--ku-kpi:max(20px, calc(var(--dsh-content-font-size,14px) * 1.42));--ku-control:32px;height:100%;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-body);padding:24px 32px 48px;line-height:1.6;overflow-y:auto}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:16px}.d29QNW_pageHead{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;display:flex}.d29QNW_pageTitle{font-size:max(24px, calc(var(--dsh-content-font-size,14px) * 1.7));letter-spacing:-.01em;white-space:nowrap;margin:0;font-weight:650;line-height:1.25}.d29QNW_headActions{flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;display:inline-flex}.d29QNW_toolbarRow{flex-wrap:wrap;align-items:center;gap:8px 10px;display:flex}.d29QNW_toolbarRow+.d29QNW_toolbarRow{margin-top:8px}.d29QNW_toolbarGroup{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:inline-flex}.d29QNW_rowSpacer{flex:auto}.d29QNW_toolbarDivider{background:var(--dsw-alias-border-l1,#2c2c34);flex:none;width:1px;height:18px}.d29QNW_stickyHead .d29QNW_headBtn{height:var(--ku-control);font-size:var(--ku-body);border-radius:8px;padding:0 12px}.d29QNW_iconBtn{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;background:0 0;border-radius:8px;justify-content:center;align-items:center;padding:0;line-height:1;text-decoration:none;display:inline-flex}.d29QNW_iconBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_iconBtn:disabled{opacity:.6;cursor:default}.d29QNW_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_filterLabel{color:var(--dsw-alias-label-tertiary,#8b8b99);white-space:nowrap;font-size:var(--ku-body)}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);margin:-24px -32px 0;padding:20px 32px 12px;position:sticky;top:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-16px -16px 0;padding:14px 16px 10px}}.d29QNW_ghLink{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border-radius:8px;justify-content:center;align-items:center;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{background:var(--dsw-alias-interactive-bg-active,#80808c24);border-radius:10px;flex-wrap:wrap;gap:2px;padding:3px;display:inline-flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:8px;height:28px;padding:0 13px}.d29QNW_tabBar button:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;box-shadow:0 1px 2px #00000024}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:18px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:72px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:inherit;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:5px 8px}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:7px 8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:18px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 5px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_modeSwitch{height:var(--ku-control);color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-body);cursor:pointer;white-space:nowrap;align-items:center;gap:6px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;box-sizing:border-box;height:var(--ku-control);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);text-overflow:ellipsis;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 12px),calc(100% - 8px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border-radius:8px;max-width:200px;padding:0 24px 0 10px}.d29QNW_refreshSelect:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_sections{flex-direction:column;gap:32px;margin-top:24px;display:flex}.d29QNW_pageSection{min-width:0}.d29QNW_pageSectionTitle{letter-spacing:.01em;color:var(--dsw-alias-label-secondary,#9a9aa6);margin:0 0 12px;font-size:15px;font-weight:600;line-height:1.35}.d29QNW_rangeTabs{box-sizing:border-box;height:var(--ku-control);background:var(--dsw-alias-interactive-bg-active,#80808c24);border-radius:10px;flex-wrap:wrap;align-items:center;gap:2px;padding:3px;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:8px;height:26px;padding:0 12px}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;box-shadow:0 1px 2px #00000024}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}";
+		const tagId$18 = "dsh-key-usage/shared.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$18) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "dsh-key-usage";
-			tag.dataset.pluginCss = tagId$16;
-			tag.textContent = css$16;
+			tag.dataset.pluginCss = tagId$18;
+			tag.textContent = css$18;
 			document.head.appendChild(tag);
 		}
-		const cssRegistry$16 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
-		if (!cssRegistry$16.some((e) => e.tagId === tagId$16)) cssRegistry$16.push({
-			tagId: tagId$16,
-			css: css$16
+		const cssRegistry$18 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
+		if (!cssRegistry$18.some((e) => e.tagId === tagId$18)) cssRegistry$18.push({
+			tagId: tagId$18,
+			css: css$18
 		});
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
@@ -1402,13 +1412,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"pageTitle": "d29QNW_pageTitle",
 			"pathLine": "d29QNW_pathLine",
 			"pathsCell": "d29QNW_pathsCell",
-			"rangeCustom": "d29QNW_rangeCustom",
-			"rangeCustomLabel": "d29QNW_rangeCustomLabel",
-			"rangeDate": "d29QNW_rangeDate",
 			"rangeTab": "d29QNW_rangeTab",
 			"rangeTabActive": "d29QNW_rangeTabActive",
 			"rangeTabs": "d29QNW_rangeTabs",
-			"rangeTilde": "d29QNW_rangeTilde",
 			"refreshBtn": "d29QNW_refreshBtn",
 			"refreshIcon": "d29QNW_refreshIcon",
 			"refreshIconSpin": "d29QNW_refreshIconSpin",
@@ -1967,6 +1973,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return t("fx.defaultPrefix") + rateValueTextOf(fx.rate) + t("fx.defaultSuffix") + (fxNoteTextOf(fx) === null ? "" : "（" + fxNoteTextOf(fx) + "）");
 		}
 		//#endregion
+		//#region src/client/core/filter-selection.ts
+		/** 多选筛选的值约定：界面用数组，状态里存成逗号分隔的字符串（空串 = 全部）。 */
+		function selectionOf(value) {
+			if (value === void 0) return [];
+			const trimmed = value.trim();
+			if (trimmed === "" || trimmed === "ALL") return [];
+			return trimmed.split(",").filter((item) => item !== "");
+		}
+		/** 一个值集合是否命中筛选：筛选为空表示不筛。 */
+		function selectionMatches(values, filter) {
+			const selected = selectionOf(filter);
+			if (selected.length === 0) return true;
+			return values.some((value) => selected.includes(value));
+		}
+		//#endregion
 		//#region src/client/core/export-csv.ts
 		const escapeCell = (value) => {
 			if (/[",\n\r]/.test(value)) return "\"" + value.replace(/"/g, "\"\"") + "\"";
@@ -2191,6 +2212,481 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					width: Math.max(2, percent) + "%",
 					background: color
 				} })
+			});
+		}
+		//#endregion
+		//#region \0dsh-css:src/client/styles/dateRange.module.css.mjs
+		const css$17 = ".Bnmpwa_root{flex:none;display:inline-flex;position:relative}.Bnmpwa_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;align-items:center;gap:6px;padding:0 10px;font-size:13px;line-height:1;display:inline-flex}.Bnmpwa_trigger:hover{border-color:var(--dsw-alias-label-secondary,#9a9aa6);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.Bnmpwa_half{font-variant-numeric:tabular-nums}.Bnmpwa_sep{color:var(--dsw-alias-label-tertiary,#67676f)}.Bnmpwa_caret{opacity:.8;font-size:12px}.Bnmpwa_panel{z-index:300;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:max-content;max-width:calc(100vw - 16px);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;padding:8px;position:fixed}.Bnmpwa_nav{align-items:center;gap:4px;margin-bottom:4px;display:flex}.Bnmpwa_month{text-align:center;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;flex:auto;font-size:13px;font-weight:500;line-height:22px}.Bnmpwa_navBtn{width:22px;height:22px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:5px;flex:none;font-size:14px;line-height:1}.Bnmpwa_navBtn:hover:enabled{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_navBtn:disabled{opacity:.35;cursor:not-allowed}.Bnmpwa_navBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.Bnmpwa_weekdays,.Bnmpwa_week{display:flex}.Bnmpwa_weekday{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);flex:0 0 30px;font-size:12px;line-height:20px}.Bnmpwa_grid{outline:none;flex-direction:column;display:flex}.Bnmpwa_grid:focus-visible{outline:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:6px}.Bnmpwa_cell{box-sizing:border-box;height:28px;color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;cursor:pointer;-webkit-user-select:none;user-select:none;border-radius:5px;flex:0 0 30px;justify-content:center;align-items:center;font-size:13px;line-height:1;display:flex}.Bnmpwa_cell:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.Bnmpwa_inRange{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 16%, transparent);border-radius:0}.Bnmpwa_inRange:hover{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 24%, transparent)}.Bnmpwa_edge{background:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:5px;font-weight:600}.Bnmpwa_edge:hover{background:var(--dsw-alias-state-business-primary,#5b8cff)}.Bnmpwa_cursor{box-shadow:inset 0 0 0 1px var(--dsw-alias-label-secondary,#9a9aa6)}.Bnmpwa_todayCell{font-weight:600}.Bnmpwa_future{color:var(--dsw-alias-label-tertiary,#67676f);opacity:.4;cursor:not-allowed}.Bnmpwa_future:hover{background:0 0}.Bnmpwa_blank{cursor:default}.Bnmpwa_blank:hover{background:0 0}.Bnmpwa_foot{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);align-items:center;gap:8px;margin-top:6px;padding-top:6px;display:flex}.Bnmpwa_hint{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-tertiary,#67676f);flex:auto;font-size:12px;line-height:18px;overflow:hidden}";
+		const tagId$17 = "dsh-key-usage/dateRange.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$17) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "dsh-key-usage";
+			tag.dataset.pluginCss = tagId$17;
+			tag.textContent = css$17;
+			document.head.appendChild(tag);
+		}
+		const cssRegistry$17 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
+		if (!cssRegistry$17.some((e) => e.tagId === tagId$17)) cssRegistry$17.push({
+			tagId: tagId$17,
+			css: css$17
+		});
+		var dateRange_module_css_default = {
+			"blank": "Bnmpwa_blank",
+			"caret": "Bnmpwa_caret",
+			"cell": "Bnmpwa_cell",
+			"cursor": "Bnmpwa_cursor",
+			"edge": "Bnmpwa_edge",
+			"foot": "Bnmpwa_foot",
+			"future": "Bnmpwa_future",
+			"grid": "Bnmpwa_grid",
+			"half": "Bnmpwa_half",
+			"hint": "Bnmpwa_hint",
+			"inRange": "Bnmpwa_inRange",
+			"month": "Bnmpwa_month",
+			"nav": "Bnmpwa_nav",
+			"navBtn": "Bnmpwa_navBtn",
+			"panel": "Bnmpwa_panel",
+			"root": "Bnmpwa_root",
+			"sep": "Bnmpwa_sep",
+			"todayCell": "Bnmpwa_todayCell",
+			"trigger": "Bnmpwa_trigger",
+			"week": "Bnmpwa_week",
+			"weekday": "Bnmpwa_weekday",
+			"weekdays": "Bnmpwa_weekdays"
+		};
+		//#endregion
+		//#region src/client/components/DateRangePicker.tsx
+		/**
+		* 自定义日期区间选择器：胶囊触发条（起 → 止 ▾）+ 浮层日历。
+		* 交互对齐 dsh-context：先点开始日、再点结束日；区间浅底连片、两端实心；Esc / 点外部 / 滚动关闭。
+		* 日期运算一律用本地时间构造 Date，避免 UTC 偏移把「当天」算错。
+		*/
+		const WEEKDAY_COUNT = 7;
+		/** `YYYY-MM-DD` → 本地零点的时间戳；解析失败返回 null。 */
+		function timeOf(value) {
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+			const year = Number(value.slice(0, 4));
+			const month = Number(value.slice(5, 7));
+			const day = Number(value.slice(8, 10));
+			const time = new Date(year, month - 1, day).getTime();
+			return Number.isNaN(time) ? null : time;
+		}
+		/** 日期加减天数（本地时间）；入参非法返回 null。 */
+		function addDaysOf(value, delta) {
+			const time = timeOf(value);
+			if (time === null) return null;
+			return isoDate(new Date(time + delta * 864e5));
+		}
+		/** 月份加减：`YYYY-MM` → 相邻月份；入参非法返回 null。 */
+		function shiftMonthOf(yearMonth, delta) {
+			const year = Number(yearMonth.slice(0, 4));
+			const month = Number(yearMonth.slice(5, 7));
+			if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+			return isoDate(new Date(year, month - 1 + delta, 1)).slice(0, 7);
+		}
+		/** 月标题：跟随界面语言（中文「2026年10月」/ 英文 "October 2026"），不写死文案。 */
+		function monthTitleOf(yearMonth) {
+			const year = Number(yearMonth.slice(0, 4));
+			const month = Number(yearMonth.slice(5, 7));
+			if (!Number.isFinite(year) || !Number.isFinite(month)) return yearMonth;
+			return new Date(year, month - 1, 1).toLocaleDateString(isEnglish() ? "en-US" : "zh-CN", {
+				year: "numeric",
+				month: "long"
+			});
+		}
+		/** 一个月的日历行：6 行 × 7 列，首尾用 null 补齐（周日开头，与宿主日历一致）。 */
+		function weeksOf(yearMonth) {
+			const year = Number(yearMonth.slice(0, 4));
+			const month = Number(yearMonth.slice(5, 7));
+			const lead = new Date(year, month - 1, 1).getDay();
+			const total = new Date(year, month, 0).getDate();
+			const cells = Array.from({ length: lead }, () => null);
+			for (let day = 1; day <= total; day += 1) cells.push(isoDate(new Date(year, month - 1, day)));
+			while (cells.length % WEEKDAY_COUNT !== 0) cells.push(null);
+			const weeks = [];
+			for (let index = 0; index < cells.length; index += WEEKDAY_COUNT) weeks.push(cells.slice(index, index + WEEKDAY_COUNT));
+			return weeks;
+		}
+		function DateRangePicker(props) {
+			const t = useT();
+			const today = isoDate(/* @__PURE__ */ new Date());
+			const [open, setOpen] = (0, react.useState)(false);
+			const [month, setMonth] = (0, react.useState)(() => timeOf(props.to) === null ? today.slice(0, 7) : props.to.slice(0, 7));
+			const [cursor, setCursor] = (0, react.useState)(() => (timeOf(props.to) === null ? today.slice(0, 7) : props.to.slice(0, 7)) + "-01");
+			/** 已点下开始日、还没点结束日 */
+			const [pending, setPending] = (0, react.useState)(null);
+			/** 选结束日时的悬停预览 */
+			const [hovered, setHovered] = (0, react.useState)(null);
+			const [position, setPosition] = (0, react.useState)(null);
+			const rootRef = (0, react.useRef)(null);
+			const triggerRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const popupId = (0, react.useId)();
+			const cursorId = (0, react.useId)();
+			/** 浮层里要画的区间：选结束日阶段用「起点 + 悬停/起点」预览，否则用已提交的区间 */
+			const previewFrom = pending === null ? props.from : hovered !== null && hovered < pending ? hovered : pending;
+			const previewTo = pending === null ? props.to : hovered !== null && hovered > pending ? hovered : pending;
+			const close = () => {
+				setOpen(false);
+				setPending(null);
+				setHovered(null);
+			};
+			const openPicker = () => {
+				const anchor = timeOf(props.to) === null ? today.slice(0, 7) : props.to.slice(0, 7);
+				setMonth(anchor);
+				setCursor(anchor + "-01");
+				setPending(null);
+				setHovered(null);
+				setPosition(null);
+				setOpen(true);
+			};
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onPointerDown = (event) => {
+					const root = rootRef.current;
+					if (root !== null && event.target instanceof Node && root.contains(event.target)) return;
+					close();
+				};
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.stopPropagation();
+					close();
+					triggerRef.current?.focus();
+				};
+				const onDismiss = () => {
+					close();
+				};
+				document.addEventListener("mousedown", onPointerDown);
+				document.addEventListener("keydown", onKeyDown);
+				window.addEventListener("scroll", onDismiss, true);
+				window.addEventListener("resize", onDismiss);
+				return () => {
+					document.removeEventListener("mousedown", onPointerDown);
+					document.removeEventListener("keydown", onKeyDown);
+					window.removeEventListener("scroll", onDismiss, true);
+					window.removeEventListener("resize", onDismiss);
+				};
+			}, [open]);
+			(0, react.useLayoutEffect)(() => {
+				if (!open) return;
+				const trigger = rootRef.current;
+				const panel = panelRef.current;
+				if (trigger === null || panel === null) return;
+				const box = trigger.getBoundingClientRect();
+				const left = Math.max(8, Math.min(box.left, window.innerWidth - panel.offsetWidth - 8));
+				const below = box.bottom + 6;
+				const top = below + panel.offsetHeight > window.innerHeight - 8 ? Math.max(8, box.top - panel.offsetHeight - 6) : below;
+				setPosition((previous) => previous !== null && previous.left === left && previous.top === top ? previous : {
+					left,
+					top
+				});
+			});
+			const pickDay = (day) => {
+				if (day > today) return;
+				if (pending === null) {
+					setPending(day);
+					setHovered(null);
+					return;
+				}
+				const start = pending <= day ? pending : day;
+				const end = pending <= day ? day : pending;
+				close();
+				triggerRef.current?.focus();
+				props.onChange(start, end);
+			};
+			const shiftMonth = (delta) => {
+				const next = shiftMonthOf(month, delta);
+				if (next === null || next > today.slice(0, 7)) return;
+				setMonth(next);
+				setCursor(next + "-01");
+			};
+			const onGridKeyDown = (event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					pickDay(cursor);
+					return;
+				}
+				const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : event.key === "ArrowUp" ? -7 : event.key === "ArrowDown" ? 7 : null;
+				if (step === null) return;
+				event.preventDefault();
+				const next = addDaysOf(cursor, step);
+				if (next === null || next > today || next.slice(0, 7) !== month) return;
+				setCursor(next);
+			};
+			const cellClassOf = (day) => {
+				const parts = [dateRange_module_css_default.cell];
+				if (day >= previewFrom && day <= previewTo) parts.push(dateRange_module_css_default.inRange);
+				if (day === previewFrom || day === previewTo) parts.push(dateRange_module_css_default.edge);
+				if (day === cursor) parts.push(dateRange_module_css_default.cursor);
+				if (day === today) parts.push(dateRange_module_css_default.todayCell);
+				if (day > today) parts.push(dateRange_module_css_default.future);
+				return parts.join(" ");
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: dateRange_module_css_default.root,
+				ref: rootRef,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					ref: triggerRef,
+					className: dateRange_module_css_default.trigger,
+					"aria-haspopup": "dialog",
+					"aria-expanded": open,
+					"aria-controls": open ? popupId : void 0,
+					"aria-label": t("date.select"),
+					title: t("date.select"),
+					onClick: () => {
+						if (open) close();
+						else openPicker();
+					},
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: dateRange_module_css_default.half,
+							children: props.from
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: dateRange_module_css_default.sep,
+							"aria-hidden": "true",
+							children: "→"
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: dateRange_module_css_default.half,
+							children: props.to
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: dateRange_module_css_default.caret,
+							"aria-hidden": "true",
+							children: "▾"
+						})
+					]
+				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					ref: panelRef,
+					id: popupId,
+					className: dateRange_module_css_default.panel,
+					role: "dialog",
+					"aria-label": t("date.select"),
+					style: position === null ? {
+						left: 0,
+						top: 0,
+						visibility: "hidden"
+					} : {
+						left: position.left,
+						top: position.top
+					},
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: dateRange_module_css_default.nav,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: dateRange_module_css_default.navBtn,
+									"aria-label": t("date.prevMonth"),
+									onClick: () => shiftMonth(-1),
+									children: "‹"
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: dateRange_module_css_default.month,
+									children: monthTitleOf(month)
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: dateRange_module_css_default.navBtn,
+									"aria-label": t("date.nextMonth"),
+									disabled: month >= today.slice(0, 7),
+									onClick: () => shiftMonth(1),
+									children: "›"
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: dateRange_module_css_default.weekdays,
+							"aria-hidden": "true",
+							children: Array.from({ length: WEEKDAY_COUNT }, (unused, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: dateRange_module_css_default.weekday,
+								children: t("h.wd" + String(index))
+							}, index))
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: dateRange_module_css_default.grid,
+							role: "grid",
+							tabIndex: 0,
+							"aria-label": t("date.select"),
+							"aria-activedescendant": cursorId,
+							onKeyDown: onGridKeyDown,
+							children: weeksOf(month).map((week, weekIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: dateRange_module_css_default.week,
+								role: "row",
+								children: week.map((day, dayIndex) => {
+									if (day === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: dateRange_module_css_default.cell + " " + dateRange_module_css_default.blank }, dayIndex);
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										id: day === cursor ? cursorId : void 0,
+										role: "gridcell",
+										"aria-label": day,
+										"aria-selected": day >= previewFrom && day <= previewTo,
+										"aria-disabled": day > today,
+										className: cellClassOf(day),
+										onMouseEnter: () => {
+											if (pending !== null) setHovered(day);
+										},
+										onClick: () => pickDay(day),
+										children: String(Number(day.slice(8, 10)))
+									}, dayIndex);
+								})
+							}, weekIndex))
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: dateRange_module_css_default.foot,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: dateRange_module_css_default.hint,
+								children: t(pending === null ? "date.startHint" : "date.endHint")
+							})
+						})
+					]
+				})]
+			});
+		}
+		//#endregion
+		//#region \0dsh-css:src/client/styles/multiSelect.module.css.mjs
+		const css$16 = ".zLYuDG_root{min-width:0;display:inline-flex;position:relative}.zLYuDG_trigger{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:104px;max-width:190px;height:32px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;background:0 0;border-radius:8px;align-items:center;gap:8px;padding:0 10px;display:inline-flex}.zLYuDG_trigger:hover{color:var(--dsw-alias-label-primary,#e8e8ec);border-color:var(--dsw-alias-state-business-primary,#5b8cff)}.zLYuDG_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_triggerText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_caret{opacity:.7;margin-left:auto;font-size:10px}.zLYuDG_panel{z-index:30;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:260px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;top:calc(100% + 6px);left:0}.zLYuDG_search{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);width:100%;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-sub,13px);background:0 0;border-radius:7px;padding:0 9px}.zLYuDG_search:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.zLYuDG_toolbar{gap:12px;padding:0 2px;display:flex}.zLYuDG_linkBtn{color:var(--dsw-alias-state-business-primary,#5b8cff);font:inherit;font-size:var(--ku-sub,13px);cursor:pointer;background:0 0;border:0;padding:0}.zLYuDG_linkBtn:hover{text-decoration:underline}.zLYuDG_list{flex-direction:column;max-height:260px;display:flex;overflow-y:auto}.zLYuDG_item,.zLYuDG_itemOn{text-align:left;cursor:pointer;width:100%;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:7px;align-items:center;gap:8px;padding:6px;display:flex}.zLYuDG_item:hover,.zLYuDG_itemOn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f)}.zLYuDG_itemOn{color:var(--dsw-alias-label-primary,#e8e8ec)}.zLYuDG_box,.zLYuDG_boxOn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:4px;flex:none;justify-content:center;align-items:center;width:16px;height:16px;font-size:11px;line-height:1;display:inline-flex}.zLYuDG_boxOn{border-color:var(--dsw-alias-state-business-primary,#5b8cff);background:var(--dsw-alias-state-business-primary,#5b8cff);color:#fff}.zLYuDG_itemLabel{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.zLYuDG_empty{color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-sub,13px);padding:8px 6px}";
+		const tagId$16 = "dsh-key-usage/multiSelect.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "dsh-key-usage";
+			tag.dataset.pluginCss = tagId$16;
+			tag.textContent = css$16;
+			document.head.appendChild(tag);
+		}
+		const cssRegistry$16 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
+		if (!cssRegistry$16.some((e) => e.tagId === tagId$16)) cssRegistry$16.push({
+			tagId: tagId$16,
+			css: css$16
+		});
+		var multiSelect_module_css_default = {
+			"box": "zLYuDG_box",
+			"boxOn": "zLYuDG_boxOn",
+			"caret": "zLYuDG_caret",
+			"empty": "zLYuDG_empty",
+			"item": "zLYuDG_item",
+			"itemLabel": "zLYuDG_itemLabel",
+			"itemOn": "zLYuDG_itemOn",
+			"linkBtn": "zLYuDG_linkBtn",
+			"list": "zLYuDG_list",
+			"panel": "zLYuDG_panel",
+			"root": "zLYuDG_root",
+			"search": "zLYuDG_search",
+			"toolbar": "zLYuDG_toolbar",
+			"trigger": "zLYuDG_trigger",
+			"triggerText": "zLYuDG_triggerText"
+		};
+		//#endregion
+		//#region src/client/components/MultiSelect.tsx
+		/** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
+		/** 名称排序：中文按拼音、数字与符号跟在后面，保证每次打开顺序稳定。 */
+		function sorted(options) {
+			return [...options].sort((left, right) => left.label.localeCompare(right.label, "zh-Hans-CN"));
+		}
+		function MultiSelect(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [query, setQuery] = (0, react.useState)("");
+			const rootRef = (0, react.useRef)(null);
+			const options = (0, react.useMemo)(() => sorted(props.options), [props.options]);
+			const selectedSet = (0, react.useMemo)(() => new Set(props.selected), [props.selected]);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onDown = (event) => {
+					if (rootRef.current !== null && !rootRef.current.contains(event.target)) setOpen(false);
+				};
+				const onKey = (event) => {
+					if (event.key === "Escape") setOpen(false);
+				};
+				document.addEventListener("mousedown", onDown);
+				document.addEventListener("keydown", onKey);
+				return () => {
+					document.removeEventListener("mousedown", onDown);
+					document.removeEventListener("keydown", onKey);
+				};
+			}, [open]);
+			const filtered = (0, react.useMemo)(() => {
+				const keyword = query.trim().toLowerCase();
+				if (keyword === "") return options;
+				return options.filter((option) => option.label.toLowerCase().includes(keyword));
+			}, [options, query]);
+			const toggle = (value) => {
+				const next = selectedSet.has(value) ? props.selected.filter((item) => item !== value) : [...props.selected, value];
+				props.onChange(next);
+			};
+			const triggerText = props.selected.length === 0 ? props.allLabel : props.selected.length === 1 ? options.find((option) => option.value === props.selected[0])?.label ?? props.selected[0] : t("multi.count", { count: props.selected.length });
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				className: multiSelect_module_css_default.root,
+				ref: rootRef,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: multiSelect_module_css_default.trigger,
+					onClick: () => setOpen((previous) => !previous),
+					"aria-haspopup": "listbox",
+					"aria-expanded": open,
+					"aria-label": props.ariaLabel,
+					title: props.ariaLabel,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: multiSelect_module_css_default.triggerText,
+						children: triggerText
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: multiSelect_module_css_default.caret,
+						"aria-hidden": "true",
+						children: "▾"
+					})]
+				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: multiSelect_module_css_default.panel,
+					role: "listbox",
+					"aria-multiselectable": "true",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+							className: multiSelect_module_css_default.search,
+							value: query,
+							placeholder: props.searchLabel,
+							"aria-label": props.searchLabel,
+							onChange: (event) => setQuery(event.target.value),
+							autoFocus: true
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: multiSelect_module_css_default.toolbar,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: multiSelect_module_css_default.linkBtn,
+								onClick: () => props.onChange(options.map((option) => option.value)),
+								children: t("multi.all")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: multiSelect_module_css_default.linkBtn,
+								onClick: () => props.onChange([]),
+								children: t("multi.none")
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: multiSelect_module_css_default.list,
+							children: [filtered.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: multiSelect_module_css_default.empty,
+								children: t("multi.empty")
+							}), filtered.map((option) => {
+								const chosen = selectedSet.has(option.value);
+								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: chosen ? multiSelect_module_css_default.itemOn : multiSelect_module_css_default.item,
+									role: "option",
+									"aria-selected": chosen,
+									onClick: () => toggle(option.value),
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: chosen ? multiSelect_module_css_default.boxOn : multiSelect_module_css_default.box,
+										"aria-hidden": "true",
+										children: chosen ? "✓" : ""
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: multiSelect_module_css_default.itemLabel,
+										children: option.label
+									})]
+								}, option.value === "" ? "__empty" : option.value);
+							})]
+						})
+					]
+				})]
 			});
 		}
 		//#endregion
@@ -2493,7 +2989,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/log.module.css.mjs
-		const css$14 = ".bxCCjW_panel{flex-direction:column;gap:10px;display:flex}.bxCCjW_head{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.bxCCjW_count{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);font-variant-numeric:tabular-nums;white-space:nowrap}.bxCCjW_headActions{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.bxCCjW_filters{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.bxCCjW_levelGroup{align-items:center;gap:4px;display:inline-flex}.bxCCjW_searchInput{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#1d1d22);min-width:120px;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1);border-radius:6px;flex:140px;padding:0 10px}.bxCCjW_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.bxCCjW_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.bxCCjW_listScroll{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;max-height:min(52vh,520px);overflow-y:auto}.bxCCjW_list{flex-direction:column;margin:0;padding:0;list-style:none;display:flex}.bxCCjW_row{border-left:2px solid #0000;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);flex-direction:column;gap:3px;padding:7px 10px;line-height:1.5;display:flex}.bxCCjW_row:last-child{border-bottom:0}.bxCCjW_row:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.bxCCjW_rowWarn{border-left-color:var(--dsw-alias-state-warn-primary,#e0a13c)}.bxCCjW_rowError{border-left-color:var(--dsw-alias-state-error-primary,#e05a5a)}.bxCCjW_meta{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.bxCCjW_time{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);font-variant-numeric:tabular-nums;white-space:nowrap}.bxCCjW_badge{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .87);letter-spacing:.04em;white-space:nowrap;border-radius:999px;padding:0 6px;font-weight:600;line-height:1.7}.bxCCjW_levelWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c);border-color:currentColor}.bxCCjW_levelError{color:var(--dsw-alias-state-error-primary,#e05a5a);border-color:currentColor}.bxCCjW_source{border:1px solid var(--dsw-alias-border-l1,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * .87);white-space:nowrap;border-radius:999px;padding:0 6px;font-family:ui-monospace,Consolas,monospace;line-height:1.7}.bxCCjW_retry{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;background:0 0;border:0;padding:0}.bxCCjW_retry:hover{text-decoration:underline}.bxCCjW_retry:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.bxCCjW_message{color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-word;overflow-wrap:anywhere}.bxCCjW_messageBtn{width:100%;font:inherit;text-align:left;color:var(--dsw-alias-label-primary,#e8e8ec);word-break:break-word;overflow-wrap:anywhere;cursor:pointer;background:0 0;border:0;padding:0;display:block}.bxCCjW_messageBtn:hover{text-decoration:underline}.bxCCjW_messageBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.bxCCjW_caret{color:var(--dsw-alias-label-tertiary,#67676f);margin-right:5px}.bxCCjW_detail{border-left:2px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;border-radius:0 6px 6px 0;margin:2px 0 0;padding:6px 8px;line-height:1.55}";
+		const css$14 = ".bxCCjW_panel{flex-direction:column;gap:10px;display:flex}.bxCCjW_head{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.bxCCjW_count{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--ku-body,14px);font-variant-numeric:tabular-nums;white-space:nowrap}.bxCCjW_headActions{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.bxCCjW_filters{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.bxCCjW_levelGroup{align-items:center;gap:4px;display:inline-flex}.bxCCjW_searchInput{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#2c2c34);background:var(--dsw-alias-bg-layer-2,#1d1d22);min-width:120px;height:30px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:var(--ku-body,14px);border-radius:6px;flex:140px;padding:0 10px}.bxCCjW_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.bxCCjW_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.bxCCjW_listScroll{max-height:min(46vh,440px);padding-right:4px;overflow-y:auto}.bxCCjW_list{flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;display:flex}.bxCCjW_row{border-radius:8px;flex-direction:column;gap:4px;padding:8px 10px;display:flex}.bxCCjW_row:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c14)}.bxCCjW_meta{flex-wrap:wrap;align-items:center;gap:10px;display:flex}.bxCCjW_time{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);font-variant-numeric:tabular-nums;white-space:nowrap}.bxCCjW_level{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);letter-spacing:.03em;white-space:nowrap;align-items:center;gap:5px;font-weight:600;display:inline-flex}.bxCCjW_levelDot{background:currentColor;border-radius:999px;flex:none;width:7px;height:7px}.bxCCjW_levelWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.bxCCjW_levelError{color:var(--dsw-alias-state-error-primary,#e05a5a)}.bxCCjW_source{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);white-space:nowrap;font-family:ui-monospace,Consolas,monospace}.bxCCjW_retry{font:inherit;font-size:var(--ku-sub,13px);color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;background:0 0;border:0;padding:0}.bxCCjW_retry:hover{text-decoration:underline}.bxCCjW_retry:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.bxCCjW_content{flex-direction:column;gap:4px;min-width:0;display:flex}.bxCCjW_message{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-body,14px);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.bxCCjW_detail{color:var(--dsw-alias-label-secondary,#9a9aa6);font-family:ui-monospace,Consolas,monospace;font-size:var(--ku-sub,13px);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;margin:0;padding-left:12px;line-height:1.55}";
 		const tagId$14 = "dsh-key-usage/log.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$14) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2508,26 +3004,24 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$14
 		});
 		var log_module_css_default = {
-			"badge": "bxCCjW_badge",
-			"caret": "bxCCjW_caret",
+			"content": "bxCCjW_content",
 			"count": "bxCCjW_count",
 			"detail": "bxCCjW_detail",
 			"filters": "bxCCjW_filters",
 			"head": "bxCCjW_head",
 			"headActions": "bxCCjW_headActions",
+			"level": "bxCCjW_level",
+			"levelDot": "bxCCjW_levelDot",
 			"levelError": "bxCCjW_levelError",
 			"levelGroup": "bxCCjW_levelGroup",
 			"levelWarn": "bxCCjW_levelWarn",
 			"list": "bxCCjW_list",
 			"listScroll": "bxCCjW_listScroll",
 			"message": "bxCCjW_message",
-			"messageBtn": "bxCCjW_messageBtn",
 			"meta": "bxCCjW_meta",
 			"panel": "bxCCjW_panel",
 			"retry": "bxCCjW_retry",
 			"row": "bxCCjW_row",
-			"rowError": "bxCCjW_rowError",
-			"rowWarn": "bxCCjW_rowWarn",
 			"searchInput": "bxCCjW_searchInput",
 			"source": "bxCCjW_source",
 			"time": "bxCCjW_time"
@@ -2535,8 +3029,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/LogPanel.tsx
 		/**
-		* 系统日志面板：条数统计 + 级别 / 来源 / 搜索筛选 + 级别配色 + 可展开的等宽详情。
-		* 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧的内联实现一致：刷新 / 复制 / 导出 / 清空。
+		* 系统日志面板：条数统计 + 级别 / 来源 / 搜索筛选 + 平铺条目。
+		* 每条的 message 与详情直接展示（详情多行缩进、保留换行、不截断），不再需要点击展开。
+		* 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧实现一致：刷新 / 复制 / 导出 / 清空。
 		*/
 		const LEVEL_FILTERS = [
 			{
@@ -2564,7 +3059,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [levelFilter, setLevelFilter] = (0, react.useState)("all");
 			const [sourceFilter, setSourceFilter] = (0, react.useState)("");
 			const [search, setSearch] = (0, react.useState)("");
-			const [expanded, setExpanded] = (0, react.useState)({});
 			const [refreshing, setRefreshing] = (0, react.useState)(false);
 			const listRef = (0, react.useRef)(null);
 			const newestRef = (0, react.useRef)(null);
@@ -2604,12 +3098,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (list.scrollTop <= STICK_TOP_PX) list.scrollTop = 0;
 				newestRef.current = newest;
 			}, [visible]);
-			const toggle = (id) => {
-				setExpanded((previous) => ({
-					...previous,
-					[id]: previous[id] !== true
-				}));
-			};
 			const onRefresh = () => {
 				setRefreshing(true);
 				refreshLog({
@@ -2629,7 +3117,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const onClear = () => {
 				clearLog();
-				setExpanded({});
 				setSourceFilter("");
 			};
 			const empty = visible.length === 0;
@@ -2710,55 +3197,46 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						ref: listRef,
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 							className: log_module_css_default.list,
-							children: visible.map((entry) => {
-								const open = expanded[entry.id] === true;
-								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
-									className: log_module_css_default.row + levelRowClass(entry.level),
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: log_module_css_default.meta,
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: log_module_css_default.time,
-												children: formatTime(entry.time)
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: log_module_css_default.badge + levelBadgeClass(entry.level),
-												children: entry.level.toUpperCase()
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: log_module_css_default.source,
-												children: entry.source
-											}),
-											entry.retry === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-												type: "button",
-												className: log_module_css_default.retry,
-												onClick: () => {
-													entry.retry?.();
-												},
-												children: t("log.retry")
-											})
-										]
-									}), entry.detail === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: visible.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+								className: log_module_css_default.row,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: log_module_css_default.meta,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: log_module_css_default.time,
+											children: formatTime(entry.time)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: log_module_css_default.level + levelClass(entry.level),
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: log_module_css_default.levelDot,
+												"aria-hidden": "true"
+											}), entry.level.toUpperCase()]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: log_module_css_default.source,
+											children: entry.source
+										}),
+										entry.retry === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: log_module_css_default.retry,
+											onClick: () => {
+												entry.retry?.();
+											},
+											children: t("log.retry")
+										})
+									]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: log_module_css_default.content,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: log_module_css_default.message,
 										children: messageTextOf(entry)
-									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-										type: "button",
-										className: log_module_css_default.messageBtn,
-										"aria-expanded": open,
-										"aria-controls": "log-detail-" + String(entry.id),
-										onClick: () => toggle(entry.id),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: log_module_css_default.caret,
-											"aria-hidden": "true",
-											children: open ? "▾" : "▸"
-										}), messageTextOf(entry)]
-									}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+									}), entry.detail === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
 										className: log_module_css_default.detail,
-										id: "log-detail-" + String(entry.id),
 										children: entry.detail
-									})] })]
-								}, entry.id);
-							})
+									})]
+								})]
+							}, entry.id))
 						})
 					})
 				]
@@ -2774,19 +3252,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function messageTextOf(entry) {
 			return entry.message + (entry.count > 1 ? " ×" + String(entry.count) : "");
 		}
-		function levelBadgeClass(level) {
+		/** 级别配色：错误红、警告黄、信息弱化（色点与色字同色）。 */
+		function levelClass(level) {
 			if (level === "error") return " " + log_module_css_default.levelError;
 			if (level === "warn") return " " + log_module_css_default.levelWarn;
 			return "";
 		}
-		function levelRowClass(level) {
-			if (level === "error") return " " + log_module_css_default.rowError;
-			if (level === "warn") return " " + log_module_css_default.rowWarn;
-			return "";
-		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/settings.module.css.mjs
-		const css$13 = ".YqBhuW_wrap{flex-direction:column;gap:16px;min-width:300px;max-width:420px;display:flex}.YqBhuW_block{flex-direction:column;gap:6px;display:flex}.YqBhuW_head{justify-content:space-between;align-items:center;gap:10px;display:flex}.YqBhuW_title{font-size:calc(var(--dsh-content-font-size,12px) * 1.02);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.YqBhuW_actions{align-items:center;gap:6px;display:flex}.YqBhuW_currencyBtn{min-width:34px;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);line-height:1.2}.YqBhuW_value{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);word-break:break-all}.YqBhuW_valueWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.YqBhuW_version{font-size:calc(var(--dsh-content-font-size,12px) * .9);color:var(--dsw-alias-label-tertiary,#67676f)}.YqBhuW_shell{align-items:stretch;gap:16px;min-width:620px;display:flex}.YqBhuW_tabs{border-right:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);flex-direction:column;flex:0 0 92px;gap:2px;padding-right:8px;display:flex}.YqBhuW_tab{-webkit-appearance:none;appearance:none;cursor:pointer;text-align:left;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);background:0 0;border:0;border-radius:6px;padding:6px 8px}.YqBhuW_tab:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);color:var(--dsw-alias-label-primary,#e8e8ec)}.YqBhuW_tabActive{background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.YqBhuW_panel{flex:auto;min-width:0;max-height:62vh;overflow:auto}.YqBhuW_logPane{min-height:240px}.YqBhuW_caliberVersion{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .95)}.YqBhuW_caliberList{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * .95);margin:8px 0 0;padding-left:18px;line-height:1.7}.YqBhuW_link{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:none}.YqBhuW_link:hover{text-decoration:underline}";
+		const css$13 = ".YqBhuW_shell{align-items:stretch;gap:16px;min-width:620px;display:flex}.YqBhuW_tabs{border-right:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);flex-direction:column;flex:0 0 92px;gap:2px;padding-right:8px;display:flex}.YqBhuW_tab{-webkit-appearance:none;appearance:none;cursor:pointer;text-align:left;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:6px;padding:6px 8px}.YqBhuW_tab:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);color:var(--dsw-alias-label-primary,#e8e8ec)}.YqBhuW_tabActive{background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.YqBhuW_panel{flex:auto;min-width:0;max-height:62vh;overflow:auto}.YqBhuW_sections{flex-direction:column;gap:12px;min-width:300px;max-width:420px;display:flex}.YqBhuW_section{flex-direction:column;gap:8px;display:flex}.YqBhuW_sectionTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:15px;font-weight:600}.YqBhuW_block{flex-direction:column;gap:6px;display:flex}.YqBhuW_head{justify-content:space-between;align-items:center;gap:10px;display:flex}.YqBhuW_rowLabel{font-size:var(--ku-body,14px);color:var(--dsw-alias-label-secondary,#9a9aa6)}.YqBhuW_actions{align-items:center;gap:6px;display:flex}.YqBhuW_currencyBtn{min-width:34px;font-size:var(--ku-body,14px);line-height:1.2}.YqBhuW_value{font-size:var(--ku-sub,13px);color:var(--dsw-alias-label-tertiary,#67676f);word-break:break-all}.YqBhuW_valueWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.YqBhuW_logPane{min-height:240px}.YqBhuW_wrap{flex-direction:column;gap:16px;min-width:300px;max-width:420px;display:flex}.YqBhuW_caliberVersion{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px)}.YqBhuW_caliberList{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--ku-sub,13px);margin:8px 0 0;padding-left:18px;line-height:1.7}.YqBhuW_link{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:none}.YqBhuW_link:hover{text-decoration:underline}";
 		const tagId$13 = "dsh-key-usage/settings.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$13) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2810,32 +3284,30 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"link": "YqBhuW_link",
 			"logPane": "YqBhuW_logPane",
 			"panel": "YqBhuW_panel",
+			"rowLabel": "YqBhuW_rowLabel",
+			"section": "YqBhuW_section",
+			"sectionTitle": "YqBhuW_sectionTitle",
+			"sections": "YqBhuW_sections",
 			"shell": "YqBhuW_shell",
 			"tab": "YqBhuW_tab",
 			"tabActive": "YqBhuW_tabActive",
 			"tabs": "YqBhuW_tabs",
-			"title": "YqBhuW_title",
 			"value": "YqBhuW_value",
 			"valueWarn": "YqBhuW_valueWarn",
-			"version": "YqBhuW_version",
 			"wrap": "YqBhuW_wrap"
 		};
 		//#endregion
 		//#region src/client/components/SettingsDialog.tsx
 		/**
-		* 设置：左侧竖排 Tab —— 显示 / 价目 / 日志 / 口径 / 关于。
-		* 把原先散在页头的「日志」「口径」两个弹窗并进来：页头只留「刷新 + 设置」。
+		* 设置：左侧竖排 Tab —— 设置 / 日志 / 口径。
+		* 「设置」把显示偏好、价目、关于三块按小节平铺；日志与口径各占一个 Tab。
 		* 页面里只留结论；来源与时间放这里，失败原因仍只进系统日志（日志页签内可查）。
 		*/
 		const PLUGIN_REPO = "https://github.com/xyl886/dsh-key-usage";
 		const TAB_KEYS = [
 			{
-				key: "display",
-				labelKey: "settings.tabDisplay"
-			},
-			{
-				key: "pricing",
-				labelKey: "settings.tabPricing"
+				key: "general",
+				labelKey: "settings.tabGeneral"
 			},
 			{
 				key: "log",
@@ -2844,16 +3316,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			{
 				key: "caliber",
 				labelKey: "settings.tabCaliber"
-			},
-			{
-				key: "about",
-				labelKey: "settings.tabAbout"
 			}
 		];
 		function SettingsDialog(props) {
 			const t = useT();
 			const display = useCurrencyDisplay();
-			const [tab, setTab] = (0, react.useState)(props.initialTab ?? "display");
+			const [tab, setTab] = (0, react.useState)(props.initialTab ?? "general");
 			const [fxLoading, setFxLoading] = (0, react.useState)(false);
 			const [fxError, setFxError] = (0, react.useState)(null);
 			const [refreshing, setRefreshing] = (0, react.useState)(false);
@@ -2958,82 +3426,142 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: settings_module_css_default.panel,
 					children: [
-						tab === "display" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: settings_module_css_default.wrap,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: settings_module_css_default.block,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: settings_module_css_default.head,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.title,
-										children: t("settings.currency")
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.actions,
-										children: DISPLAY_CURRENCIES.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-											size: "sm",
-											active: display.display === currency,
-											className: settings_module_css_default.currencyBtn,
-											ariaLabel: currency,
-											onClick: () => switchCurrency(currency),
-											children: DISPLAY_CURRENCY_SYMBOLS[currency]
-										}, currency))
-									})]
-								})
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: settings_module_css_default.block,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: settings_module_css_default.head,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.title,
-										children: t("settings.fx")
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.actions,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-											size: "sm",
-											disabled: fxLoading,
-											"aria-busy": fxLoading,
-											title: t("quota.fxCacheHint"),
-											onClick: () => void fetchFx(true),
-											children: fxLoading ? t("quota.fetchFx") : t("quota.refreshFx")
+						tab === "general" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: settings_module_css_default.sections,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+									className: settings_module_css_default.section,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.sectionTitle,
+											children: t("settings.sectionDisplay")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.block,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: settings_module_css_default.head,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.rowLabel,
+													children: t("settings.currency")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.actions,
+													children: DISPLAY_CURRENCIES.map((currency) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+														size: "sm",
+														active: display.display === currency,
+														className: settings_module_css_default.currencyBtn,
+														ariaLabel: currency,
+														onClick: () => switchCurrency(currency),
+														children: DISPLAY_CURRENCY_SYMBOLS[currency]
+													}, currency))
+												})]
+											})
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: settings_module_css_default.block,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: settings_module_css_default.head,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.rowLabel,
+													children: t("settings.fx")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.actions,
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+														size: "sm",
+														disabled: fxLoading,
+														"aria-busy": fxLoading,
+														title: t("quota.fxCacheHint"),
+														onClick: () => void fetchFx(true),
+														children: fxLoading ? t("quota.fetchFx") : t("quota.refreshFx")
+													})
+												})]
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+												className: fxWarn ? settings_module_css_default.value + " " + settings_module_css_default.valueWarn : settings_module_css_default.value,
+												children: fxText
+											})]
 										})
-									})]
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: fxWarn ? settings_module_css_default.value + " " + settings_module_css_default.valueWarn : settings_module_css_default.value,
-									children: fxText
-								})]
-							})]
-						}),
-						tab === "pricing" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: settings_module_css_default.wrap,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: settings_module_css_default.block,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: settings_module_css_default.head,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.title,
+									]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+									className: settings_module_css_default.section,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: settings_module_css_default.sectionTitle,
 										children: t("settings.pricing")
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: settings_module_css_default.actions,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-											size: "sm",
-											variant: "primary",
-											disabled: refreshing,
-											"aria-busy": refreshing,
-											onClick: () => void refreshPrices(),
-											children: refreshing ? t("action.refreshing") + (refreshElapsed > 0 ? " " + String(refreshElapsed) + "s" : "") : t("quota.refreshPrices")
-										})
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: settings_module_css_default.block,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.actions,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+												size: "sm",
+												variant: "primary",
+												disabled: refreshing,
+												"aria-busy": refreshing,
+												onClick: () => void refreshPrices(),
+												children: refreshing ? t("action.refreshing") + (refreshElapsed > 0 ? " " + String(refreshElapsed) + "s" : "") : t("quota.refreshPrices")
+											})
+										}), refreshStatus === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.value,
+											children: t("quota.pricingInfoHint")
+										}) : refreshStatus.tone === "ok" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.value,
+											children: refreshStatus.text
+										}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, {
+											text: refreshStatus.text,
+											tone: "error"
+										})]
 									})]
-								}), refreshStatus === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: settings_module_css_default.value,
-									children: t("quota.pricingInfoHint")
-								}) : refreshStatus.tone === "ok" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: settings_module_css_default.value,
-									children: refreshStatus.text
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LogHint, {
-									text: refreshStatus.text,
-									tone: "error"
-								})]
-							})
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+									className: settings_module_css_default.section,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.sectionTitle,
+											children: t("settings.sectionAbout")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.block,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: settings_module_css_default.head,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.rowLabel,
+													children: t("settings.version")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.value,
+													children: "0.1.9"
+												})]
+											})
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.block,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: settings_module_css_default.head,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.rowLabel,
+													children: t("settings.license")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.value,
+													children: t("settings.licenseValue")
+												})]
+											})
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: settings_module_css_default.block,
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: settings_module_css_default.head,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: settings_module_css_default.rowLabel,
+													children: t("settings.repo")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+													className: settings_module_css_default.link,
+													href: PLUGIN_REPO,
+													target: "_blank",
+													rel: "noreferrer",
+													children: PLUGIN_REPO.replace(/^https?:\/\//, "")
+												})]
+											})
+										})
+									]
+								})
+							]
 						}),
 						tab === "log" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: settings_module_css_default.logPane,
@@ -3055,53 +3583,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.refresh") })
 								]
 							})]
-						}),
-						tab === "about" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: settings_module_css_default.wrap,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: settings_module_css_default.block,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: settings_module_css_default.head,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: settings_module_css_default.title,
-											children: t("settings.version")
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: settings_module_css_default.value,
-											children: "0.1.9"
-										})]
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: settings_module_css_default.block,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: settings_module_css_default.head,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: settings_module_css_default.title,
-											children: t("settings.license")
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: settings_module_css_default.value,
-											children: t("settings.licenseValue")
-										})]
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: settings_module_css_default.block,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: settings_module_css_default.head,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: settings_module_css_default.title,
-											children: t("settings.repo")
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-											className: settings_module_css_default.link,
-											href: PLUGIN_REPO,
-											target: "_blank",
-											rel: "noreferrer",
-											children: PLUGIN_REPO.replace(/^https?:\/\//, "")
-										})]
-									})
-								})
-							]
 						})
 					]
 				})]
@@ -3669,6 +4150,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		/**
 		* 合计行的上一期：与统计卡同一口径（按上一段等长范围再取一次 `/usage`，纯客户端，无新端点）。
+		* 通道 / 模型筛选都在客户端做，所以这里固定取全量（传 `'ALL'`），否则环比会拿「过滤后本期」比「全量上期」。
 		* 只用于算一个百分比，取不到就保持 null（界面显示 —），不影响表格本身。
 		*/
 		function usePreviousUsage(props) {
@@ -3679,7 +4161,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const window = previousWindowOf(props.from, props.to);
 				let cancelled = false;
 				setPrevious(null);
-				loadUsage(window.from, window.to, props.channelFilter).then((result) => {
+				loadUsage(window.from, window.to, "ALL").then((result) => {
 					if (!cancelled) setPrevious(result);
 				});
 				return () => {
@@ -3689,7 +4171,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				comparable,
 				props.from,
 				props.to,
-				props.channelFilter,
 				props.pricingRevision
 			]);
 			return comparable ? previous : null;
@@ -3798,17 +4279,25 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				...partial ? { partial: true } : {}
 			};
 		}
+		/** 多选筛选里「未归入工作区」项目的值：空串被 `selectionOf` 当成「全部」，所以用固定 sentinel 表示。 */
+		const ORPHAN_PROJECT_VALUE = "__orphan__";
 		/**
-		* 按模型过滤 `/usage`：逐日只留该模型的桶，当天合计与范围合计都按剩下的桶重算（分页/汇总口径一致）。
-		* `'ALL'`、空串或没有这个模型的任何数据时原样返回（引用不变，零回归）；
-		* `hours`（按时段）没有模型维度，保持原样、不二次聚合。
+		* 项目筛选的取值集合：未归入工作区的行（`workspace` 为空）用 sentinel，其余用 workspace + 覆盖目录。
+		* 通道 / 模型 / 会话三个 Tab 都用它，保证同一个项目在各处命中同一批行。
 		*/
-		function filterUsageByModel(usage, modelFilter) {
+		function projectFilterValuesOf(workspace, paths) {
+			return [workspace === void 0 || workspace === null || workspace === "" ? ORPHAN_PROJECT_VALUE : workspace, ...paths ?? []];
+		}
+		/**
+		* 按维度过滤 `/usage`：逐日只留命中的模型桶，当天合计与范围合计都按剩下的桶重算（口径一致）。
+		* `hours`（按时段）没有模型 / 通道维度，保持原样、不二次聚合。
+		*/
+		function filterUsageOf(usage, keep) {
 			const raw = usage ?? null;
-			if (raw === null || modelFilter === void 0 || modelFilter === "" || modelFilter === "ALL") return raw;
+			if (raw === null) return null;
 			const days = [];
 			for (const day of raw.days) {
-				const models = day.models.filter((model) => model.model === modelFilter);
+				const models = day.models.filter(keep);
 				if (models.length === 0) continue;
 				days.push(mergedDayOf(models, day.date, day.provider));
 			}
@@ -3817,6 +4306,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				days,
 				totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? "")
 			};
+		}
+		/**
+		* 按通道多选过滤（值存逗号分隔串，空串 = 全部；通道维度只在模型桶的 `provider` 上）。
+		* 页头把整段选中的通道一起下发，服务端 `/usage` 固定取全量，过滤在客户端做。
+		*/
+		function filterUsageByChannels(usage, channelFilter) {
+			const raw = usage ?? null;
+			const selected = selectionOf(channelFilter);
+			if (raw === null || selected.length === 0) return raw;
+			return filterUsageOf(raw, (model) => selected.includes(model.provider));
+		}
+		/** 按模型多选过滤（值同上）；多个模型先合并回逐日行再算，合计 / 图表 / 环比一起重算。 */
+		function filterUsageByModel(usage, modelFilter) {
+			const raw = usage ?? null;
+			const selected = selectionOf(modelFilter);
+			if (raw === null || selected.length === 0) return raw;
+			return filterUsageOf(raw, (model) => selected.includes(model.model));
 		}
 		/** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
 		function deltaOf(current, previous) {
@@ -4019,8 +4525,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function DetailTab(props) {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
-			const { usage, channels, bounds, tooltip, channelFilter } = props;
-			const modelFilter = props.modelFilter ?? "ALL";
+			const { usage, channels, bounds, tooltip } = props;
+			const modelFilter = props.modelFilter ?? "";
 			const currency = useCurrencyDisplay();
 			const [metric, setMetric] = (0, react.useState)("cost");
 			const [dimension, setDimension] = (0, react.useState)("day");
@@ -4031,7 +4537,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				from: bounds.from,
 				to: bounds.to,
 				range: props.range,
-				channelFilter,
 				pricingRevision: props.pricingRevision
 			});
 			/** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致 */
@@ -4447,8 +4952,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [hourMetric, setHourMetric] = (0, react.useState)("sessions");
 			const range = props.range ?? "month";
 			const summary = props.summary;
-			const modelFilter = props.modelFilter ?? "ALL";
-			const projectFilter = props.projectFilter ?? "ALL";
+			const modelFilter = props.modelFilter ?? "";
+			const projectFilter = props.projectFilter ?? "";
 			/** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
 			const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter);
 			const isMonthRange = range === "month";
@@ -4484,7 +4989,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			/** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
 			*  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
 			const rawTrendDays = trendDaysOf(props.usage, props.heatmap);
-			const trendDays = isAllRange ? rawTrendDays : modelFilter === "ALL" ? rawTrendDays : trendDaysOf(scopedUsage, []);
+			const trendDays = isAllRange ? rawTrendDays : selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, []);
 			/** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
 			const hasDailyCalls = trendDays.some((day) => day.calls !== null);
 			const rangeWindow = windowOfRange(range);
@@ -4564,7 +5069,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
 								label: t("overview.kpiCost"),
 								value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine$1, {
 									previous: props.previousCost ?? null,
 									current: costAmount,
 									format: (value) => moneyTextOf(display, value)
@@ -4591,7 +5096,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
 								label: t("overview.kpiSessions"),
 								value: sessionCount === null ? "—" : fmtCalls(sessionCount),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine$1, {
 									previous: props.previousSessions ?? null,
 									current: sessionCount,
 									format: fmtCalls
@@ -4786,7 +5291,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
 		* 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
 		*/
-		function PrevLine(props) {
+		function PrevLine$1(props) {
 			if (props.previous === null) return null;
 			const previousText = t("overview.prev", { value: props.format(props.previous) });
 			if (props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
@@ -5081,32 +5586,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (metric === "tokens") return fmtTokens(row.tokens);
 			return fmtCalls(row.sessionCount);
 		}
-		/** 项目榜按全局项目筛选收窄（`''` 命中的是「未归入工作区」那一行）；`'ALL'` 原样返回。 */
+		/** 项目榜按全局项目筛选收窄（项目行按 workspace / 覆盖目录命中，空 workspace 命中「未归入工作区」）；空选择原样返回。 */
 		function projectsOfScope(projects, projectFilter) {
-			if (projects == null || projectFilter === "ALL") return projects ?? null;
+			if (projects == null || selectionOf(projectFilter).length === 0) return projects ?? null;
 			return {
 				...projects,
-				rows: projects.rows.filter((row) => row.workspace === projectFilter || (row.paths ?? []).includes(projectFilter))
+				rows: projects.rows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, row.paths), projectFilter))
 			};
 		}
-		/** 模型榜按全局模型筛选收窄；`'ALL'` 原样返回。 */
+		/** 模型榜按全局模型筛选收窄；空选择原样返回。 */
 		function modelsOfScope(models, modelFilter) {
-			if (models == null || modelFilter === "ALL") return models ?? null;
+			if (models == null || selectionOf(modelFilter).length === 0) return models ?? null;
 			return {
 				...models,
-				rows: models.rows.filter((row) => row.model === modelFilter)
+				rows: models.rows.filter((row) => selectionMatches([row.model], modelFilter))
 			};
 		}
-		/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个都是 `'ALL'` 时原样返回。 */
+		/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个筛选都为空时原样返回。 */
 		function sessionsOfScope(sessions, projectFilter, modelFilter) {
-			if (sessions == null || projectFilter === "ALL" && modelFilter === "ALL") return sessions ?? null;
+			if (sessions == null || selectionOf(projectFilter).length === 0 && selectionOf(modelFilter).length === 0) return sessions ?? null;
 			return {
 				...sessions,
-				rows: sessions.rows.filter((row) => {
-					if (projectFilter !== "ALL" && (row.workspace ?? "") !== projectFilter) return false;
-					if (modelFilter !== "ALL" && !row.models.some((model) => model.model === modelFilter)) return false;
-					return true;
-				})
+				rows: sessions.rows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter) && selectionMatches(row.models.map((model) => model.model), modelFilter))
 			};
 		}
 		function rankItemsOfProjects(projects, metric) {
@@ -6033,22 +6534,26 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function DistributionTab(props) {
 			const t = useT();
 			const [tableOpen, setTableOpen] = (0, react.useState)(false);
-			const externalProject = props.projectFilter ?? "ALL";
-			const modelFilter = props.modelFilter ?? "ALL";
-			const focusWorkspace = externalProject !== "ALL" ? externalProject : props.focusWorkspace ?? null;
+			const externalProject = props.projectFilter ?? "";
+			const modelFilter = props.modelFilter ?? "";
+			const noProjectSelection = selectionOf(externalProject).length === 0;
+			const noModelSelection = selectionOf(modelFilter).length === 0;
+			const focusWorkspace = noProjectSelection ? props.focusWorkspace ?? null : null;
+			/** 内部联动 / 全局筛选各自的项目命中：项目行按 workspace 与覆盖目录匹配 */
+			const projectMatches = (row) => noProjectSelection ? focusWorkspace === null || selectionMatches(projectFilterValuesOf(row.workspace, row.paths), focusWorkspace) : selectionMatches(projectFilterValuesOf(row.workspace, row.paths), externalProject);
 			const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows;
 			const allModelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows;
 			/** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
-			const modelRows = modelFilter === "ALL" ? allModelRows : allModelRows.filter((row) => row.model === modelFilter);
-			const scopedProjects = focusWorkspace === null ? projectRows : projectRows.filter((row) => row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace));
-			/** Mekko 的项目块：有模型筛选时每个项目只留该模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
-			const mekkoProjects = modelFilter === "ALL" ? scopedProjects : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row) => row !== null);
-			const cacheUsage = modelFilter === "ALL" ? props.usage ?? null : null;
+			const modelRows = noModelSelection ? allModelRows : allModelRows.filter((row) => selectionMatches([row.model], modelFilter));
+			const scopedProjects = projectRows.filter(projectMatches);
+			/** Mekko 的项目块：有模型筛选时每个项目只留选中模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
+			const mekkoProjects = noModelSelection ? scopedProjects : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row) => row !== null);
+			const cacheUsage = noModelSelection ? props.usage ?? null : null;
 			const coverage = props.projects?.coverage ?? props.models?.coverage;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: distribution_module_css_default.page,
 				children: [
-					externalProject === "ALL" && focusWorkspace !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					noProjectSelection && focusWorkspace !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: lists_module_css_default.focusChip,
 						children: [
 							t("p.focusPrefix"),
@@ -6142,7 +6647,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 该项目没有这个模型的用量时返回 null（整块不进 Mekko）。
 		*/
 		function projectOfModel(row, modelFilter) {
-			const models = (row.models ?? []).filter((entry) => entry.model === modelFilter);
+			const models = (row.models ?? []).filter((entry) => selectionMatches([entry.model], modelFilter));
 			if (models.length === 0) return null;
 			const costsByCurrency = {};
 			const sources = [];
@@ -7750,16 +8255,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [query, setQuery] = (0, react.useState)("");
 			const [pageSize, setPageSize] = (0, react.useState)(PAGE_SIZE);
 			const [detailId, setDetailId] = (0, react.useState)(null);
-			const projectFilter = props.projectFilter ?? "ALL";
-			const modelFilter = props.modelFilter ?? "ALL";
+			const projectFilter = props.projectFilter ?? "";
+			const modelFilter = props.modelFilter ?? "";
 			/** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
 			const allRows = props.data?.rows ?? [];
-			/** 两个筛选都作用在行上：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
-			const rows = (0, react.useMemo)(() => allRows.filter((row) => {
-				if (projectFilter !== "ALL" && (row.workspace ?? "") !== projectFilter) return false;
-				if (modelFilter !== "ALL" && !row.models.some((model) => model.model === modelFilter)) return false;
-				return true;
-			}), [
+			/** 项目 / 模型筛选都作用在行上（逗号分隔多选，空串 = 全部）：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
+			const rows = (0, react.useMemo)(() => allRows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter) && selectionMatches(row.models.map((model) => model.model), modelFilter)), [
 				allRows,
 				projectFilter,
 				modelFilter
@@ -8667,14 +9168,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							tone,
 							weight
 						].join(" ").trim(),
-						children: [item.word, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("title", { children: item.word + " · " + String(item.count) })]
+						children: [item.word, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("title", { children: props.tipOf === void 0 ? item.word + " · " + String(item.count) : props.tipOf(item.word, item.count) })]
 					}, item.word);
 				})
 			});
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/words.module.css.mjs
-		const css$1 = ".VeBaIW_page{--words-body:var(--ku-body,14px);--words-title:var(--ku-title,17px);--words-kpi:var(--ku-kpi,20px);font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.VeBaIW_scroll{flex:1;min-height:0;max-height:300px;overflow:auto}.VeBaIW_table{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%}.VeBaIW_table th,.VeBaIW_table td{text-align:right;white-space:nowrap;border-bottom:1px solid var(--dsw-alias-interactive-bg-active,#80808c24);padding:4px 7px}.VeBaIW_table th{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500}.VeBaIW_table td{color:var(--dsw-alias-label-secondary,#9a9aa6)}.VeBaIW_table th:first-child,.VeBaIW_table td:first-child{text-align:left;color:var(--dsw-alias-label-primary,#e8e8ec)}.VeBaIW_table tbody tr:last-child td{border-bottom:0}.VeBaIW_empty{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);padding:24px 0}";
+		const css$1 = ".VeBaIW_page{--words-body:var(--ku-body,14px);--words-title:var(--ku-title,17px);--words-kpi:var(--ku-kpi,20px);font-size:var(--words-body);flex-direction:column;gap:10px;display:flex}.VeBaIW_kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;display:grid}.VeBaIW_kpi{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:8px 10px}.VeBaIW_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f)}.VeBaIW_kpiValue{font-size:var(--words-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;font-weight:700;overflow:hidden}.VeBaIW_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums}.VeBaIW_rise{color:var(--dsw-alias-state-error-primary,#e05a5a);margin-left:4px}.VeBaIW_fall{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:4px}.VeBaIW_panel{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;min-width:0;padding:10px 11px;display:flex}.VeBaIW_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.VeBaIW_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--words-title);font-weight:600}.VeBaIW_panelAction{align-items:center;gap:8px;margin-left:auto;display:inline-flex}.VeBaIW_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}";
 		const tagId$1 = "dsh-key-usage/words.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -8689,8 +9190,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			css: css$1
 		});
 		var words_module_css_default = {
-			"empty": "VeBaIW_empty",
-			"grid": "VeBaIW_grid",
+			"fall": "VeBaIW_fall",
 			"kpi": "VeBaIW_kpi",
 			"kpiDetail": "VeBaIW_kpiDetail",
 			"kpiLabel": "VeBaIW_kpiLabel",
@@ -8702,20 +9202,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"panelHead": "VeBaIW_panelHead",
 			"panelNote": "VeBaIW_panelNote",
 			"panelTitle": "VeBaIW_panelTitle",
-			"scroll": "VeBaIW_scroll",
-			"table": "VeBaIW_table"
+			"rise": "VeBaIW_rise"
 		};
 		//#endregion
 		//#region src/client/tabs/WordsTab.tsx
-		/** 词表最多列几行：服务端最多下发 60 个词，页面只列高频的前 30 个（导出仍给全量）。 */
-		const MAX_WORD_ROWS = 30;
 		function WordsTab(props) {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
 			const prompts = props.prompts;
 			const words = prompts === null ? [] : [...prompts.words].sort((first, second) => second.count - first.count);
-			const totalPrompts = prompts === null ? null : prompts.totalPrompts;
 			const topWord = words[0];
+			const totalPrompts = prompts === null ? null : prompts.totalPrompts;
+			const prevPrompts = prevOf(prompts?.prevTotalPrompts);
+			const prevChars = prevOf(prompts?.prevTotalChars);
+			const prevWords = prevOf(prompts?.prevWordCount);
+			const prevTopWord = prevOf(prompts?.prevTopWordCount);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: words_module_css_default.page,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -8723,93 +9224,67 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
 							label: t("words.kpiPrompts"),
-							value: totalPrompts === null ? "—" : fmtCount(totalPrompts)
+							value: totalPrompts === null ? "—" : fmtCount(totalPrompts),
+							detail: prevPrompts === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+								previous: prevPrompts,
+								current: totalPrompts,
+								format: fmtCount
+							})
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
 							label: t("words.kpiChars"),
-							value: prompts === null ? "—" : fmtCount(prompts.totalChars)
+							value: prompts === null ? "—" : fmtCount(prompts.totalChars),
+							detail: prevChars === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+								previous: prevChars,
+								current: prompts === null ? null : prompts.totalChars,
+								format: fmtCount
+							})
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
 							label: t("words.kpiWords"),
-							value: prompts === null ? "—" : fmtCount(words.length)
+							value: prompts === null ? "—" : fmtCount(words.length),
+							detail: prevWords === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine, {
+								previous: prevWords,
+								current: prompts === null ? null : words.length,
+								format: fmtCount
+							})
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
 							label: t("words.kpiTop"),
 							value: topWord === void 0 ? "—" : topWord.word,
-							detail: topWord === void 0 ? void 0 : t("words.times", { count: fmtCount(topWord.count) })
+							detail: topWord === void 0 ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [t("words.times", { count: fmtCount(topWord.count) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrendPercent, {
+								previous: prevTopWord,
+								current: topWord.count
+							})] })
 						})
 					]
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: words_module_css_default.grid,
+					className: words_module_css_default.panel,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: words_module_css_default.panel,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: words_module_css_default.panelHead,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: words_module_css_default.panelTitle,
-								children: t("words.cloud")
-							}), prompts !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: words_module_css_default.panelAction,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: words_module_css_default.panelNote,
-									children: t("words.wordCount", { count: words.length })
-								})
-							})]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(WordCloud, {
-							words,
-							emptyText: prompts === null ? t("s.loading") : t("words.noPrompts")
-						})]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: words_module_css_default.panel,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: words_module_css_default.panelHead,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: words_module_css_default.panelTitle,
-								children: t("words.table")
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: words_module_css_default.panelAction,
-								children: [prompts !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: words_module_css_default.panelNote,
-									children: t("words.wordCount", { count: words.length })
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									size: "sm",
-									disabled: words.length === 0,
-									onClick: () => exportWordCsv(words, totalPrompts),
-									children: t("export.csv")
-								})]
-							})]
-						}), words.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: words_module_css_default.empty,
-							children: prompts === null ? t("s.loading") : t("words.noPrompts")
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: words_module_css_default.scroll,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("table", {
-								className: words_module_css_default.table,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-										scope: "col",
-										children: t("words.colWord")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-										scope: "col",
-										children: t("words.colCount")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", {
-										scope: "col",
-										children: t("m.share")
-									})
-								] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("tbody", { children: words.slice(0, MAX_WORD_ROWS).map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: entry.word }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: fmtCount(entry.count) }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: wordShareTextOf(entry.count, totalPrompts) })
-								] }, entry.word)) })]
+						className: words_module_css_default.panelHead,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: words_module_css_default.panelTitle,
+							children: t("words.cloud")
+						}), prompts !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: words_module_css_default.panelAction,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: words_module_css_default.panelNote,
+								children: t("words.wordCount", { count: words.length })
 							})
 						})]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(WordCloud, {
+						words,
+						emptyText: prompts === null ? t("s.loading") : t("words.noPrompts"),
+						tipOf: (word, count) => t("words.cloudTip", {
+							word,
+							count: fmtCount(count),
+							share: sharePercentOf(count, totalPrompts)
+						})
 					})]
 				})]
 			});
 		}
-		/** KPI 小卡：标签 + 数值 +（可选）绝对值附注。 */
+		/** KPI 小卡：标签 + 数值 +（可选）环比行。 */
 		function KpiCard(props) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: words_module_css_default.kpi,
@@ -8830,24 +9305,36 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			});
 		}
-		/** 词频占比：保留一位小数；没有参与统计的提问时给 —（不除零）。 */
-		function wordShareTextOf(count, totalPrompts) {
-			if (totalPrompts === null || totalPrompts <= 0) return "—";
-			return (count / totalPrompts * 100).toFixed(1) + "%";
+		/** 服务端没给上期字段（旧版本 / 上期窗口没有提问）时为 null，整段环比不显示。 */
+		function prevOf(value) {
+			return typeof value === "number" && Number.isFinite(value) ? value : null;
 		}
-		/** 词表导出：列与页面表格同口径（百分数写在表头，单元格只放数值）；导出全部词。 */
-		function exportWordCsv(words, totalPrompts) {
-			const header = [
-				t("words.colWord"),
-				t("words.colCount"),
-				t("m.share") + "(%)"
-			];
-			const rows = words.map((entry) => [
-				entry.word,
-				entry.count,
-				totalPrompts === null || totalPrompts <= 0 ? "" : (entry.count / totalPrompts * 100).toFixed(1)
-			]);
-			downloadCsv("dsh-key-usage-提问词表-" + (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) + ".csv", header, rows);
+		/** 涨跌角标：与概览的环比同一套语义色（涨红跌绿），持平不染色。 */
+		function TrendPercent(props) {
+			if (props.previous === null || props.previous <= 0 || props.current === null) return null;
+			const delta = (props.current - props.previous) / props.previous * 100;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				className: delta > 0 ? words_module_css_default.rise : delta < 0 ? words_module_css_default.fall : void 0,
+				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
+			});
+		}
+		/**
+		* 「上期 X ±Y%」：没有上期字段就整行不显示（不编数字）；
+		* 有上期但本期为 null 时只讲上期，只有两边都有且上期非零才带涨跌百分比。
+		*/
+		function PrevLine(props) {
+			if (props.previous === null) return null;
+			const previousText = t("overview.prev", { value: props.format(props.previous) });
+			if (props.current === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrendPercent, {
+				previous: props.previous,
+				current: props.current
+			})] });
+		}
+		/** 词频占比：一位小数；没有参与统计的提问时给 0（此时词云必为空，不会真的显示）。 */
+		function sharePercentOf(count, totalPrompts) {
+			if (totalPrompts === null || totalPrompts <= 0) return "0.0";
+			return (count / totalPrompts * 100).toFixed(1);
 		}
 		//#endregion
 		//#region src/client/KeyUsageSection.tsx
@@ -8899,10 +9386,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [range, setRange] = (0, react.useState)("month");
 			const [customFrom, setCustomFrom] = (0, react.useState)(() => shiftedIsoDate(-29));
 			const [customTo, setCustomTo] = (0, react.useState)(() => isoDate(/* @__PURE__ */ new Date()));
-			const [channelFilter, setChannelFilter] = (0, react.useState)("ALL");
-			/** 项目 / 模型筛选：'ALL' = 不过滤；项目值取 `projects` 段的 workspace（'' = 未归入工作区）。 */
-			const [projectFilter, setProjectFilter] = (0, react.useState)("ALL");
-			const [modelFilter, setModelFilter] = (0, react.useState)("ALL");
+			/** 三个筛选都存多选值：逗号分隔字符串，空串 = 全部（服务端 /usage 固定取全量，过滤在客户端做）。 */
+			const [channelFilter, setChannelFilter] = (0, react.useState)("");
+			/** 项目值取 `projects` 段的 workspace（'' = 未归入工作区）；模型值取模型名。 */
+			const [projectFilter, setProjectFilter] = (0, react.useState)("");
+			const [modelFilter, setModelFilter] = (0, react.useState)("");
 			const [channels, setChannels] = (0, react.useState)([]);
 			const [quotas, setQuotas] = (0, react.useState)([]);
 			const [summary, setSummary] = (0, react.useState)(null);
@@ -8926,7 +9414,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [showSettings, setShowSettings] = (0, react.useState)(false);
 			/** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
 			const [quotaDialog, setQuotaDialog] = (0, react.useState)(null);
-			const [settingsTab, setSettingsTab] = (0, react.useState)("display");
+			const [settingsTab, setSettingsTab] = (0, react.useState)("general");
 			/** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
 			const t = useT();
 			const lastSnapshotAt = (0, react.useRef)(0);
@@ -8966,9 +9454,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const wantWords = wants("words");
 			const wantTools = wants("tools");
 			activeTabRef.current = activeTab;
-			/** 用户是否还在看默认范围（近 30 天 / 全部通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
+			/** 用户是否还在看默认范围（近 30 天 / 未筛通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
 			const usageIsDefaultRef = (0, react.useRef)(true);
-			usageIsDefaultRef.current = range === "month" && channelFilter === "ALL";
+			usageIsDefaultRef.current = range === "month" && selectionOf(channelFilter).length === 0;
 			/** 把一份快照落到各 Tab 的状态上（快照是 6 个 Tab 的唯一数据来源）。 */
 			const applySnapshot = (0, react.useCallback)((snapshot) => {
 				const sections = snapshot.sections;
@@ -9178,7 +9666,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			(0, react.useEffect)(() => {
 				if (!wantDetail && !wantDistribution && !wantOverview) return;
 				let cancelled = false;
-				loadUsage(bounds.from, bounds.to, channelFilter).then((result) => {
+				loadUsage(bounds.from, bounds.to, "ALL").then((result) => {
 					if (cancelled || result === null) return;
 					setUsage(result);
 					if (result.availableFrom !== null && result.availableTo !== null) setAvailable({
@@ -9195,12 +9683,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				wantOverview,
 				bounds.from,
 				bounds.to,
-				channelFilter,
 				pricingRevision
 			]);
-			/** 项目下拉：值取 workspace（'' = 未归入工作区），文案取宿主工作区标题。 */
+			/** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
+			const scopedUsage = (0, react.useMemo)(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter]);
+			/** 通道下拉：值取 provider，文案取显示名。 */
+			const channelOptions = (0, react.useMemo)(() => channels.map((channel) => ({
+				value: channel.provider,
+				label: channel.displayName ?? channel.provider
+			})), [channels]);
+			/** 项目下拉：值取 workspace（未归入工作区的那行用 sentinel），文案取宿主工作区标题。 */
 			const projectOptions = (0, react.useMemo)(() => (projects?.rows ?? []).map((row) => ({
-				value: row.workspace,
+				value: row.workspace === "" ? ORPHAN_PROJECT_VALUE : row.workspace,
 				label: row.workspace === "" ? t("p.orphan") : row.workspaceTitle ?? row.workspace
 			})), [projects, t]);
 			/** 模型下拉：同一个模型跨通道只留一项（筛选按模型名）。 */
@@ -9288,7 +9782,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						logWarn("snapshot", t("action.refresh") + " · " + t("api.requestFailed"), REFRESH_PATH);
 						await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true);
 					}
-					const usageResult = await loadUsage(bounds.from, bounds.to, channelFilter);
+					const usageResult = await loadUsage(bounds.from, bounds.to, "ALL");
 					if (usageResult !== null) setUsage(usageResult);
 					setLoading(false);
 				})();
@@ -9300,7 +9794,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				models,
 				bounds.from,
 				bounds.to,
-				channelFilter,
 				t
 			]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -9348,7 +9841,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												type: "button",
 												className: shared_module_css_default.iconBtn,
 												onClick: () => {
-													setSettingsTab("display");
+													setSettingsTab("general");
 													setShowSettings(true);
 												},
 												"aria-label": t("action.settings"),
@@ -9420,78 +9913,43 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												onClick: () => setRange(key),
 												children: t(labelKey)
 											}, key))
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-											className: shared_module_css_default.rangeCustom,
-											children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-													type: "date",
-													className: shared_module_css_default.rangeDate,
-													value: customFrom,
-													"aria-label": t("date.startHint"),
-													onChange: (event) => {
-														setCustomFrom(event.target.value);
-														setRange("custom");
-													}
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: shared_module_css_default.rangeTilde,
-													children: "~"
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-													type: "date",
-													className: shared_module_css_default.rangeDate,
-													value: customTo,
-													"aria-label": t("date.endHint"),
-													onChange: (event) => {
-														setCustomTo(event.target.value);
-														setRange("custom");
-													}
-												})
-											]
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DateRangePicker, {
+											from: customFrom,
+											to: customTo,
+											onChange: (from, to) => {
+												setCustomFrom(from);
+												setCustomTo(to);
+												setRange("custom");
+											}
 										})]
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: shared_module_css_default.toolbarDivider,
 										"aria-hidden": "true"
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-										className: shared_module_css_default.refreshSelect,
-										value: channelFilter,
-										onChange: (event) => setChannelFilter(event.target.value),
-										"aria-label": t("filter.channel"),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "ALL",
-											children: t("s.allChannels")
-										}), channels.map((channel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: channel.provider,
-											children: channel.displayName ?? channel.provider
-										}, channel.provider))]
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MultiSelect, {
+										options: channelOptions,
+										selected: selectionOf(channelFilter),
+										onChange: (next) => setChannelFilter(next.join(",")),
+										allLabel: t("s.allChannels"),
+										ariaLabel: t("filter.channel"),
+										searchLabel: t("filter.searchChannel")
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-										className: shared_module_css_default.refreshSelect,
-										value: projectFilter,
-										onChange: (event) => setProjectFilter(event.target.value),
-										"aria-label": t("filter.project"),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "ALL",
-											children: t("filter.allProjects")
-										}), projectOptions.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: option.value,
-											children: option.label
-										}, option.value === "" ? "__orphan" : option.value))]
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MultiSelect, {
+										options: projectOptions,
+										selected: selectionOf(projectFilter),
+										onChange: (next) => setProjectFilter(next.join(",")),
+										allLabel: t("filter.allProjects"),
+										ariaLabel: t("filter.project"),
+										searchLabel: t("filter.searchProject")
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-										className: shared_module_css_default.refreshSelect,
-										value: modelFilter,
-										onChange: (event) => setModelFilter(event.target.value),
-										"aria-label": t("filter.model"),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "ALL",
-											children: t("filter.allModels")
-										}), modelOptions.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: option.value,
-											children: option.label
-										}, option.value))]
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MultiSelect, {
+										options: modelOptions,
+										selected: selectionOf(modelFilter),
+										onChange: (next) => setModelFilter(next.join(",")),
+										allLabel: t("filter.allModels"),
+										ariaLabel: t("filter.model"),
+										searchLabel: t("filter.searchModel")
 									})
 								]
 							}),
@@ -9510,9 +9968,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 										size: "sm",
 										className: shared_module_css_default.headBtn,
-										disabled: usage === null,
+										disabled: scopedUsage === null,
 										onClick: () => {
-											if (usage !== null) exportUsageCsv(usage);
+											if (scopedUsage !== null) exportUsageCsv(scopedUsage);
 										},
 										ariaLabel: t("action.exportUsage"),
 										title: t("action.exportUsage"),
@@ -9572,7 +10030,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									heatmap,
 									hourly,
 									range,
-									usage,
+									usage: scopedUsage,
 									sessions,
 									projects,
 									models,
@@ -9599,7 +10057,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.pageSectionTitle,
 									children: t("tab.detail")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DetailTab, {
-									usage,
+									usage: scopedUsage,
 									channels,
 									range,
 									onRange: setRange,
@@ -9625,7 +10083,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									projects,
 									models,
 									channels,
-									usage,
+									usage: scopedUsage,
 									tooltip,
 									projectFilter,
 									modelFilter
@@ -9642,7 +10100,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									channels,
 									tooltip,
 									onOpenProject: (workspace) => {
-										setProjectFilter(workspace);
+										setProjectFilter(workspace === "" ? "__orphan__" : workspace);
 										goSection("distribution");
 									},
 									projectFilter,

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { channelOf, costCellOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTotalsTextOf } from '../core/currency.ts'
 import { fmtCount, fmtDuration, fmtRelative, fmtTokens } from '../core/format.ts'
+import { selectionMatches } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
 import { COST_SOURCE_LABELS, costSourceHintOf } from '../core/pricing.ts'
 import { TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
@@ -15,6 +16,7 @@ import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
 import { EmptyState } from '../components/ui/EmptyState.tsx'
 import { Select } from '../components/ui/Select.tsx'
 import type { Channel, CostSource, SessionRow, SessionsResponse } from '../core/types.ts'
+import { projectFilterValuesOf } from './DetailTab.tsx'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import sessionsStyles from '../styles/sessions.module.css'
@@ -50,9 +52,9 @@ export function SessionsTab(props: {
   tooltip: TooltipApi
   /** 点工作目录：切到「项目用量」并只看这个项目（筛选状态提升在 KeyUsageSection） */
   onOpenProject: (workspace: string) => void
-  /** 全局项目筛选（`'ALL'` = 不过滤）：按会话行的 workspace 匹配；`''` 表示未归入工作区。 */
+  /** 全局项目筛选（逗号分隔多选，空串 = 全部）：按会话行的 workspace 匹配；空值项对应「未归入工作区」。 */
   projectFilter?: string
-  /** 全局模型筛选（`'ALL'` = 不过滤）：会话行的 `models` 桶里出现该模型才保留。 */
+  /** 全局模型筛选（逗号分隔多选，空串 = 全部）：会话行的 `models` 桶里命中任一选中模型才保留。 */
   modelFilter?: string
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
@@ -64,16 +66,15 @@ export function SessionsTab(props: {
   const [query, setQuery] = useState('')
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [detailId, setDetailId] = useState<string | null>(null)
-  const projectFilter = props.projectFilter ?? 'ALL'
-  const modelFilter = props.modelFilter ?? 'ALL'
+  const projectFilter = props.projectFilter ?? ''
+  const modelFilter = props.modelFilter ?? ''
   /** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
   const allRows = props.data?.rows ?? []
-  /** 两个筛选都作用在行上：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
-  const rows = useMemo(() => allRows.filter((row) => {
-    if (projectFilter !== 'ALL' && (row.workspace ?? '') !== projectFilter) return false
-    if (modelFilter !== 'ALL' && !row.models.some((model) => model.model === modelFilter)) return false
-    return true
-  }), [allRows, projectFilter, modelFilter])
+  /** 项目 / 模型筛选都作用在行上（逗号分隔多选，空串 = 全部）：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
+  const rows = useMemo(() => allRows.filter((row) => (
+    selectionMatches(projectFilterValuesOf(row.workspace, undefined), projectFilter)
+    && selectionMatches(row.models.map((model) => model.model), modelFilter)
+  )), [allRows, projectFilter, modelFilter])
 
   // 换了范围 / 搜索 / 全局筛选就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
   useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query, projectFilter, modelFilter])

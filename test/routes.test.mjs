@@ -90,11 +90,16 @@ const sessionRecords = [{
   workspace: 'D:\\EasyJob',
   summary: summarizeSession(foldSessionEvents(sessionEvents)),
   // 提问词频统计字段（快照 prompts 段直接聚合它们；数据源外部注入时也允许缺这些字段）
-  promptCount: 2,
-  promptChars: 24,
-  words: new Map([['分析', 3], ['snapshot.json', 2], ['ledger', 1]]),
+  promptCount: 5,
+  promptChars: 64,
+  words: new Map([['分析', 4], ['snapshot.json', 2], ['需求', 2], ['ledger', 1]]),
   promptFirstTime: morning,
   promptLastTime: outsideLedger,
+  // 按天桶：今天 2 条 + 35 天前 3 条 —— 词云段按窗口切分（当前近 30 天 / 上期紧邻前 30 天）
+  promptDayStats: new Map([
+    [localDayKey(0), { count: 2, chars: 24, words: new Map([['分析', 3], ['snapshot.json', 2], ['ledger', 1]]) }],
+    [localDayKey(-35), { count: 3, chars: 40, words: new Map([['分析', 1], ['需求', 2]]) }],
+  ]),
   // 工具 / 技能 / MCP 统计字段（快照 tools 段直接聚合它们；数据源外部注入时也允许缺这些字段）
   toolCalls: 4,
   toolNameCounts: new Map([['pwsh', 2], ['skill', 1], ['mcp_call', 1]]),
@@ -280,9 +285,13 @@ assert.deepEqual(firstSnapshot.body.sections.prompts, {
   words: [{ word: '分析', count: 3 }, { word: 'snapshot.json', count: 2 }, { word: 'ledger', count: 1 }],
   totalPrompts: 2,
   totalChars: 24,
-  from: ledgerNewerDay,
-  to: sessionOnlyDay,
-}, 'prompts 段 = 跨会话词频合并结果（不含提问原文）')
+  from: localDayKey(-29),
+  to: localDayKey(0),
+  prevTotalPrompts: 3,
+  prevTotalChars: 40,
+  prevWordCount: 2,
+  prevTopWordCount: 2,
+}, 'prompts 段 = 近 30 天词频 + 上期同长度窗口（不含提问原文）')
 assert.equal(JSON.stringify(firstSnapshot.body.sections.prompts).includes('夹具会话'), false, '词云不下发提问原文')
 const toolsSection = firstSnapshot.body.sections.tools
 const { days: toolTrendDays, ...toolsWithoutDays } = toolsSection

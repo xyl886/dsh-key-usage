@@ -1,6 +1,5 @@
-/* 提问词云：4 张 KPI 小卡 + 词云 + 词表（可滚动、可导出）。
-   字号：正文 13 / 区块标题 15 / KPI 数字 18 —— 跟随宿主机字号缩放，但设下限，
-   保证默认设置下不小于原型，且没有小于 12px 的字。 */
+/* 提问：4 张 KPI 小卡 + 词云（悬停给次数与占比）。
+   字号沿用页面刻度 --ku-body / --ku-title / --ku-kpi（没有小于 12px 的字）。 */
 
 .page {
   --words-body: var(--ku-body, 14px);
@@ -10,7 +9,7 @@
   font-size: var(--words-body);
 }
 
-/* ===== KPI 卡片（原型 .kpis / .kpi） ===== */
+/* ===== KPI 卡片（原型 .kpis / .kpi）：上期与涨跌跟在数值下面 ===== */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .kpi {
   min-width: 0; padding: 8px 10px; box-sizing: border-box;
@@ -24,9 +23,11 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .kpiDetail { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
+/* 环比涨跌：与概览的角标同一套语义色（涨红跌绿），持平不染色 */
+.rise { margin-left: 4px; color: var(--dsw-alias-state-error-primary, #e05a5a); }
+.fall { margin-left: 4px; color: var(--dsw-alias-state-success-primary, #3fb96f); }
 
-/* ===== 词云 / 词表两块面板（原型 .grid2 / .panel / .ph） ===== */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; align-items: stretch; }
+/* ===== 词云面板（原型 .panel / .ph） ===== */
 .panel {
   display: flex; flex-direction: column; min-width: 0; padding: 10px 11px; box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
@@ -36,17 +37,3 @@
 .panelTitle { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: var(--words-title); font-weight: 600; }
 .panelAction { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
 .panelNote { color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-/* ===== 词表（原型 table.mx + .scroll）：最多 30 行，超出在卡片内滚动 ===== */
-.scroll { flex: 1; min-height: 0; max-height: 300px; overflow: auto; }
-.table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.table th, .table td {
-  padding: 4px 7px; text-align: right; white-space: nowrap;
-  border-bottom: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .14));
-}
-.table th { color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; }
-.table td { color: var(--dsw-alias-label-secondary, #9a9aa6); }
-.table th:first-child, .table td:first-child { text-align: left; color: var(--dsw-alias-label-primary, #e8e8ec); }
-.table tbody tr:last-child td { border-bottom: 0; }
-
-.empty { padding: 24px 0; text-align: center; color: var(--dsw-alias-label-tertiary, #67676f); }

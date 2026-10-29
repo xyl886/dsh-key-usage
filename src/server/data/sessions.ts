@@ -15,6 +15,7 @@ import {
   PROMPT_TITLE_CHARS,
   type SessionEvent,
   type SessionFold,
+  type PromptDayStat,
   type SessionSummary,
   type TokenBuckets,
   type ToolStatsRecord,
@@ -55,6 +56,8 @@ export interface SessionUsageRecord extends ToolStatsRecord {
   /** 参与统计的提问最早 / 最晚时间（毫秒），没有统计到提问时为 null。 */
   promptFirstTime: number | null
   promptLastTime: number | null
+  /** 本地日期（`YYYY-MM-DD`）→ 当天提问统计：快照 `prompts` 段按窗口切分环比用。 */
+  promptDayStats: Map<string, PromptDayStat>
   summary: SessionSummary
 }
 
@@ -168,6 +171,7 @@ function recordOf(id: string, metadata: SessionMetadata, fold: SessionFold): Ses
     words: fold.words,
     promptFirstTime: fold.promptFirstTime,
     promptLastTime: fold.promptLastTime,
+    promptDayStats: fold.promptDayStats,
     // 工具 / 技能 / MCP 统计跟着折叠缓存走，快照 `tools` 段直接聚合它们
     toolCalls: fold.toolCalls,
     toolNameCounts: fold.toolNameCounts,

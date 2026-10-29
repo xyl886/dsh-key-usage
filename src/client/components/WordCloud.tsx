@@ -90,6 +90,8 @@ function layoutWords(words: Array<{ word: string; count: number }>): PlacedWord[
 export function WordCloud(props: {
   words: Array<{ word: string; count: number }>
   emptyText: string
+  /** 单个词的悬停文案（词 · 次数 · 占比）：给了就用原生 `<title>` 显示，不自造弹层。 */
+  tipOf?: (word: string, count: number) => string
 }): ReactNode {
   // 布局是纯函数但开销不小（螺旋 + 碰撞检测）：按 words 记忆，悬停/切 Tab 不重算
   const placed = useMemo(() => layoutWords(props.words), [props.words])
@@ -111,7 +113,7 @@ export function WordCloud(props: {
             className={[styles.word, tone, weight].join(' ').trim()}
           >
             {item.word}
-            <title>{item.word + ' · ' + String(item.count)}</title>
+            <title>{props.tipOf === undefined ? item.word + ' · ' + String(item.count) : props.tipOf(item.word, item.count)}</title>
           </text>
         )
       })}

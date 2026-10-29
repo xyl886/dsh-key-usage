@@ -259,23 +259,3 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
 }
 .rangeTab:focus-visible, .rangeTabActive:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
-.rangeCustom { display: inline-flex; align-items: center; gap: 4px; }
-.rangeCustomLabel { color: var(--dsw-alias-label-secondary, #9a9aa6); white-space: nowrap; }
-/* 日期框：原生控件的字号与日历图标都要压住，与同排控件同高 */
-.rangeDate {
-  box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font: inherit;
-  font-size: var(--ku-body);
-  height: var(--ku-control);
-  padding: 0 6px;
-  cursor: pointer;
-}
-.rangeDate::-webkit-calendar-picker-indicator { width: 14px; height: 14px; opacity: .55; cursor: pointer; }
-.rangeDate::-webkit-datetime-edit { padding: 0; }
-.rangeDate:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
-.rangeDate:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
-.rangeTilde { color: var(--dsw-alias-label-tertiary, #8b8b99); }

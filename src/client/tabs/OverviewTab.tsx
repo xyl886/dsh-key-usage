@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../core/channels.ts'
 import { comparableMoneyOf, displaySymbolOf, moneyTextOf, moneyTotalsTextOf, rowMoneyViewOf, useCurrencyDisplay, type CostRowLike } from '../core/currency.ts'
 import { fmtCalls, fmtCount, fmtShortDate, fmtTokens, isoDate, shiftedIsoDate } from '../core/format.ts'
+import { selectionMatches, selectionOf } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
 import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import type {
@@ -26,7 +27,7 @@ import type {
   WeekdayHours,
 } from '../core/types.ts'
 import { LEVEL_COLORS, YearHeatmap, levelColorOf, levelOfValue, levelThresholds } from '../components/Heatmap.tsx'
-import { filterUsageByModel, type RangeKey } from './DetailTab.tsx'
+import { filterUsageByModel, projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
 import shared from '../styles/shared.module.css'
 import styles from '../styles/overview.module.css'
 
@@ -117,9 +118,9 @@ export interface OverviewTabProps {
   previousCost?: number | null
   /** 上期会话数：同上。 */
   previousSessions?: number | null
-  /** 全局项目筛选（`'ALL'` = 不过滤）：只有会话与项目聚合有项目维度，台账类面板不跟。 */
+  /** 全局项目筛选（逗号分隔多选，空串 = 全部）：只有会话与项目聚合有项目维度，台账类面板不跟。 */
   projectFilter?: string
-  /** 全局模型筛选（`'ALL'` = 不过滤）：只作用于 `/usage` 的逐日模型桶与模型排行，热力图 / 按时段保持全量。 */
+  /** 全局模型筛选（逗号分隔多选，空串 = 全部）：只作用于 `/usage` 的模型桶与模型排行，热力图 / 按时段保持全量。 */
   modelFilter?: string
 }
 
@@ -135,8 +136,8 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
 
   const range: RangeKey = props.range ?? 'month'
   const summary = props.summary
-  const modelFilter = props.modelFilter ?? 'ALL'
-  const projectFilter = props.projectFilter ?? 'ALL'
+  const modelFilter = props.modelFilter ?? ''
+  const projectFilter = props.projectFilter ?? ''
   /** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
   const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter)
 
@@ -184,7 +185,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const rawTrendDays = trendDaysOf(props.usage, props.heatmap)
   const trendDays = isAllRange
     ? rawTrendDays
-    : (modelFilter === 'ALL' ? rawTrendDays : trendDaysOf(scopedUsage, []))
+    : (selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, []))
   /** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
   const hasDailyCalls = trendDays.some((day) => day.calls !== null)
   const rangeWindow = windowOfRange(range)
@@ -767,35 +768,34 @@ function projectValueTextOf(metric: ProjectMetric, row: ProjectRow): string {
   return fmtCalls(row.sessionCount)
 }
 
-/** 项目榜按全局项目筛选收窄（`''` 命中的是「未归入工作区」那一行）；`'ALL'` 原样返回。 */
+/** 项目榜按全局项目筛选收窄（项目行按 workspace / 覆盖目录命中，空 workspace 命中「未归入工作区」）；空选择原样返回。 */
 function projectsOfScope(projects: ProjectsResponse | null | undefined, projectFilter: string): ProjectsResponse | null {
-  if (projects == null || projectFilter === 'ALL') return projects ?? null
+  if (projects == null || selectionOf(projectFilter).length === 0) return projects ?? null
   return {
     ...projects,
-    rows: projects.rows.filter((row) => row.workspace === projectFilter || (row.paths ?? []).includes(projectFilter)),
+    rows: projects.rows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, row.paths), projectFilter)),
   }
 }
 
-/** 模型榜按全局模型筛选收窄；`'ALL'` 原样返回。 */
+/** 模型榜按全局模型筛选收窄；空选择原样返回。 */
 function modelsOfScope(models: ModelsResponse | null | undefined, modelFilter: string): ModelsResponse | null {
-  if (models == null || modelFilter === 'ALL') return models ?? null
-  return { ...models, rows: models.rows.filter((row) => row.model === modelFilter) }
+  if (models == null || selectionOf(modelFilter).length === 0) return models ?? null
+  return { ...models, rows: models.rows.filter((row) => selectionMatches([row.model], modelFilter)) }
 }
 
-/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个都是 `'ALL'` 时原样返回。 */
+/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个筛选都为空时原样返回。 */
 function sessionsOfScope(
   sessions: SessionsResponse | null | undefined,
   projectFilter: string,
   modelFilter: string,
 ): SessionsResponse | null {
-  if (sessions == null || (projectFilter === 'ALL' && modelFilter === 'ALL')) return sessions ?? null
+  if (sessions == null || (selectionOf(projectFilter).length === 0 && selectionOf(modelFilter).length === 0)) return sessions ?? null
   return {
     ...sessions,
-    rows: sessions.rows.filter((row) => {
-      if (projectFilter !== 'ALL' && (row.workspace ?? '') !== projectFilter) return false
-      if (modelFilter !== 'ALL' && !row.models.some((model) => model.model === modelFilter)) return false
-      return true
-    }),
+    rows: sessions.rows.filter((row) => (
+      selectionMatches(projectFilterValuesOf(row.workspace, undefined), projectFilter)
+      && selectionMatches(row.models.map((model) => model.model), modelFilter)
+    )),
   }
 }
 

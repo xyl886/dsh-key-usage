@@ -91,7 +91,7 @@ export interface SnapshotSections {
   models: unknown
   projects: unknown
   sessions: unknown
-  /** 用户提问词云（形状 = `sections.prompts` 契约：`{ words, totalPrompts, totalChars, from, to }`）。 */
+  /** 用户提问统计与词云（形状 = `sections.prompts` 契约：`{ words, totalPrompts, totalChars, from, to, prevTotalPrompts, prevTotalChars, prevWordCount, prevTopWordCount }`）。 */
   prompts: unknown
   /** 工具 / 技能 / MCP 调用统计（形状 = `ToolsStat`：`{ calls, sessions, tools, days, skills, mcp }`）。 */
   tools: unknown

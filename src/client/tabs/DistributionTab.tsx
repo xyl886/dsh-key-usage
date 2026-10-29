@@ -7,9 +7,11 @@ import { Button } from '../components/ui/Button.tsx'
 import { channelOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, type CostRowLike } from '../core/currency.ts'
 import { fmtTokens } from '../core/format.ts'
+import { selectionMatches, selectionOf } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
+import { projectFilterValuesOf } from './DetailTab.tsx'
 import type {
   Channel, CostSource, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse,
   SessionCoverage, UsageResponse,
@@ -96,36 +98,40 @@ export function DistributionTab(props: {
   /** 跨 Tab 联动：从「会话用量」点工作目录进来时只看这一个项目（null = 不过滤）。 */
   focusWorkspace?: string | null
   onClearFocus?: () => void
-  /** 全局项目筛选（`'ALL'` = 不过滤）：优先于内部联动，项目块与明细表都收窄到这一个项目。 */
+  /** 全局项目筛选（逗号分隔多选，空串 = 全部）：优先于内部联动，项目块与明细表都收窄到所选项目。 */
   projectFilter?: string
-  /** 全局模型筛选（`'ALL'` = 不过滤）：模型块、缓存节省、Token 构成、Mekko 的逐项目金额都按它重算。 */
+  /** 全局模型筛选（逗号分隔多选，空串 = 全部）：模型块、缓存节省、Token 构成、Mekko 的逐项目金额都按它重算。 */
   modelFilter?: string
 }): ReactNode {
   const t = useT()
   const [tableOpen, setTableOpen] = useState(false)
-  const externalProject = props.projectFilter ?? 'ALL'
-  const modelFilter = props.modelFilter ?? 'ALL'
-  // 外部的全局项目筛选优先；没有时才有内部联动（从会话页点工作目录进来）
-  const focusWorkspace = externalProject !== 'ALL' ? externalProject : (props.focusWorkspace ?? null)
+  const externalProject = props.projectFilter ?? ''
+  const modelFilter = props.modelFilter ?? ''
+  const noProjectSelection = selectionOf(externalProject).length === 0
+  const noModelSelection = selectionOf(modelFilter).length === 0
+  // 外部的全局项目筛选优先（多选时内部联动让位）；没有时才有内部联动（从会话页点工作目录进来）
+  const focusWorkspace = noProjectSelection ? (props.focusWorkspace ?? null) : null
+  /** 内部联动 / 全局筛选各自的项目命中：项目行按 workspace 与覆盖目录匹配 */
+  const projectMatches = (row: ProjectRow): boolean => (noProjectSelection
+    ? (focusWorkspace === null || selectionMatches(projectFilterValuesOf(row.workspace, row.paths), focusWorkspace))
+    : selectionMatches(projectFilterValuesOf(row.workspace, row.paths), externalProject))
 
   const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows
   const allModelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
   /** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
-  const modelRows = modelFilter === 'ALL' ? allModelRows : allModelRows.filter((row) => row.model === modelFilter)
-  const scopedProjects = focusWorkspace === null ? projectRows : projectRows.filter((row) => (
-    row.workspace === focusWorkspace || (row.paths ?? []).includes(focusWorkspace)
-  ))
-  /** Mekko 的项目块：有模型筛选时每个项目只留该模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
-  const mekkoProjects = modelFilter === 'ALL'
+  const modelRows = noModelSelection ? allModelRows : allModelRows.filter((row) => selectionMatches([row.model], modelFilter))
+  const scopedProjects = projectRows.filter(projectMatches)
+  /** Mekko 的项目块：有模型筛选时每个项目只留选中模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
+  const mekkoProjects = noModelSelection
     ? scopedProjects
     : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row): row is ProjectRow => row !== null)
   // 缓存节省的合计只能从 `/usage` 合计取；按模型筛后那份合计不可拆，宁可不给（显示 —）也不编
-  const cacheUsage = modelFilter === 'ALL' ? (props.usage ?? null) : null
+  const cacheUsage = noModelSelection ? (props.usage ?? null) : null
   const coverage = props.projects?.coverage ?? props.models?.coverage
 
   return (
     <div className={styles.page}>
-      {externalProject === 'ALL' && focusWorkspace !== null && (
+      {noProjectSelection && focusWorkspace !== null && (
         <div className={listStyles.focusChip}>
           {t('p.focusPrefix')}{focusWorkspace}
           <span className={styles.focusNote}>{t('dist.focusScope')}</span>
@@ -192,7 +198,7 @@ function weakestSourceOf(sources: CostSource[]): CostSource | null {
  * 该项目没有这个模型的用量时返回 null（整块不进 Mekko）。
  */
 function projectOfModel(row: ProjectRow, modelFilter: string): ProjectRow | null {
-  const models = (row.models ?? []).filter((entry) => entry.model === modelFilter)
+  const models = (row.models ?? []).filter((entry) => selectionMatches([entry.model], modelFilter))
   if (models.length === 0) return null
   const costsByCurrency: CostsByCurrency = {}
   const sources: CostSource[] = []

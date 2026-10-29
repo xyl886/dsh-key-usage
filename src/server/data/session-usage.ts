@@ -57,6 +57,13 @@ interface UsageSample {
   buckets: TokenBuckets
 }
 
+/** 单日提问统计：词云环比要按「同长度前一窗口」切分，只有按天分桶才不跨窗口重复计。 */
+export interface PromptDayStat {
+  count: number
+  chars: number
+  words: Map<string, number>
+}
+
 export interface SessionFold {
   /** 样本键（turn:step，缺失时回落 seq）→ 最后一次上报的用量。 */
   samples: Map<string, UsageSample>
@@ -74,6 +81,8 @@ export interface SessionFold {
   promptFirstTime: number | null
   /** 参与统计的提问最晚时间（毫秒）；没有统计到提问时为 null。 */
   promptLastTime: number | null
+  /** 本地日期（`YYYY-MM-DD`）→ 当天提问条数 / 字数 / 词频；没有统计到提问时为空表。 */
+  promptDayStats: Map<string, PromptDayStat>
   /** 工具调用次数（`tool/call` 事件数；一次调用一条事件）。 */
   toolCalls: number
   /** 工具名 → 调用次数；该会话没有工具调用时为 null。 */
@@ -276,10 +285,23 @@ function addWordCount(words: Map<string, number>, word: string, count: number, c
  * 把一段提问正文拆成英文标识符与中文词并逐词计数（中英同一权重）。
  * 中文优先走 jieba 分词；分词器没就绪时回退到滑动 2-gram（宁可碎片也不丢词）。
  */
-function addPromptWords(words: Map<string, number>, text: string): void {
+function addPromptWords(
+  words: Map<string, number>,
+  text: string,
+  dayBucket?: { words: Map<string, number>; budget: { remaining: number } },
+): void {
+  // 同一个词一次出现只切一次；当天桶与总表同步累加，避免重复分词
+  const add = (word: string): void => {
+    addWordCount(words, word, 1, MAX_SESSION_WORDS)
+    if (dayBucket === undefined) return
+    // 当天桶的总词条数另有预算：只兜病态会话的内存，到顶后只累加已有词
+    if (dayBucket.budget.remaining <= 0) return
+    if (!dayBucket.words.has(word)) dayBucket.budget.remaining -= 1
+    addWordCount(dayBucket.words, word, 1, MAX_SESSION_WORDS)
+  }
   for (const word of text.toLowerCase().match(LATIN_WORD_PATTERN) ?? []) {
     if (ENGLISH_STOP_WORDS.has(word)) continue
-    addWordCount(words, word, 1, MAX_SESSION_WORDS)
+    add(word)
   }
   const cut = segmenter?.cut ?? null
   if (cut !== null) {
@@ -289,7 +311,7 @@ function addPromptWords(words: Map<string, number>, text: string): void {
       // 词首 / 词尾是虚词（这个、什么、我们的…）就丢掉，与 2-gram 的边界判定同一套表
       if (CHINESE_FUNCTION_CHAR_FLAGS[word.charCodeAt(0)] === 1 || CHINESE_FUNCTION_CHAR_FLAGS[word.charCodeAt(word.length - 1)] === 1) continue
       if (CHINESE_INJECTED_GRAMS.has(word)) continue
-      addWordCount(words, word, 1, MAX_SESSION_WORDS)
+      add(word)
     }
     return
   }
@@ -299,7 +321,7 @@ function addPromptWords(words: Map<string, number>, text: string): void {
       if (CHINESE_FUNCTION_CHAR_FLAGS[run.charCodeAt(index)] === 1 || CHINESE_FUNCTION_CHAR_FLAGS[run.charCodeAt(index + 1)] === 1) continue
       const gram = run.slice(index, index + 2)
       if (CHINESE_INJECTED_GRAMS.has(gram)) continue
-      addWordCount(words, gram, 1, MAX_SESSION_WORDS)
+      add(gram)
     }
   }
 }
@@ -459,6 +481,19 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
   let promptChars = 0
   let promptFirstTime: number | null = null
   let promptLastTime: number | null = null
+  const promptDayStats = new Map<string, PromptDayStat>()
+  /** 当天桶的词条总预算：与单会话词表同一上限，只兜病态会话的内存（到顶后只累加已有词）。 */
+  const promptDayWordBudget = { remaining: MAX_SESSION_WORDS }
+  /** 取（或建）某天的桶：词云环比按天切窗口，跨窗口的会话不会重复计。 */
+  const promptDayOf = (time: number): PromptDayStat => {
+    const day = dayKeyOf(time)
+    let stat = promptDayStats.get(day)
+    if (stat === undefined) {
+      stat = { count: 0, chars: 0, words: new Map() }
+      promptDayStats.set(day, stat)
+    }
+    return stat
+  }
   let toolCalls = 0
   let toolNameCounts: Map<string, number> | null = null
   let skillNameCounts: Map<string, number> | null = null
@@ -518,10 +553,13 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
           const counted = cleaned.length > PROMPT_STATS_CHARS ? cleaned.slice(0, PROMPT_STATS_CHARS) : cleaned
           promptCount += 1
           promptChars += counted.length
-          addPromptWords(words, counted)
-          if (time !== null) {
+          const dayStat = time === null ? null : promptDayOf(time)
+          addPromptWords(words, counted, dayStat === null ? undefined : { words: dayStat.words, budget: promptDayWordBudget })
+          if (time !== null && dayStat !== null) {
             if (promptFirstTime === null || time < promptFirstTime) promptFirstTime = time
             if (promptLastTime === null || time > promptLastTime) promptLastTime = time
+            dayStat.count += 1
+            dayStat.chars += counted.length
           }
         }
       }
@@ -553,7 +591,7 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
     }
   }
   return {
-    samples, firstTime, lastTime, firstPrompt, promptCount, promptChars, words, promptFirstTime, promptLastTime,
+    samples, firstTime, lastTime, firstPrompt, promptCount, promptChars, words, promptFirstTime, promptLastTime, promptDayStats,
     toolCalls, toolNameCounts, skillNameCounts, mcpServerCounts, toolDayCalls,
   }
 }
@@ -689,6 +727,8 @@ export interface PromptStatsRecord {
   words?: Map<string, number>
   promptFirstTime?: number | null
   promptLastTime?: number | null
+  /** 按天切分的提问统计（环比用）；旧数据源 / 老缓存没有这个字段时按窗口无数据处理。 */
+  promptDayStats?: Map<string, PromptDayStat> | null
 }
 
 /** 下发给客户端的提问词云（快照 `sections.prompts`）：只有词与次数，**不含提问原文**。 */
@@ -786,6 +826,48 @@ export function mergePromptStats(
     from: firstTime === null ? null : dayKeyOf(firstTime),
     to: lastTime === null ? null : dayKeyOf(lastTime),
   }
+}
+
+/** 一个日期窗口内的提问统计（环比用）。 */
+export interface PromptWindowStat {
+  words: Array<{ word: string; count: number }>
+  totalPrompts: number
+  totalChars: number
+  /** 窗口内有提问数据的天数：0 = 该窗口没有任何提问（环比按「没数据」处理，不能当 0）。 */
+  days: number
+}
+
+/**
+ * 某个日期区间（含首尾，本地 `YYYY-MM-DD`）内的提问统计：只读按天桶，
+ * 同一会话跨两个窗口时按天各计各的，不重复、不近似。
+ */
+export function mergePromptStatsInWindow(
+  records: Iterable<PromptStatsRecord>,
+  fromDay: string,
+  toDay: string,
+  limit: number = PROMPT_WORDS_LIMIT,
+): PromptWindowStat {
+  const totals = new Map<string, number>()
+  let totalPrompts = 0
+  let totalChars = 0
+  let days = 0
+  for (const record of records) {
+    const dayStats = record.promptDayStats
+    if (!(dayStats instanceof Map)) continue
+    for (const [day, stat] of dayStats) {
+      if (day < fromDay || day > toDay) continue
+      days += 1
+      if (Number.isFinite(stat.count) && stat.count > 0) totalPrompts += stat.count
+      if (Number.isFinite(stat.chars) && stat.chars > 0) totalChars += stat.chars
+      if (!(stat.words instanceof Map)) continue
+      for (const [word, count] of stat.words) {
+        if (word === '' || !Number.isFinite(count) || count <= 0) continue
+        addWordCount(totals, word, count, MAX_MERGED_WORDS)
+      }
+    }
+  }
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 1000) : PROMPT_WORDS_LIMIT
+  return { words: topWordEntries(totals, safeLimit), totalPrompts, totalChars, days }
 }
 
 /** 工具统计的会话级样本（跟着会话折叠缓存走；外部注入的旧数据源可能没有这些字段）。 */

@@ -10,6 +10,7 @@ import { displayNameOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, useCurrencyDisplay, type CostRowLike } from '../core/currency.ts'
 import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../core/format.ts'
 import { useT } from '../core/i18n.ts'
+import { selectionOf } from '../core/filter-selection.ts'
 import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse, UsageTotals } from '../core/types.ts'
 import { COST_SOURCE_LABELS } from '../core/pricing.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
@@ -99,13 +100,13 @@ function previousWindowOf(from: string, to: string): { from: string; to: string 
 
 /**
  * 合计行的上一期：与统计卡同一口径（按上一段等长范围再取一次 `/usage`，纯客户端，无新端点）。
+ * 通道 / 模型筛选都在客户端做，所以这里固定取全量（传 `'ALL'`），否则环比会拿「过滤后本期」比「全量上期」。
  * 只用于算一个百分比，取不到就保持 null（界面显示 —），不影响表格本身。
  */
 function usePreviousUsage(props: {
   from: string
   to: string
   range: RangeKey
-  channelFilter: string
   pricingRevision: number
 }): UsageResponse | null {
   const [previous, setPrevious] = useState<UsageResponse | null>(null)
@@ -115,11 +116,11 @@ function usePreviousUsage(props: {
     const window = previousWindowOf(props.from, props.to)
     let cancelled = false
     setPrevious(null)
-    void loadUsage(window.from, window.to, props.channelFilter).then((result) => {
+    void loadUsage(window.from, window.to, 'ALL').then((result) => {
       if (!cancelled) setPrevious(result)
     })
     return () => { cancelled = true }
-  }, [comparable, props.from, props.to, props.channelFilter, props.pricingRevision])
+  }, [comparable, props.from, props.to, props.pricingRevision])
   return comparable ? previous : null
 }
 
@@ -249,21 +250,51 @@ function totalsOfDays(days: ChannelDailySummary[], date: string): UsageTotals {
   }
 }
 
+/** 多选筛选里「未归入工作区」项目的值：空串被 `selectionOf` 当成「全部」，所以用固定 sentinel 表示。 */
+export const ORPHAN_PROJECT_VALUE = '__orphan__'
+
 /**
- * 按模型过滤 `/usage`：逐日只留该模型的桶，当天合计与范围合计都按剩下的桶重算（分页/汇总口径一致）。
- * `'ALL'`、空串或没有这个模型的任何数据时原样返回（引用不变，零回归）；
- * `hours`（按时段）没有模型维度，保持原样、不二次聚合。
+ * 项目筛选的取值集合：未归入工作区的行（`workspace` 为空）用 sentinel，其余用 workspace + 覆盖目录。
+ * 通道 / 模型 / 会话三个 Tab 都用它，保证同一个项目在各处命中同一批行。
  */
-export function filterUsageByModel(usage: UsageResponse | null | undefined, modelFilter: string | undefined): UsageResponse | null {
+export function projectFilterValuesOf(workspace: string | null | undefined, paths: readonly string[] | undefined): string[] {
+  const self = workspace === undefined || workspace === null || workspace === '' ? ORPHAN_PROJECT_VALUE : workspace
+  return [self, ...(paths ?? [])]
+}
+
+/**
+ * 按维度过滤 `/usage`：逐日只留命中的模型桶，当天合计与范围合计都按剩下的桶重算（口径一致）。
+ * `hours`（按时段）没有模型 / 通道维度，保持原样、不二次聚合。
+ */
+function filterUsageOf(usage: UsageResponse | null | undefined, keep: (model: ModelSummary) => boolean): UsageResponse | null {
   const raw = usage ?? null
-  if (raw === null || modelFilter === undefined || modelFilter === '' || modelFilter === 'ALL') return raw
+  if (raw === null) return null
   const days: ChannelDailySummary[] = []
   for (const day of raw.days) {
-    const models = day.models.filter((model) => model.model === modelFilter)
+    const models = day.models.filter(keep)
     if (models.length === 0) continue
     days.push(mergedDayOf(models, day.date, day.provider))
   }
   return { ...raw, days, totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? '') }
+}
+
+/**
+ * 按通道多选过滤（值存逗号分隔串，空串 = 全部；通道维度只在模型桶的 `provider` 上）。
+ * 页头把整段选中的通道一起下发，服务端 `/usage` 固定取全量，过滤在客户端做。
+ */
+export function filterUsageByChannels(usage: UsageResponse | null | undefined, channelFilter: string | undefined): UsageResponse | null {
+  const raw = usage ?? null
+  const selected = selectionOf(channelFilter)
+  if (raw === null || selected.length === 0) return raw
+  return filterUsageOf(raw, (model) => selected.includes(model.provider))
+}
+
+/** 按模型多选过滤（值同上）；多个模型先合并回逐日行再算，合计 / 图表 / 环比一起重算。 */
+export function filterUsageByModel(usage: UsageResponse | null | undefined, modelFilter: string | undefined): UsageResponse | null {
+  const raw = usage ?? null
+  const selected = selectionOf(modelFilter)
+  if (raw === null || selected.length === 0) return raw
+  return filterUsageOf(raw, (model) => selected.includes(model.model))
 }
 
 /** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
@@ -521,19 +552,20 @@ export function DetailTab(props: {
   onCustomFrom: (value: string) => void
   customTo: string
   onCustomTo: (value: string) => void
+  /** 通道筛选已由页头在客户端过滤 `usage` 后再传进来（多选不能当单值发给服务端），这两个 prop 只为壳层签名保留。 */
   channelFilter: string
   onChannelFilter: (value: string) => void
   bounds: { from: string; to: string }
   tooltip: TooltipApi
   /** 价目版本号：成本在服务端按价目算，价目一换这里要重取上期数据。 */
   pricingRevision: number
-  /** 全局模型筛选（`'ALL'` = 不过滤）：只作用于 `/usage` 的模型桶，页头通道筛选照旧生效。 */
+  /** 全局模型筛选（逗号分隔多选，空串 = 不过滤）：只作用于 `/usage` 的模型桶，通道过滤已在页头做完。 */
   modelFilter?: string
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
-  const { usage, channels, bounds, tooltip, channelFilter } = props
-  const modelFilter = props.modelFilter ?? 'ALL'
+  const { usage, channels, bounds, tooltip } = props
+  const modelFilter = props.modelFilter ?? ''
   const currency = useCurrencyDisplay()
   const [metric, setMetric] = useState<MetricKey>('cost')
   const [dimension, setDimension] = useState<Dimension>('day')
@@ -542,7 +574,7 @@ export function DetailTab(props: {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   // hook 必须在任何早退之前调用：usage 从 null 变成有值时如果才第一次调，会因 hook 数量变化抛 #310
   const previousUsage = usePreviousUsage({
-    from: bounds.from, to: bounds.to, range: props.range, channelFilter, pricingRevision: props.pricingRevision,
+    from: bounds.from, to: bounds.to, range: props.range, pricingRevision: props.pricingRevision,
   })
   /** 模型筛选后的本期 / 上期 `/usage`：两张面板、合计、环比全部从它算，保证口径一致 */
   const scopedUsage = useMemo(() => filterUsageByModel(usage, modelFilter), [usage, modelFilter])

@@ -1,0 +1,67 @@
+/* 自定义日期区间选择器：触发条与顶部工具栏其它控件同规格（--ku-control 高 / 8px 圆角 / 1px 边框），浮层日历。 */
+
+.root { position: relative; display: inline-flex; flex: none; }
+
+/* 触发条：起 → 止 ▾（日期等宽数字，切换月份时不抖动） */
+.trigger {
+  box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px;
+  height: var(--ku-control, 32px); padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px;
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: var(--ku-body, 14px); line-height: 1;
+  cursor: pointer; white-space: nowrap;
+}
+.trigger:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.trigger:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+.half { font-variant-numeric: tabular-nums; }
+.sep { color: var(--dsw-alias-label-tertiary, #67676f); }
+.caret { font-size: 10px; opacity: .7; }
+
+/* 浮层：fixed 定位（组件按触发条位置算坐标），滚动 / 缩放 / Esc / 点外部都关闭 */
+.panel {
+  position: fixed; z-index: 300; width: max-content; max-width: calc(100vw - 16px);
+  padding: 8px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-3, #232329); box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0, 0, 0, .35));
+}
+
+/* 月份切换 */
+.nav { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.month { flex: auto; text-align: center; font-size: var(--ku-body, 14px); font-weight: 500; line-height: 22px; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; }
+.navBtn {
+  width: 22px; height: 22px; flex: none; border: 0; border-radius: 5px; background: none;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: 14px; line-height: 1; cursor: pointer;
+}
+.navBtn:hover:enabled { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
+.navBtn:disabled { opacity: .35; cursor: not-allowed; }
+.navBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+
+/* 星期行与日期网格：7 列等宽 */
+.weekdays, .week { display: flex; }
+.weekday { flex: 0 0 30px; text-align: center; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); line-height: 20px; }
+
+.grid { display: flex; flex-direction: column; outline: none; }
+.grid:focus-visible { outline: 1px solid var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 6px; }
+
+.cell {
+  box-sizing: border-box; flex: 0 0 30px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; color: var(--dsw-alias-label-primary, #e8e8ec);
+  font-size: var(--ku-sub, 13px); line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; user-select: none;
+}
+.cell:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+/* 区间内：浅色底连成一片（左右不留圆角，视觉上一段连续） */
+.inRange { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 16%, transparent); border-radius: 0; }
+.inRange:hover { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 24%, transparent); }
+/* 两端：深色实心圆角块 */
+.edge { background: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-label-primary-foreground, #fff); border-radius: 5px; font-weight: 600; }
+.edge:hover { background: var(--dsw-alias-state-business-primary, #5b8cff); }
+/* 键盘光标 */
+.cursor { box-shadow: inset 0 0 0 1px var(--dsw-alias-label-secondary, #9a9aa6); }
+.todayCell { font-weight: 600; }
+.future { color: var(--dsw-alias-label-tertiary, #67676f); opacity: .4; cursor: not-allowed; }
+.future:hover { background: none; }
+.blank { cursor: default; }
+.blank:hover { background: none; }
+
+/* 底部提示：开始前「点击选择开始日期」，点了开始日后「点击选择结束日期」 */
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); }
+.hint { min-width: 0; flex: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); line-height: 18px; }

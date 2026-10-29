@@ -3,16 +3,19 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
 import { DISPLAY_CURRENCIES, DISPLAY_CURRENCY_SYMBOLS, setDisplayCurrency, useCurrencyDisplay, type DisplayCurrency } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
+import { selectionOf } from './core/filter-selection.ts'
 import { t, useT } from './core/i18n.ts'
 import { hydrateLog, logInfo, logWarn, subscribeOpenLog } from './core/log.ts'
 import { exportSessionsCsv, exportUsageCsv } from './core/export-csv.ts'
 import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
+import { DateRangePicker } from './components/DateRangePicker.tsx'
+import { MultiSelect } from './components/MultiSelect.tsx'
 import { Button } from './components/ui/Button.tsx'
 import { Dialog } from './components/ui/Dialog.tsx'
 import { SettingsDialog, type SettingsTab } from './components/SettingsDialog.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
-import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
+import { DetailTab, ORPHAN_PROJECT_VALUE, filterUsageByChannels, type RangeKey } from './tabs/DetailTab.tsx'
 import { DistributionTab } from './tabs/DistributionTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
@@ -72,10 +75,11 @@ export function KeyUsageSection() {
   const [range, setRange] = useState<RangeKey>('month')
   const [customFrom, setCustomFrom] = useState(() => shiftedIsoDate(-29))
   const [customTo, setCustomTo] = useState(() => isoDate(new Date()))
-  const [channelFilter, setChannelFilter] = useState('ALL')
-  /** 项目 / 模型筛选：'ALL' = 不过滤；项目值取 `projects` 段的 workspace（'' = 未归入工作区）。 */
-  const [projectFilter, setProjectFilter] = useState('ALL')
-  const [modelFilter, setModelFilter] = useState('ALL')
+  /** 三个筛选都存多选值：逗号分隔字符串，空串 = 全部（服务端 /usage 固定取全量，过滤在客户端做）。 */
+  const [channelFilter, setChannelFilter] = useState('')
+  /** 项目值取 `projects` 段的 workspace（'' = 未归入工作区）；模型值取模型名。 */
+  const [projectFilter, setProjectFilter] = useState('')
+  const [modelFilter, setModelFilter] = useState('')
 
   const [channels, setChannels] = useState<Channel[]>([])
   const [quotas, setQuotas] = useState<QuotaProvider[]>([])
@@ -100,7 +104,7 @@ export function KeyUsageSection() {
   const [showSettings, setShowSettings] = useState(false)
   /** 总览的通道行点击：余额/配额 + 单价表放进弹窗（原来的「余额与配额」Tab 已移除） */
   const [quotaDialog, setQuotaDialog] = useState<string | null>(null)
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('display')
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
   /** 取词函数：宿主切语言时 useT 触发重渲染，文案跟着切 */
   const t = useT()
   const lastSnapshotAt = useRef(0)
@@ -139,9 +143,9 @@ export function KeyUsageSection() {
 
   activeTabRef.current = activeTab
 
-  /** 用户是否还在看默认范围（近 30 天 / 全部通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
+  /** 用户是否还在看默认范围（近 30 天 / 未筛通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
   const usageIsDefaultRef = useRef(true)
-  usageIsDefaultRef.current = range === 'month' && channelFilter === 'ALL'
+  usageIsDefaultRef.current = range === 'month' && selectionOf(channelFilter).length === 0
 
   /** 把一份快照落到各 Tab 的状态上（快照是 6 个 Tab 的唯一数据来源）。 */
   const applySnapshot = useCallback((snapshot: SnapshotResponse) => {
@@ -290,11 +294,12 @@ export function KeyUsageSection() {
     return { from: available?.from ?? today, to: available?.to ?? today }
   }, [range, customFrom, customTo, available])
 
-  // 明细数据只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它
+  // 明细数据只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它。
+  // 通道多选不能当单值发给服务端 → 这里固定取全量（'ALL'），选中哪些通道在客户端过滤。
   useEffect(() => {
     if (!wantDetail && !wantDistribution && !wantOverview) return
     let cancelled = false
-    void loadUsage(bounds.from, bounds.to, channelFilter).then((result) => {
+    void loadUsage(bounds.from, bounds.to, 'ALL').then((result) => {
       if (cancelled || result === null) return
       setUsage(result)
       if (result.availableFrom !== null && result.availableTo !== null) {
@@ -302,11 +307,20 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, channelFilter, pricingRevision])
+  }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, pricingRevision])
 
-  /** 项目下拉：值取 workspace（'' = 未归入工作区），文案取宿主工作区标题。 */
+  /** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
+  const scopedUsage = useMemo(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter])
+
+  /** 通道下拉：值取 provider，文案取显示名。 */
+  const channelOptions = useMemo(() => channels.map((channel) => ({
+    value: channel.provider,
+    label: channel.displayName ?? channel.provider,
+  })), [channels])
+
+  /** 项目下拉：值取 workspace（未归入工作区的那行用 sentinel），文案取宿主工作区标题。 */
   const projectOptions = useMemo(() => (projects?.rows ?? []).map((row) => ({
-    value: row.workspace,
+    value: row.workspace === '' ? ORPHAN_PROJECT_VALUE : row.workspace,
     label: row.workspace === '' ? t('p.orphan') : (row.workspaceTitle ?? row.workspace),
   })), [projects, t])
 
@@ -382,11 +396,11 @@ export function KeyUsageSection() {
         logWarn('snapshot', t('action.refresh') + ' · ' + t('api.requestFailed'), REFRESH_PATH)
         await reloadFromEndpoints(sessions !== null || projects !== null || models !== null, true)
       }
-      const usageResult = await loadUsage(bounds.from, bounds.to, channelFilter)
+      const usageResult = await loadUsage(bounds.from, bounds.to, 'ALL')
       if (usageResult !== null) setUsage(usageResult)
       setLoading(false)
     })()
-  }, [applySnapshot, reloadFromEndpoints, sessions, projects, models, bounds.from, bounds.to, channelFilter, t])
+  }, [applySnapshot, reloadFromEndpoints, sessions, projects, models, bounds.from, bounds.to, t])
 
   return (
     <div className={styles.section}>
@@ -419,7 +433,7 @@ export function KeyUsageSection() {
           <button
             type="button"
             className={styles.iconBtn}
-            onClick={() => { setSettingsTab('display'); setShowSettings(true) }}
+            onClick={() => { setSettingsTab('general'); setShowSettings(true) }}
             aria-label={t('action.settings')}
             title={t('action.settings')}
           >
@@ -454,58 +468,37 @@ export function KeyUsageSection() {
               <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
             ))}
           </span>
-          <span className={styles.rangeCustom}>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customFrom}
-              aria-label={t('date.startHint')}
-              onChange={(event) => { setCustomFrom(event.target.value); setRange('custom') }}
-            />
-            <span className={styles.rangeTilde}>~</span>
-            <input
-              type="date"
-              className={styles.rangeDate}
-              value={customTo}
-              aria-label={t('date.endHint')}
-              onChange={(event) => { setCustomTo(event.target.value); setRange('custom') }}
-            />
-          </span>
+          <DateRangePicker
+            from={customFrom}
+            to={customTo}
+            onChange={(from, to) => { setCustomFrom(from); setCustomTo(to); setRange('custom') }}
+          />
         </span>
         <span className={styles.toolbarDivider} aria-hidden="true" />
-        <select
-          className={styles.refreshSelect}
-          value={channelFilter}
-          onChange={(event) => setChannelFilter(event.target.value)}
-          aria-label={t('filter.channel')}
-        >
-          <option value="ALL">{t('s.allChannels')}</option>
-          {channels.map((channel) => (
-            <option key={channel.provider} value={channel.provider}>{channel.displayName ?? channel.provider}</option>
-          ))}
-        </select>
-        <select
-          className={styles.refreshSelect}
-          value={projectFilter}
-          onChange={(event) => setProjectFilter(event.target.value)}
-          aria-label={t('filter.project')}
-        >
-          <option value="ALL">{t('filter.allProjects')}</option>
-          {projectOptions.map((option) => (
-            <option key={option.value === '' ? '__orphan' : option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-        <select
-          className={styles.refreshSelect}
-          value={modelFilter}
-          onChange={(event) => setModelFilter(event.target.value)}
-          aria-label={t('filter.model')}
-        >
-          <option value="ALL">{t('filter.allModels')}</option>
-          {modelOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+        <MultiSelect
+          options={channelOptions}
+          selected={selectionOf(channelFilter)}
+          onChange={(next) => setChannelFilter(next.join(','))}
+          allLabel={t('s.allChannels')}
+          ariaLabel={t('filter.channel')}
+          searchLabel={t('filter.searchChannel')}
+        />
+        <MultiSelect
+          options={projectOptions}
+          selected={selectionOf(projectFilter)}
+          onChange={(next) => setProjectFilter(next.join(','))}
+          allLabel={t('filter.allProjects')}
+          ariaLabel={t('filter.project')}
+          searchLabel={t('filter.searchProject')}
+        />
+        <MultiSelect
+          options={modelOptions}
+          selected={selectionOf(modelFilter)}
+          onChange={(next) => setModelFilter(next.join(','))}
+          allLabel={t('filter.allModels')}
+          ariaLabel={t('filter.model')}
+          searchLabel={t('filter.searchModel')}
+        />
       </div>
 
       <div className={styles.toolbarRow}>
@@ -515,7 +508,7 @@ export function KeyUsageSection() {
           ))}
         </div>
         <span className={styles.rowSpacer} />
-        <Button size="sm" className={styles.headBtn} disabled={usage === null} onClick={() => { if (usage !== null) exportUsageCsv(usage) }} ariaLabel={t('action.exportUsage')} title={t('action.exportUsage')}>
+        <Button size="sm" className={styles.headBtn} disabled={scopedUsage === null} onClick={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage) }} ariaLabel={t('action.exportUsage')} title={t('action.exportUsage')}>
           {t('action.exportUsage')}
         </Button>
         <Button size="sm" className={styles.headBtn} disabled={sessions === null} onClick={() => { if (sessions !== null) exportSessionsCsv(sessions) }} ariaLabel={t('action.exportSessions')} title={t('action.exportSessions')}>
@@ -551,7 +544,7 @@ export function KeyUsageSection() {
               heatmap={heatmap}
               hourly={hourly}
               range={range}
-              usage={usage}
+              usage={scopedUsage}
               sessions={sessions}
               projects={projects}
               models={models}
@@ -568,7 +561,7 @@ export function KeyUsageSection() {
           <section className={styles.pageSection} id="sec-detail">
             <h2 className={styles.pageSectionTitle}>{t('tab.detail')}</h2>
             <DetailTab
-              usage={usage}
+              usage={scopedUsage}
               channels={channels}
               range={range}
               onRange={setRange}
@@ -592,7 +585,7 @@ export function KeyUsageSection() {
               projects={projects}
               models={models}
               channels={channels}
-              usage={usage}
+              usage={scopedUsage}
               tooltip={tooltip}
               projectFilter={projectFilter}
               modelFilter={modelFilter}
@@ -606,7 +599,7 @@ export function KeyUsageSection() {
               data={sessions}
               channels={channels}
               tooltip={tooltip}
-              onOpenProject={(workspace) => { setProjectFilter(workspace); goSection('distribution') }}
+              onOpenProject={(workspace) => { setProjectFilter(workspace === '' ? ORPHAN_PROJECT_VALUE : workspace); goSection('distribution') }}
               projectFilter={projectFilter}
               modelFilter={modelFilter}
             />
