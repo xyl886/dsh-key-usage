@@ -323,6 +323,17 @@ export function KeyUsageSection() {
     void loadUsage(previousFrom, previousTo, 'ALL').then((result) => { if (!cancelled) setPreviousUsage(result) })
     return () => { cancelled = true }
   }, [bounds.from, bounds.to, pricingRevision])
+  /** 通道用量：通道没有聚合接口，用 /usage 的逐日模型 token 相加，供筛选下拉排序 */
+  const channelUsage = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const day of usage?.days ?? []) {
+      let tokens = 0
+      for (const model of day.models) tokens += model.inputTokens + model.outputTokens + model.cacheReadTokens
+      map.set(day.provider, (map.get(day.provider) ?? 0) + tokens)
+    }
+    return map
+  }, [usage])
+
   /** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
   const scopedUsage = useMemo(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter])
 
@@ -493,6 +504,7 @@ export function KeyUsageSection() {
         </span>
         <span className={styles.toolbarDivider} aria-hidden="true" />
         <MultiSelect
+          usageOf={(value) => channelUsage.get(value) ?? 0}
           options={channelOptions}
           selected={selectionOf(channelFilter)}
           onChange={(next) => setChannelFilter(next.join(','))}

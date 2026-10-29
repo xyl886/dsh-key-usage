@@ -159,7 +159,8 @@ export const COST_SOURCE_LABELS: Partial<Record<CostSource, string>> = {
   official: 'cso.official',
   catalog: 'cso.catalog',
   aggregate: 'cso.aggregate',
-  none: '—',
+  model: 'cso.model',
+  none: 'cso.none',
 }
 
 /** 角标的悬浮说明：让「估算」不会被当成账单金额用。 */
