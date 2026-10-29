@@ -9344,28 +9344,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 													children: "↻"
 												})
 											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-												size: "sm",
-												className: shared_module_css_default.headBtn,
-												disabled: usage === null,
-												onClick: () => {
-													if (usage !== null) exportUsageCsv(usage);
-												},
-												ariaLabel: t("action.exportUsage"),
-												title: t("action.exportUsage"),
-												children: t("action.exportUsage")
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-												size: "sm",
-												className: shared_module_css_default.headBtn,
-												disabled: sessions === null,
-												onClick: () => {
-													if (sessions !== null) exportSessionsCsv(sessions);
-												},
-												ariaLabel: t("action.exportSessions"),
-												title: t("action.exportSessions"),
-												children: t("action.exportSessions")
-											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 												type: "button",
 												className: shared_module_css_default.iconBtn,
@@ -9414,6 +9392,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 														d: "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
 													})
 												})
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+												className: shared_module_css_default.refreshSelect,
+												value: currency.display,
+												onChange: (event) => setDisplayCurrency(event.target.value),
+												"aria-label": t("settings.currency"),
+												title: t("settings.currency"),
+												children: DISPLAY_CURRENCIES.map((code) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+													value: code,
+													children: DISPLAY_CURRENCY_SYMBOLS[code]
+												}, code))
 											})
 										]
 									})
@@ -9434,10 +9423,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: shared_module_css_default.rangeCustom,
 											children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: shared_module_css_default.rangeCustomLabel,
-													children: t("r.custom")
-												}),
 												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 													type: "date",
 													className: shared_module_css_default.rangeDate,
@@ -9507,21 +9492,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 											value: option.value,
 											children: option.label
 										}, option.value))]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rowSpacer }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: shared_module_css_default.filterLabel,
-										children: t("settings.currency")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-										className: shared_module_css_default.refreshSelect,
-										value: currency.display,
-										onChange: (event) => setDisplayCurrency(event.target.value),
-										"aria-label": t("settings.currency"),
-										children: DISPLAY_CURRENCIES.map((code) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: code,
-											children: DISPLAY_CURRENCY_SYMBOLS[code]
-										}, code))
 									})
 								]
 							}),
@@ -9537,6 +9507,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										}, tabId))
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: shared_module_css_default.rowSpacer }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+										size: "sm",
+										className: shared_module_css_default.headBtn,
+										disabled: usage === null,
+										onClick: () => {
+											if (usage !== null) exportUsageCsv(usage);
+										},
+										ariaLabel: t("action.exportUsage"),
+										title: t("action.exportUsage"),
+										children: t("action.exportUsage")
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+										size: "sm",
+										className: shared_module_css_default.headBtn,
+										disabled: sessions === null,
+										onClick: () => {
+											if (sessions !== null) exportSessionsCsv(sessions);
+										},
+										ariaLabel: t("action.exportSessions"),
+										title: t("action.exportSessions"),
+										children: t("action.exportSessions")
+									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
 										className: shared_module_css_default.modeSwitch,
 										title: t("section.modeHint"),
