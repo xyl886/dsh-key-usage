@@ -5,12 +5,15 @@
 import assert from 'node:assert/strict'
 import {
   attributeModelKey,
+  buildPromptSessionIndex,
   foldSessionEvents,
   preparePromptSegmenter,
   isInjectedPromptText,
   mergePromptStats,
+  mergePromptStatsForWindow,
   mergePromptStatsInWindow,
   normalizeProvider,
+  previousPromptWindowOf,
   promptSnippetOf,
   summarizeSession,
   MAX_SESSION_WORDS,
@@ -294,8 +297,8 @@ assert.deepEqual(
   '旧数据源没有统计字段时按空值合并，不抛错',
 )
 
-// 按天窗口合并（词云环比用）：同一会话跨窗口时按天各计各的，不重复也不近似
-const windowFirstDayOnly = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-13')
+// 按天窗口合并（快照 prompts 段的环比用）：同一会话跨窗口时按天各计各的，不重复也不近似
+const windowFirstDayOnly = mergePromptStatsForWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-13')
 assert.equal(windowFirstDayOnly.totalPrompts, 2, '窗口只算 10-13 的提问')
 assert.equal(windowFirstDayOnly.totalChars, mergeFirst.promptChars, '字数按窗口切分')
 assert.equal(windowFirstDayOnly.days, 1, '窗口内有数据的天数')
@@ -304,20 +307,67 @@ assert.deepEqual(
   ['分析', '插件', 'snapshot.json'],
   '窗口内 top 词（同频按词升序）',
 )
-const windowBothDays = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-15')
+const windowBothDays = mergePromptStatsForWindow([mergeFirst, mergeSecond], '2026-10-13', '2026-10-15')
 assert.equal(windowBothDays.totalPrompts, merged.totalPrompts, '覆盖两天的窗口等于整体合计')
 assert.equal(windowBothDays.days, 2)
-const windowEmpty = mergePromptStatsInWindow([mergeFirst, mergeSecond], '2026-10-01', '2026-10-05')
+const windowEmpty = mergePromptStatsForWindow([mergeFirst, mergeSecond], '2026-10-01', '2026-10-05')
 assert.deepEqual(
   { prompts: windowEmpty.totalPrompts, chars: windowEmpty.totalChars, words: windowEmpty.words, days: windowEmpty.days },
   { prompts: 0, chars: 0, words: [], days: 0 },
   '窗口内没有任何提问：用 days=0 表示「没数据」，界面不能拿 0 编环比',
 )
 assert.equal(
-  mergePromptStatsInWindow([{ words: new Map([['分析', 4]]) }], '2026-10-01', '2026-10-31').days,
+  mergePromptStatsForWindow([{ words: new Map([['分析', 4]]) }], '2026-10-01', '2026-10-31').days,
   0,
   '旧数据源没有按天桶时窗口按无数据处理，不抛错',
 )
+
+// 上期窗口：同长度、紧邻前一段（UTC 日期算术，本地日期键不变）
+assert.deepEqual(previousPromptWindowOf('2026-10-14', '2026-10-15'), { from: '2026-10-12', to: '2026-10-13' })
+assert.deepEqual(previousPromptWindowOf('2026-10-15', '2026-10-15'), { from: '2026-10-14', to: '2026-10-14' })
+assert.deepEqual(previousPromptWindowOf('2026-10-01', '2026-10-30'), { from: '2026-09-01', to: '2026-09-30' })
+
+// ===== 场景九：提问运行期索引 = 窗口 + 项目 / 模型 / 通道筛选（`/prompts` 用的那套） =====
+const indexFoldA = foldSessionEvents([
+  timeUserMessage(0, mergeFirstDay, 'alpha deployment 分析'),
+  timeUserMessage(1, mergeFirstDay, 'beta cache 插件'),
+  timeUserMessage(2, mergeSecondDay, 'gamma snapshot 部署'),
+])
+const indexFoldB = foldSessionEvents([timeUserMessage(0, mergeSecondDay, 'delta ledger Qwen3')])
+const promptIndex = buildPromptSessionIndex([
+  { id: 'session-a', workspace: 'D:\\EasyJob', summary: { models: [{ key: 'pi-ai/opencode-go/GLM-5.3-Flash' }] }, promptDayStats: indexFoldA.promptDayStats },
+  { id: 'session-b', workspace: null, summary: { models: [{ key: 'local/Qwen3' }] }, promptDayStats: indexFoldB.promptDayStats },
+], ['opencode-go', 'local'])
+assert.deepEqual(promptIndex.get('session-a').models, ['GLM-5.3-Flash'], '模型名按展示口径拆掉路由前缀')
+assert.deepEqual(promptIndex.get('session-a').providers, ['opencode-go'])
+assert.equal(promptIndex.get('session-b').workspace, '', '没有工作区的会话归到未归入工作区（空串）')
+const noFilterIndex = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15' })
+assert.equal(noFilterIndex.totalPrompts, 4, '窗口内全部会话的提问条数')
+assert.equal(noFilterIndex.days, 2, '窗口内有数据的天数（同一天多个会话只算一天）')
+const firstDayIndex = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-13' })
+assert.equal(firstDayIndex.totalPrompts, 2, '按天切片：只算 10-13 的提问')
+assert.deepEqual(firstDayIndex.words.map((entry) => entry.word).slice(0, 2), ['alpha', 'beta'], '窗口内 top 词')
+const byProject = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15', projects: ['D:\\EasyJob'] })
+assert.equal(byProject.totalPrompts, 3, '项目筛选只算该工作区的会话 A')
+assert.equal(byProject.words.some((entry) => entry.word === 'delta'), false, '别的会话的词不混进来')
+const byOrphan = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15', projects: [''] })
+assert.equal(byOrphan.totalPrompts, 1, '空串 = 未归入工作区的会话 B')
+const byModel = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15', models: ['GLM-5.3-Flash'] })
+assert.equal(byModel.totalPrompts, 3, '模型筛选按展示模型名')
+const byModelMulti = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15', models: ['GLM-5.3-Flash', 'Qwen3'] })
+assert.equal(byModelMulti.totalPrompts, 4, '模型多选是任一命中')
+const byProvider = mergePromptStatsInWindow(promptIndex, { from: '2026-10-13', to: '2026-10-15', providers: ['local'] })
+assert.equal(byProvider.totalPrompts, 1, '通道筛选按 provider id')
+const combinedFilter = mergePromptStatsInWindow(promptIndex, {
+  from: '2026-10-13', to: '2026-10-15', projects: ['D:\\EasyJob'], models: ['Qwen3'],
+})
+assert.deepEqual(
+  { prompts: combinedFilter.totalPrompts, words: combinedFilter.words, days: combinedFilter.days },
+  { prompts: 0, words: [], days: 0 },
+  '不同维度之间是同时满足：项目命中但模型不命中 → 空结果（不是全量也不是报错）',
+)
+assert.equal(mergePromptStatsInWindow(promptIndex, { from: '2026-10-01', to: '2026-10-05' }).totalPrompts, 0, '空窗口回全 0')
+assert.equal(mergePromptStatsInWindow(null, { from: '2026-10-13', to: '2026-10-15' }), null, '索引还没建好时回 null（客户端回落快照段）')
 
 // ===== 场景八：剥离宿主注入（来源 kind + 标签段）与英文停用词 =====
 const sourcedUserMessage = (seq, time, text, source) => ({ seq, time, type: 'user/message', data: { content: [{ type: 'text', text }], source } })

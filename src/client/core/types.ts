@@ -446,14 +446,17 @@ export interface SnapshotQuotaOutcome {
 }
 
 /** 快照里的 6 个 Tab 数据段，每段形状与对应端点一致（null = 该段这次没构建成功）。 */
-/** 提问词云：服务端已聚合好的 top 词（只下发词与频次，不下发提问原文）。 */
+/**
+ * 提问词云：服务端已聚合好的 top 词（只下发词与频次，不下发提问原文）。
+ * 快照 `prompts` 段与 `GET /prompts` 参数化端点共用这个形状：前者固定近 30 天，后者回显筛选后的窗口。
+ */
 export interface PromptsResponse {
   words: Array<{ word: string; count: number }>
   totalPrompts: number
   totalChars: number
-  /** 当前窗口起点（本地 `YYYY-MM-DD`） */
+  /** 当前窗口起点（本地 `YYYY-MM-DD`；快照段 = 近 30 天窗口的起点） */
   from: string | null
-  /** 当前窗口终点（本地 `YYYY-MM-DD`） */
+  /** 当前窗口终点（本地 `YYYY-MM-DD`；快照段 = 今天） */
   to: string | null
   /** 上期（同长度、紧邻前一窗口）的提问条数；服务端没给（上期无数据 / 旧版本）时为 null，界面不显示环比。 */
   prevTotalPrompts?: number | null

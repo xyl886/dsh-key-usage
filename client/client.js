@@ -1581,6 +1581,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (modelFilter !== "") params.set("model", modelFilter);
 			return fetchJson(TOOLS_PATH + "?" + params.toString(), TOOLS_PATH);
 		}
+		/** 提问词云参数化端点：窗口 + 项目 / 模型 / 通道多选（空串筛选值留给「未归入工作区」）。 */
+		const PROMPTS_PATH = "/dsh-key-usage/prompts";
+		/**
+		* 按当前筛选取提问词云。服务端索引还没建好（老版本 / 构建中）时回 `null`，
+		* 调用方保留快照里的 `prompts` 段作为回落。
+		* `projectFilter` 传 `null` = 不筛；传空串 = 只筛「未归入工作区」（服务端按 workspace 空串匹配）。
+		*/
+		function loadPrompts(from, to, projectFilter, modelFilter, channelFilter) {
+			const params = new URLSearchParams({
+				from,
+				to
+			});
+			if (projectFilter !== null) params.set("project", projectFilter);
+			if (modelFilter !== "") params.set("model", modelFilter);
+			if (channelFilter !== "") params.set("provider", channelFilter);
+			return fetchJson(PROMPTS_PATH + "?" + params.toString(), PROMPTS_PATH);
+		}
 		const RATES_PATH = "/dsh-key-usage/rates";
 		/** 汇率端点：`?refresh=1` 强制走上游。 */
 		const FX_PATH = "/dsh-key-usage/fx";
@@ -9476,6 +9493,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [tools, setTools] = (0, react.useState)(null);
 			/** 快照 `tools` 段（全量历史）：首屏与参数化请求失败时的回落，不被每次轮询覆盖筛选结果。 */
 			const toolsFallbackRef = (0, react.useRef)(null);
+			/** 快照 `prompts` 段（近 30 天）：同上，参数化请求失败 / 索引未建好时回落它。 */
+			const promptsFallbackRef = (0, react.useRef)(null);
 			/** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
 			const [snapshotRevision, setSnapshotRevision] = (0, react.useState)(0);
 			const [projects, setProjects] = (0, react.useState)(null);
@@ -9551,7 +9570,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (sections.sessions !== void 0 && sections.sessions !== null) setSessions(sections.sessions);
 				if (sections.projects !== void 0 && sections.projects !== null) setProjects(sections.projects);
 				if (sections.models !== void 0 && sections.models !== null) setModels(sections.models);
-				if (sections.prompts !== void 0 && sections.prompts !== null) setPrompts(sections.prompts);
+				if (sections.prompts !== void 0) {
+					promptsFallbackRef.current = sections.prompts;
+					setPrompts((current) => current === null ? sections.prompts : current);
+				}
 				if (sections.tools !== void 0) {
 					toolsFallbackRef.current = sections.tools;
 					setTools((current) => current === null ? sections.tools : current);
@@ -9774,9 +9796,35 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				modelFilter,
 				snapshotRevision
 			]);
+			/**
+			* 提问段跟随顶部筛选：窗口 = bounds，项目 / 模型 / 通道取多选值（项目 sentinel 还原成空串，
+			* 服务端按实际 workspace 字符串匹配）。服务端用运行期索引聚合，不重读会话；
+			* 回 null（索引还没建好 / 请求失败）时保留快照 `prompts` 段作回落。
+			*/
+			(0, react.useEffect)(() => {
+				if (!wantWords) return;
+				let cancelled = false;
+				const chosenProjects = selectionOf(projectFilter);
+				const projectParam = chosenProjects.length === 0 ? null : chosenProjects.map((value) => value === "__orphan__" ? "" : value).join(",");
+				loadPrompts(bounds.from, bounds.to, projectParam, selectionOf(modelFilter).join(","), selectionOf(channelFilter).join(",")).then((result) => {
+					if (cancelled) return;
+					setPrompts(result ?? promptsFallbackRef.current);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				wantWords,
+				bounds.from,
+				bounds.to,
+				projectFilter,
+				modelFilter,
+				channelFilter,
+				snapshotRevision
+			]);
 			(0, react.useEffect)(() => {
 				if (!wantDetail && !wantDistribution && !wantOverview) {
-					if (!wantTools || hasAvailable) return;
+					if (!wantTools && !wantWords || hasAvailable) return;
 				}
 				let cancelled = false;
 				loadUsage(bounds.from, bounds.to, "ALL").then((result) => {
@@ -9795,6 +9843,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				wantDistribution,
 				wantOverview,
 				wantTools,
+				wantWords,
 				hasAvailable,
 				bounds.from,
 				bounds.to,

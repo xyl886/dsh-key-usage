@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
+import { loadChannels, loadHeatmap, loadModels, loadProjects, loadPrompts, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { selectionOf } from './core/filter-selection.ts'
@@ -93,6 +93,8 @@ export function KeyUsageSection() {
   const [tools, setTools] = useState<ToolsResponse | null>(null)
   /** 快照 `tools` 段（全量历史）：首屏与参数化请求失败时的回落，不被每次轮询覆盖筛选结果。 */
   const toolsFallbackRef = useRef<ToolsResponse | null>(null)
+  /** 快照 `prompts` 段（近 30 天）：同上，参数化请求失败 / 索引未建好时回落它。 */
+  const promptsFallbackRef = useRef<PromptsResponse | null>(null)
   /** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
   const [snapshotRevision, setSnapshotRevision] = useState(0)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
@@ -171,7 +173,11 @@ export function KeyUsageSection() {
     if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
     if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
     if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
-    if (sections.prompts !== undefined && sections.prompts !== null) setPrompts(sections.prompts)
+    // prompts 段同样是「筛选结果由下面那个 effect 接管」：快照只作首屏 / 回落，轮询不覆盖筛选结果
+    if (sections.prompts !== undefined) {
+      promptsFallbackRef.current = sections.prompts
+      setPrompts((current) => current === null ? sections.prompts : current)
+    }
     // tools 段用 null 表示「暂无采集」：是合法值，只有裁剪没取（undefined）才不许覆盖
     if (sections.tools !== undefined) {
       toolsFallbackRef.current = sections.tools
@@ -330,13 +336,38 @@ export function KeyUsageSection() {
     return () => { cancelled = true }
   }, [wantTools, bounds.from, bounds.to, projectFilter, modelFilter, snapshotRevision])
 
-  // 明细数据只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它。
+  /**
+   * 提问段跟随顶部筛选：窗口 = bounds，项目 / 模型 / 通道取多选值（项目 sentinel 还原成空串，
+   * 服务端按实际 workspace 字符串匹配）。服务端用运行期索引聚合，不重读会话；
+   * 回 null（索引还没建好 / 请求失败）时保留快照 `prompts` 段作回落。
+   */
+  useEffect(() => {
+    if (!wantWords) return
+    let cancelled = false
+    const chosenProjects = selectionOf(projectFilter)
+    const projectParam = chosenProjects.length === 0
+      ? null
+      : chosenProjects.map((value) => value === ORPHAN_PROJECT_VALUE ? '' : value).join(',')
+    void loadPrompts(
+      bounds.from,
+      bounds.to,
+      projectParam,
+      selectionOf(modelFilter).join(','),
+      selectionOf(channelFilter).join(','),
+    ).then((result) => {
+      if (cancelled) return
+      setPrompts(result ?? promptsFallbackRef.current)
+    })
+    return () => { cancelled = true }
+  }, [wantWords, bounds.from, bounds.to, projectFilter, modelFilter, channelFilter, snapshotRevision])
+
+  // 明细分页只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它。
   // 通道多选不能当单值发给服务端 → 这里固定取全量（'ALL'），选中哪些通道在客户端过滤。
-  // 工具页只用 bounds 当窗口，但 range='total' 的起点由 usage 回填的 available 决定，
-  // 所以单独打开工具页时也取一次（拿到 available 就停，不随范围反复取）。
+  // 工具 / 提问页只用 bounds 当窗口，但 range='total' 的起点由 usage 回填的 available 决定，
+  // 所以单独打开这两个页时也取一次（拿到 available 就停，不随范围反复取）。
   useEffect(() => {
     if (!wantDetail && !wantDistribution && !wantOverview) {
-      if (!wantTools || hasAvailable) return
+      if ((!wantTools && !wantWords) || hasAvailable) return
     }
     let cancelled = false
     void loadUsage(bounds.from, bounds.to, 'ALL').then((result) => {
@@ -347,7 +378,7 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [wantDetail, wantDistribution, wantOverview, wantTools, hasAvailable, bounds.from, bounds.to, pricingRevision])
+  }, [wantDetail, wantDistribution, wantOverview, wantTools, wantWords, hasAvailable, bounds.from, bounds.to, pricingRevision])
 
   /** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
   const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)

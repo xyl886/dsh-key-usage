@@ -41,12 +41,17 @@ import {
 } from './data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
 import {
+  buildPromptSessionIndex,
   buildToolSessionIndex,
+  mergePromptStatsForWindow,
   mergePromptStatsInWindow,
   mergeToolStats,
   mergeToolStatsInWindow,
+  previousPromptWindowOf,
   TOOL_TREND_DAYS,
+  type PromptSessionIndex,
   type PromptStatsRecord,
+  type PromptWindowStat,
   type ToolSessionIndex,
 } from './data/session-usage.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-file.js'
@@ -1058,18 +1063,16 @@ export function mountKeyUsageRoutes(
   const PROMPT_WINDOW_DAYS = 30
 
   /**
-   * 提问词云（快照 `prompts` 段）：当前窗口 = 近 30 天，上期 = 紧邻的前 30 天。
-   * 按天桶切分，同一会话跨窗口时各计各的；上期窗口没有任何提问时 prev* 全给 null，
-   * 界面据此不显示环比（宁可不显示，也不拿 0 编一个百分比）。
+   * 提问词云的响应体（快照 `prompts` 段与 `GET /prompts` 端点共用同一个形状）：
+   * 本期 + 上期，上期窗口没有任何提问时 prev* 全给 null（界面据此不显示环比，不拿 0 编百分比）。
    */
-  const promptCloudOf = (records: Iterable<PromptStatsRecord>): Record<string, unknown> => {
-    const to = dayKeyOf(new Date())
-    const from = shiftedDayKey(-(PROMPT_WINDOW_DAYS - 1))
-    const previousFrom = shiftedDayKey(-(PROMPT_WINDOW_DAYS * 2 - 1))
-    const previousTo = shiftedDayKey(-PROMPT_WINDOW_DAYS)
-    const current = mergePromptStatsInWindow(records, from, to)
-    const previous = mergePromptStatsInWindow(records, previousFrom, previousTo)
-    const hasPrevious = previous.days > 0
+  const promptPayloadOf = (
+    current: PromptWindowStat,
+    previous: PromptWindowStat | null,
+    from: string,
+    to: string,
+  ): Record<string, unknown> => {
+    const hasPrevious = previous !== null && previous.days > 0
     return {
       words: current.words,
       totalPrompts: current.totalPrompts,
@@ -1084,13 +1087,32 @@ export function mountKeyUsageRoutes(
   }
 
   /**
+   * 提问词云（快照 `prompts` 段）：当前窗口 = 近 30 天，上期 = 紧邻的前 30 天。
+   * 按天桶切分，同一会话跨窗口时各计各的。
+   */
+  const promptCloudOf = (records: Iterable<PromptStatsRecord>): Record<string, unknown> => {
+    const to = dayKeyOf(new Date())
+    const from = shiftedDayKey(-(PROMPT_WINDOW_DAYS - 1))
+    const previousWindow = previousPromptWindowOf(from, to)
+    const current = mergePromptStatsForWindow(records, from, to)
+    const previous = mergePromptStatsForWindow(records, previousWindow.from, previousWindow.to)
+    return promptPayloadOf(current, previous, from, to)
+  }
+
+  /**
    * 运行期工具索引（挂载期内存、不落盘）：随每次本地重建从**同一份**会话折叠结果刷新，
    * 供 `/tools` 按窗口 + 项目 + 模型聚合，不重读会话；本地段还没建好时为 null。
    */
   let toolsIndex: ToolSessionIndex | null = null
 
   /**
-   * 统一快照：6 个 tab 的唯一数据来源（`$DSH_HOME/dsh-key-usage/usage.db` 的 snapshot_section 表）。
+   * 运行期提问索引（挂载期内存、不落盘）：同一份折叠结果里的按天桶 + 过滤维度，
+   * 供 `/prompts` 按窗口 + 项目 + 模型 + 通道聚合，不重读会话；本地段还没建好时为 null。
+   */
+  let promptsIndex: PromptSessionIndex | null = null
+
+  /**
+   * 统一快照：6 个 tab 的唯一数据来源（`$DSH_HOME/dsh-key-usage/usage.db` 的 `snapshot_section` 表）。
    * 本地段由定时器每 5 分钟重算（不联网）；配额段只在首次构建与手动刷新时联网。
    */
   const snapshotService = createSnapshotService({
@@ -1103,8 +1125,10 @@ export function mountKeyUsageRoutes(
          * `collect()` 内部只做「并发去重」，串行调用就是三次真实读取 —— 这里显式只取一次。
          */
         const collection = await sessionSource.collect()
-        // 工具运行期索引：同一份折叠结果，只搬 Map 引用与过滤维度，不读第二遍会话（`/tools` 靠它聚合）
-        toolsIndex = buildToolSessionIndex(collection.records, knownProviders())
+        // 两个运行期索引共用同一份折叠结果：只搬 Map 引用与过滤维度，不读第二遍会话
+        const providers = knownProviders()
+        toolsIndex = buildToolSessionIndex(collection.records, providers)
+        promptsIndex = buildPromptSessionIndex(collection.records, providers)
         const stats = sessionSource.stats?.() ?? null
         // 耗时明细直接落盘（info）：这是排查信息，不是「快照问题」，不进 issues（界面就不会弹警告）
         if (stats !== null) {
@@ -1368,6 +1392,50 @@ export function mountKeyUsageRoutes(
         return
       }
       sendJson(response, 200, { ...stat, from: windowFrom, to: windowTo })
+    },
+  })
+
+  /**
+   * 提问词云参数化统计：窗口 = `from`/`to`（本地日期、含首尾），`project` / `model` / `provider`
+   * 逗号分隔多选（空串项 = 匹配「未归入工作区」）。响应形状与快照 `prompts` 段一致，另带上期环比。
+   * 只读运行期索引、不重读会话；索引还没建好（老版本 / 构建中）时回 `null`，客户端回落快照段。
+   */
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/prompts',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const today = dayKeyOf(new Date())
+      const to = parseDayParam(url.searchParams.get('to'), today)
+      const from = parseDayParam(url.searchParams.get('from'), shiftedDayKey(-(PROMPT_WINDOW_DAYS - 1)))
+      // 起止倒置时交换：与范围选择器一致，取用户圈定的窗口而不是报错
+      const windowFrom = from <= to ? from : to
+      const windowTo = from <= to ? to : from
+      const projects = parseMultiFilter(url.searchParams.get('project'))
+      const models = parseMultiFilter(url.searchParams.get('model'))
+      const providers = parseMultiFilter(url.searchParams.get('provider'))
+      const current = mergePromptStatsInWindow(promptsIndex, {
+        from: windowFrom,
+        to: windowTo,
+        projects,
+        models,
+        providers,
+      })
+      if (current === null) {
+        sendJson(response, 200, null)
+        return
+      }
+      // 上期 = 同长度、紧邻前一段；筛选条件与本期一致，环比才有可比性
+      const previousWindow = previousPromptWindowOf(windowFrom, windowTo)
+      const previous = mergePromptStatsInWindow(promptsIndex, {
+        from: previousWindow.from,
+        to: previousWindow.to,
+        projects,
+        models,
+        providers,
+      })
+      sendJson(response, 200, promptPayloadOf(current, previous, windowFrom, windowTo))
     },
   })
 

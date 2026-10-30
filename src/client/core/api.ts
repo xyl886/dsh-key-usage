@@ -9,6 +9,7 @@ import type {
   PricingRefreshResult,
   PricingResponse,
   ProjectsResponse,
+  PromptsResponse,
   QuotaProvider,
   RatesResponse,
   SessionDetailResponse,
@@ -115,6 +116,28 @@ export function loadTools(from: string, to: string, projectFilter: string | null
   if (projectFilter !== null) params.set('project', projectFilter)
   if (modelFilter !== '') params.set('model', modelFilter)
   return fetchJson<ToolsResponse>(TOOLS_PATH + '?' + params.toString(), TOOLS_PATH)
+}
+
+/** 提问词云参数化端点：窗口 + 项目 / 模型 / 通道多选（空串筛选值留给「未归入工作区」）。 */
+export const PROMPTS_PATH = '/dsh-key-usage/prompts'
+
+/**
+ * 按当前筛选取提问词云。服务端索引还没建好（老版本 / 构建中）时回 `null`，
+ * 调用方保留快照里的 `prompts` 段作为回落。
+ * `projectFilter` 传 `null` = 不筛；传空串 = 只筛「未归入工作区」（服务端按 workspace 空串匹配）。
+ */
+export function loadPrompts(
+  from: string,
+  to: string,
+  projectFilter: string | null,
+  modelFilter: string,
+  channelFilter: string,
+): Promise<PromptsResponse | null> {
+  const params = new URLSearchParams({ from, to })
+  if (projectFilter !== null) params.set('project', projectFilter)
+  if (modelFilter !== '') params.set('model', modelFilter)
+  if (channelFilter !== '') params.set('provider', channelFilter)
+  return fetchJson<PromptsResponse>(PROMPTS_PATH + '?' + params.toString(), PROMPTS_PATH)
 }
 
 export function loadPricing(): Promise<PricingResponse | null> {

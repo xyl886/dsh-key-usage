@@ -821,6 +821,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/pricing',
     '/dsh-key-usage/pricing/refresh',
     '/dsh-key-usage/projects',
+    '/dsh-key-usage/prompts',
     '/dsh-key-usage/quota',
     '/dsh-key-usage/rates',
     '/dsh-key-usage/refresh',
@@ -830,7 +831,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/summary',
     '/dsh-key-usage/tools',
     '/dsh-key-usage/usage',
-  ], '18 个端点 = 15 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
+  ], '19 个端点 = 16 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
 
   // /log：POST 追加 → GET 回读 → POST 清空；坏请求体与非回环都被挡住
   const logAppend = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({
@@ -1435,6 +1436,162 @@ rmSync(home, { recursive: true, force: true })
 
   process.env.DSH_HOME = toolsHome
   rmSync(toolsHome, { recursive: true, force: true })
+}
+
+// ===== /prompts：窗口 + 项目 + 模型 + 通道（运行期索引随本地重建刷新；索引缺失回 null） =====
+{
+  const promptsHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-prompts-'))
+  mkdirSync(join(promptsHome, 'profiles', 'desktop'), { recursive: true })
+  mkdirSync(join(promptsHome, 'dsh-usage'), { recursive: true })
+  writeFileSync(join(promptsHome, 'profiles', 'desktop', 'cordis.yml'), [
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      opencode-go:',
+    '        apiKeyEnv: OPENCODE_GO_API_KEY',
+    '        models:',
+    '          - id: glm-5.3-flash',
+    '            name: GLM-5.3-Flash',
+    '      local:',
+    '        apiKeyEnv: LOCAL_API_KEY',
+    '        baseURL: http://127.0.0.1:11434/v1',
+    '        models:',
+    '          - id: qwen3',
+    '            name: Qwen3',
+    '',
+  ].join('\n'), 'utf8')
+
+  // 会话 A：真实工作区 + GLM-5.3-Flash，按天分布三条提问（-2 / -1 / 今天）
+  const promptEventsA = [
+    { seq: 0, time: localTimeOf(-2, 9), type: 'request/header', data: { header: { config: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } } },
+    { seq: 1, time: localTimeOf(-2, 9), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 0 } } } },
+    { seq: 2, time: localTimeOf(-2, 10), type: 'user/message', data: { content: [{ type: 'text', text: 'legacy planning 旧需求' }] } },
+    { seq: 3, time: localTimeOf(-1, 10), type: 'user/message', data: { content: [{ type: 'text', text: 'alpha deployment 分析' }] } },
+    { seq: 4, time: localTimeOf(0, 10), type: 'user/message', data: { content: [{ type: 'text', text: 'beta cache 检查' }] } },
+  ]
+  // 会话 B：没有工作区（「未归入工作区」）+ 本地通道 Qwen3
+  const promptEventsB = [
+    { seq: 0, time: localTimeOf(0, 11), type: 'request/header', data: { header: { config: { provider: 'local', model: 'Qwen3' } } } },
+    { seq: 1, time: localTimeOf(0, 11), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 50, outputTokens: 5, cacheReadTokens: 0 } } } },
+    { seq: 2, time: localTimeOf(0, 11), type: 'user/message', data: { content: [{ type: 'text', text: 'gamma ledger 部署' }] } },
+  ]
+  const promptsFixture = createFakePersistence([
+    ['session-prompts-a', { header: { id: 'session-prompts-a', title: '提问会话 A', cwd: 'D:\\EasyJob', updatedAt: localTimeOf(0, 10) }, revision: Symbol('prompts-a'), events: promptEventsA }],
+    ['session-prompts-b', { header: { id: 'session-prompts-b', title: '提问会话 B', updatedAt: localTimeOf(0, 11) }, revision: Symbol('prompts-b'), events: promptEventsB }],
+  ])
+  const promptsSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? promptsFixture.service : undefined) })
+
+  const promptsHandlers = new Map()
+  process.env.DSH_HOME = promptsHome
+  mountKeyUsageRoutes(
+    { register: (route) => { promptsHandlers.set(route.path, route.handler) } },
+    promptsSource,
+    undefined,
+    undefined,
+    { snapshotIntervalMs: 0 },
+  )
+  const promptsCall = (path, remoteAddress) => callHandler(promptsHandlers, path, remoteAddress)
+
+  // 索引还没随本地重建建起来 → null：客户端回落快照 prompts 段，不是报错也不是空壳
+  const beforeBuild = await promptsCall('/dsh-key-usage/prompts')
+  assert.equal(beforeBuild.status, 200)
+  assert.equal(beforeBuild.body, null)
+  await warmUp(promptsHandlers)
+
+  const todayKey = localDayKey(0)
+  const yesterdayKey = localDayKey(-1)
+  const twoDaysAgoKey = localDayKey(-2)
+  const promptsOf = async (query) => (await promptsCall('/dsh-key-usage/prompts' + query)).body
+  const windowQuery = '?from=' + yesterdayKey + '&to=' + todayKey
+
+  // 响应形状 = 快照 prompts 段 + 窗口回显
+  const spanning = await promptsOf(windowQuery)
+  assert.deepEqual(Object.keys(spanning).sort(), [
+    'from', 'prevTopWordCount', 'prevTotalChars', 'prevTotalPrompts', 'prevWordCount',
+    'to', 'totalChars', 'totalPrompts', 'words',
+  ])
+  assert.equal(spanning.from, yesterdayKey)
+  assert.equal(spanning.to, todayKey)
+  assert.equal(spanning.totalPrompts, 3, 'A 的两条 + B 的一条')
+  const spanningWords = spanning.words.map((row) => row.word)
+  for (const expectedWord of ['alpha', 'beta', 'gamma', 'deployment', 'cache', 'ledger']) {
+    assert.ok(spanningWords.includes(expectedWord), '窗口内的词：' + expectedWord)
+  }
+  assert.equal(spanningWords.includes('legacy'), false, '窗口外的词不混进来')
+
+  // 上期 = 同长度、紧邻前一段（这里 = 前天）：条数 / 字数 / 最高频词都按上期算
+  assert.equal(spanning.prevTotalPrompts, 1, '上期只有 A 前天的那一条提问')
+  assert.equal(spanning.prevTotalChars, 19, '上期字符数')
+  assert.ok(spanning.prevWordCount > 0)
+  assert.ok(spanning.prevTopWordCount >= 1)
+  // 上期完全没有数据时四个 prev* 全为 null（界面不显示环比，不拿 0 编百分比）
+  const noPrevious = await promptsOf('?from=' + twoDaysAgoKey + '&to=' + todayKey)
+  assert.equal(noPrevious.prevTotalPrompts, null)
+  assert.equal(noPrevious.prevTotalChars, null)
+  assert.equal(noPrevious.prevWordCount, null)
+  assert.equal(noPrevious.prevTopWordCount, null)
+
+  // 窗口切分：只取某一天
+  const yesterdayOnly = await promptsOf('?from=' + yesterdayKey + '&to=' + yesterdayKey)
+  assert.equal(yesterdayOnly.totalPrompts, 1)
+  assert.equal(yesterdayOnly.totalChars, 19, '只算窗口内的那条提问')
+  assert.equal(yesterdayOnly.words.some((row) => row.word === 'alpha'), true)
+  assert.equal(yesterdayOnly.words.some((row) => row.word === 'beta'), false)
+  const todayOnly = await promptsOf('?from=' + todayKey + '&to=' + todayKey)
+  assert.equal(todayOnly.totalPrompts, 2, '今天 A / B 各一条')
+
+  // 项目筛选：真实工作区 / 空串（未归入工作区）/ 未知工作区
+  const byProject = await promptsOf(windowQuery + '&project=' + encodeURIComponent('D:\\EasyJob'))
+  assert.equal(byProject.totalPrompts, 2, '只算该工作区的会话 A')
+  assert.equal(byProject.words.some((row) => row.word === 'gamma'), false)
+  const byOrphan = await promptsOf(windowQuery + '&project=')
+  assert.equal(byOrphan.totalPrompts, 1, '空串 = 「未归入工作区」：匹配 workspace 为空的会话 B')
+  assert.equal(byOrphan.words.some((row) => row.word === 'gamma'), true)
+  const noProject = await promptsOf(windowQuery + '&project=' + encodeURIComponent('D:\\nope'))
+  assert.equal(noProject.totalPrompts, 0)
+  assert.deepEqual(noProject.words, [])
+
+  // 模型筛选（展示模型名）：单选 / 多选
+  assert.equal((await promptsOf(windowQuery + '&model=GLM-5.3-Flash')).totalPrompts, 2)
+  assert.equal((await promptsOf(windowQuery + '&model=Qwen3')).totalPrompts, 1)
+  assert.equal((await promptsOf(windowQuery + '&model=Qwen3,GLM-5.3-Flash')).totalPrompts, 3)
+
+  // 通道筛选（provider id）：单选 / 多选
+  assert.equal((await promptsOf(windowQuery + '&provider=opencode-go')).totalPrompts, 2)
+  assert.equal((await promptsOf(windowQuery + '&provider=local')).totalPrompts, 1)
+  assert.equal((await promptsOf(windowQuery + '&provider=local,opencode-go')).totalPrompts, 3)
+
+  // 不同维度之间同时满足
+  assert.equal((await promptsOf(windowQuery + '&project=' + encodeURIComponent('D:\\EasyJob') + '&model=Qwen3')).totalPrompts, 0)
+
+  // 空窗口：全 0 对象（界面显示空态，绝不拿全量数据冒充）
+  const emptyWindow = await promptsOf('?from=' + localDayKey(-5) + '&to=' + localDayKey(-4))
+  assert.equal(emptyWindow.from, localDayKey(-5))
+  assert.equal(emptyWindow.totalPrompts, 0)
+  assert.equal(emptyWindow.totalChars, 0)
+  assert.deepEqual(emptyWindow.words, [])
+  assert.equal(emptyWindow.prevTotalPrompts, null)
+
+  // 参数校验：缺省 = 近 30 天；起止倒置按交换处理；非法日期回落默认窗口
+  const defaultWindow = await promptsOf('')
+  assert.equal(defaultWindow.from, localDayKey(-29))
+  assert.equal(defaultWindow.to, todayKey)
+  assert.equal(defaultWindow.totalPrompts, 4, 'A 的三条 + B 的一条都在近 30 天内')
+  const reversed = await promptsOf('?from=' + todayKey + '&to=' + yesterdayKey)
+  assert.equal(reversed.from, yesterdayKey, '起止倒置时交换，不报错')
+  assert.equal(reversed.to, todayKey)
+  assert.equal(reversed.totalPrompts, 3)
+  const invalidDays = await promptsOf('?from=2026-02-30&to=nope')
+  assert.equal(invalidDays.from, localDayKey(-29), '非法日期（含溢出日期）回落默认窗口')
+  assert.equal(invalidDays.to, todayKey)
+
+  // 只允许回环
+  const foreignPrompts = await promptsCall('/dsh-key-usage/prompts', '10.0.0.7')
+  assert.equal(foreignPrompts.status, 403)
+  assert.deepEqual(foreignPrompts.body, { error: 'loopback only' })
+
+  process.env.DSH_HOME = promptsHome
+  rmSync(promptsHome, { recursive: true, force: true })
 }
 
 console.log('routes.test: 全部通过')

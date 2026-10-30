@@ -869,24 +869,24 @@ export interface PromptWindowStat {
 
 /**
  * 某个日期区间（含首尾，本地 `YYYY-MM-DD`）内的提问统计：只读按天桶，
- * 同一会话跨两个窗口时按天各计各的，不重复、不近似。
+ * 同一会话跨两个窗口时按天各计各的，不重复、不近似。快照 `prompts` 段用它拼本期 / 上期。
  */
-export function mergePromptStatsInWindow(
+export function mergePromptStatsForWindow(
   records: Iterable<PromptStatsRecord>,
   fromDay: string,
   toDay: string,
   limit: number = PROMPT_WORDS_LIMIT,
 ): PromptWindowStat {
   const totals = new Map<string, number>()
+  const dayKeys = new Set<string>()
   let totalPrompts = 0
   let totalChars = 0
-  let days = 0
   for (const record of records) {
     const dayStats = record.promptDayStats
     if (!(dayStats instanceof Map)) continue
     for (const [day, stat] of dayStats) {
       if (day < fromDay || day > toDay) continue
-      days += 1
+      dayKeys.add(day)
       if (Number.isFinite(stat.count) && stat.count > 0) totalPrompts += stat.count
       if (Number.isFinite(stat.chars) && stat.chars > 0) totalChars += stat.chars
       if (!(stat.words instanceof Map)) continue
@@ -897,7 +897,74 @@ export function mergePromptStatsInWindow(
     }
   }
   const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 1000) : PROMPT_WORDS_LIMIT
-  return { words: topWordEntries(totals, safeLimit), totalPrompts, totalChars, days }
+  return { words: topWordEntries(totals, safeLimit), totalPrompts, totalChars, days: dayKeys.size }
+}
+
+/** `/prompts` 的查询窗口与筛选维度（空数组 / 缺省 = 不筛）。 */
+export interface PromptWindowQuery {
+  /** 起始本地日期 `YYYY-MM-DD`（含）。 */
+  from: string
+  /** 结束本地日期 `YYYY-MM-DD`（含）。 */
+  to: string
+  /** 工作区多选；`''` 匹配「未归入工作区」。 */
+  projects?: string[] | null
+  /** 展示模型名多选。 */
+  models?: string[] | null
+  /** 通道（provider id）多选。 */
+  providers?: string[] | null
+}
+
+/**
+ * 按窗口 + 项目 + 模型 + 通道聚合提问统计（`GET /prompts`）。
+ * `null` = 运行期索引还没建好（老版本 / 构建中）：调用方回落快照里的 `prompts` 段，不报错。
+ * 索引存在但窗口 / 筛选没有命中时返回**全 0 对象**（界面显示空态，不拿全量数据冒充）。
+ */
+export function mergePromptStatsInWindow(
+  index: PromptSessionIndex | null,
+  query: PromptWindowQuery,
+  limit: number = PROMPT_WORDS_LIMIT,
+): PromptWindowStat | null {
+  if (index === null) return null
+  const projects = query.projects !== undefined && query.projects !== null && query.projects.length > 0 ? new Set(query.projects) : null
+  const models = query.models !== undefined && query.models !== null && query.models.length > 0 ? new Set(query.models) : null
+  const providers = query.providers !== undefined && query.providers !== null && query.providers.length > 0 ? new Set(query.providers) : null
+  const totals = new Map<string, number>()
+  const dayKeys = new Set<string>()
+  let totalPrompts = 0
+  let totalChars = 0
+  for (const entry of index.values()) {
+    if (projects !== null && !projects.has(entry.workspace)) continue
+    if (models !== null && !entry.models.some((model) => models.has(model))) continue
+    if (providers !== null && !entry.providers.some((provider) => providers.has(provider))) continue
+    if (entry.promptDayStats === null) continue
+    for (const [day, stat] of entry.promptDayStats) {
+      if (day < query.from || day > query.to) continue
+      dayKeys.add(day)
+      if (Number.isFinite(stat.count) && stat.count > 0) totalPrompts += stat.count
+      if (Number.isFinite(stat.chars) && stat.chars > 0) totalChars += stat.chars
+      if (!(stat.words instanceof Map)) continue
+      for (const [word, count] of stat.words) {
+        if (word === '' || !Number.isFinite(count) || count <= 0) continue
+        addWordCount(totals, word, count, MAX_MERGED_WORDS)
+      }
+    }
+  }
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 1000) : PROMPT_WORDS_LIMIT
+  return { words: topWordEntries(totals, safeLimit), totalPrompts, totalChars, days: dayKeys.size }
+}
+
+/**
+ * 上期窗口：与本期**同长度、紧邻前一段**（本地 `YYYY-MM-DD`）。
+ * 日期按 UTC 做整数天算术，夏令时不会把窗口算歪；调用方保证入参是合法日期且 from <= to。
+ */
+export function previousPromptWindowOf(from: string, to: string): { from: string; to: string } {
+  const dayMs = 86400000
+  const fromMs = Date.parse(from + 'T00:00:00Z')
+  const toMs = Date.parse(to + 'T00:00:00Z')
+  const length = Math.round((toMs - fromMs) / dayMs) + 1
+  const previousTo = fromMs - dayMs
+  const previousFrom = previousTo - (length - 1) * dayMs
+  return { from: new Date(previousFrom).toISOString().slice(0, 10), to: new Date(previousTo).toISOString().slice(0, 10) }
 }
 
 /** 工具统计的会话级样本（跟着会话折叠缓存走；外部注入的旧数据源可能没有这些字段）。 */
@@ -1082,39 +1149,78 @@ export interface ToolSessionEntry {
 /** 工具运行期索引：会话 id → 过滤维度 + 计数表。 */
 export type ToolSessionIndex = Map<string, ToolSessionEntry>
 
-/** 建索引所需的会话字段（`SessionUsageRecord` 的结构子集，避免 data 层反向依赖 sessions.ts）。 */
-export interface ToolIndexRecord extends ToolStatsRecord {
+/** 建运行期索引所需的会话字段（`SessionUsageRecord` 的结构子集，避免 data 层反向依赖 sessions.ts）。 */
+export interface SessionIndexRecord {
   id: string
   workspace?: string | null
   summary?: { models?: ReadonlyArray<{ key: string }> } | null
 }
 
+/** 建索引所需的工具统计字段。 */
+export interface ToolIndexRecord extends ToolStatsRecord, SessionIndexRecord {}
+
+/** 运行期索引共用的过滤维度：模型名按展示口径拆（`attributeModelKey` 去掉路由前缀），与顶部「模型」筛选一致。 */
+function sessionDimensionsOf(
+  record: SessionIndexRecord,
+  knownProviders: string[],
+): { workspace: string; models: string[]; providers: string[] } {
+  const models = new Set<string>()
+  const providers = new Set<string>()
+  for (const model of record.summary?.models ?? []) {
+    if (model === null || typeof model.key !== 'string' || model.key === '') continue
+    const attribution = attributeModelKey(model.key, knownProviders)
+    if (attribution.model !== '') models.add(attribution.model)
+    if (attribution.provider !== '') providers.add(attribution.provider)
+  }
+  return { workspace: record.workspace ?? '', models: [...models], providers: [...providers] }
+}
+
 /**
- * 从同一份会话折叠结果建运行期索引：只搬 Map 引用、收集过滤维度，**不读第二遍会话**。
- * 模型名按展示口径拆（`attributeModelKey` 去掉路由前缀），与顶部「模型」筛选的取值一致。
+ * 从同一份会话折叠结果建工具运行期索引：只搬 Map 引用、收集过滤维度，**不读第二遍会话**。
  */
 export function buildToolSessionIndex(records: Iterable<ToolIndexRecord>, knownProviders: string[]): ToolSessionIndex {
   const index: ToolSessionIndex = new Map()
   for (const record of records) {
     if (typeof record.id !== 'string' || record.id === '') continue
-    const models = new Set<string>()
-    const providers = new Set<string>()
-    for (const model of record.summary?.models ?? []) {
-      if (model === null || typeof model.key !== 'string' || model.key === '') continue
-      const attribution = attributeModelKey(model.key, knownProviders)
-      if (attribution.model !== '') models.add(attribution.model)
-      if (attribution.provider !== '') providers.add(attribution.provider)
-    }
     index.set(record.id, {
-      workspace: record.workspace ?? '',
-      models: [...models],
-      providers: [...providers],
+      ...sessionDimensionsOf(record, knownProviders),
       byTool: record.toolNameCounts ?? null,
       skills: record.skillNameCounts ?? null,
       mcp: record.mcpServerCounts ?? null,
       byDay: record.toolDayCalls ?? null,
       toolDayStats: record.toolDayStats ?? null,
       total: typeof record.toolCalls === 'number' && Number.isFinite(record.toolCalls) ? record.toolCalls : 0,
+    })
+  }
+  return index
+}
+
+/** 提问运行期索引里一个会话的过滤维度与按天桶（内存态、不落盘，随每次本地重建刷新）。 */
+export interface PromptSessionEntry {
+  /** 会话工作区；空串 = 未归入工作区。 */
+  workspace: string
+  /** 会话用到的展示模型名（去重，与顶部「模型」筛选同一口径）。 */
+  models: string[]
+  /** 会话用到的通道（去重）。 */
+  providers: string[]
+  /** 本地日期 → 当天提问统计（直接引用折叠缓存里的 Map，不复制）。 */
+  promptDayStats: Map<string, PromptDayStat> | null
+}
+
+/** 提问运行期索引：会话 id → 过滤维度 + 按天桶。 */
+export type PromptSessionIndex = Map<string, PromptSessionEntry>
+
+/** 建提问索引所需的会话字段。 */
+export interface PromptIndexRecord extends PromptStatsRecord, SessionIndexRecord {}
+
+/** 从同一份会话折叠结果建提问运行期索引：只搬按天桶引用、收集过滤维度，不读第二遍会话。 */
+export function buildPromptSessionIndex(records: Iterable<PromptIndexRecord>, knownProviders: string[]): PromptSessionIndex {
+  const index: PromptSessionIndex = new Map()
+  for (const record of records) {
+    if (typeof record.id !== 'string' || record.id === '') continue
+    index.set(record.id, {
+      ...sessionDimensionsOf(record, knownProviders),
+      promptDayStats: record.promptDayStats ?? null,
     })
   }
   return index
