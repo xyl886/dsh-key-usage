@@ -35,7 +35,7 @@
 .iconBtn {
   box-sizing: border-box; width: var(--ku-control); height: var(--ku-control); padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, .12)); border-radius: 12px;
+  border: 1px solid transparent; border-radius: 12px;
   background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit; font-size: var(--ku-body); line-height: 1; cursor: pointer; text-decoration: none;
 }
@@ -60,8 +60,8 @@
 /* 仓库链接：与其它图标控件同规格（跳外站，但外观不特殊） */
 .ghLink {
   display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
-  width: var(--ku-control); height: var(--ku-control); border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 8px;
+  width: var(--ku-control); height: var(--ku-control); border: 1px solid transparent;
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 12px;
   text-decoration: none; line-height: 0;
 }
 .ghLink:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
@@ -196,7 +196,7 @@
   -webkit-appearance: none;
   box-sizing: border-box;
   height: var(--ku-control);
-  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, .12));
+  border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
@@ -211,7 +211,7 @@
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
 }
-.refreshSelect:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+.refreshSelect:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #0f1115); }
 .refreshSelect:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .sections { display: flex; flex-direction: column; gap: 32px; margin: 24px auto 0; max-width: 960px; }
 /* 分区不再套一层边框卡片：宿主页面是扁平分区，靠标题与留白分隔 */
@@ -259,3 +259,19 @@
   font-weight: 400;
 }
 .rangeTab:focus-visible, .rangeTabActive:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+
+/* ===== 导出下拉（两个导出动作合并成一个菜单） ===== */
+.exportMenu { position: relative; display: inline-flex; }
+.exportPanel {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 132px;
+  display: flex; flex-direction: column; gap: 2px; padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-3, #232329); box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0, 0, 0, .35));
+}
+.exportItem {
+  display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px;
+  background: none; color: var(--dsw-alias-label-primary, #0f1115); font: inherit; font-size: 13px;
+  text-align: left; cursor: pointer; white-space: nowrap;
+}
+.exportItem:hover:enabled { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+.exportItem:disabled { color: var(--dsw-alias-label-tertiary, #67676f); cursor: default; }

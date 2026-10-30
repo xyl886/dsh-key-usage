@@ -1,5 +1,5 @@
 /**
- * 客户端系统日志测试：攒批落盘、去重累加、磁盘回读 / 重复刷新不虚增、清空、导出文本、
+ * 客户端系统日志测试：攒批落盘、逐条记录（不合并）、磁盘回读 / 重复刷新不虚增、清空、导出文本、
  * 落盘失败不抛错、打开日志窗的订阅。
  * 用 Node 的类型擦除直接加载 `src/client/core/log.ts`（Node ≥ 22.18 默认开启）。
  * 运行：node test/client-log.test.mjs
@@ -33,32 +33,32 @@ async function check(name, run) {
   console.log('  ✓ ' + name)
 }
 
-await check('磁盘历史读回：按时间排序、详情保留、重复记录合并计数', async () => {
+await check('磁盘历史读回：按时间排序、详情保留、同一条出现两次就保留两条', async () => {
   await log.hydrateLog()
   const entries = log.logEntries()
-  assert.deepEqual(entries.map((entry) => entry.source), ['fx', 'pricing'])
+  assert.deepEqual(entries.map((entry) => entry.source), ['fx', 'pricing', 'pricing'])
   assert.equal(entries[0].detail, 'https://example.test/fx')
-  assert.equal(entries[1].count, 2, '磁盘上同一条出现两次 → 折叠成 ×2')
-  assert.ok(entries[0].time < entries[1].time)
+  assert.equal(entries[1].count, 1, '不再合并计数，每条都是独立的 1 次')
+  assert.ok(entries[0].time <= entries[1].time)
 })
 
-await check('重复刷新磁盘不虚增计数（日志窗「刷新」幂等）', async () => {
+await check('重复刷新磁盘不虚增条数（日志窗「刷新」幂等）', async () => {
   await log.refreshLog()
   await log.refreshLog()
-  assert.deepEqual(log.logEntries().map((entry) => entry.count), [1, 2])
+  assert.deepEqual(log.logEntries().map((entry) => entry.source), ['fx', 'pricing', 'pricing'])
 })
 
-await check('同来源同消息去重累加，攒批只发一次 POST', async () => {
+await check('同来源同消息逐条记录（不合并），攒批只发一次 POST', async () => {
   calls.length = 0
   const before = log.logEntries().length
   log.logError('quota', '实时查询未成功 · local', '未配置 API Key')
   log.logError('quota', '实时查询未成功 · local', '未配置 API Key')
   log.logInfo('pricing', '刷新价目')
-  assert.equal(log.logEntries().length, before + 2, '两条相同合成一条 + 一条新的')
+  assert.equal(log.logEntries().length, before + 3, '每条都独立记录')
   await sleep(1300)
   const bodies = postBodies()
   assert.equal(bodies.length, 1, '1 秒内的三条合成一批')
-  assert.equal(bodies[0].records.length, 2, '去重后只写两条')
+  assert.equal(bodies[0].records.length, 3, '三条都写盘')
   const quotaRecord = bodies[0].records.find((record) => record.source === 'quota')
   assert.equal(quotaRecord.message, '实时查询未成功 · local')
   assert.equal(quotaRecord.detail, '未配置 API Key')
@@ -71,25 +71,27 @@ await check('已发送的条目不会重复写盘', async () => {
   assert.equal(postBodies().length, 0)
 })
 
-await check('同一问题再次出现只累加内存计数，不再重复写文件', async () => {
+await check('同一问题再次出现也单独成条并落盘', async () => {
   calls.length = 0
   log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
   await sleep(1300)
   assert.equal(postBodies().length, 1, '第一次出现要落盘')
   calls.length = 0
-  // 同一个问题（同来源 + 同消息）第二次出现：内存里 ×2，磁盘上不该再多一条
+  // 同一个问题第二次出现：这次也单独记一条（页面要求一条一条列，不做 ×N 合并）
   log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
   await sleep(1300)
-  assert.equal(postBodies().length, 0, '重复出现不再写文件（否则 plugin.log 会被同一个已知问题刷满）')
-  const entry = log.logEntries().find((item) => item.message.includes('sensenova'))
-  assert.equal(entry.count, 2, '内存里仍然累加计数')
+  assert.equal(postBodies().length, 1, '第二次出现同样写盘')
+  const rows = log.logEntries().filter((item) => item.message.includes('sensenova'))
+  assert.equal(rows.length, 2, '内存里是两条独立记录')
+  assert.deepEqual(rows.map((item) => item.count), [1, 1])
 })
 
-await check('导出文本：带时间 / 级别 / 来源，详情缩进一行，重复标 ×N', async () => {
+await check('导出文本：带时间 / 级别 / 来源，详情缩进一行，不再标 ×N', async () => {
   const text = log.logTextOf(log.logEntries())
-  assert.match(text, /\[error\] pricing · 刷新价目失败 ×2/)
+  assert.match(text, /\[error\] pricing · 刷新价目失败/)
+  assert.doesNotMatch(text, /×\d/)
   assert.match(text, /\n {4}HTTP 502/)
-  assert.match(text, /\[error\] quota · 实时查询未成功 · local ×2/)
+  assert.match(text, /\[error\] quota · 实时查询未成功 · local/)
 })
 
 await check('落盘失败被吞掉，不影响内存日志', async () => {

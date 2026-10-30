@@ -56,15 +56,8 @@ function trim(): void {
   if (entries.length > MAX_ENTRIES) entries = entries.slice(entries.length - MAX_ENTRIES)
 }
 
-/** 去重累加：同来源 + 同消息 + 同级别合并成一条（重试一次不该刷两屏）。 */
+/** 每次记录都单独成条（页面按发生顺序一条一条列，不再合并成「×N」）。 */
 function fold(level: LogLevel, source: string, message: string, detail: string | undefined, time: number): LogEntry {
-  const existing = entries.find((entry) => entry.source === source && entry.message === message && entry.level === level)
-  if (existing !== undefined) {
-    existing.count += 1
-    if (time > existing.time) existing.time = time
-    if (detail !== undefined) existing.detail = detail
-    return existing
-  }
   const entry: LogEntry = { id: nextId, time, level, source, message, detail, count: 1 }
   nextId += 1
   entries = [...entries, entry]

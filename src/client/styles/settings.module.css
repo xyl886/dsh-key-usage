@@ -16,10 +16,10 @@
 .panel { flex: 1 1 auto; min-width: 0; max-height: 62vh; overflow: auto; }
 
 /* ===== 「设置」页：三小节平铺，12px 间距、无卡片边框 ===== */
-.sections { display: flex; flex-direction: column; gap: 12px; min-width: 300px; max-width: 420px; }
-.section { display: flex; flex-direction: column; gap: 8px; }
+.sections { display: flex; flex-direction: column; gap: 20px; min-width: 300px; max-width: 520px; }
+.section { display: flex; flex-direction: column; gap: 2px; }
 /* 小节标题：15px 次级色，比正文大一号、比页内面板标题弱一档 */
-.sectionTitle { font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-secondary, #9a9aa6); }
+.sectionTitle { font-size: 14px; font-weight: 500; color: var(--dsw-alias-label-primary, #0f1115); margin-bottom: 4px; }
 
 /* 小节内的一行（标签 + 右侧控件 / 值） */
 .block { display: flex; flex-direction: column; gap: 6px; }
@@ -38,8 +38,18 @@
 .logPane { min-height: 44px; }
 
 /* ===== 「口径」页（保持原样） ===== */
-.wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 420px; }
+.wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 560px; }
 .caliberVersion { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); }
 .caliberList { margin: 8px 0 0; padding-left: 20px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-sub, 13px); line-height: 1.7; }
 .link { color: var(--dsw-alias-state-business-primary, #5b8cff); text-decoration: none; }
 .link:hover { text-decoration: underline; }
+
+/* 行式布局：左标签、右控件，行间用发丝线分隔 */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.row + .row { border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, .06)); }
+.hint { padding: 0 0 8px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; line-height: 1.6; }
+.hintWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
+
+/* 设置行：标签 / 中间信息 / 右侧控件；不再有分区标题与说明段 */
+.rowInfo { flex: 1 1 auto; min-width: 0; text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rowInfoWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }

@@ -13,7 +13,6 @@ import { t, useT } from '../core/i18n.ts'
 import { logError, logInfo, logWarn } from '../core/log.ts'
 import { modelPriceRefreshTextOf } from '../core/pricing.ts'
 import { PLUGIN_VERSION } from '../core/version.ts'
-import { LogHint } from './LogHint.tsx'
 import { LogPanel } from './LogPanel.tsx'
 import { Button } from './ui/Button.tsx'
 import styles from '../styles/settings.module.css'
@@ -110,12 +109,12 @@ export function SettingsDialog(props: {
     if (outcome === null) {
       const reason = failureReasonOf(MODEL_PRICE_REFRESH_PATH) ?? t('quota.noResponse')
       logError('pricing', t('quota.pricingFailedShort'), reason + ' · ' + MODEL_PRICE_REFRESH_PATH, () => { void refreshPrices() })
-      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
+      setRefreshStatus(null)
       return
     }
     if (!outcome.ok) {
       logError('pricing', t('quota.pricingFailedShort'), outcome.error, () => { void refreshPrices() })
-      setRefreshStatus({ tone: 'bad', text: t('quota.pricingFailedShort') })
+      setRefreshStatus(null)
       return
     }
     setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
@@ -123,9 +122,12 @@ export function SettingsDialog(props: {
     props.onPricingReload()
   }
 
-  const fxText = display.fx === null
-    ? (fxError === null ? fxSummaryTextOf(null) : t('quota.fxUnavailable'))
-    : (fxFallback ?? fxSummaryTextOf(display.fx))
+  /** 设置页只展示一行汇率结论（来源与时间进不到版面上）。 */
+  const fxRateTextOf = (fx: typeof display.fx): string => {
+    if (fx === null) return '—'
+    return '1 ' + fx.base + ' = ' + String(Math.round(fx.rate * 100) / 100) + ' ' + fx.quote
+  }
+
   const fxWarn = display.fx === null || display.fx.source === 'default'
 
   return (
@@ -148,79 +150,61 @@ export function SettingsDialog(props: {
       <div className={styles.panel}>
         {tab === 'general' && (
           <div className={styles.sections}>
-            <section className={styles.section}>
-              <div className={styles.sectionTitle}>{t('settings.sectionDisplay')}</div>
-              <div className={styles.block}>
-                <div className={styles.head}>
-                  <span className={styles.rowLabel}>{t('settings.currency')}</span>
-                  <span className={styles.actions}>
-                    {DISPLAY_CURRENCIES.map((currency) => (
-                      <Button
-                        key={currency}
-                        size="sm"
-                        active={display.display === currency}
-                        className={styles.currencyBtn}
-                        ariaLabel={currency}
-                        onClick={() => switchCurrency(currency)}
-                      >
-                        {DISPLAY_CURRENCY_SYMBOLS[currency]}
-                      </Button>
-                    ))}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.block}>
-                <div className={styles.head}>
-                  <span className={styles.rowLabel}>{t('settings.fx')}</span>
-                  <span className={styles.actions}>
-                    <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} title={t('quota.fxCacheHint')} onClick={() => void fetchFx(true)}>
-                      {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
-                    </Button>
-                  </span>
-                </div>
-                <div className={fxWarn ? styles.value + ' ' + styles.valueWarn : styles.value}>{fxText}</div>
-              </div>
-            </section>
-
-            <section className={styles.section}>
-              <div className={styles.sectionTitle}>{t('settings.pricing')}</div>
-              <div className={styles.block}>
-                <div className={styles.actions}>
-                  <Button size="sm" variant="primary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshPrices()}>
-                    {refreshing
-                      ? t('action.refreshing') + (refreshElapsed > 0 ? ' ' + String(refreshElapsed) + 's' : '')
-                      : t('quota.refreshPrices')}
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.currency')}</span>
+              <span className={styles.rowInfo} />
+              <span className={styles.actions}>
+                {DISPLAY_CURRENCIES.map((currency) => (
+                  <Button
+                    key={currency}
+                    size="sm"
+                    active={display.display === currency}
+                    className={styles.currencyBtn}
+                    ariaLabel={currency}
+                    onClick={() => switchCurrency(currency)}
+                  >
+                    {DISPLAY_CURRENCY_SYMBOLS[currency]}
                   </Button>
-                </div>
-                {refreshStatus === null
-                  ? <div className={styles.value}>{t('quota.pricingInfoHint')}</div>
-                  : refreshStatus.tone === 'ok'
-                    ? <div className={styles.value}>{refreshStatus.text}</div>
-                    : <LogHint text={refreshStatus.text} tone="error" />}
-              </div>
-            </section>
-
-            <section className={styles.section}>
-              <div className={styles.sectionTitle}>{t('settings.sectionAbout')}</div>
-              <div className={styles.block}>
-                <div className={styles.head}>
-                  <span className={styles.rowLabel}>{t('settings.version')}</span>
-                  <span className={styles.value}>{PLUGIN_VERSION}</span>
-                </div>
-              </div>
-              <div className={styles.block}>
-                <div className={styles.head}>
-                  <span className={styles.rowLabel}>{t('settings.license')}</span>
-                  <span className={styles.value}>{t('settings.licenseValue')}</span>
-                </div>
-              </div>
-              <div className={styles.block}>
-                <div className={styles.head}>
-                  <span className={styles.rowLabel}>{t('settings.repo')}</span>
-                  <a className={styles.link} href={PLUGIN_REPO} target="_blank" rel="noreferrer">{PLUGIN_REPO.replace(/^https?:\/\//, '')}</a>
-                </div>
-              </div>
-            </section>
+                ))}
+              </span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.fx')}</span>
+              <span className={fxWarn ? styles.rowInfo + ' ' + styles.rowInfoWarn : styles.rowInfo}>{fxRateTextOf(display.fx)}</span>
+              <span className={styles.actions}>
+                <Button size="sm" disabled={fxLoading} aria-busy={fxLoading} onClick={() => void fetchFx(true)}>
+                  {fxLoading ? t('quota.fetchFx') : t('quota.refreshFx')}
+                </Button>
+              </span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.pricing')}</span>
+              <span className={styles.rowInfo} />
+              <span className={styles.actions}>
+                <Button size="sm" variant="primary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshPrices()}>
+                  {refreshing
+                    ? t('action.refreshing') + (refreshElapsed > 0 ? ' ' + String(refreshElapsed) + 's' : '')
+                    : t('quota.refreshPrices')}
+                </Button>
+              </span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.version')}</span>
+              <span className={styles.rowInfo}>{PLUGIN_VERSION}</span>
+              <span className={styles.actions} />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.license')}</span>
+              <span className={styles.rowInfo}>{t('settings.licenseValue')}</span>
+              <span className={styles.actions} />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>{t('settings.repo')}</span>
+              <span className={styles.rowInfo}>
+                <a className={styles.link} href={PLUGIN_REPO} target="_blank" rel="noreferrer">{PLUGIN_REPO.replace(/^https?:\/\//, '')}</a>
+              </span>
+              <span className={styles.actions} />
+            </div>
           </div>
         )}
 
@@ -232,18 +216,12 @@ export function SettingsDialog(props: {
 
         {tab === 'caliber' && (
           <div className={styles.wrap}>
-            <div className={styles.caliberVersion}>{t('caliber.version', { version: PLUGIN_VERSION })}</div>
             <ul className={styles.caliberList}>
-              <li>
-                {t('caliber.source', {
-                  days: props.todaySource === 'session' ? t('caliber.sourceDays', { count: props.sessionDays }) : '',
-                })}
-              </li>
+              <li>{t('caliber.source')}</li>
               <li>{t('caliber.cost')}</li>
-              <li>{t('caliber.costHint')}</li>
-              <li>{t('caliber.pricingInfo')}</li>
-              <li>{t('caliber.sessionSource')}</li>
-              <li>{t('caliber.refresh')}</li>
+              <li>{t('caliber.hourly')}</li>
+              <li>{t('caliber.sessions')}</li>
+              <li>{t('caliber.logs')}</li>
             </ul>
           </div>
         )}

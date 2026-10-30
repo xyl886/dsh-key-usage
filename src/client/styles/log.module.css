@@ -68,3 +68,8 @@
   font-family: ui-monospace, Consolas, monospace; font-size: var(--ku-sub, 13px);
   line-height: 1.55; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
 }
+
+/* 滚动加载提示：列表底部的一行弱化文字 */
+.loadMore {
+  padding: 10px 0 4px; text-align: center; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
+}

@@ -1,6 +1,6 @@
 /**
  * 系统日志面板：条数统计 + 级别 / 来源 / 搜索筛选 + 平铺条目。
- * 每条的 message 与详情直接展示（详情多行缩进、保留换行、不截断），不再需要点击展开。
+ * 每次记录单独一条（不合并 ×N）；列表先渲染最近 40 条，向下滚动再继续加载。
  * 数据只来自 core/log.ts（内存 + 磁盘回读），动作与旧实现一致：刷新 / 复制 / 导出 / 清空。
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -22,6 +22,8 @@ const LEVEL_FILTERS: Array<{ value: LevelFilter; labelKey: string }> = [
 
 /** 列表停在顶部附近时才跟随新条目，用户往下翻看历史时不被抢滚动位置。 */
 const STICK_TOP_PX = 32
+/** 每次滚动加载的条数。 */
+const LOAD_STEP = 40
 
 export function LogPanel(): ReactNode {
   const t = useT()
@@ -31,6 +33,8 @@ export function LogPanel(): ReactNode {
   const [sourceFilter, setSourceFilter] = useState('')
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  /** 已渲染条数：到列表底部时再追加一批（滚动加载）。 */
+  const [pageSize, setPageSize] = useState(LOAD_STEP)
   const listRef = useRef<HTMLDivElement>(null)
   const newestRef = useRef<number | null>(null)
 
@@ -57,6 +61,18 @@ export function LogPanel(): ReactNode {
         return (entry.message + '\n' + entry.source + '\n' + (entry.detail ?? '')).toLowerCase().includes(query)
       })
   }, [snapshot.list, levelFilter, sourceFilter, search])
+
+  /** 换筛选 / 搜索就回到第一批，避免停在很后面。 */
+  useEffect(() => { setPageSize(LOAD_STEP) }, [levelFilter, sourceFilter, search])
+
+  /** 列表没占满容器时继续补，直到出现滚动条（否则滚动加载永远触发不了）。 */
+  useEffect(() => {
+    const list = listRef.current
+    if (list === null) return
+    if (list.scrollHeight <= list.clientHeight + 4 && pageSize < visible.length) {
+      setPageSize((previous) => Math.min(visible.length, previous + LOAD_STEP))
+    }
+  }, [pageSize, visible.length])
 
   /** 新条目出现时回到最新一条（列表时间倒序，最新在顶部）。 */
   useEffect(() => {
@@ -89,6 +105,17 @@ export function LogPanel(): ReactNode {
   const onClear = (): void => {
     clearLog()
     setSourceFilter('')
+  }
+
+  const shown = visible.slice(0, pageSize)
+  const hasMore = pageSize < visible.length
+
+  const onScroll = (): void => {
+    const list = listRef.current
+    if (list === null || !hasMore) return
+    if (list.scrollTop + list.clientHeight >= list.scrollHeight - 24) {
+      setPageSize((previous) => Math.min(visible.length, previous + LOAD_STEP))
+    }
   }
 
   const empty = visible.length === 0
@@ -137,9 +164,9 @@ export function LogPanel(): ReactNode {
       {empty
         ? <EmptyState title={t('log.empty')} />
         : (
-          <div className={styles.listScroll} ref={listRef}>
+          <div className={styles.listScroll} ref={listRef} onScroll={onScroll}>
             <ul className={styles.list}>
-              {visible.map((entry) => (
+              {shown.map((entry) => (
                 <li key={entry.id} className={styles.row}>
                   <div className={styles.meta}>
                     <span className={styles.time}>{formatTime(entry.time)}</span>
@@ -153,12 +180,13 @@ export function LogPanel(): ReactNode {
                     )}
                   </div>
                   <div className={styles.content}>
-                    <span className={styles.message}>{messageTextOf(entry)}</span>
+                    <span className={styles.message}>{entry.message}</span>
                     {entry.detail === undefined ? null : <pre className={styles.detail}>{entry.detail}</pre>}
                   </div>
                 </li>
               ))}
             </ul>
+            {hasMore && <div className={styles.loadMore}>{t('log.loadMore', { loaded: shown.length, total: visible.length })}</div>}
           </div>
         )}
     </div>
@@ -171,11 +199,6 @@ function formatTime(time: number): string {
   const pad = (value: number): string => String(value).padStart(2, '0')
   return String(date.getFullYear()) + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
     + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds())
-}
-
-/** 重复次数跟在消息后面（去重累加后要能看出「发生过几次」）。 */
-function messageTextOf(entry: LogEntry): string {
-  return entry.message + (entry.count > 1 ? ' ×' + String(entry.count) : '')
 }
 
 /** 级别配色：错误红、警告黄、信息弱化（色点与色字同色）。 */

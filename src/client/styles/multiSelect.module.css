@@ -5,7 +5,7 @@
   display: inline-flex; align-items: center; gap: 8px;
   height: 36px; min-width: 104px; max-width: 190px;
   padding: 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
+  border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
