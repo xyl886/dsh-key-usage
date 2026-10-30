@@ -828,8 +828,9 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/sessions',
     '/dsh-key-usage/snapshot',
     '/dsh-key-usage/summary',
+    '/dsh-key-usage/tools',
     '/dsh-key-usage/usage',
-  ], '17 个端点 = 14 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
+  ], '18 个端点 = 15 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
 
   // /log：POST 追加 → GET 回读 → POST 清空；坏请求体与非回环都被挡住
   const logAppend = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({
@@ -1300,6 +1301,140 @@ rmSync(home, { recursive: true, force: true })
   assert.equal(orphan.partial, true)
   const allRegistered = collapseOrphanProjects([row('D:\\EasyJob', { registered: true, workspaceTitle: 'EasyJob' })])
   assert.equal(allRegistered.length, 1, '全部是工作区时原样返回')
+}
+
+// ===== /tools：窗口 + 项目 + 模型（运行期索引随本地重建刷新；索引缺失回 null） =====
+{
+  const toolsHome = mkdtempSync(join(tmpdir(), 'dsh-key-usage-tools-'))
+  mkdirSync(join(toolsHome, 'profiles', 'desktop'), { recursive: true })
+  mkdirSync(join(toolsHome, 'dsh-usage'), { recursive: true })
+  writeFileSync(join(toolsHome, 'profiles', 'desktop', 'cordis.yml'), [
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      opencode-go:',
+    '        apiKeyEnv: OPENCODE_GO_API_KEY',
+    '        models:',
+    '          - id: glm-5.3-flash',
+    '            name: GLM-5.3-Flash',
+    '      local:',
+    '        apiKeyEnv: LOCAL_API_KEY',
+    '        baseURL: http://127.0.0.1:11434/v1',
+    '        models:',
+    '          - id: qwen3',
+    '            name: Qwen3',
+    '',
+  ].join('\n'), 'utf8')
+
+  // 会话 A：两天都有工具调用（GLM-5.3-Flash）；会话 B：没有工作区（「未归入工作区」）+ Qwen3
+  const toolsEventsA = [
+    { seq: 0, time: localTimeOf(-1, 10), type: 'request/header', data: { header: { config: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } } },
+    { seq: 1, time: localTimeOf(-1, 10), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 0 } } } },
+    { seq: 2, time: localTimeOf(-1, 10), type: 'tool/call', data: { turn: 1, step: 1, callId: 'ta1', name: 'pwsh', arguments: '{}' } },
+    { seq: 3, time: localTimeOf(-1, 11), type: 'tool/call', data: { turn: 1, step: 2, callId: 'ta2', name: 'read', arguments: '{}' } },
+    { seq: 4, time: localTimeOf(-1, 11), type: 'tool/call', data: { turn: 1, step: 3, callId: 'ta3', name: 'skill', arguments: '{"name":"easyjob-dev"}' } },
+    { seq: 5, time: localTimeOf(-1, 12), type: 'tool/call', data: { turn: 1, step: 4, callId: 'ta4', name: 'mcp_call', arguments: '{"server":"playwright","tool":"browse","arguments":{}}' } },
+    { seq: 6, time: localTimeOf(0, 9), type: 'assistant/chunk', data: { turn: 2, step: 1, chunk: { type: 'usage', usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 0 } } } },
+    { seq: 7, time: localTimeOf(0, 9), type: 'tool/call', data: { turn: 2, step: 1, callId: 'ta5', name: 'pwsh', arguments: '{}' } },
+    { seq: 8, time: localTimeOf(0, 10), type: 'tool/call', data: { turn: 2, step: 2, callId: 'ta6', name: 'pwsh', arguments: '{}' } },
+    { seq: 9, time: localTimeOf(0, 10), type: 'tool/call', data: { turn: 2, step: 3, callId: 'ta7', name: 'read', arguments: '{}' } },
+  ]
+  const toolsEventsB = [
+    { seq: 0, time: localTimeOf(0, 12), type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 50, outputTokens: 5, cacheReadTokens: 0 } }, message: { source: { provider: 'local', model: 'Qwen3' } } } },
+    { seq: 1, time: localTimeOf(0, 12), type: 'tool/call', data: { turn: 1, step: 1, callId: 'tb1', name: 'pwsh', arguments: '{}' } },
+  ]
+  const toolsFixture = createFakePersistence([
+    ['session-tools-a', { header: { id: 'session-tools-a', title: '工具会话 A', cwd: 'D:\\EasyJob', updatedAt: localTimeOf(0, 10) }, revision: Symbol('tools-a'), events: toolsEventsA }],
+    ['session-tools-b', { header: { id: 'session-tools-b', title: '工具会话 B', updatedAt: localTimeOf(0, 12) }, revision: Symbol('tools-b'), events: toolsEventsB }],
+  ])
+  const toolsSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? toolsFixture.service : undefined) })
+
+  const toolsHandlers = new Map()
+  process.env.DSH_HOME = toolsHome
+  mountKeyUsageRoutes(
+    { register: (route) => { toolsHandlers.set(route.path, route.handler) } },
+    toolsSource,
+    undefined,
+    undefined,
+    { snapshotIntervalMs: 0 },
+  )
+  const toolsCall = (path, remoteAddress) => callHandler(toolsHandlers, path, remoteAddress)
+
+  // 索引还没随本地重建建起来 → null：客户端回落快照里的全量段，不是报错也不是空壳
+  const beforeBuild = await toolsCall('/dsh-key-usage/tools')
+  assert.equal(beforeBuild.status, 200)
+  assert.equal(beforeBuild.body, null)
+  await warmUp(toolsHandlers)
+
+  const todayKey = localDayKey(0)
+  const yesterdayKey = localDayKey(-1)
+  const toolsOf = async (query) => (await toolsCall('/dsh-key-usage/tools' + query)).body
+
+  // 窗口 = 一整段：两天相加，逐日补 0
+  const spanning = await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey)
+  assert.deepEqual(Object.keys(spanning).sort(), ['calls', 'days', 'from', 'mcp', 'sessions', 'skills', 'to', 'tools'])
+  assert.equal(spanning.from, yesterdayKey)
+  assert.equal(spanning.to, todayKey)
+  assert.equal(spanning.calls, 8, 'A 的 7 次 + B 的 1 次')
+  assert.equal(spanning.sessions, 2)
+  assert.deepEqual(spanning.days, [{ date: yesterdayKey, calls: 4 }, { date: todayKey, calls: 4 }])
+  assert.deepEqual(spanning.tools.map((row) => [row.name, row.calls]), [['pwsh', 4], ['read', 2], ['mcp_call', 1], ['skill', 1]])
+  assert.deepEqual(spanning.tools.map((row) => row.sharePercent), [50, 25, 12.5, 12.5])
+  assert.equal(spanning.skills.calls, 1)
+  assert.deepEqual(spanning.skills.rows.map((row) => row.name), ['easyjob-dev'])
+  assert.deepEqual(spanning.mcp.rows.map((row) => [row.server, row.calls]), [['playwright', 1]])
+
+  // 窗口切分：只取某一天时工具榜也只算那一天
+  const todayOnly = await toolsOf('?from=' + todayKey + '&to=' + todayKey)
+  assert.equal(todayOnly.calls, 4)
+  assert.deepEqual(todayOnly.tools.map((row) => [row.name, row.calls]), [['pwsh', 3], ['read', 1]])
+  assert.deepEqual(todayOnly.days, [{ date: todayKey, calls: 4 }])
+  const yesterdayOnly = await toolsOf('?from=' + yesterdayKey + '&to=' + yesterdayKey)
+  assert.equal(yesterdayOnly.calls, 4)
+  assert.deepEqual(yesterdayOnly.tools.map((row) => row.name), ['mcp_call', 'pwsh', 'read', 'skill'])
+
+  // 项目筛选：真实工作区 / 空串（未归入工作区）/ 未知工作区
+  const byProject = await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&project=' + encodeURIComponent('D:\\EasyJob'))
+  assert.equal(byProject.calls, 7, '只算该工作区的会话 A')
+  assert.equal(byProject.sessions, 1)
+  const byOrphan = await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&project=')
+  assert.equal(byOrphan.calls, 1, '空串 = 「未归入工作区」：匹配 workspace 为空的会话 B')
+  assert.deepEqual(byOrphan.tools.map((row) => [row.name, row.calls]), [['pwsh', 1]])
+  assert.equal((await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&project=' + encodeURIComponent('D:\\nope'))).calls, 0)
+
+  // 模型筛选（展示模型名）：单选 / 多选
+  assert.equal((await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&model=GLM-5.3-Flash')).calls, 7)
+  assert.equal((await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&model=Qwen3')).calls, 1)
+  assert.equal((await toolsOf('?from=' + yesterdayKey + '&to=' + todayKey + '&model=Qwen3,' + encodeURIComponent('GLM-5.3-Flash'))).calls, 8)
+
+  // 空窗口：全 0 对象（界面显示空态，绝不拿全量数据冒充）
+  const emptyWindow = await toolsOf('?from=' + localDayKey(-5) + '&to=' + localDayKey(-4))
+  assert.equal(emptyWindow.calls, 0)
+  assert.equal(emptyWindow.sessions, 0)
+  assert.deepEqual(emptyWindow.tools, [])
+  assert.deepEqual(emptyWindow.days, [{ date: localDayKey(-5), calls: 0 }, { date: localDayKey(-4), calls: 0 }])
+
+  // 参数校验：缺省 = 近 7 天；起止倒置按交换处理；非法日期回落默认窗口
+  const defaultWindow = await toolsOf('')
+  assert.equal(defaultWindow.from, localDayKey(-6))
+  assert.equal(defaultWindow.to, todayKey)
+  assert.equal(defaultWindow.days.length, 7)
+  assert.equal(defaultWindow.calls, 8)
+  const reversed = await toolsOf('?from=' + todayKey + '&to=' + yesterdayKey)
+  assert.equal(reversed.from, yesterdayKey, '起止倒置时交换，不报错')
+  assert.equal(reversed.to, todayKey)
+  assert.equal(reversed.calls, 8)
+  const invalidDays = await toolsOf('?from=2026-02-30&to=nope')
+  assert.equal(invalidDays.from, localDayKey(-6), '非法日期（含溢出日期）回落默认窗口')
+  assert.equal(invalidDays.to, todayKey)
+
+  // 只允许回环
+  const foreignTools = await toolsCall('/dsh-key-usage/tools', '10.0.0.7')
+  assert.equal(foreignTools.status, 403)
+  assert.deepEqual(foreignTools.body, { error: 'loopback only' })
+
+  process.env.DSH_HOME = toolsHome
+  rmSync(toolsHome, { recursive: true, force: true })
 }
 
 console.log('routes.test: 全部通过')

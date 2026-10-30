@@ -15,6 +15,7 @@ import type {
   SessionsResponse,
   SnapshotResponse,
   SummaryResponse,
+  ToolsResponse,
   UsageResponse,
 } from './types.ts'
 import { t } from './i18n.ts'
@@ -99,6 +100,21 @@ export function loadProjects(limit = 200): Promise<ProjectsResponse | null> {
 
 export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
+}
+
+/** 工具 / 技能 / MCP 参数化端点：窗口 + 项目 / 模型多选（空串筛选值留给「未归入工作区」）。 */
+export const TOOLS_PATH = '/dsh-key-usage/tools'
+
+/**
+ * 按当前筛选取工具统计。服务端索引还没建好（老版本 / 构建中）时回 `null`，
+ * 调用方保留快照里的全量段作为回落。
+ * `projectFilter` 传 `null` = 不筛；传空串 = 只筛「未归入工作区」（服务端按 workspace 空串匹配）。
+ */
+export function loadTools(from: string, to: string, projectFilter: string | null, modelFilter: string): Promise<ToolsResponse | null> {
+  const params = new URLSearchParams({ from, to })
+  if (projectFilter !== null) params.set('project', projectFilter)
+  if (modelFilter !== '') params.set('model', modelFilter)
+  return fetchJson<ToolsResponse>(TOOLS_PATH + '?' + params.toString(), TOOLS_PATH)
 }
 
 export function loadPricing(): Promise<PricingResponse | null> {

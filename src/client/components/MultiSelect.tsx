@@ -1,5 +1,9 @@
 /** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+
+/** 同一时刻只允许一个筛选浮层展开：新打开的那个负责关掉上一个。 */
+let closeOtherOverlay: (() => void) | null = null
+const OVERLAY_CLOSE_EVENT = 'dsh-key-usage:close-overlays'
 import { t } from '../core/i18n.ts'
 import styles from '../styles/multiSelect.module.css'
 
@@ -55,6 +59,11 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
 
   useEffect(() => {
     if (!open) return
+    const myClose = (): void => { setOpen(false) }
+    if (closeOtherOverlay !== null && closeOtherOverlay !== myClose) closeOtherOverlay()
+    closeOtherOverlay = myClose
+    const onOverlayClose = (): void => setOpen(false)
+    window.addEventListener(OVERLAY_CLOSE_EVENT, onOverlayClose)
     const onDown = (event: MouseEvent): void => {
       if (rootRef.current !== null && !rootRef.current.contains(event.target as Node)) setOpen(false)
     }
@@ -64,6 +73,8 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
+      window.removeEventListener(OVERLAY_CLOSE_EVENT, onOverlayClose)
+      if (closeOtherOverlay === myClose) closeOtherOverlay = null
     }
   }, [open])
 

@@ -16,7 +16,7 @@ import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
 import { EmptyState } from '../components/ui/EmptyState.tsx'
 import { Select } from '../components/ui/Select.tsx'
 import type { Channel, CostSource, SessionRow, SessionsResponse } from '../core/types.ts'
-import { projectFilterValuesOf } from './DetailTab.tsx'
+import { projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import sessionsStyles from '../styles/sessions.module.css'
@@ -56,6 +56,11 @@ export function SessionsTab(props: {
   projectFilter?: string
   /** 全局模型筛选（逗号分隔多选，空串 = 全部）：会话行的 `models` 桶里命中任一选中模型才保留。 */
   modelFilter?: string
+  /** 全局通道筛选（逗号分隔多选，空串 = 全部）：会话行出现过的通道命中任一才保留。 */
+  channelFilter?: string
+  /** 页面范围与时间窗口：会话按「与窗口有交集」过滤。 */
+  range?: RangeKey
+  bounds?: { from: string; to: string }
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
@@ -68,13 +73,24 @@ export function SessionsTab(props: {
   const [detailId, setDetailId] = useState<string | null>(null)
   const projectFilter = props.projectFilter ?? ''
   const modelFilter = props.modelFilter ?? ''
+  const channelFilter = props.channelFilter ?? ''
+  const windowFromMs = props.bounds === undefined ? null : Date.parse(props.bounds.from + 'T00:00:00')
+  const windowToMs = props.bounds === undefined ? null : Date.parse(props.bounds.to + 'T23:59:59.999')
   /** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
   const allRows = props.data?.rows ?? []
   /** 项目 / 模型筛选都作用在行上（逗号分隔多选，空串 = 全部）：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
-  const rows = useMemo(() => allRows.filter((row) => (
-    selectionMatches(projectFilterValuesOf(row.workspace, undefined), projectFilter)
-    && selectionMatches(row.models.map((model) => model.model), modelFilter)
-  )), [allRows, projectFilter, modelFilter])
+  const rows = useMemo(() => allRows.filter((row) => {
+    if (!selectionMatches(projectFilterValuesOf(row.workspace, undefined), projectFilter)) return false
+    if (!selectionMatches(row.models.map((model) => model.model), modelFilter)) return false
+    if (!selectionMatches([row.provider ?? '', ...row.models.map((model) => model.provider)], channelFilter)) return false
+    // 时间范围：会话与窗口有交集才保留；首末时间都缺的老会话不参与时间筛选，避免整页清空
+    if (windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
+      const startMs = row.firstTime ?? (row.lastTime as number)
+      const endMs = row.lastTime ?? (row.firstTime as number)
+      if (endMs < windowFromMs || startMs > windowToMs) return false
+    }
+    return true
+  }), [allRows, projectFilter, modelFilter, channelFilter, windowFromMs, windowToMs])
 
   // 换了范围 / 搜索 / 全局筛选就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
   useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query, projectFilter, modelFilter])

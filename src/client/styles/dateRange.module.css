@@ -65,3 +65,7 @@
 /* 底部提示：开始前「点击选择开始日期」，点了开始日后「点击选择结束日期」 */
 .foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); }
 .hint { min-width: 0; flex: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); line-height: 18px; }
+
+/* 自定义范围生效中：与分段控件选中项同一底色 */
+.triggerActive { background: var(--dsw-alias-interactive-bg-active, rgba(38, 49, 72, .06)); color: var(--dsw-alias-label-primary, #0f1115); }
+

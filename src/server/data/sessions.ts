@@ -18,6 +18,7 @@ import {
   type PromptDayStat,
   type SessionSummary,
   type TokenBuckets,
+  type ToolDayStat,
   type ToolStatsRecord,
 } from './session-usage.js'
 import { normalizeSessionId } from './session-meta.js'
@@ -58,6 +59,8 @@ export interface SessionUsageRecord extends ToolStatsRecord {
   promptLastTime: number | null
   /** 本地日期（`YYYY-MM-DD`）→ 当天提问统计：快照 `prompts` 段按窗口切分环比用。 */
   promptDayStats: Map<string, PromptDayStat>
+  /** 本地日期 → 当天的工具 / 技能 / MCP 明细：`/tools` 按窗口切片用（不落盘，跟着折叠缓存走）。 */
+  toolDayStats: Map<string, ToolDayStat> | null
   summary: SessionSummary
 }
 
@@ -178,6 +181,7 @@ function recordOf(id: string, metadata: SessionMetadata, fold: SessionFold): Ses
     skillNameCounts: fold.skillNameCounts,
     mcpServerCounts: fold.mcpServerCounts,
     toolDayCalls: fold.toolDayCalls,
+    toolDayStats: fold.toolDayStats,
     summary: summarizeSession(fold),
   }
 }

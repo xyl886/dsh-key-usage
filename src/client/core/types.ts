@@ -518,6 +518,9 @@ export interface ToolsResponse {
     /** server Top 8。 */
     rows: McpServerUsageRow[]
   }
+  /** `/tools` 参数化响应的回显：统计窗口的起止本地日期；快照段没有这两个字段（全量历史）。 */
+  from?: string
+  to?: string
 }
 
 export interface SnapshotSections {

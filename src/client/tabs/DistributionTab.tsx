@@ -102,6 +102,8 @@ export function DistributionTab(props: {
   projectFilter?: string
   /** 全局模型筛选（逗号分隔多选，空串 = 全部）：模型块、缓存节省、Token 构成、Mekko 的逐项目金额都按它重算。 */
   modelFilter?: string
+  /** 全局通道筛选（逗号分隔多选，空串 = 全部）：模型行带 provider，可按通道再收窄。 */
+  channelFilter?: string
 }): ReactNode {
   const t = useT()
   const [tableOpen, setTableOpen] = useState(false)

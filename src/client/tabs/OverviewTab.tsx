@@ -122,6 +122,8 @@ export interface OverviewTabProps {
   projectFilter?: string
   /** 全局模型筛选（逗号分隔多选，空串 = 全部）：只作用于 `/usage` 的模型桶与模型排行，热力图 / 按时段保持全量。 */
   modelFilter?: string
+  /** 全局通道筛选（逗号分隔多选，空串 = 全部）：激活后 KPI 改由过滤后的 usage 计算（summary 月列没有通道维度）。 */
+  channelFilter?: string
 }
 
 export function OverviewTab(props: OverviewTabProps): ReactNode {
@@ -138,6 +140,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const summary = props.summary
   const modelFilter = props.modelFilter ?? ''
   const projectFilter = props.projectFilter ?? ''
+  const channelFilter = props.channelFilter ?? ''
+  /** 任一筛选激活时，KPI 必须从过滤后的 usage 算：summary 的月列没有通道/项目/模型维度 */
+  const anyFilterActive = selectionOf(channelFilter).length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0
   /** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
   const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter)
 
@@ -153,15 +158,16 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length
 
   // ===== KPI：其余范围整行改由 usage.totals 算，一行里不混两个窗口 =====
-  const rangeTotals = isMonthRange ? null : rangeTotalsOf(scopedUsage, range)
+  const useSummaryKpi = isMonthRange && !anyFilterActive
+  const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range)
   /** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
    *  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
-  const splitTotals: UsageTotals | null = isMonthRange ? (props.usage?.totals ?? null) : rangeTotals
-  const costRow: CostRowLike | null = isMonthRange
+  const splitTotals: UsageTotals | null = useSummaryKpi ? (props.usage?.totals ?? null) : rangeTotals
+  const costRow: CostRowLike | null = useSummaryKpi
     ? (summary === null ? null : monthCost)
     : (rangeTotals === null ? null : { cost: rangeTotals.cost, costsByCurrency: rangeTotals.costsByCurrency })
   const costAmount = costRow === null ? null : comparableMoneyOf(costRow)
-  const tokenCount = isMonthRange
+  const tokenCount = useSummaryKpi
     ? (summary === null ? null : monthTokens)
     : (rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens)
   const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount)
@@ -169,12 +175,12 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null
     ? null
     : moneyTotalsTextOf({ cost: splitTotals.cacheSaved, costsByCurrency: splitTotals.cacheSavedByCurrency })
-  const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range)
+  const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range)
   const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays
   /** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
   const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter)
   const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length
-  const sessionCount = isMonthRange
+  const sessionCount = useSummaryKpi
     ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount)
     : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount)
 

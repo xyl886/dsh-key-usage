@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
+import { loadChannels, loadHeatmap, loadModels, loadProjects, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { selectionOf } from './core/filter-selection.ts'
@@ -91,6 +91,10 @@ export function KeyUsageSection() {
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
   const [tools, setTools] = useState<ToolsResponse | null>(null)
+  /** 快照 `tools` 段（全量历史）：首屏与参数化请求失败时的回落，不被每次轮询覆盖筛选结果。 */
+  const toolsFallbackRef = useRef<ToolsResponse | null>(null)
+  /** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
+  const [snapshotRevision, setSnapshotRevision] = useState(0)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
   const [models, setModels] = useState<ModelsResponse | null>(null)
   const [available, setAvailable] = useState<{ from: string; to: string } | null>(null)
@@ -143,6 +147,11 @@ export function KeyUsageSection() {
 
   activeTabRef.current = activeTab
 
+  // 切区块时关掉所有浮层：否则下拉/日历会盖在新页面上
+  useEffect(() => {
+    window.dispatchEvent(new Event('dsh-key-usage:close-overlays'))
+  }, [activeTab])
+
   /** 用户是否还在看默认范围（近 30 天 / 未筛通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
   const usageIsDefaultRef = useRef(true)
   usageIsDefaultRef.current = range === 'month' && selectionOf(channelFilter).length === 0
@@ -164,7 +173,11 @@ export function KeyUsageSection() {
     if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
     if (sections.prompts !== undefined && sections.prompts !== null) setPrompts(sections.prompts)
     // tools 段用 null 表示「暂无采集」：是合法值，只有裁剪没取（undefined）才不许覆盖
-    if (sections.tools !== undefined) setTools(sections.tools)
+    if (sections.tools !== undefined) {
+      toolsFallbackRef.current = sections.tools
+      // 首屏先显示快照全量；之后由「工具段跟随筛选」那个 effect 用窗口结果替换（轮询不覆盖它）
+      setTools((current) => current === null ? sections.tools : current)
+    }
     const usageSection = sections.usage
     if (usageSection !== undefined && usageIsDefaultRef.current && usageSection !== null) {
       setUsage(usageSection)
@@ -185,6 +198,7 @@ export function KeyUsageSection() {
       partial.push(name + '(' + section.coverage.status + '：' + String(section.coverage.countedSessions) + '/' + String(section.coverage.totalSessions) + ')')
     }
     if (partial.length > 0) logWarn('snapshot', t('log.coveragePartial') + '：' + partial.join('、'))
+    setSnapshotRevision((revision) => revision + 1)
   }, [t])
 
   /** 逐端点兜底：服务端还是旧版本（没有 /snapshot）时用，语义与升级前一致。 */
@@ -294,10 +308,36 @@ export function KeyUsageSection() {
     return { from: available?.from ?? today, to: available?.to ?? today }
   }, [range, customFrom, customTo, available])
 
+  /** 是否已经知道数据可用范围（range='total' 的窗口起点要靠它；布尔化避免每次回填都触发重取）。 */
+  const hasAvailable = available !== null
+
+  /**
+   * 工具段跟随顶部筛选：窗口 = bounds，项目 / 模型取多选值（项目 sentinel 还原成空串，
+   * 服务端按实际 workspace 字符串匹配）。服务端用运行期索引聚合，不重读会话；
+   * 回 null（索引还没建好 / 请求失败）时保留快照全量段作回落。
+   */
+  useEffect(() => {
+    if (!wantTools) return
+    let cancelled = false
+    const chosenProjects = selectionOf(projectFilter)
+    const projectParam = chosenProjects.length === 0
+      ? null
+      : chosenProjects.map((value) => value === ORPHAN_PROJECT_VALUE ? '' : value).join(',')
+    void loadTools(bounds.from, bounds.to, projectParam, selectionOf(modelFilter).join(',')).then((result) => {
+      if (cancelled) return
+      setTools(result ?? toolsFallbackRef.current)
+    })
+    return () => { cancelled = true }
+  }, [wantTools, bounds.from, bounds.to, projectFilter, modelFilter, snapshotRevision])
+
   // 明细数据只在切到「使用明细」时才取：概览 / 分布 / 会话都不需要它。
   // 通道多选不能当单值发给服务端 → 这里固定取全量（'ALL'），选中哪些通道在客户端过滤。
+  // 工具页只用 bounds 当窗口，但 range='total' 的起点由 usage 回填的 available 决定，
+  // 所以单独打开工具页时也取一次（拿到 available 就停，不随范围反复取）。
   useEffect(() => {
-    if (!wantDetail && !wantDistribution && !wantOverview) return
+    if (!wantDetail && !wantDistribution && !wantOverview) {
+      if (!wantTools || hasAvailable) return
+    }
     let cancelled = false
     void loadUsage(bounds.from, bounds.to, 'ALL').then((result) => {
       if (cancelled || result === null) return
@@ -307,7 +347,7 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [wantDetail, wantDistribution, wantOverview, bounds.from, bounds.to, pricingRevision])
+  }, [wantDetail, wantDistribution, wantOverview, wantTools, hasAvailable, bounds.from, bounds.to, pricingRevision])
 
   /** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
   const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)
@@ -513,6 +553,7 @@ export function KeyUsageSection() {
             from={range === 'custom' ? customFrom : bounds.from}
             to={range === 'custom' ? customTo : bounds.to}
             onChange={(from, to) => { setCustomFrom(from); setCustomTo(to); setRange('custom') }}
+            active={range === 'custom'}
           />
         </span>
         <span className={styles.toolbarDivider} aria-hidden="true" />
@@ -600,6 +641,7 @@ export function KeyUsageSection() {
               onPickDay={(date) => { setRange('custom'); setCustomFrom(date); setCustomTo(date); goSection('detail') }}
               projectFilter={projectFilter}
               modelFilter={modelFilter}
+              channelFilter={channelFilter}
             />
           </section>
         )}
@@ -628,6 +670,7 @@ export function KeyUsageSection() {
           <section className={styles.pageSection} id="sec-distribution">
             <h2 className={styles.pageSectionTitle}>{t('tab.distribution')}</h2>
             <DistributionTab
+              channelFilter={channelFilter}
               projects={projects}
               models={models}
               channels={channels}
@@ -642,6 +685,9 @@ export function KeyUsageSection() {
           <section className={styles.pageSection} id="sec-sessions">
             <h2 className={styles.pageSectionTitle}>{t('tab.sessions')}</h2>
             <SessionsTab
+              range={range}
+              bounds={bounds}
+              channelFilter={channelFilter}
               data={sessions}
               channels={channels}
               tooltip={tooltip}

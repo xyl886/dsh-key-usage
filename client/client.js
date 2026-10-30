@@ -1565,6 +1565,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function loadModels(limit = 200) {
 			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
 		}
+		/** 工具 / 技能 / MCP 参数化端点：窗口 + 项目 / 模型多选（空串筛选值留给「未归入工作区」）。 */
+		const TOOLS_PATH = "/dsh-key-usage/tools";
+		/**
+		* 按当前筛选取工具统计。服务端索引还没建好（老版本 / 构建中）时回 `null`，
+		* 调用方保留快照里的全量段作为回落。
+		* `projectFilter` 传 `null` = 不筛；传空串 = 只筛「未归入工作区」（服务端按 workspace 空串匹配）。
+		*/
+		function loadTools(from, to, projectFilter, modelFilter) {
+			const params = new URLSearchParams({
+				from,
+				to
+			});
+			if (projectFilter !== null) params.set("project", projectFilter);
+			if (modelFilter !== "") params.set("model", modelFilter);
+			return fetchJson(TOOLS_PATH + "?" + params.toString(), TOOLS_PATH);
+		}
 		const RATES_PATH = "/dsh-key-usage/rates";
 		/** 汇率端点：`?refresh=1` 强制走上游。 */
 		const FX_PATH = "/dsh-key-usage/fx";
@@ -2233,7 +2249,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/dateRange.module.css.mjs
-		const css$17 = ".Bnmpwa_root{flex:none;display:inline-flex;position:relative}.Bnmpwa_trigger{box-sizing:border-box;height:var(--ku-control,36px);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;white-space:nowrap;background:0 0;border-radius:12px;align-items:center;gap:6px;padding:0 10px;line-height:1;display:inline-flex}.Bnmpwa_trigger:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.Bnmpwa_half{font-variant-numeric:tabular-nums}.Bnmpwa_sep{color:var(--dsw-alias-label-tertiary,#67676f)}.Bnmpwa_caret{opacity:.7;font-size:12px}.Bnmpwa_panel{z-index:300;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:max-content;max-width:calc(100vw - 16px);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;padding:8px;position:fixed}.Bnmpwa_nav{align-items:center;gap:4px;margin-bottom:4px;display:flex}.Bnmpwa_month{text-align:center;font-size:var(--ku-body,14px);color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;flex:auto;font-weight:500;line-height:22px}.Bnmpwa_navBtn{width:22px;height:22px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:6px;flex:none;font-size:14px;line-height:1}.Bnmpwa_navBtn:hover:enabled{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_navBtn:disabled{opacity:.35;cursor:not-allowed}.Bnmpwa_navBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.Bnmpwa_weekdays,.Bnmpwa_week{display:flex}.Bnmpwa_weekday{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);flex:0 0 30px;line-height:20px}.Bnmpwa_grid{outline:none;flex-direction:column;display:flex}.Bnmpwa_grid:focus-visible{outline:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:6px}.Bnmpwa_cell{box-sizing:border-box;height:28px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-sub,13px);font-variant-numeric:tabular-nums;cursor:pointer;-webkit-user-select:none;user-select:none;border-radius:6px;flex:0 0 30px;justify-content:center;align-items:center;line-height:1;display:flex}.Bnmpwa_cell:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.Bnmpwa_inRange{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 16%, transparent);border-radius:0}.Bnmpwa_inRange:hover{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 24%, transparent)}.Bnmpwa_edge{background:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:6px;font-weight:600}.Bnmpwa_edge:hover{background:var(--dsw-alias-state-business-primary,#5b8cff)}.Bnmpwa_cursor{box-shadow:inset 0 0 0 1px var(--dsw-alias-label-secondary,#9a9aa6)}.Bnmpwa_todayCell{font-weight:600}.Bnmpwa_future{color:var(--dsw-alias-label-tertiary,#67676f);opacity:.4;cursor:not-allowed}.Bnmpwa_future:hover{background:0 0}.Bnmpwa_blank{cursor:default}.Bnmpwa_blank:hover{background:0 0}.Bnmpwa_foot{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);align-items:center;gap:8px;margin-top:6px;padding-top:6px;display:flex}.Bnmpwa_hint{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);flex:auto;line-height:18px;overflow:hidden}";
+		const css$17 = ".Bnmpwa_root{flex:none;display:inline-flex;position:relative}.Bnmpwa_trigger{box-sizing:border-box;height:var(--ku-control,36px);border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);cursor:pointer;white-space:nowrap;background:0 0;border-radius:12px;align-items:center;gap:6px;padding:0 10px;line-height:1;display:inline-flex}.Bnmpwa_trigger:hover{border-color:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_trigger:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.Bnmpwa_half{font-variant-numeric:tabular-nums}.Bnmpwa_sep{color:var(--dsw-alias-label-tertiary,#67676f)}.Bnmpwa_caret{opacity:.7;font-size:12px}.Bnmpwa_panel{z-index:300;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);width:max-content;max-width:calc(100vw - 16px);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;padding:8px;position:fixed}.Bnmpwa_nav{align-items:center;gap:4px;margin-bottom:4px;display:flex}.Bnmpwa_month{text-align:center;font-size:var(--ku-body,14px);color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;flex:auto;font-weight:500;line-height:22px}.Bnmpwa_navBtn{width:22px;height:22px;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:6px;flex:none;font-size:14px;line-height:1}.Bnmpwa_navBtn:hover:enabled{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.Bnmpwa_navBtn:disabled{opacity:.35;cursor:not-allowed}.Bnmpwa_navBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.Bnmpwa_weekdays,.Bnmpwa_week{display:flex}.Bnmpwa_weekday{text-align:center;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);flex:0 0 30px;line-height:20px}.Bnmpwa_grid{outline:none;flex-direction:column;display:flex}.Bnmpwa_grid:focus-visible{outline:1px solid var(--dsw-alias-state-business-primary,#5b8cff);border-radius:6px}.Bnmpwa_cell{box-sizing:border-box;height:28px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-sub,13px);font-variant-numeric:tabular-nums;cursor:pointer;-webkit-user-select:none;user-select:none;border-radius:6px;flex:0 0 30px;justify-content:center;align-items:center;line-height:1;display:flex}.Bnmpwa_cell:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.Bnmpwa_inRange{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 16%, transparent);border-radius:0}.Bnmpwa_inRange:hover{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 24%, transparent)}.Bnmpwa_edge{background:var(--dsw-alias-state-business-primary,#5b8cff);color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:6px;font-weight:600}.Bnmpwa_edge:hover{background:var(--dsw-alias-state-business-primary,#5b8cff)}.Bnmpwa_cursor{box-shadow:inset 0 0 0 1px var(--dsw-alias-label-secondary,#9a9aa6)}.Bnmpwa_todayCell{font-weight:600}.Bnmpwa_future{color:var(--dsw-alias-label-tertiary,#67676f);opacity:.4;cursor:not-allowed}.Bnmpwa_future:hover{background:0 0}.Bnmpwa_blank{cursor:default}.Bnmpwa_blank:hover{background:0 0}.Bnmpwa_foot{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);align-items:center;gap:8px;margin-top:6px;padding-top:6px;display:flex}.Bnmpwa_hint{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);flex:auto;line-height:18px;overflow:hidden}.Bnmpwa_triggerActive{background:var(--dsw-alias-interactive-bg-active,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}";
 		const tagId$17 = "dsh-key-usage/dateRange.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$17) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2267,6 +2283,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"sep": "Bnmpwa_sep",
 			"todayCell": "Bnmpwa_todayCell",
 			"trigger": "Bnmpwa_trigger",
+			"triggerActive": "Bnmpwa_triggerActive",
 			"week": "Bnmpwa_week",
 			"weekday": "Bnmpwa_weekday",
 			"weekdays": "Bnmpwa_weekdays"
@@ -2445,7 +2462,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
 					ref: triggerRef,
-					className: dateRange_module_css_default.trigger,
+					className: props.active === true ? dateRange_module_css_default.trigger + " " + dateRange_module_css_default.triggerActive : dateRange_module_css_default.trigger,
 					"aria-haspopup": "dialog",
 					"aria-expanded": open,
 					"aria-controls": open ? popupId : void 0,
@@ -2597,6 +2614,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/components/MultiSelect.tsx
 		/** 可搜索、可多选、选项按名称排序的筛选下拉（通道 / 项目 / 模型共用）。 */
+		/** 同一时刻只允许一个筛选浮层展开：新打开的那个负责关掉上一个。 */
+		let closeOtherOverlay = null;
+		const OVERLAY_CLOSE_EVENT = "dsh-key-usage:close-overlays";
 		/** 名称排序：中文按拼音、数字与符号跟在后面，保证每次打开顺序稳定。 */
 		function sorted(options, usageOf) {
 			const byName = (left, right) => left.label.localeCompare(right.label, "zh-Hans-CN", {
@@ -2633,6 +2653,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [open]);
 			(0, react.useEffect)(() => {
 				if (!open) return;
+				const myClose = () => {
+					setOpen(false);
+				};
+				if (closeOtherOverlay !== null && closeOtherOverlay !== myClose) closeOtherOverlay();
+				closeOtherOverlay = myClose;
+				const onOverlayClose = () => setOpen(false);
+				window.addEventListener(OVERLAY_CLOSE_EVENT, onOverlayClose);
 				const onDown = (event) => {
 					if (rootRef.current !== null && !rootRef.current.contains(event.target)) setOpen(false);
 				};
@@ -2644,6 +2671,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return () => {
 					document.removeEventListener("mousedown", onDown);
 					document.removeEventListener("keydown", onKey);
+					window.removeEventListener(OVERLAY_CLOSE_EVENT, onOverlayClose);
+					if (closeOtherOverlay === myClose) closeOtherOverlay = null;
 				};
 			}, [open]);
 			const filtered = (0, react.useMemo)(() => {
@@ -5005,6 +5034,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const summary = props.summary;
 			const modelFilter = props.modelFilter ?? "";
 			const projectFilter = props.projectFilter ?? "";
+			/** 任一筛选激活时，KPI 必须从过滤后的 usage 算：summary 的月列没有通道/项目/模型维度 */
+			const anyFilterActive = selectionOf(props.channelFilter ?? "").length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0;
 			/** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
 			const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter);
 			const isMonthRange = range === "month";
@@ -5014,28 +5045,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const monthFrom = summary === null ? null : summary.range.monthFrom;
 			const monthTo = summary === null ? null : summary.range.today;
 			const activeDaysOfMonth = monthFrom === null || monthTo === null ? 0 : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length;
-			const rangeTotals = isMonthRange ? null : rangeTotalsOf(scopedUsage, range);
+			const useSummaryKpi = isMonthRange && !anyFilterActive;
+			const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range);
 			/** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
 			*  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
-			const splitTotals = isMonthRange ? props.usage?.totals ?? null : rangeTotals;
-			const costRow = isMonthRange ? summary === null ? null : monthCost : rangeTotals === null ? null : {
+			const splitTotals = useSummaryKpi ? props.usage?.totals ?? null : rangeTotals;
+			const costRow = useSummaryKpi ? summary === null ? null : monthCost : rangeTotals === null ? null : {
 				cost: rangeTotals.cost,
 				costsByCurrency: rangeTotals.costsByCurrency
 			};
 			const costAmount = costRow === null ? null : comparableMoneyOf(costRow);
-			const tokenCount = isMonthRange ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
+			const tokenCount = useSummaryKpi ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
 			const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount);
 			const hitRate = hitRateOf(splitTotals);
 			const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null ? null : moneyTotalsTextOf({
 				cost: splitTotals.cacheSaved,
 				costsByCurrency: splitTotals.cacheSavedByCurrency
 			});
-			const activeDays = isMonthRange ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range);
+			const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range);
 			const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
 			/** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
 			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter);
 			const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length;
-			const sessionCount = isMonthRange ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount) : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount);
+			const sessionCount = useSummaryKpi ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount) : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount);
 			const isAllRange = range === "total";
 			/** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
 			*  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
@@ -8281,13 +8313,28 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [detailId, setDetailId] = (0, react.useState)(null);
 			const projectFilter = props.projectFilter ?? "";
 			const modelFilter = props.modelFilter ?? "";
+			const channelFilter = props.channelFilter ?? "";
+			const windowFromMs = props.bounds === void 0 ? null : Date.parse(props.bounds.from + "T00:00:00");
+			const windowToMs = props.bounds === void 0 ? null : Date.parse(props.bounds.to + "T23:59:59.999");
 			/** 未过滤的全量行：会话详情抽屉里的子会话列表仍按全量找，筛选只作用于列表与榜单 */
 			const allRows = props.data?.rows ?? [];
 			/** 项目 / 模型筛选都作用在行上（逗号分隔多选，空串 = 全部）：榜单 / 形态 / 计数 / 最近列表全部由过滤后的行重算 */
-			const rows = (0, react.useMemo)(() => allRows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter) && selectionMatches(row.models.map((model) => model.model), modelFilter)), [
+			const rows = (0, react.useMemo)(() => allRows.filter((row) => {
+				if (!selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter)) return false;
+				if (!selectionMatches(row.models.map((model) => model.model), modelFilter)) return false;
+				if (!selectionMatches([row.provider ?? "", ...row.models.map((model) => model.provider)], channelFilter)) return false;
+				if (windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
+					const startMs = row.firstTime ?? row.lastTime;
+					if ((row.lastTime ?? row.firstTime) < windowFromMs || startMs > windowToMs) return false;
+				}
+				return true;
+			}), [
 				allRows,
 				projectFilter,
-				modelFilter
+				modelFilter,
+				channelFilter,
+				windowFromMs,
+				windowToMs
 			]);
 			(0, react.useEffect)(() => {
 				setPageSize(PAGE_SIZE);
@@ -8779,9 +8826,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		//#endregion
 		//#region src/client/tabs/ToolsTab.tsx
 		/**
-		* 工具与技能：会话事件里的 `tool/call` 统计（工具 Top7 / 技能 Top6+其它 / MCP server Top8 / 工具占比 + 近 7 天迷你柱）。
+		* 工具与技能：会话事件里的 `tool/call` 统计（工具 Top7 / 技能 Top6+其它 / MCP server Top8 / 工具占比 + 窗口内迷你柱）。
 		*
-		* 数据来自统一快照的 `tools` 段：全部会话、全量历史，与页面范围筛选无关；`null` = 暂无采集（老库 / 读不到会话），
+		* 数据来自 `GET /tools`（窗口 + 项目 + 模型跟随顶部筛选，服务端按会话折叠里的按天计数表聚合）；
+		* 首屏与请求失败时用统一快照的 `tools` 段兜底（全部会话、全量历史）；`null` = 暂无采集（老库 / 读不到会话），
 		* 显示占位而不是 0。占比口径由服务端算好（该行次数 / 同类总次数），界面只做取整与条宽换算。
 		*/
 		/** 工具占比堆叠条只单列前 4 个工具，其余并成「其它」。 */
@@ -9426,6 +9474,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [sessions, setSessions] = (0, react.useState)(null);
 			const [prompts, setPrompts] = (0, react.useState)(null);
 			const [tools, setTools] = (0, react.useState)(null);
+			/** 快照 `tools` 段（全量历史）：首屏与参数化请求失败时的回落，不被每次轮询覆盖筛选结果。 */
+			const toolsFallbackRef = (0, react.useRef)(null);
+			/** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
+			const [snapshotRevision, setSnapshotRevision] = (0, react.useState)(0);
 			const [projects, setProjects] = (0, react.useState)(null);
 			const [models, setModels] = (0, react.useState)(null);
 			const [available, setAvailable] = (0, react.useState)(null);
@@ -9479,6 +9531,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const wantWords = wants("words");
 			const wantTools = wants("tools");
 			activeTabRef.current = activeTab;
+			(0, react.useEffect)(() => {
+				window.dispatchEvent(new Event("dsh-key-usage:close-overlays"));
+			}, [activeTab]);
 			/** 用户是否还在看默认范围（近 30 天 / 未筛通道）：是才采用快照里的 usage，否则会覆盖他自己的选择。 */
 			const usageIsDefaultRef = (0, react.useRef)(true);
 			usageIsDefaultRef.current = range === "month" && selectionOf(channelFilter).length === 0;
@@ -9497,7 +9552,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (sections.projects !== void 0 && sections.projects !== null) setProjects(sections.projects);
 				if (sections.models !== void 0 && sections.models !== null) setModels(sections.models);
 				if (sections.prompts !== void 0 && sections.prompts !== null) setPrompts(sections.prompts);
-				if (sections.tools !== void 0) setTools(sections.tools);
+				if (sections.tools !== void 0) {
+					toolsFallbackRef.current = sections.tools;
+					setTools((current) => current === null ? sections.tools : current);
+				}
 				const usageSection = sections.usage;
 				if (usageSection !== void 0 && usageIsDefaultRef.current && usageSection !== null) {
 					setUsage(usageSection);
@@ -9519,6 +9577,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					partial.push(name + "(" + section.coverage.status + "：" + String(section.coverage.countedSessions) + "/" + String(section.coverage.totalSessions) + ")");
 				}
 				if (partial.length > 0) logWarn("snapshot", t("log.coveragePartial") + "：" + partial.join("、"));
+				setSnapshotRevision((revision) => revision + 1);
 			}, [t]);
 			/** 逐端点兜底：服务端还是旧版本（没有 /snapshot）时用，语义与升级前一致。 */
 			const reloadFromEndpoints = (0, react.useCallback)(async (includeSessionData, forceQuota) => {
@@ -9688,8 +9747,37 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				customTo,
 				available
 			]);
+			/** 是否已经知道数据可用范围（range='total' 的窗口起点要靠它；布尔化避免每次回填都触发重取）。 */
+			const hasAvailable = available !== null;
+			/**
+			* 工具段跟随顶部筛选：窗口 = bounds，项目 / 模型取多选值（项目 sentinel 还原成空串，
+			* 服务端按实际 workspace 字符串匹配）。服务端用运行期索引聚合，不重读会话；
+			* 回 null（索引还没建好 / 请求失败）时保留快照全量段作回落。
+			*/
 			(0, react.useEffect)(() => {
-				if (!wantDetail && !wantDistribution && !wantOverview) return;
+				if (!wantTools) return;
+				let cancelled = false;
+				const chosenProjects = selectionOf(projectFilter);
+				const projectParam = chosenProjects.length === 0 ? null : chosenProjects.map((value) => value === "__orphan__" ? "" : value).join(",");
+				loadTools(bounds.from, bounds.to, projectParam, selectionOf(modelFilter).join(",")).then((result) => {
+					if (cancelled) return;
+					setTools(result ?? toolsFallbackRef.current);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				wantTools,
+				bounds.from,
+				bounds.to,
+				projectFilter,
+				modelFilter,
+				snapshotRevision
+			]);
+			(0, react.useEffect)(() => {
+				if (!wantDetail && !wantDistribution && !wantOverview) {
+					if (!wantTools || hasAvailable) return;
+				}
 				let cancelled = false;
 				loadUsage(bounds.from, bounds.to, "ALL").then((result) => {
 					if (cancelled || result === null) return;
@@ -9706,6 +9794,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				wantDetail,
 				wantDistribution,
 				wantOverview,
+				wantTools,
+				hasAvailable,
 				bounds.from,
 				bounds.to,
 				pricingRevision
@@ -9992,7 +10082,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 												setCustomFrom(from);
 												setCustomTo(to);
 												setRange("custom");
-											}
+											},
+											active: range === "custom"
 										})]
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -10124,7 +10215,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										goSection("detail");
 									},
 									projectFilter,
-									modelFilter
+									modelFilter,
+									channelFilter
 								})]
 							}),
 							wants("detail") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
@@ -10157,6 +10249,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.pageSectionTitle,
 									children: t("tab.distribution")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DistributionTab, {
+									channelFilter,
 									projects,
 									models,
 									channels,
@@ -10173,6 +10266,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									className: shared_module_css_default.pageSectionTitle,
 									children: t("tab.sessions")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionsTab, {
+									range,
+									bounds,
+									channelFilter,
 									data: sessions,
 									channels,
 									tooltip,

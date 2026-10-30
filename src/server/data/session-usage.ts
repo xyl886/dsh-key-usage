@@ -64,6 +64,18 @@ export interface PromptDayStat {
   words: Map<string, number>
 }
 
+/**
+ * 一天里的工具 / 技能 / MCP 调用明细：`/tools` 按窗口切片时只能读天级数据，
+ * 拿会话全量次数按比例摊是猜，不是统计。
+ * 技能 / MCP 绝大多数天为空，按需建表（空 Map 也要占对象头，全库累计到 MB 级）。
+ */
+export interface ToolDayStat {
+  calls: number
+  tools: Map<string, number>
+  skills: Map<string, number> | null
+  mcp: Map<string, number> | null
+}
+
 export interface SessionFold {
   /** 样本键（turn:step，缺失时回落 seq）→ 最后一次上报的用量。 */
   samples: Map<string, UsageSample>
@@ -93,6 +105,8 @@ export interface SessionFold {
   mcpServerCounts: Map<string, number> | null
   /** 本地日期（`YYYY-MM-DD`）→ 工具调用次数（迷你柱的近 7 天趋势）；没有工具调用时为 null。 */
   toolDayCalls: Map<string, number> | null
+  /** 本地日期 → 当天的工具 / 技能 / MCP 明细（窗口切片用）；没有工具调用时为 null。 */
+  toolDayStats: Map<string, ToolDayStat> | null
 }
 
 export interface ModelUsageRow {
@@ -499,6 +513,7 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
   let skillNameCounts: Map<string, number> | null = null
   let mcpServerCounts: Map<string, number> | null = null
   let toolDayCalls: Map<string, number> | null = null
+  let toolDayStats: Map<string, ToolDayStat> | null = null
   for (const event of events) {
     const time = typeof event.time === 'number' ? event.time : null
     if (time !== null) {
@@ -571,12 +586,10 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
       toolCalls += 1
       toolNameCounts ??= new Map()
       incrementCount(toolNameCounts, toolName)
-      if (toolName === SKILL_TOOL_NAME) {
-        const skillName = skillNameOf(event.data?.arguments)
-        if (skillName !== null) {
-          skillNameCounts ??= new Map()
-          incrementCount(skillNameCounts, skillName)
-        }
+      const skillName = toolName === SKILL_TOOL_NAME ? skillNameOf(event.data?.arguments) : null
+      if (skillName !== null) {
+        skillNameCounts ??= new Map()
+        incrementCount(skillNameCounts, skillName)
       }
       const mcpServer = mcpServerOf(toolName, event.data?.arguments)
       if (mcpServer !== null) {
@@ -584,15 +597,32 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
         incrementCount(mcpServerCounts, mcpServer)
       }
       if (time !== null) {
+        const day = dayKeyOf(time)
         toolDayCalls ??= new Map()
-        incrementCount(toolDayCalls, dayKeyOf(time))
+        incrementCount(toolDayCalls, day)
+        toolDayStats ??= new Map()
+        let dayStat = toolDayStats.get(day)
+        if (dayStat === undefined) {
+          dayStat = { calls: 0, tools: new Map(), skills: null, mcp: null }
+          toolDayStats.set(day, dayStat)
+        }
+        dayStat.calls += 1
+        incrementCount(dayStat.tools, toolName)
+        if (skillName !== null) {
+          dayStat.skills ??= new Map()
+          incrementCount(dayStat.skills, skillName)
+        }
+        if (mcpServer !== null) {
+          dayStat.mcp ??= new Map()
+          incrementCount(dayStat.mcp, mcpServer)
+        }
       }
       continue
     }
   }
   return {
     samples, firstTime, lastTime, firstPrompt, promptCount, promptChars, words, promptFirstTime, promptLastTime, promptDayStats,
-    toolCalls, toolNameCounts, skillNameCounts, mcpServerCounts, toolDayCalls,
+    toolCalls, toolNameCounts, skillNameCounts, mcpServerCounts, toolDayCalls, toolDayStats,
   }
 }
 
@@ -877,6 +907,8 @@ export interface ToolStatsRecord {
   skillNameCounts?: Map<string, number> | null
   mcpServerCounts?: Map<string, number> | null
   toolDayCalls?: Map<string, number> | null
+  /** 按天的工具 / 技能 / MCP 明细（`/tools` 窗口切片用）；老数据源没有这个字段。 */
+  toolDayStats?: Map<string, ToolDayStat> | null
 }
 
 /** 快照 `tools` 段的一行（工具 / 技能共用）。 */
@@ -955,8 +987,45 @@ function countRowsOf(counts: Map<string, number>, limit: number, total: number):
     .map(([key, calls]) => ({ key, calls, sharePercent: sharePercentOf(calls, total) }))
 }
 
+/** 计数表 → 下发的 `ToolsStat`：两个入口（全量快照段、`/tools` 窗口）共用同一套占比与截断规则。 */
+function toolsStatOf(input: {
+  calls: number
+  sessions: number
+  toolCounts: Map<string, number>
+  skillCounts: Map<string, number>
+  mcpCounts: Map<string, number>
+  days: ToolUsageDay[]
+}): ToolsStat {
+  const skillTotal = [...input.skillCounts.values()].reduce((sum, count) => sum + count, 0)
+  const mcpTotal = [...input.mcpCounts.values()].reduce((sum, count) => sum + count, 0)
+  // 占比分母：工具用总调用次数（与面板头部的「N 次」同一口径），技能 / MCP 用各自总数
+  const toolRows = countRowsOf(input.toolCounts, TOOLS_TOP_LIMIT, input.calls)
+  const skillRows = countRowsOf(input.skillCounts, SKILLS_TOP_LIMIT, skillTotal)
+  const mcpRows = countRowsOf(input.mcpCounts, MCP_TOP_LIMIT, mcpTotal)
+  return {
+    calls: input.calls,
+    sessions: input.sessions,
+    tools: toolRows.map((row) => ({ name: row.key, calls: row.calls, sharePercent: row.sharePercent })),
+    days: input.days,
+    skills: {
+      calls: skillTotal,
+      count: input.skillCounts.size,
+      rows: skillRows.map((row) => ({ name: row.key, calls: row.calls, sharePercent: row.sharePercent })),
+      other: {
+        count: Math.max(0, input.skillCounts.size - skillRows.length),
+        calls: Math.max(0, skillTotal - skillRows.reduce((sum, row) => sum + row.calls, 0)),
+      },
+    },
+    mcp: {
+      calls: mcpTotal,
+      count: input.mcpCounts.size,
+      rows: mcpRows.map((row) => ({ server: row.key, calls: row.calls, sharePercent: row.sharePercent })),
+    },
+  }
+}
+
 /**
- * 跨会话合并工具 / 技能 / MCP 统计。
+ * 跨会话合并工具 / 技能 / MCP 统计（快照 `tools` 段：全部会话、全量历史）。
  * `null` = 这份数据源没有工具统计（老缓存 / 外部注入的旧数据源 / 没有会话 / 一条工具调用都没有），
  * 界面统一显示「暂无采集」而不是 0；只有真的采集到调用才返回对象。
  */
@@ -979,38 +1048,141 @@ export function mergeToolStats(records: Iterable<ToolStatsRecord>, options?: { n
     mergeCounts(dayCounts, record.toolDayCalls)
   }
   if (!collected || calls <= 0 || toolCounts.size === 0) return null
-  const skillTotal = [...skillCounts.values()].reduce((sum, count) => sum + count, 0)
-  const mcpTotal = [...mcpCounts.values()].reduce((sum, count) => sum + count, 0)
-  // 占比分母：工具用总调用次数（与面板头部的「N 次」同一口径），技能 / MCP 用各自总数
-  const toolRows = countRowsOf(toolCounts, TOOLS_TOP_LIMIT, calls)
-  const skillRows = countRowsOf(skillCounts, SKILLS_TOP_LIMIT, skillTotal)
-  const mcpRows = countRowsOf(mcpCounts, MCP_TOP_LIMIT, mcpTotal)
   const nowMs = options?.now ?? Date.now()
   const days: ToolUsageDay[] = []
   for (let offset = TOOL_TREND_DAYS - 1; offset >= 0; offset -= 1) {
     const date = dayKeyOf(nowMs - offset * 86400000)
     days.push({ date, calls: dayCounts.get(date) ?? 0 })
   }
-  return {
-    calls,
-    sessions,
-    tools: toolRows.map((row) => ({ name: row.key, calls: row.calls, sharePercent: row.sharePercent })),
-    days,
-    skills: {
-      calls: skillTotal,
-      count: skillCounts.size,
-      rows: skillRows.map((row) => ({ name: row.key, calls: row.calls, sharePercent: row.sharePercent })),
-      other: {
-        count: Math.max(0, skillCounts.size - skillRows.length),
-        calls: Math.max(0, skillTotal - skillRows.reduce((sum, row) => sum + row.calls, 0)),
-      },
-    },
-    mcp: {
-      calls: mcpTotal,
-      count: mcpCounts.size,
-      rows: mcpRows.map((row) => ({ server: row.key, calls: row.calls, sharePercent: row.sharePercent })),
-    },
+  return toolsStatOf({ calls, sessions, toolCounts, skillCounts, mcpCounts, days })
+}
+
+/** 工具运行期索引里一个会话的维度与计数表（内存态、不落盘，随每次本地重建刷新）。 */
+export interface ToolSessionEntry {
+  /** 会话工作区；空串 = 未归入工作区。 */
+  workspace: string
+  /** 会话用到的**展示模型名**（去重，与顶部「模型」筛选的取值同一口径）。 */
+  models: string[]
+  /** 会话用到的通道（去重）。 */
+  providers: string[]
+  /** 工具名 → 调用次数（直接引用折叠缓存里的 Map，不复制）。 */
+  byTool: Map<string, number> | null
+  /** 技能名 → 调用次数。 */
+  skills: Map<string, number> | null
+  /** MCP server → 调用次数。 */
+  mcp: Map<string, number> | null
+  /** 本地日期 → 当天工具调用次数。 */
+  byDay: Map<string, number> | null
+  /** 本地日期 → 当天工具 / 技能 / MCP 明细：窗口切片只能读它。 */
+  toolDayStats: Map<string, ToolDayStat> | null
+  /** 全量工具调用次数（含没有事件时间、进不了 byDay 的那些）。 */
+  total: number
+}
+
+/** 工具运行期索引：会话 id → 过滤维度 + 计数表。 */
+export type ToolSessionIndex = Map<string, ToolSessionEntry>
+
+/** 建索引所需的会话字段（`SessionUsageRecord` 的结构子集，避免 data 层反向依赖 sessions.ts）。 */
+export interface ToolIndexRecord extends ToolStatsRecord {
+  id: string
+  workspace?: string | null
+  summary?: { models?: ReadonlyArray<{ key: string }> } | null
+}
+
+/**
+ * 从同一份会话折叠结果建运行期索引：只搬 Map 引用、收集过滤维度，**不读第二遍会话**。
+ * 模型名按展示口径拆（`attributeModelKey` 去掉路由前缀），与顶部「模型」筛选的取值一致。
+ */
+export function buildToolSessionIndex(records: Iterable<ToolIndexRecord>, knownProviders: string[]): ToolSessionIndex {
+  const index: ToolSessionIndex = new Map()
+  for (const record of records) {
+    if (typeof record.id !== 'string' || record.id === '') continue
+    const models = new Set<string>()
+    const providers = new Set<string>()
+    for (const model of record.summary?.models ?? []) {
+      if (model === null || typeof model.key !== 'string' || model.key === '') continue
+      const attribution = attributeModelKey(model.key, knownProviders)
+      if (attribution.model !== '') models.add(attribution.model)
+      if (attribution.provider !== '') providers.add(attribution.provider)
+    }
+    index.set(record.id, {
+      workspace: record.workspace ?? '',
+      models: [...models],
+      providers: [...providers],
+      byTool: record.toolNameCounts ?? null,
+      skills: record.skillNameCounts ?? null,
+      mcp: record.mcpServerCounts ?? null,
+      byDay: record.toolDayCalls ?? null,
+      toolDayStats: record.toolDayStats ?? null,
+      total: typeof record.toolCalls === 'number' && Number.isFinite(record.toolCalls) ? record.toolCalls : 0,
+    })
   }
+  return index
+}
+
+/** `/tools` 的查询窗口与筛选维度（空数组 / 缺省 = 不筛）。 */
+export interface ToolWindowQuery {
+  /** 起始本地日期 `YYYY-MM-DD`（含）。 */
+  from: string
+  /** 结束本地日期 `YYYY-MM-DD`（含）。 */
+  to: string
+  /** 工作区多选；`''` 匹配「未归入工作区」。 */
+  projects?: string[] | null
+  /** 展示模型名多选。 */
+  models?: string[] | null
+}
+
+/** `/tools` 迷你柱最多画的天数：窗口更长时只画最后 N 天，次数仍按完整窗口统计。 */
+export const TOOLS_WINDOW_MAX_DAYS = 400
+
+/** 窗口内的日期序列（含首尾）；窗口更长时取最后 N 天。非法日期返回空表。 */
+function windowDayKeysOf(from: string, to: string): string[] {
+  const startMs = Date.parse(from)
+  const endMs = Date.parse(to)
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return []
+  const span = Math.round((endMs - startMs) / 86400000) + 1
+  const length = Math.min(span, TOOLS_WINDOW_MAX_DAYS)
+  const days: string[] = []
+  for (let offset = span - length; offset < span; offset += 1) {
+    days.push(new Date(startMs + offset * 86400000).toISOString().slice(0, 10))
+  }
+  return days
+}
+
+/**
+ * 按窗口 + 项目 + 模型聚合工具统计（`GET /tools`）。
+ * `null` = 运行期索引还没建好（老版本 / 构建中）：调用方回落快照里的全量段，不报错。
+ * 索引存在但窗口内没有调用时返回**全 0 的对象**（界面据此显示空态，而不是拿全量数据冒充）。
+ */
+export function mergeToolStatsInWindow(index: ToolSessionIndex | null, query: ToolWindowQuery): ToolsStat | null {
+  if (index === null) return null
+  const projects = query.projects !== undefined && query.projects !== null && query.projects.length > 0 ? new Set(query.projects) : null
+  const models = query.models !== undefined && query.models !== null && query.models.length > 0 ? new Set(query.models) : null
+  const toolCounts = new Map<string, number>()
+  const skillCounts = new Map<string, number>()
+  const mcpCounts = new Map<string, number>()
+  const dayCounts = new Map<string, number>()
+  let calls = 0
+  let sessions = 0
+  for (const entry of index.values()) {
+    if (projects !== null && !projects.has(entry.workspace)) continue
+    if (models !== null && !entry.models.some((model) => models.has(model))) continue
+    if (entry.toolDayStats === null) continue
+    let sessionCalls = 0
+    for (const [day, stat] of entry.toolDayStats) {
+      if (day < query.from || day > query.to) continue
+      sessionCalls += stat.calls
+      dayCounts.set(day, (dayCounts.get(day) ?? 0) + stat.calls)
+      mergeCounts(toolCounts, stat.tools)
+      mergeCounts(skillCounts, stat.skills)
+      mergeCounts(mcpCounts, stat.mcp)
+    }
+    if (sessionCalls <= 0) continue
+    sessions += 1
+    calls += sessionCalls
+  }
+  const days = windowDayKeysOf(query.from, query.to).map((date) => ({ date, calls: dayCounts.get(date) ?? 0 }))
+  return toolsStatOf({ calls, sessions, toolCounts, skillCounts, mcpCounts, days })
 }
 
 /**

@@ -64,6 +64,8 @@ export function DateRangePicker(props: {
   from: string
   to: string
   onChange: (from: string, to: string) => void
+  /** 当前范围就是自定义：触发条高亮，避免用户以为筛选没生效 */
+  active?: boolean
 }): ReactNode {
   const t = useT()
   const today = isoDate(new Date())
@@ -200,7 +202,7 @@ export function DateRangePicker(props: {
       <button
         type="button"
         ref={triggerRef}
-        className={styles.trigger}
+        className={props.active === true ? styles.trigger + ' ' + styles.triggerActive : styles.trigger}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popupId : undefined}
