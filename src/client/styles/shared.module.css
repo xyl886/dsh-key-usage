@@ -100,7 +100,7 @@
 
 .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .table th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit;
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
   padding: 4px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 /* 单元格允许换行：窄面板下靠折行而不是横向滚动条容纳列 */

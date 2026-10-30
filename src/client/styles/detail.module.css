@@ -86,6 +86,6 @@
 /* 展开后的模型明细：缩进一层，列宽与上表无关，自己一整套右对齐数字 */
 .detailTable td.subCell { padding: 2px 8px 8px 28px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
 .subTable { width: 100%; border-collapse: collapse; }
-.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: var(--detail-body); padding: 2px 8px; }
+.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: 13px; padding: 2px 8px; }
 .subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 8px; font-variant-numeric: tabular-nums; }
 .subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }

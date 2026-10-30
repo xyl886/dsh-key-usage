@@ -5,8 +5,8 @@
 /* 触发条：起 → 止 ▾（日期等宽数字，切换月份时不抖动） */
 .trigger {
   box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px;
-  height: var(--ku-control, 32px); padding: 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px;
+  height: var(--ku-control, 36px); padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 12px;
   background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit; font-size: var(--ku-body, 14px); line-height: 1;
   cursor: pointer; white-space: nowrap;
