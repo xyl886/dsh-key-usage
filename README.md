@@ -254,7 +254,7 @@ pnpm run pack:dry     # 发布清单自检
 | `src/client/**` | `pnpm run build` → **刷新页面** |
 | `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
 
-**验证安装**（共 **17 个端点 = 14 个只读 `GET` + 3 个写 `POST`**，全部只接受回环请求）：
+**验证安装**（共 **18 个端点 = 15 个只读 `GET` + 3 个写 `POST`**，全部只接受回环请求）：
 
 装好后点侧边栏「使用情况」能出内容即可 —— **不要用 curl / 别的进程去请求桌面端 GUI 的端口**：那个端口带宿主自身的鉴权，外部请求只会拿到 `dsh web authentication required`，看不到插件端点。要直接验端点，只能用宿主自己打开的页面（浏览器里跑 `fetch('/dsh-key-usage/channels')`），或 `dsh web` 打印出来的带 token 的地址。
 
