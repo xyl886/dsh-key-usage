@@ -15,7 +15,7 @@
 /* ===== 面板（原型 .panel / .ph） ===== */
 .panel {
   min-width: 0;
-  padding: 10px 11px;
+  padding: 10px 12px;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 9px;
   box-sizing: border-box;
@@ -31,7 +31,7 @@
 }
 
 /* ===== 项目 × 模型（Mekko）：块宽 = 项目成本占总成本比例 ===== */
-.mekko { display: flex; align-items: stretch; height: 132px; border-radius: 5px; overflow: hidden; }
+.mekko { display: flex; align-items: stretch; height: 132px; border-radius: 6px; overflow: hidden; }
 .mekkoBlock {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
   gap: 3px; min-width: 0; padding: 8px; overflow: hidden; box-sizing: border-box;
@@ -86,22 +86,22 @@
 }
 
 /* ===== Token 构成：输出 / 缓存读堆叠条 + 图例（原型 .stack / .lg） ===== */
-.stackBar { display: flex; height: 22px; border-radius: 5px; overflow: hidden; }
+.stackBar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; }
 .stackOutput, .stackCache {
   display: flex; align-items: center; justify-content: center; min-width: 0;
   flex-basis: 0;
   /* 段内留 5px 侧边距（原型 .stack > div）：窄段靠 overflow 裁剪，box-sizing 保证比例不被 padding 撑歪 */
-  padding: 0 5px; box-sizing: border-box;
+  padding: 0 6px; box-sizing: border-box;
   overflow: hidden; white-space: nowrap; color: var(--dsw-alias-label-primary-foreground, #fff);
 }
 .stackOutput { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 85%, var(--dsw-alias-label-primary, #111)); }
 /* 绿在亮色主题里太亮，配前景色会看不清：与 label-primary 混合（亮色压暗、暗色提亮） */
 .stackCache { background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb96f) 60%, var(--dsw-alias-label-primary, #111)); }
 .legend {
-  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 7px;
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
 }
-.legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .legendOutput, .legendCache { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .legendOutput { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 85%, var(--dsw-alias-label-primary, #111)); }
 .legendCache { background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb96f) 60%, var(--dsw-alias-label-primary, #111)); }

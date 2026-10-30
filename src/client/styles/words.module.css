@@ -29,7 +29,7 @@
 
 /* ===== 词云面板（原型 .panel / .ph） ===== */
 .panel {
-  display: flex; flex-direction: column; min-width: 0; padding: 10px 11px; box-sizing: border-box;
+  display: flex; flex-direction: column; min-width: 0; padding: 10px 12px; box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   border-radius: 9px;
 }

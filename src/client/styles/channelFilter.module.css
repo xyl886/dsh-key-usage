@@ -22,7 +22,7 @@
 }
 
 .item {
-  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px;
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px; border-radius: 6px;
   font-size: var(--ku-body, 14px); color: var(--dsw-alias-label-primary, #e8e8ec); cursor: pointer;
 }
 .item:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }

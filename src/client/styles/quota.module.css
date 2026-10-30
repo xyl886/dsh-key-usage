@@ -21,7 +21,7 @@
 }
 
 /* 标题行：通道名 + 类型胶囊 + 右侧更新时间（整行是按钮，点开该通道的单价表） */
-.chanHead { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+.chanHead { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
 .chanHeadButton { width: 100%; cursor: pointer; border-radius: 6px; }
 .chanHeadButton:hover .chanName { color: var(--dsw-alias-state-business-primary, #5b8cff); }
 .chanHeadButton:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
@@ -65,7 +65,7 @@
   border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 140, .28));
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
 }
-.ratePanelHead { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.ratePanelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .ratePanelTitle { font-size: var(--ku-title, 17px); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .ratePanelClose {
   margin-left: auto; padding: 0 2px; border: 0; border-radius: 4px; background: none; cursor: pointer;
@@ -80,7 +80,7 @@
   padding: 6px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .rateTable td {
-  text-align: right; padding: 7px 8px; font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums;
+  text-align: right; padding: 8px 8px; font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-secondary, #9a9aa6); border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   white-space: nowrap;
 }

@@ -30,7 +30,7 @@
 .fall { color: var(--dsw-alias-state-success-primary, #3fb96f); }
 
 /* ===== 面板 ===== */
-.panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 11px; min-width: 0; }
+.panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 12px; min-width: 0; }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .panelTitle { font-size: var(--ov-title); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .panelMore {
@@ -41,12 +41,12 @@
 
 /* 指标切换：分段控件，选中态吃掉面板底色 */
 .metricTabs {
-  display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; flex-wrap: wrap;
+  display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; flex-wrap: wrap;
   background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12));
 }
 .metricTab {
   border: 0; background: transparent; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit;
-  font-size: var(--ov-body); padding: 2px 8px; border-radius: 5px;
+  font-size: var(--ov-body); padding: 2px 8px; border-radius: 6px;
   cursor: pointer; white-space: nowrap;
 }
 .metricTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
@@ -95,12 +95,12 @@
 }
 .histLabels span { flex: 1; min-width: 0; text-align: center; white-space: nowrap; }
 .trendFoot {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 9px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px;
   color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body);
 }
 /* 图例与原型一致：6 个色块「少 → 多」，首尾色块各自带文字标签 */
 .legend { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.legendItem { display: inline-flex; align-items: center; gap: 5px; color: var(--dsw-alias-label-tertiary, #67676f); }
+.legendItem { display: inline-flex; align-items: center; gap: 4px; color: var(--dsw-alias-label-tertiary, #67676f); }
 .legendItem i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .trendStats { margin-left: auto; font-variant-numeric: tabular-nums; }
 

@@ -43,7 +43,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
 }
 .selectOption {
-  display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 7px;
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px;
   font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); color: var(--dsw-alias-label-primary, #e8e8ec); cursor: pointer; white-space: nowrap;
 }
 .selectOptionActive { background: var(--dsw-alias-interactive-bg-active, rgba(91, 140, 255, .14)); color: var(--dsw-alias-state-business-primary, #5b8cff); }

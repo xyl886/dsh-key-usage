@@ -4,7 +4,7 @@
  */
 .sourceChip {
   display: inline-block; border-radius: 999px; padding: 0 6px; font-size: calc(var(--dsh-content-font-size, 12px) * 0.92); line-height: 1.7;
-  border: 1px solid currentColor; margin-left: 5px; vertical-align: baseline; white-space: nowrap;
+  border: 1px solid currentColor; margin-left: 4px; vertical-align: baseline; white-space: nowrap;
 }
 /* 聚合价目（LiteLLM，第三方、USD）：比内置官方价目再弱一档，虚线边框做区分，不用语义色 */
 .sourceAggregate {

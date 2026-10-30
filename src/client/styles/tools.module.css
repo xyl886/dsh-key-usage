@@ -6,7 +6,7 @@
 /* 两列卡片：窄屏自动单列 */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; align-items: stretch; }
 .panel {
-  min-width: 0; padding: 10px 11px; box-sizing: border-box;
+  min-width: 0; padding: 10px 12px; box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px;
 }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -28,10 +28,10 @@
 .rowPercent { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* 工具占比：堆叠条 + 图例 */
-.stack { display: flex; height: 22px; border-radius: 5px; overflow: hidden; }
+.stack { display: flex; height: 22px; border-radius: 6px; overflow: hidden; }
 .stackSegment {
   display: flex; align-items: center; justify-content: center; flex-basis: 0; min-width: 0;
-  overflow: hidden; white-space: nowrap; padding: 0 5px;
+  overflow: hidden; white-space: nowrap; padding: 0 6px;
   color: var(--dsw-alias-label-primary-foreground, #fff); font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums;
 }
 /* 段色相全部来自宿主状态色；与 label-primary 混合保证亮色主题压暗、暗色提亮 */
@@ -41,8 +41,8 @@
 .stack4 { background: color-mix(in srgb, var(--dsw-alias-state-warn-primary, #e0a13c) 60%, var(--dsw-alias-label-primary, #111)); }
 .stackOther { background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .22)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 
-.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 7px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-body, 14px); }
-.legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-body, 14px); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .dot1, .dot2, .dot3, .dot4, .dotOther { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .dot1 { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 .dot2 { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 55%, var(--dsw-alias-label-primary, #111)); }

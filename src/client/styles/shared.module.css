@@ -3,24 +3,24 @@
    宿主 main 容器本身不带内边距，页面自己负责，所以这里必须给。 */
 .section {
   box-sizing: border-box; min-height: 0; overflow: visible;
-  padding: 24px 32px 48px;
+  padding: 28px 48px 48px;
   /* 页面字号刻度：正文 / 小字 / 区块标题 / 数字 / 控件高 —— 一处定义，全页与各区块共用 */
   --ku-body: max(14px, var(--dsh-content-font-size, 14px));
   --ku-sub: max(13px, calc(var(--dsh-content-font-size, 14px) * .92));
   --ku-title: max(17px, calc(var(--dsh-content-font-size, 14px) * 1.2));
   --ku-kpi: max(20px, calc(var(--dsh-content-font-size, 14px) * 1.42));
-  --ku-control: 32px;
+  --ku-control: 36px;
   color: var(--dsw-alias-label-primary, #e8e8ec); font-size: var(--ku-body); line-height: 1.6;
 }
 /* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
 [data-sidebar-right-open] .section,
 [data-sidebar-right-float-host] .section { padding: 16px; }
 /* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部） */
-.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.pageTitle { margin: 0; font-size: max(24px, calc(var(--dsh-content-font-size, 14px) * 1.7)); font-weight: 650; line-height: 1.25; letter-spacing: -.01em; white-space: nowrap; }
+.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: 960px; }
+.pageTitle { margin: 0; font-size: 20px; font-weight: 500; line-height: 28px; letter-spacing: normal; white-space: nowrap; color: var(--dsw-alias-label-primary, #0f1115); }
 .headActions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* 工具栏：三行（标题+范围+动作 / 筛选 / 区块导航），同类控件成组，窄面板按行换行 */
-.toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; }
+.toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; max-width: 960px; margin-left: auto; margin-right: auto; }
 .toolbarRow + .toolbarRow { margin-top: 8px; }
 .toolbarGroup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .rowSpacer { flex: 1 1 auto; }
@@ -30,12 +30,12 @@
 /* .brand 已由 .pageTitle 取代 */
 /* 按钮类控件统一 26px 高：导出按钮经 Button 的 className 走进来；
    用 .stickyHead 前缀提高优先级，压住 Button 原语自带的 30px/8px 圆角 */
-.stickyHead .headBtn { height: var(--ku-control); padding: 0 12px; border-radius: 8px; font-size: var(--ku-body); }
+.stickyHead .headBtn { height: var(--ku-control); padding: 0 12px; border-radius: 12px; font-size: 13px; font-weight: 400; }
 /* 纯图标控件（刷新 / 设置 / 仓库）：与按钮同高同宽，不抢视觉 */
 .iconBtn {
   box-sizing: border-box; width: var(--ku-control); height: var(--ku-control); padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34); border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, .12)); border-radius: 12px;
   background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit; font-size: var(--ku-body); line-height: 1; cursor: pointer; text-decoration: none;
 }
@@ -51,8 +51,8 @@
   position: sticky;
   top: 0;
   z-index: 6;
-  margin: -24px -32px 0;
-  padding: 20px 32px 12px;
+  margin: -28px -48px 0;
+  padding: 20px 48px 8px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
@@ -81,31 +81,31 @@
 
 /* 区块导航：胶囊按钮，与筛选控件同高（原型 .tabs） */
 /* 区块导航用宿主的分段控件样式：浅灰底槽 + 选中项白底浮起 */
-.tabBar { display: inline-flex; gap: 2px; flex-wrap: wrap; padding: 3px; border-radius: 10px; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .14)); }
+.tabBar { display: inline-flex; gap: 2px; flex-wrap: wrap; padding: 0; border-radius: 0; background: transparent; }
 .tabBar button {
   border: 0; background: none; color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font: inherit; font-size: var(--ku-body); height: 26px; padding: 0 13px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: var(--ku-body); height: 26px; padding: 0 14px; border-radius: 8px; cursor: pointer; white-space: nowrap;
 }
 .tabBar button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
-.tabBar button.active { background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .14); }
+.tabBar button.active { background: var(--dsw-alias-interactive-bg-active, rgba(38, 49, 72, .06)); color: var(--dsw-alias-label-primary, #0f1115); font-weight: 400; box-shadow: none; }
 
 .card { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
-.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 20px; }
 
 .statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-bottom: 6px; }
-.statValue { font-size: max(18px, calc(var(--dsh-content-font-size, 13px) * 1.4)); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; padding-right: 72px; }
+.statValue { font-size: max(18px, calc(var(--dsh-content-font-size, 13px) * 1.4)); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; padding-right: 48px; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-top: 4px; }
 
 .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .table th {
   text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit;
-  padding: 5px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
+  padding: 4px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 /* 单元格允许换行：窄面板下靠折行而不是横向滚动条容纳列 */
 .table td {
-  text-align: right; padding: 7px 8px; font-size: inherit; font-variant-numeric: tabular-nums;
+  text-align: right; padding: 8px 8px; font-size: inherit; font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-secondary, #9a9aa6); vertical-align: middle;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: normal; overflow-wrap: anywhere;
 }
@@ -122,7 +122,7 @@
 
 .statusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }
-.empty { color: var(--dsw-alias-label-tertiary, #67676f); padding: 18px 0; }
+.empty { color: var(--dsw-alias-label-tertiary, #67676f); padding: 16px 0; }
 .warning { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: inherit; margin-bottom: 10px; }
 .legend { display: inline-flex; gap: 10px; font-size: inherit; color: var(--dsw-alias-label-tertiary, #67676f); align-items: center; flex-wrap: wrap; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
@@ -145,7 +145,7 @@
 .tipName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tipAmount { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-tertiary, #67676f); width: 58px; text-align: right; }
 .tipRate { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); font-weight: 600; }
-.tipBar { height: 3px; border-radius: 2px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.18)); margin: 1px 0 5px; overflow: hidden; }
+.tipBar { height: 3px; border-radius: 2px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.18)); margin: 1px 0 6px; overflow: hidden; }
 .tipBar > i { display: block; height: 100%; border-radius: 2px; }
 .tipDivider {
   display: flex; justify-content: space-between; gap: 12px;
@@ -196,8 +196,8 @@
   -webkit-appearance: none;
   box-sizing: border-box;
   height: var(--ku-control);
-  border: 1px solid var(--dsw-alias-border-l2, #2c2c34);
-  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, .12));
+  border-radius: 12px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit;
@@ -213,18 +213,18 @@
 }
 .refreshSelect:hover { border-color: var(--dsw-alias-state-business-primary, #5b8cff); }
 .refreshSelect:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
-.sections { display: flex; flex-direction: column; gap: 32px; margin-top: 24px; }
+.sections { display: flex; flex-direction: column; gap: 32px; margin: 24px auto 0; max-width: 960px; }
 /* 分区不再套一层边框卡片：宿主页面是扁平分区，靠标题与留白分隔 */
 .pageSection { min-width: 0; }
 /* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
 /* 分区标题只是锚点标签：比页面标题低两档，避免与顶部导航重名时抢视线 */
 .pageSectionTitle {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: .01em;
-  color: var(--dsw-alias-label-secondary, #9a9aa6);
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: normal;
+  color: var(--dsw-alias-label-primary, #0f1115);
 }
 /* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
 /* 范围切换用分段控件（一个外框装按钮）：外框 26px 高，与同排控件齐平 */
@@ -234,10 +234,10 @@
   box-sizing: border-box;
   height: var(--ku-control);
   align-items: center;
-  border-radius: 10px;
-  padding: 3px;
+  border-radius: 0;
+  padding: 0;
   flex-wrap: wrap;
-  background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .14));
+  background: transparent;
 }
 .rangeTab, .rangeTabActive {
   border: 0;
@@ -245,17 +245,17 @@
   color: var(--dsw-alias-label-secondary, #9a9aa6);
   font: inherit;
   font-size: var(--ku-body);
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
   cursor: pointer;
   white-space: nowrap;
+  font-weight: 400;
 }
 .rangeTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .rangeTabActive {
-  background: var(--dsw-alias-bg-layer-2, #1d1d22);
-  color: var(--dsw-alias-label-primary, #e8e8ec);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
+  background: var(--dsw-alias-interactive-bg-active, rgba(38, 49, 72, .06));
+  color: var(--dsw-alias-label-primary, #0f1115);
+  font-weight: 400;
 }
 .rangeTab:focus-visible, .rangeTabActive:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }

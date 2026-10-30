@@ -18,7 +18,7 @@
 .listBar > i { display: block; height: 100%; border-radius: 3px; }
 .sessionDay td {
   background: var(--dsw-alias-bg-layer-2, #1d1d22); color: var(--dsw-alias-label-primary, #e8e8ec);
-  font-weight: 600; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); text-align: left !important; padding: 7px 10px !important;
+  font-weight: 600; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); text-align: left !important; padding: 8px 10px !important;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
 .dayCount { color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: calc(var(--dsh-content-font-size, 12px) * 1.01); margin-left: 8px; }
@@ -52,7 +52,7 @@
 .subagentBlock { margin-top: 14px; border-top: 1px solid var(--dsw-alias-border-l2, #2c2c34); padding-top: 10px; }
 .subagentBlockTitle { font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); color: var(--dsw-alias-label-secondary, #9a9aa6); margin-bottom: 6px; }
 .subagentRow {
-  display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 5px 6px;
+  display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 4px 6px;
   border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-size: calc(var(--dsh-content-font-size, 12px) * 1.1); cursor: pointer;
 }
 .subagentRow:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); }
@@ -149,7 +149,7 @@
 }
 .drawerPanel {
   box-sizing: border-box; width: min(880px, 96vw); height: 100%; overflow-y: auto;
-  padding: 14px 18px 30px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
+  padding: 14px 20px 32px; background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border-left: 1px solid var(--dsw-alias-border-l1, #2c2c34); box-shadow: var(--dsw-shadow-lv2, 0 8px 24px rgba(0,0,0,.35));
 }
 .drawerHead { display: flex; align-items: flex-start; gap: 10px; }
@@ -196,6 +196,6 @@
 /* 24 小时迷你图：柱高按该会话的小时峰值归一 */
 .hourChart { display: flex; align-items: flex-end; gap: 2px; height: 84px; margin-top: 6px; }
 .hourBar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
-.hourBarFill { display: block; min-height: 1px; background: var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 2px 2px 0 0; }
+.hourBarFill { display: block; min-height: 0; background: var(--dsw-alias-state-business-primary, #5b8cff); border-radius: 2px 2px 0 0; }
 .hourBarTick { text-align: center; font-size: calc(var(--dsh-content-font-size, 12px) * 0.83); color: var(--dsw-alias-label-tertiary, #67676f); }
 

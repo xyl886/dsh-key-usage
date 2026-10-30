@@ -15,7 +15,7 @@
 .trigger:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
 .half { font-variant-numeric: tabular-nums; }
 .sep { color: var(--dsw-alias-label-tertiary, #67676f); }
-.caret { font-size: 10px; opacity: .7; }
+.caret { font-size: 12px; opacity: .7; }
 
 /* 浮层：fixed 定位（组件按触发条位置算坐标），滚动 / 缩放 / Esc / 点外部都关闭 */
 .panel {
@@ -28,7 +28,7 @@
 .nav { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
 .month { flex: auto; text-align: center; font-size: var(--ku-body, 14px); font-weight: 500; line-height: 22px; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; }
 .navBtn {
-  width: 22px; height: 22px; flex: none; border: 0; border-radius: 5px; background: none;
+  width: 22px; height: 22px; flex: none; border: 0; border-radius: 6px; background: none;
   color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: 14px; line-height: 1; cursor: pointer;
 }
 .navBtn:hover:enabled { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
@@ -44,7 +44,7 @@
 
 .cell {
   box-sizing: border-box; flex: 0 0 30px; height: 28px; display: flex; align-items: center; justify-content: center;
-  border-radius: 5px; color: var(--dsw-alias-label-primary, #e8e8ec);
+  border-radius: 6px; color: var(--dsw-alias-label-primary, #e8e8ec);
   font-size: var(--ku-sub, 13px); line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; user-select: none;
 }
 .cell:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
@@ -52,7 +52,7 @@
 .inRange { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 16%, transparent); border-radius: 0; }
 .inRange:hover { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #5b8cff) 24%, transparent); }
 /* 两端：深色实心圆角块 */
-.edge { background: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-label-primary-foreground, #fff); border-radius: 5px; font-weight: 600; }
+.edge { background: var(--dsw-alias-state-business-primary, #5b8cff); color: var(--dsw-alias-label-primary-foreground, #fff); border-radius: 6px; font-weight: 600; }
 .edge:hover { background: var(--dsw-alias-state-business-primary, #5b8cff); }
 /* 键盘光标 */
 .cursor { box-shadow: inset 0 0 0 1px var(--dsw-alias-label-secondary, #9a9aa6); }

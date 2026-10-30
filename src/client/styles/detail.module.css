@@ -10,7 +10,7 @@
 }
 
 /* ===== 面板（原型 .panel / .ph） ===== */
-.panel { min-width: 0; padding: 10px 11px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; box-sizing: border-box; }
+.panel { min-width: 0; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; box-sizing: border-box; }
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .panelTitle { font-size: var(--detail-title); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 /* 右上角结论（合计 · 日均 · 峰值 / 行数）：永远贴右边，窄屏换行后仍靠右 */
@@ -18,12 +18,12 @@
 
 /* 指标 / 维度切换：分段控件，选中项吃掉面板底色（与其它区块同一套） */
 .metricTabs {
-  display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; flex-wrap: wrap;
+  display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; flex-wrap: wrap;
   background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .12));
 }
 .metricTab {
   border: 0; background: transparent; color: var(--dsw-alias-label-tertiary, #67676f); font: inherit;
-  font-size: var(--detail-body); padding: 2px 8px; border-radius: 5px;
+  font-size: var(--detail-body); padding: 2px 8px; border-radius: 6px;
   cursor: pointer; white-space: nowrap;
 }
 .metricTab:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
@@ -45,11 +45,11 @@
 .tableScroll { overflow-x: auto; }
 .detailTable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: var(--detail-body); }
 .detailTable th {
-  color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; padding: 4px 7px;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; padding: 4px 8px;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .detailTable td {
-  color: var(--dsw-alias-label-secondary, #9a9aa6); padding: 4px 7px;
+  color: var(--dsw-alias-label-secondary, #9a9aa6); padding: 4px 8px;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .detailTable .alignLeft { text-align: left; }
@@ -84,8 +84,8 @@
 .expandSpacer { display: inline-block; width: 16px; }
 
 /* 展开后的模型明细：缩进一层，列宽与上表无关，自己一整套右对齐数字 */
-.detailTable td.subCell { padding: 2px 7px 8px 26px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
+.detailTable td.subCell { padding: 2px 8px 8px 28px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .04)); }
 .subTable { width: 100%; border-collapse: collapse; }
-.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: var(--detail-body); padding: 2px 7px; }
-.subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 7px; font-variant-numeric: tabular-nums; }
+.subTable th { text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-weight: 500; font-size: var(--detail-body); padding: 2px 8px; }
+.subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 8px; font-variant-numeric: tabular-nums; }
 .subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }

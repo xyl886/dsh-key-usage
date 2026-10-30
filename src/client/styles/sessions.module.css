@@ -7,16 +7,16 @@
 /* 两块并排，窄屏自动落成上下两行 */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; align-items: stretch; }
 
-.panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 11px; min-width: 0; }
+.panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 12px; min-width: 0; }
 
 .panelHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .panelTitle { color: var(--dsw-alias-label-primary, #e8e8ec); font-size: var(--ku-title, 17px); font-weight: 600; }
 .panelTotal { margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* 指标切换：分段控件，选中档用宿主层色抬高，不另造颜色 */
-.metrics { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
+.metrics { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
 .metricBtn {
-  border: 0; background: none; padding: 2px 8px; border-radius: 5px; font: inherit;
+  border: 0; background: none; padding: 2px 8px; border-radius: 6px; font: inherit;
   font-size: var(--ku-body, 14px); color: var(--dsw-alias-label-tertiary, #67676f);
   cursor: pointer; white-space: nowrap;
 }
@@ -26,7 +26,7 @@
 
 /* 最耗会话：一行 = 名次 + 标题 / 副标 + 右侧数值（原型 .item / .idx / .body / .v） */
 .topRow {
-  display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 0;
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 0;
   border: 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); background: none;
   font: inherit; font-size: var(--ku-body, 14px); color: inherit; text-align: left; cursor: pointer;
 }
@@ -56,7 +56,7 @@
 .histX span { flex: 1; text-align: center; }
 
 /* 最近会话：标题 / 副标 ｜ Tokens ｜ 成本 ｜ ›（原型 .item.rich / .right / .cost / .chev） */
-.row { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); cursor: pointer; }
+.row { display: flex; align-items: center; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); cursor: pointer; }
 .row:last-child { border-bottom: 0; }
 .row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .07)); }
 /* 已归档会话：用量照常计入，行里只淡化 + 打标 */

@@ -38,7 +38,7 @@
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .level {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 4px;
   color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px);
   font-weight: 600; letter-spacing: .03em; white-space: nowrap;
 }
