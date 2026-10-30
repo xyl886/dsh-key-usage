@@ -52,7 +52,7 @@
   top: 0;
   z-index: 6;
   margin: -28px -48px 0;
-  padding: 20px 48px 8px;
+  padding: 4px 48px 8px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
@@ -81,10 +81,10 @@
 
 /* 区块导航：胶囊按钮，与筛选控件同高（原型 .tabs） */
 /* 区块导航用宿主的分段控件样式：浅灰底槽 + 选中项白底浮起 */
-.tabBar { display: inline-flex; gap: 2px; flex-wrap: wrap; padding: 0; border-radius: 0; background: transparent; }
+.tabBar { display: inline-flex; gap: 8px; flex-wrap: wrap; padding: 0; border-radius: 0; background: transparent; }
 .tabBar button {
   border: 0; background: none; color: var(--dsw-alias-label-secondary, #9a9aa6);
-  font: inherit; font-size: var(--ku-body); height: 26px; padding: 0 14px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: var(--ku-body); height: 28px; padding: 0 10px; border-radius: 14px; cursor: pointer; white-space: nowrap; font-weight: 400;
 }
 .tabBar button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #e8e8ec); }
 .tabBar button.active { background: var(--dsw-alias-interactive-bg-active, rgba(38, 49, 72, .06)); color: var(--dsw-alias-label-primary, #0f1115); font-weight: 400; box-shadow: none; }
@@ -94,7 +94,7 @@
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
 .cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 20px; }
 
-.statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-bottom: 6px; }
+.statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); margin-bottom: 6px; }
 .statValue { font-size: max(18px, calc(var(--dsh-content-font-size, 13px) * 1.4)); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; padding-right: 48px; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-top: 4px; }
 

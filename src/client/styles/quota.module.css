@@ -29,15 +29,15 @@
 .chanKind {
   padding: 0 6px; border-radius: 999px; white-space: nowrap;
   background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18));
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
 .chanChecked {
   margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px);
+  color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
 
 /* 正文：正文 13px；行距按原型 5px */
-.chanBody { display: grid; grid-auto-rows: auto; align-content: start; align-items: center; gap: 8px; min-height: 0; font-size: var(--ku-body, 14px); }
+.chanBody { display: grid; grid-auto-rows: auto; align-content: start; align-items: center; gap: 8px; min-height: 0; font-size: 13px; }
 
 /* 订阅窗口行：列宽对齐原型 .row4（32px / 1fr / 38px / 112px，gap 7）；
    百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
@@ -69,27 +69,27 @@
 .ratePanelTitle { font-size: var(--ku-title, 17px); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .ratePanelClose {
   margin-left: auto; padding: 0 2px; border: 0; border-radius: 4px; background: none; cursor: pointer;
-  font: inherit; font-size: var(--ku-body, 14px); color: var(--dsw-alias-label-tertiary, #67676f);
+  font: inherit; font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f);
 }
 .ratePanelClose:hover { color: var(--dsw-alias-label-primary, #e8e8ec); }
 .rateScroll { overflow-x: auto; }
-.rateHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px); line-height: 1.7; margin-bottom: 8px; }
+.rateHead { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; line-height: 1.7; margin-bottom: 8px; }
 .rateTable { width: 100%; border-collapse: collapse; }
 .rateTable th {
-  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px);
+  text-align: right; font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
   padding: 6px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34); white-space: nowrap;
 }
 .rateTable td {
-  text-align: right; padding: 8px 8px; font-size: var(--ku-body, 14px); font-variant-numeric: tabular-nums;
+  text-align: right; padding: 8px 8px; font-size: 13px; font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-secondary, #9a9aa6); border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
   white-space: nowrap;
 }
 .rateTable th:first-child, .rateTable td:first-child { text-align: left; }
 .rateTable td:first-child { color: var(--dsw-alias-label-primary, #e8e8ec); }
-.rateModel { font-family: ui-monospace, Consolas, monospace; font-size: var(--ku-body, 14px); }
+.rateModel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
 
 .rateSourceNone {
-  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: var(--ku-body, 14px); line-height: 1.7;
+  display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 13px; line-height: 1.7;
   border: 1px dashed currentColor; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap;
 }
-.rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px); padding: 8px 0; }
+.rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; padding: 8px 0; }
