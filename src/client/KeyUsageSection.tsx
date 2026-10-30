@@ -558,6 +558,7 @@ export function KeyUsageSection() {
           <section className={styles.pageSection} id="sec-quota">
             <h2 className={styles.pageSectionTitle}>{t('tab.quota')}</h2>
             <QuotaTab
+              onOpenProvider={(provider) => setQuotaDialog(provider)}
               channels={channels}
               quotas={quotas}
               quotaOutcome={quotaOutcome}

@@ -89,6 +89,8 @@ export function QuotaTab(props: {
   reloadToken: number
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本整体重算）。 */
   onPricingReload: () => void
+  /** 点卡片标题时打开「通道明细」弹窗（整页模式用）；不传则退回原地在卡片下方展开。 */
+  onOpenProvider?: (provider: string) => void
 }): ReactNode {
   /** 取词：宿主切语言时重渲染（模块级辅助函数直接用 import 的 t） */
   const t = useT()
@@ -195,7 +197,10 @@ export function QuotaTab(props: {
                   aria-expanded={openProvider === card.provider}
                   aria-controls={openProvider === card.provider ? drawerId : undefined}
                   title={t('quota.ratesHint')}
-                  onClick={() => setExpandedProvider((previous) => (previous === card.provider ? null : card.provider))}
+                  onClick={() => {
+                    if (props.onOpenProvider !== undefined) props.onOpenProvider(card.provider as string)
+                    else setExpandedProvider((previous) => (previous === card.provider ? null : card.provider))
+                  }}
                 >
                   {cardHeadOf(card)}
                 </button>
