@@ -298,7 +298,8 @@ export function KeyUsageSection() {
 
   // 项目 / 会话 / 模型数据按需加载（首次切到对应 Tab；快照已经带了就直接用）
   useEffect(() => {
-    if (wantSessions && sessions === null) void loadSessions().then(setSessions)
+    // 概览的「会话数」KPI 也要会话段：切换/滚动到概览时就懒加载，不占首屏（会话段约 200 KB）
+    if ((wantSessions || wantOverview) && sessions === null) void loadSessions().then(setSessions)
     if (wantDistribution) {
       if (projects === null) void loadProjects().then(setProjects)
       if (models === null) void loadModels().then(setModels)
@@ -306,7 +307,7 @@ export function KeyUsageSection() {
     // 词频只在词云页用：切到本页才第一次取（服务端已算好，读快照即可）
     if (wantWords && prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     if (wantTools && tools === null) void loadSnapshot(false, ['tools']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
-  }, [wantSessions, wantDistribution, wantWords, wantTools, sessions, projects, models, prompts, tools, applySnapshot])
+  }, [wantSessions, wantOverview, wantDistribution, wantWords, wantTools, sessions, projects, models, prompts, tools, applySnapshot])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
@@ -424,6 +425,8 @@ export function KeyUsageSection() {
 
   /** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
   const scopedUsage = useMemo(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter])
+  /** 上一等长窗口同样按通道筛选：环比与本期用同一个口径，否则筛选后环比会失真。 */
+  const scopedPreviousUsage = useMemo(() => filterUsageByChannels(previousUsage, channelFilter), [previousUsage, channelFilter])
 
   /** 通道下拉：值取 provider，文案取显示名。 */
   const channelOptions = useMemo(() => channels.map((channel) => ({
@@ -660,6 +663,7 @@ export function KeyUsageSection() {
             <h2 className={styles.pageSectionTitle}>{t('tab.overview')}</h2>
             <OverviewTab
               previousCost={previousUsage === null || previousUsage.totals === null ? null : previousUsage.totals.cost}
+              previousUsage={scopedPreviousUsage}
               channels={channels}
               summary={summary}
               quotas={quotas}

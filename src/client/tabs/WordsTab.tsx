@@ -104,12 +104,12 @@ function TrendPercent(props: { previous: number | null; current: number | null }
 }
 
 /**
- * 「上期 X ±Y%」：没有上期字段就整行不显示（不编数字）；
- * 有上期但本期为 null 时只讲上期，只有两边都有且上期非零才带涨跌百分比。
+ * 「上期值 ±Y%」：没有上期字段就整行不显示（不编数字）；
+ * 有上期但本期为 null 时只给上期值，只有两边都有且上期非零才带涨跌百分比。
  */
 function PrevLine(props: { previous: number | null; current: number | null; format: (value: number) => string }): ReactNode {
   if (props.previous === null) return null
-  const previousText = t('overview.prev', { value: props.format(props.previous) })
+  const previousText = props.format(props.previous)
   if (props.current === null) return <>{previousText}</>
   return <>{previousText}<TrendPercent previous={props.previous} current={props.current} /></>
 }

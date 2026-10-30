@@ -29,7 +29,7 @@ import type {
 } from '../core/types.ts'
 import { Dialog } from '../components/ui/Dialog.tsx'
 import { LEVEL_COLORS, YearHeatmap, levelColorOf, levelOfValue, levelThresholds } from '../components/Heatmap.tsx'
-import { filterUsageByModel, projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
+import { filterUsageByChannels, filterUsageByModel, projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
 import shared from '../styles/shared.module.css'
 import styles from '../styles/overview.module.css'
 
@@ -122,6 +122,8 @@ export interface OverviewTabProps {
   hourlyMetrics?: Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }> | null
   /** 上期成本（显示币种金额）：服务端没有这个字段，不传时副标题显示 —。 */
   previousCost?: number | null
+  /** 上一等长窗口的 usage（父级已按通道筛选）：环比全部由它重算，跟随通道 / 模型筛选。 */
+  previousUsage?: UsageResponse | null
   /** 上期会话数：同上。 */
   previousSessions?: number | null
   /** 全局项目筛选（逗号分隔多选，空串 = 全部）：只有会话与项目聚合有项目维度，台账类面板不跟。 */
@@ -152,7 +154,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   /** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
   const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter)
 
-  // ===== KPI：近 30 天那一列（summary 的第二列，有官方账单）=====
+  // ===== KPI：本期 = 当前筛选后的 usage；上期 = 上一等长窗口（同样套筛选）=====
+  const scopedPrev = filterUsageByModel(filterUsageByChannels(props.previousUsage ?? null, channelFilter), modelFilter)
+  // 近 30 天且无筛选时，成本仍取 summary 的官方账单列（与台账同源）；有筛选就没有官方列可用了。
   const isMonthRange = range === 'month'
   const monthRows = summary === null ? [] : summary.channels.map((row) => row.month)
   const monthCost = monthCostTotalsOf(summary)
@@ -163,11 +167,8 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     ? 0
     : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length
 
-  // ===== KPI：其余范围整行改由 usage.totals 算，一行里不混两个窗口 =====
   const useSummaryKpi = isMonthRange && !anyFilterActive
   const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range)
-  /** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
-   *  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
   const splitTotals: UsageTotals | null = useSummaryKpi ? (props.usage?.totals ?? null) : rangeTotals
   const costRow: CostRowLike | null = useSummaryKpi
     ? (summary === null ? null : monthCost)
@@ -178,17 +179,113 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     : (rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens)
   const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount)
   const hitRate = hitRateOf(splitTotals)
-  const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null
-    ? null
-    : moneyTotalsTextOf({ cost: splitTotals.cacheSaved, costsByCurrency: splitTotals.cacheSavedByCurrency })
   const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range)
-  const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays
-  /** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
+  const dailyCost = costAmount === null || activeDays === 0 ? null : costAmount / activeDays
+  const dailyTokens = tokenCount === null || activeDays === 0 ? null : tokenCount / activeDays
+  /** 会话数：窗口内有活动即计（列表被截断时退回服务端统计，不拿 — 冒充没有会话）。 */
   const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter)
   const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length
-  const sessionCount = useSummaryKpi
-    ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount)
-    : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount)
+  const sessionFrom = isMonthRange ? monthFrom : sessionFromOf(range)
+  const sessionCount = sessionCountOf(scopedSessions, sessionFrom, rawSessionRowCount)
+
+  // ===== 上期：同一组筛选、上一等长窗口 =====
+  const prevTotals = scopedPrev?.totals ?? null
+  const prevCostRow: CostRowLike | null = prevTotals === null
+    ? null
+    : { cost: prevTotals.cost, costsByCurrency: prevTotals.costsByCurrency }
+  const prevCost = prevCostRow === null ? null : comparableMoneyOf(prevCostRow)
+  const prevTokens = prevTotals === null ? null : prevTotals.inputTokens + prevTotals.outputTokens + prevTotals.cacheReadTokens
+  const prevDays = usageDayCountOf(scopedPrev, 'total')
+  const prevDailyCost = prevCost === null || prevDays === 0 ? null : prevCost / prevDays
+  const prevDailyTokens = prevTokens === null || prevDays === 0 ? null : prevTokens / prevDays
+  const prevHitRate = hitRateOf(prevTotals)
+  const prevSessionCount = sessionCountInWindowOf(scopedSessions, dayRangeOfUsage(scopedPrev))
+
+  /** 十张卡：值、上期、环比与色义都在这里定，渲染只管排版（5×2 两行）。 */
+  const kpiCards: KpiCardDescriptor[] = [
+    {
+      key: 'cost',
+      icon: 'cost',
+      label: t('overview.kpiCost'),
+      value: costRow === null ? '—' : moneyTotalsTextOf(costRow),
+      previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
+      ...deltaOf(costAmount, prevCost, 'warn'),
+    },
+    {
+      key: 'tokens',
+      icon: 'tokens',
+      label: t('overview.kpiTokens'),
+      value: tokenValue === null ? '—' : tokenValue.text,
+      unit: tokenValue === null || tokenValue.unit === '' ? undefined : tokenValue.unit,
+      previousText: prevTokens === null ? null : fmtTokens(prevTokens),
+      ...deltaOf(tokenCount, prevTokens, 'neutral'),
+    },
+    {
+      key: 'input',
+      icon: 'input',
+      label: t('overview.kpiInput'),
+      value: splitTotals === null ? '—' : tokenTextOf(splitTotals.inputTokens),
+      previousText: prevTotals === null ? null : fmtTokens(prevTotals.inputTokens),
+      ...deltaOf(splitTotals === null ? null : splitTotals.inputTokens, prevTotals === null ? null : prevTotals.inputTokens, 'neutral'),
+    },
+    {
+      key: 'output',
+      icon: 'output',
+      label: t('overview.kpiOutput'),
+      value: splitTotals === null ? '—' : tokenTextOf(splitTotals.outputTokens),
+      previousText: prevTotals === null ? null : fmtTokens(prevTotals.outputTokens),
+      ...deltaOf(splitTotals === null ? null : splitTotals.outputTokens, prevTotals === null ? null : prevTotals.outputTokens, 'neutral'),
+    },
+    {
+      key: 'cacheRead',
+      icon: 'cacheRead',
+      label: t('overview.kpiCacheRead'),
+      value: splitTotals === null ? '—' : tokenTextOf(splitTotals.cacheReadTokens),
+      previousText: prevTotals === null ? null : fmtTokens(prevTotals.cacheReadTokens),
+      ...deltaOf(splitTotals === null ? null : splitTotals.cacheReadTokens, prevTotals === null ? null : prevTotals.cacheReadTokens, 'neutral'),
+    },
+    {
+      key: 'hitRate',
+      icon: 'hit',
+      label: t('overview.kpiCache'),
+      value: hitRate === null ? '—' : hitRate.toFixed(1),
+      unit: hitRate === null ? undefined : '%',
+      previousText: prevHitRate === null ? null : prevHitRate.toFixed(1) + '%',
+      ...deltaPpOf(hitRate, prevHitRate),
+    },
+    {
+      key: 'dailyTokens',
+      icon: 'dailyTokens',
+      label: t('overview.kpiDailyTokens'),
+      value: dailyTokens === null ? '—' : tokenTextOf(dailyTokens),
+      previousText: prevDailyTokens === null ? null : fmtTokens(prevDailyTokens),
+      ...deltaOf(dailyTokens, prevDailyTokens, 'neutral'),
+    },
+    {
+      key: 'dailyCost',
+      icon: 'dailyCost',
+      label: t('overview.kpiDailyCost'),
+      value: dailyCost === null ? '—' : displaySymbolOf(display) + dailyCost.toFixed(1),
+      previousText: prevDailyCost === null ? null : displaySymbolOf(display) + prevDailyCost.toFixed(1),
+      ...deltaOf(dailyCost, prevDailyCost, 'warn'),
+    },
+    {
+      key: 'calls',
+      icon: 'calls',
+      label: t('overview.kpiCalls'),
+      value: splitTotals === null ? '—' : fmtCalls(splitTotals.calls),
+      previousText: prevTotals === null ? null : fmtCalls(prevTotals.calls),
+      ...deltaOf(splitTotals === null ? null : splitTotals.calls, prevTotals === null ? null : prevTotals.calls, 'neutral'),
+    },
+    {
+      key: 'sessions',
+      icon: 'sessions',
+      label: t('overview.kpiSessions'),
+      value: sessionCount === null ? '—' : fmtCalls(sessionCount),
+      previousText: prevSessionCount === null ? null : fmtCalls(prevSessionCount),
+      ...deltaOf(sessionCount, prevSessionCount, 'neutral'),
+    },
+  ]
 
   // ===== 使用趋势 =====
   const isAllRange = range === 'total'
@@ -293,46 +390,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
 
   return (
     <div className={styles.stack}>
-      <div className={styles.kpiRow}>
-        <KpiCard
-          label={t('overview.kpiCost')}
-          value={costRow === null ? '—' : moneyTotalsTextOf(costRow)}
-          detail={<PrevLine previous={props.previousCost ?? null} current={costAmount} format={(value) => moneyTextOf(display, value)} />}
-        />
-        <KpiCard
-          label={t('overview.kpiTokens')}
-          value={tokenValue === null ? '—' : tokenValue.text}
-          unit={tokenValue === null || tokenValue.unit === '' ? undefined : tokenValue.unit}
-          detail={splitTotals === null
-            ? '—'
-            : t('overview.ioSplit', { input: fmtTokens(splitTotals.inputTokens), output: fmtTokens(splitTotals.outputTokens) })}
-        />
-        <KpiCard
-          label={t('overview.kpiCache')}
-          value={hitRate === null ? '—' : hitRate.toFixed(1)}
-          unit={hitRate === null ? undefined : '%'}
-          detail={splitTotals === null
-            ? '—'
-            : t('overview.cacheReadOnly', { value: tokenTextOf(splitTotals.cacheReadTokens) })}
-        />
-        <KpiCard
-          label={t('overview.kpiCacheSaved')}
-          value={cacheSaved ?? '—'}
-          detail={splitTotals?.cacheSaved == null || costAmount === null || costAmount <= 0
-            ? undefined
-            : t('overview.ofCost', { percent: Math.round((splitTotals.cacheSaved / costAmount) * 100) })}
-        />
-        <KpiCard
-          label={t('overview.kpiSessions')}
-          value={sessionCount === null ? '—' : fmtCalls(sessionCount)}
-          detail={<PrevLine previous={props.previousSessions ?? null} current={sessionCount} format={fmtCalls} />}
-        />
-        {/* 日均按原型保留 1 位小数（¥35.5），与本期成本的 2 位小数区分 */}
-        <KpiCard
-          label={t('overview.kpiDaily')}
-          value={dailyAverage === null ? '—' : displaySymbolOf(display) + dailyAverage.toFixed(1)}
-          detail={activeDays === 0 ? '—' : t('overview.activeDays', { count: activeDays })}
-        />
+      <div className={styles.kpiGrid}>
+        {kpiCards.map(({ key, ...card }) => (
+          <KpiStat key={key} {...card} />
+        ))}
       </div>
 
       <div className={styles.panel}>
@@ -463,36 +524,107 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   )
 }
 
-function KpiCard(props: { label: string; value: string; unit?: string; /** 副标：没有数据时传 null，整行不渲染（不编数字、也不留「—」占位） */ detail?: ReactNode }): ReactNode {
+interface KpiCardDescriptor {
+  key: string
+  icon: KpiIconName
+  label: string
+  value: string
+  unit?: string
+  previousText: string | null
+  deltaText: string | null
+  tone: 'warn' | 'good' | 'neutral'
+}
+
+type KpiIconName = 'cost' | 'tokens' | 'input' | 'output' | 'cacheRead' | 'hit' | 'dailyTokens' | 'dailyCost' | 'calls' | 'sessions'
+
+/** 线性小图标：只用 currentColor 描边，尺寸固定 14，不依赖任何图标库。 */
+const KPI_ICON_PATHS: Record<KpiIconName, string> = {
+  cost: 'M8 2v12M4.5 5h5.2a1.8 1.8 0 0 1 0 3.6H6a1.8 1.8 0 0 0 0 3.6h5.5',
+  tokens: 'M2.8 4h10.4v3.2H2.8zM2.8 8.8h10.4V12H2.8z',
+  input: 'M8 2.4v7.2m0 0 2.6-2.6M8 9.6 5.4 7M2.8 13.6h10.4',
+  output: 'M8 9.6V2.4m0 0L5.4 5M8 2.4 10.6 5M2.8 13.6h10.4',
+  cacheRead: 'M4.6 11.4a2.4 2.4 0 0 1 .2-4.8 3.1 3.1 0 0 1 5.9.5 2.4 2.4 0 0 1-.3 4.3H4.6z',
+  hit: 'M2.8 2.8h10.4v10.4H2.8zM6 10l4-4M6 6.2h.01M10 9.8h.01',
+  dailyTokens: 'M3 12.6V9m3 3.6V5.6m3.2 7V8.2m3 4.4V6.8',
+  dailyCost: 'M2.8 4.4h10.4v9.2H2.8zM2.8 7.2h10.4M5.8 2.6v2.4m4.4-2.4v2.4',
+  calls: 'M2.6 9.4 5.4 6.2l2.6 3 2.6-4 2.8 3.2',
+  sessions: 'M6.2 7.4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.8 13.4c0-1.9 1.5-3.4 3.4-3.4s3.4 1.5 3.4 3.4M11 6.6a1.6 1.6 0 1 0 0-3.2M11.2 13.4c0-1.3-.5-2.4-1.2-3.2',
+}
+
+/** KPI 卡：图标+标签 / 上期与环比同一行 / 大数。十张卡结构完全一致，扫一列就能比出变化。 */
+function KpiStat(props: {
+  icon: KpiIconName
+  label: string
+  value: string
+  unit?: string
+  previousText: string | null
+  deltaText: string | null
+  tone: 'warn' | 'good' | 'neutral'
+}): ReactNode {
   return (
     <div className={styles.kpiCard}>
-      <div className={styles.kpiLabel}>{props.label}</div>
+      <div className={styles.kpiTop}>
+        <svg className={styles.kpiIcon} viewBox="0 0 16 16" aria-hidden="true">
+          <path d={KPI_ICON_PATHS[props.icon]} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className={styles.kpiLabel}>{props.label}</span>
+      </div>
+      <div className={styles.kpiCompare}>
+        <span className={styles.kpiPrev}>{props.previousText ?? '—'}</span>
+        {props.deltaText !== null && (
+          <span className={props.tone === 'warn' ? styles.kpiDeltaWarn : props.tone === 'good' ? styles.kpiDeltaGood : styles.kpiDelta}>
+            {props.deltaText}
+          </span>
+        )}
+      </div>
       <div className={styles.kpiValue}>
         {props.value}
         {props.unit !== undefined && <span className={styles.kpiUnit}>{props.unit}</span>}
       </div>
-      {props.detail !== undefined && props.detail !== null && <div className={styles.kpiDetail}>{props.detail}</div>}
     </div>
   )
 }
 
-/**
- * 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
- * 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
- */
-function PrevLine(props: { previous: number | null; current: number | null; format: (value: number) => string }): ReactNode {
-  if (props.previous === null) return null
-  const previousText = t('overview.prev', { value: props.format(props.previous) })
-  if (props.current === null || props.previous <= 0) return <>{previousText}</>
-  const delta = (props.current - props.previous) / props.previous * 100
-  return (
-    <>
-      {previousText}
-      <span className={delta > 0 ? styles.rise : delta < 0 ? styles.fall : undefined}>
-        {(delta > 0 ? '+' : '') + delta.toFixed(1) + '%'}
-      </span>
-    </>
-  )
+/** 环比（%）：上期没有或非正时不编数字，只留上期值。成本类上涨算警示、下降算好。 */
+function deltaOf(current: number | null, previous: number | null, tone: 'warn' | 'good' | 'neutral'): { deltaText: string | null; tone: 'warn' | 'good' | 'neutral' } {
+  if (current === null || previous === null || previous <= 0) return { deltaText: null, tone: 'neutral' }
+  const percent = (current - previous) / previous * 100
+  if (!Number.isFinite(percent)) return { deltaText: null, tone: 'neutral' }
+  const arrow = percent > 0 ? '↑' : percent < 0 ? '↓' : '→'
+  return {
+    deltaText: arrow + ' ' + (percent > 0 ? '+' : '') + percent.toFixed(1) + '%',
+    tone: tone === 'warn' ? (percent > 0 ? 'warn' : 'good') : 'neutral',
+  }
+}
+
+/** 命中率这类比率用百分点差（pp），不是百分比涨跌。 */
+function deltaPpOf(current: number | null, previous: number | null): { deltaText: string | null; tone: 'warn' | 'good' | 'neutral' } {
+  if (current === null || previous === null) return { deltaText: null, tone: 'neutral' }
+  const diff = current - previous
+  if (!Number.isFinite(diff)) return { deltaText: null, tone: 'neutral' }
+  const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→'
+  return {
+    deltaText: arrow + ' ' + (diff > 0 ? '+' : '') + diff.toFixed(1) + t('overview.pp'),
+    tone: diff > 0 ? 'good' : diff < 0 ? 'warn' : 'neutral',
+  }
+}
+
+/** usage 的日期跨度（上期窗口只有日期，没有起止字段）。 */
+function dayRangeOfUsage(usage: UsageResponse | null | undefined): { from: string; to: string } | null {
+  const dates = (usage?.days ?? []).map((day) => day.date).sort()
+  if (dates.length === 0) return null
+  return { from: dates[0], to: dates[dates.length - 1] }
+}
+
+/** 窗口内有活动的会话数：末次活动落在 [from, to] 的行；上期没有可判定窗口时退化为「早于本期开始」的行数。 */
+function sessionCountInWindowOf(sessions: SessionsResponse | null | undefined, range: { from: string; to: string } | null): number | null {
+  if (sessions == null || sessions.coverage.status === 'unavailable') return null
+  const active = sessions.rows.filter((row) => row.calls > 0 && row.lastTime !== null)
+  if (active.length === 0) return null
+  if (range === null) return null
+  const fromMs = new Date(range.from + 'T00:00:00').getTime()
+  const toMs = new Date(range.to + 'T23:59:59.999').getTime()
+  return active.filter((row) => (row.lastTime as number) >= fromMs && (row.lastTime as number) <= toMs).length
 }
 
 /** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */

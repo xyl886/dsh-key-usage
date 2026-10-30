@@ -499,6 +499,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCache": "缓存命中",
 			"overview.kpiSessions": "会话",
 			"overview.kpiDaily": "日均",
+			"overview.kpiCalls": "调用次数",
+			"overview.kpiInput": "输入",
+			"overview.kpiOutput": "输出",
+			"overview.kpiCacheRead": "缓存读",
+			"overview.kpiDailyTokens": "日均 Tokens",
+			"overview.kpiDailyCost": "日均成本",
+			"overview.pp": "pp",
 			"overview.prev": "上期 {value}",
 			"overview.ioSplit": "入 {input} · 出 {output}",
 			"overview.cacheLine": "缓存读 {value} · 省 {saved}",
@@ -1019,6 +1026,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCache": "Cache hit",
 			"overview.kpiSessions": "Sessions",
 			"overview.kpiDaily": "Daily avg",
+			"overview.kpiCalls": "Calls",
+			"overview.kpiInput": "Input",
+			"overview.kpiOutput": "Output",
+			"overview.kpiCacheRead": "Cache read",
+			"overview.kpiDailyTokens": "Daily tokens",
+			"overview.kpiDailyCost": "Daily cost",
+			"overview.pp": "pp",
 			"overview.prev": "Prev {value}",
 			"overview.ioSplit": "In {input} · Out {output}",
 			"overview.cacheLine": "Cache read {value} · saved {saved}",
@@ -3868,7 +3882,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$12 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiRow{grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px;display:grid}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:2px;min-width:0;padding:8px 10px;display:flex}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;flex-wrap:wrap;gap:6px;display:flex}.tXjxsq_rise{color:var(--dsw-alias-state-error-primary,#e05a5a)}.tXjxsq_fall{color:var(--dsw-alias-state-success-primary,#3fb96f)}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_kpiDetail{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}";
+		const css$12 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;display:grid}@media (max-width:1180px){.tXjxsq_kpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:820px){.tXjxsq_kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;display:flex}.tXjxsq_kpiTop{align-items:center;gap:6px;min-width:0;display:flex}.tXjxsq_kpiIcon{width:14px;height:14px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}.tXjxsq_kpiCompare{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;font-size:13px;display:flex}.tXjxsq_kpiPrev{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiDelta{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_kpiDeltaWarn{color:var(--dsw-alias-state-error-primary,#e5484d);white-space:nowrap}.tXjxsq_kpiDeltaGood{color:var(--dsw-alias-state-success-primary,#46a758);white-space:nowrap}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;flex-wrap:wrap;gap:6px;display:flex}.tXjxsq_rise{color:var(--dsw-alias-state-error-primary,#e05a5a)}.tXjxsq_fall{color:var(--dsw-alias-state-success-primary,#3fb96f)}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_kpiDetail{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}";
 		const tagId$12 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3895,9 +3909,16 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"hourWeekday": "tXjxsq_hourWeekday",
 			"hourWrap": "tXjxsq_hourWrap",
 			"kpiCard": "tXjxsq_kpiCard",
+			"kpiCompare": "tXjxsq_kpiCompare",
+			"kpiDelta": "tXjxsq_kpiDelta",
+			"kpiDeltaGood": "tXjxsq_kpiDeltaGood",
+			"kpiDeltaWarn": "tXjxsq_kpiDeltaWarn",
 			"kpiDetail": "tXjxsq_kpiDetail",
+			"kpiGrid": "tXjxsq_kpiGrid",
+			"kpiIcon": "tXjxsq_kpiIcon",
 			"kpiLabel": "tXjxsq_kpiLabel",
-			"kpiRow": "tXjxsq_kpiRow",
+			"kpiPrev": "tXjxsq_kpiPrev",
+			"kpiTop": "tXjxsq_kpiTop",
 			"kpiUnit": "tXjxsq_kpiUnit",
 			"kpiValue": "tXjxsq_kpiValue",
 			"legend": "tXjxsq_legend",
@@ -4419,7 +4440,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return filterUsageOf(raw, (model) => selected.includes(model.model));
 		}
 		/** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
-		function deltaOf(current, previous) {
+		function deltaOf$1(current, previous) {
 			if (current === null || previous === null || previous === 0) return null;
 			return Math.round((current - previous) / previous * 1e3) / 10;
 		}
@@ -4489,7 +4510,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						cacheRead: day.cacheReadTokens,
 						costText,
 						costAmount: amount,
-						delta: costText === "—" ? null : deltaOf(amount, previous === null ? null : comparableMoneyOf(previous)),
+						delta: costText === "—" ? null : deltaOf$1(amount, previous === null ? null : comparableMoneyOf(previous)),
 						source: day.costSource ?? null,
 						models: day.models
 					});
@@ -4543,7 +4564,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						cacheRead: group.cacheRead,
 						costText,
 						costAmount: amount,
-						delta: costText === "—" ? null : deltaOf(amount, previous === null ? null : comparableMoneyOf(previous)),
+						delta: costText === "—" ? null : deltaOf$1(amount, previous === null ? null : comparableMoneyOf(previous)),
 						source,
 						models: group.models
 					});
@@ -4690,7 +4711,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const totalCostText = safeTotals.cost > 0 ? rowMoneyViewOf(safeTotals).text + ((safeTotals.costSource ?? null) === "none" ? " · " + t("detail.partialCost") : "") : costTextOf$1(safeTotals, safeTotals.costSource ?? null);
 			const totalAmount = comparableMoneyOf(safeTotals);
 			const previousTotal = scopedPrevious === null ? null : scopedPrevious.totals;
-			const totalDelta = totalCostText === "—" || previousTotal === null || previousTotal === void 0 ? null : deltaOf(totalAmount, comparableMoneyOf(previousTotal));
+			const totalDelta = totalCostText === "—" || previousTotal === null || previousTotal === void 0 ? null : deltaOf$1(totalAmount, comparableMoneyOf(previousTotal));
 			const summaryText = (() => {
 				if (metric === "sessions") return "—";
 				const totalText = metric === "cost" ? totalCostText : metric === "tokens" ? fmtTokens(totalTokens) : fmtTokens(safeTotals.outputTokens);
@@ -5053,10 +5074,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const summary = props.summary;
 			const modelFilter = props.modelFilter ?? "";
 			const projectFilter = props.projectFilter ?? "";
+			const channelFilter = props.channelFilter ?? "";
 			/** 任一筛选激活时，KPI 必须从过滤后的 usage 算：summary 的月列没有通道/项目/模型维度 */
-			const anyFilterActive = selectionOf(props.channelFilter ?? "").length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0;
+			const anyFilterActive = selectionOf(channelFilter).length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0;
 			/** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
 			const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter);
+			const scopedPrev = filterUsageByModel(filterUsageByChannels(props.previousUsage ?? null, channelFilter), modelFilter);
 			const isMonthRange = range === "month";
 			const monthRows = summary === null ? [] : summary.channels.map((row) => row.month);
 			const monthCost = monthCostTotalsOf(summary);
@@ -5066,8 +5089,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const activeDaysOfMonth = monthFrom === null || monthTo === null ? 0 : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length;
 			const useSummaryKpi = isMonthRange && !anyFilterActive;
 			const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range);
-			/** 入 / 出拆分与缓存读：近 30 天借 `usage.totals`（与 summary 同窗口），其余范围就是当前范围的合计。
-			*  近 30 天整行 KPI 保持同源（official 账单 + 同窗口合计），不单独按模型拆，避免同一行混两个口径。 */
 			const splitTotals = useSummaryKpi ? props.usage?.totals ?? null : rangeTotals;
 			const costRow = useSummaryKpi ? summary === null ? null : monthCost : rangeTotals === null ? null : {
 				cost: rangeTotals.cost,
@@ -5077,16 +5098,110 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const tokenCount = useSummaryKpi ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
 			const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount);
 			const hitRate = hitRateOf(splitTotals);
-			const cacheSaved = splitTotals === null || splitTotals.cacheSaved == null ? null : moneyTotalsTextOf({
-				cost: splitTotals.cacheSaved,
-				costsByCurrency: splitTotals.cacheSavedByCurrency
-			});
 			const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range);
-			const dailyAverage = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
-			/** 会话数可按项目 / 模型收窄（会话行同时带 workspace 与模型桶）；截断判定仍按未过滤的原始行数 */
+			const dailyCost = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
+			const dailyTokens = tokenCount === null || activeDays === 0 ? null : tokenCount / activeDays;
+			/** 会话数：窗口内有活动即计（列表被截断时退回服务端统计，不拿 — 冒充没有会话）。 */
 			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter);
 			const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length;
-			const sessionCount = useSummaryKpi ? sessionCountOf(scopedSessions, monthFrom, rawSessionRowCount) : sessionCountOf(scopedSessions, sessionFromOf(range), rawSessionRowCount);
+			const sessionCount = sessionCountOf(scopedSessions, isMonthRange ? monthFrom : sessionFromOf(range), rawSessionRowCount);
+			const prevTotals = scopedPrev?.totals ?? null;
+			const prevCostRow = prevTotals === null ? null : {
+				cost: prevTotals.cost,
+				costsByCurrency: prevTotals.costsByCurrency
+			};
+			const prevCost = prevCostRow === null ? null : comparableMoneyOf(prevCostRow);
+			const prevTokens = prevTotals === null ? null : prevTotals.inputTokens + prevTotals.outputTokens + prevTotals.cacheReadTokens;
+			const prevDays = usageDayCountOf(scopedPrev, "total");
+			const prevDailyCost = prevCost === null || prevDays === 0 ? null : prevCost / prevDays;
+			const prevDailyTokens = prevTokens === null || prevDays === 0 ? null : prevTokens / prevDays;
+			const prevHitRate = hitRateOf(prevTotals);
+			const prevSessionCount = sessionCountInWindowOf(scopedSessions, dayRangeOfUsage(scopedPrev));
+			/** 十张卡：值、上期、环比与色义都在这里定，渲染只管排版（5×2 两行）。 */
+			const kpiCards = [
+				{
+					key: "cost",
+					icon: "cost",
+					label: t("overview.kpiCost"),
+					value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
+					previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
+					...deltaOf(costAmount, prevCost, "warn")
+				},
+				{
+					key: "tokens",
+					icon: "tokens",
+					label: t("overview.kpiTokens"),
+					value: tokenValue === null ? "—" : tokenValue.text,
+					unit: tokenValue === null || tokenValue.unit === "" ? void 0 : tokenValue.unit,
+					previousText: prevTokens === null ? null : fmtTokens(prevTokens),
+					...deltaOf(tokenCount, prevTokens, "neutral")
+				},
+				{
+					key: "input",
+					icon: "input",
+					label: t("overview.kpiInput"),
+					value: splitTotals === null ? "—" : tokenTextOf(splitTotals.inputTokens),
+					previousText: prevTotals === null ? null : fmtTokens(prevTotals.inputTokens),
+					...deltaOf(splitTotals === null ? null : splitTotals.inputTokens, prevTotals === null ? null : prevTotals.inputTokens, "neutral")
+				},
+				{
+					key: "output",
+					icon: "output",
+					label: t("overview.kpiOutput"),
+					value: splitTotals === null ? "—" : tokenTextOf(splitTotals.outputTokens),
+					previousText: prevTotals === null ? null : fmtTokens(prevTotals.outputTokens),
+					...deltaOf(splitTotals === null ? null : splitTotals.outputTokens, prevTotals === null ? null : prevTotals.outputTokens, "neutral")
+				},
+				{
+					key: "cacheRead",
+					icon: "cacheRead",
+					label: t("overview.kpiCacheRead"),
+					value: splitTotals === null ? "—" : tokenTextOf(splitTotals.cacheReadTokens),
+					previousText: prevTotals === null ? null : fmtTokens(prevTotals.cacheReadTokens),
+					...deltaOf(splitTotals === null ? null : splitTotals.cacheReadTokens, prevTotals === null ? null : prevTotals.cacheReadTokens, "neutral")
+				},
+				{
+					key: "hitRate",
+					icon: "hit",
+					label: t("overview.kpiCache"),
+					value: hitRate === null ? "—" : hitRate.toFixed(1),
+					unit: hitRate === null ? void 0 : "%",
+					previousText: prevHitRate === null ? null : prevHitRate.toFixed(1) + "%",
+					...deltaPpOf(hitRate, prevHitRate)
+				},
+				{
+					key: "dailyTokens",
+					icon: "dailyTokens",
+					label: t("overview.kpiDailyTokens"),
+					value: dailyTokens === null ? "—" : tokenTextOf(dailyTokens),
+					previousText: prevDailyTokens === null ? null : fmtTokens(prevDailyTokens),
+					...deltaOf(dailyTokens, prevDailyTokens, "neutral")
+				},
+				{
+					key: "dailyCost",
+					icon: "dailyCost",
+					label: t("overview.kpiDailyCost"),
+					value: dailyCost === null ? "—" : displaySymbolOf(display) + dailyCost.toFixed(1),
+					previousText: prevDailyCost === null ? null : displaySymbolOf(display) + prevDailyCost.toFixed(1),
+					...deltaOf(dailyCost, prevDailyCost, "warn")
+				},
+				{
+					key: "calls",
+					icon: "calls",
+					label: t("overview.kpiCalls"),
+					value: splitTotals === null ? "—" : fmtCalls(splitTotals.calls),
+					previousText: prevTotals === null ? null : fmtCalls(prevTotals.calls),
+					...deltaOf(splitTotals === null ? null : splitTotals.calls, prevTotals === null ? null : prevTotals.calls, "neutral")
+				},
+				{
+					key: "sessions",
+					icon: "sessions",
+					label: t("overview.kpiSessions"),
+					value: sessionCount === null ? "—" : fmtCalls(sessionCount),
+					previousText: prevSessionCount === null ? null : fmtCalls(prevSessionCount),
+					...deltaOf(sessionCount, prevSessionCount, "neutral")
+				}
+			];
 			const isAllRange = range === "total";
 			/** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
 			*  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
@@ -5175,53 +5290,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: overview_module_css_default.stack,
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiRow,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiCost"),
-								value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine$1, {
-									previous: props.previousCost ?? null,
-									current: costAmount,
-									format: (value) => moneyTextOf(display, value)
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiTokens"),
-								value: tokenValue === null ? "—" : tokenValue.text,
-								unit: tokenValue === null || tokenValue.unit === "" ? void 0 : tokenValue.unit,
-								detail: splitTotals === null ? "—" : t("overview.ioSplit", {
-									input: fmtTokens(splitTotals.inputTokens),
-									output: fmtTokens(splitTotals.outputTokens)
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiCache"),
-								value: hitRate === null ? "—" : hitRate.toFixed(1),
-								unit: hitRate === null ? void 0 : "%",
-								detail: splitTotals === null ? "—" : t("overview.cacheReadOnly", { value: tokenTextOf(splitTotals.cacheReadTokens) })
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiCacheSaved"),
-								value: cacheSaved ?? "—",
-								detail: splitTotals?.cacheSaved == null || costAmount === null || costAmount <= 0 ? void 0 : t("overview.ofCost", { percent: Math.round(splitTotals.cacheSaved / costAmount * 100) })
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiSessions"),
-								value: sessionCount === null ? "—" : fmtCalls(sessionCount),
-								detail: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PrevLine$1, {
-									previous: props.previousSessions ?? null,
-									current: sessionCount,
-									format: fmtCalls
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard$1, {
-								label: t("overview.kpiDaily"),
-								value: dailyAverage === null ? "—" : displaySymbolOf(display) + dailyAverage.toFixed(1),
-								detail: activeDays === 0 ? "—" : t("overview.activeDays", { count: activeDays })
-							})
-						]
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: overview_module_css_default.kpiGrid,
+						children: kpiCards.map(({ key, ...card }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiStat, { ...card }, key))
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: overview_module_css_default.panel,
@@ -5379,13 +5450,52 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			});
 		}
-		function KpiCard$1(props) {
+		/** 线性小图标：只用 currentColor 描边，尺寸固定 14，不依赖任何图标库。 */
+		const KPI_ICON_PATHS = {
+			cost: "M8 2v12M4.5 5h5.2a1.8 1.8 0 0 1 0 3.6H6a1.8 1.8 0 0 0 0 3.6h5.5",
+			tokens: "M2.8 4h10.4v3.2H2.8zM2.8 8.8h10.4V12H2.8z",
+			input: "M8 2.4v7.2m0 0 2.6-2.6M8 9.6 5.4 7M2.8 13.6h10.4",
+			output: "M8 9.6V2.4m0 0L5.4 5M8 2.4 10.6 5M2.8 13.6h10.4",
+			cacheRead: "M4.6 11.4a2.4 2.4 0 0 1 .2-4.8 3.1 3.1 0 0 1 5.9.5 2.4 2.4 0 0 1-.3 4.3H4.6z",
+			hit: "M2.8 2.8h10.4v10.4H2.8zM6 10l4-4M6 6.2h.01M10 9.8h.01",
+			dailyTokens: "M3 12.6V9m3 3.6V5.6m3.2 7V8.2m3 4.4V6.8",
+			dailyCost: "M2.8 4.4h10.4v9.2H2.8zM2.8 7.2h10.4M5.8 2.6v2.4m4.4-2.4v2.4",
+			calls: "M2.6 9.4 5.4 6.2l2.6 3 2.6-4 2.8 3.2",
+			sessions: "M6.2 7.4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.8 13.4c0-1.9 1.5-3.4 3.4-3.4s3.4 1.5 3.4 3.4M11 6.6a1.6 1.6 0 1 0 0-3.2M11.2 13.4c0-1.3-.5-2.4-1.2-3.2"
+		};
+		/** KPI 卡：图标+标签 / 上期与环比同一行 / 大数。十张卡结构完全一致，扫一列就能比出变化。 */
+		function KpiStat(props) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: overview_module_css_default.kpiCard,
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.kpiLabel,
-						children: props.label
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiTop,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+							className: overview_module_css_default.kpiIcon,
+							viewBox: "0 0 16 16",
+							"aria-hidden": "true",
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+								d: KPI_ICON_PATHS[props.icon],
+								fill: "none",
+								stroke: "currentColor",
+								strokeWidth: "1.2",
+								strokeLinecap: "round",
+								strokeLinejoin: "round"
+							})
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiLabel,
+							children: props.label
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiCompare,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiPrev,
+							children: props.previousText ?? "—"
+						}), props.deltaText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: props.tone === "warn" ? overview_module_css_default.kpiDeltaWarn : props.tone === "good" ? overview_module_css_default.kpiDeltaGood : overview_module_css_default.kpiDelta,
+							children: props.deltaText
+						})]
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: overview_module_css_default.kpiValue,
@@ -5393,27 +5503,60 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: overview_module_css_default.kpiUnit,
 							children: props.unit
 						})]
-					}),
-					props.detail !== void 0 && props.detail !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.kpiDetail,
-						children: props.detail
 					})
 				]
 			});
 		}
-		/**
-		* 副标题的环比：服务端没有上期字段，拿不到就整行不显示（不编数字），
-		* 有上期但本期拿不到时只讲上期；只有两边都有且上期非零才带涨跌百分比。
-		*/
-		function PrevLine$1(props) {
-			if (props.previous === null) return null;
-			const previousText = t("overview.prev", { value: props.format(props.previous) });
-			if (props.current === null || props.previous <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
-			const delta = (props.current - props.previous) / props.previous * 100;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: delta > 0 ? overview_module_css_default.rise : delta < 0 ? overview_module_css_default.fall : void 0,
-				children: (delta > 0 ? "+" : "") + delta.toFixed(1) + "%"
-			})] });
+		/** 环比（%）：上期没有或非正时不编数字，只留上期值。成本类上涨算警示、下降算好。 */
+		function deltaOf(current, previous, tone) {
+			if (current === null || previous === null || previous <= 0) return {
+				deltaText: null,
+				tone: "neutral"
+			};
+			const percent = (current - previous) / previous * 100;
+			if (!Number.isFinite(percent)) return {
+				deltaText: null,
+				tone: "neutral"
+			};
+			return {
+				deltaText: (percent > 0 ? "↑" : percent < 0 ? "↓" : "→") + " " + (percent > 0 ? "+" : "") + percent.toFixed(1) + "%",
+				tone: tone === "warn" ? percent > 0 ? "warn" : "good" : "neutral"
+			};
+		}
+		/** 命中率这类比率用百分点差（pp），不是百分比涨跌。 */
+		function deltaPpOf(current, previous) {
+			if (current === null || previous === null) return {
+				deltaText: null,
+				tone: "neutral"
+			};
+			const diff = current - previous;
+			if (!Number.isFinite(diff)) return {
+				deltaText: null,
+				tone: "neutral"
+			};
+			return {
+				deltaText: (diff > 0 ? "↑" : diff < 0 ? "↓" : "→") + " " + (diff > 0 ? "+" : "") + diff.toFixed(1) + t("overview.pp"),
+				tone: diff > 0 ? "good" : diff < 0 ? "warn" : "neutral"
+			};
+		}
+		/** usage 的日期跨度（上期窗口只有日期，没有起止字段）。 */
+		function dayRangeOfUsage(usage) {
+			const dates = (usage?.days ?? []).map((day) => day.date).sort();
+			if (dates.length === 0) return null;
+			return {
+				from: dates[0],
+				to: dates[dates.length - 1]
+			};
+		}
+		/** 窗口内有活动的会话数：末次活动落在 [from, to] 的行；上期没有可判定窗口时退化为「早于本期开始」的行数。 */
+		function sessionCountInWindowOf(sessions, range) {
+			if (sessions == null || sessions.coverage.status === "unavailable") return null;
+			const active = sessions.rows.filter((row) => row.calls > 0 && row.lastTime !== null);
+			if (active.length === 0) return null;
+			if (range === null) return null;
+			const fromMs = (/* @__PURE__ */ new Date(range.from + "T00:00:00")).getTime();
+			const toMs = (/* @__PURE__ */ new Date(range.to + "T23:59:59.999")).getTime();
+			return active.filter((row) => row.lastTime >= fromMs && row.lastTime <= toMs).length;
 		}
 		/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
 		function TrendBars(props) {
@@ -9545,12 +9688,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		/**
-		* 「上期 X ±Y%」：没有上期字段就整行不显示（不编数字）；
-		* 有上期但本期为 null 时只讲上期，只有两边都有且上期非零才带涨跌百分比。
+		* 「上期值 ±Y%」：没有上期字段就整行不显示（不编数字）；
+		* 有上期但本期为 null 时只给上期值，只有两边都有且上期非零才带涨跌百分比。
 		*/
 		function PrevLine(props) {
 			if (props.previous === null) return null;
-			const previousText = t("overview.prev", { value: props.format(props.previous) });
+			const previousText = props.format(props.previous);
 			if (props.current === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: previousText });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [previousText, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrendPercent, {
 				previous: props.previous,
@@ -9854,7 +9997,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				});
 			}, [pricingRevision, applySnapshot]);
 			(0, react.useEffect)(() => {
-				if (wantSessions && sessions === null) loadSessions().then(setSessions);
+				if ((wantSessions || wantOverview) && sessions === null) loadSessions().then(setSessions);
 				if (wantDistribution) {
 					if (projects === null) loadProjects().then(setProjects);
 					if (models === null) loadModels().then(setModels);
@@ -9867,6 +10010,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				});
 			}, [
 				wantSessions,
+				wantOverview,
 				wantDistribution,
 				wantWords,
 				wantTools,
@@ -10036,6 +10180,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [quotas, channelFilter]);
 			/** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
 			const scopedUsage = (0, react.useMemo)(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter]);
+			/** 上一等长窗口同样按通道筛选：环比与本期用同一个口径，否则筛选后环比会失真。 */
+			const scopedPreviousUsage = (0, react.useMemo)(() => filterUsageByChannels(previousUsage, channelFilter), [previousUsage, channelFilter]);
 			/** 通道下拉：值取 provider，文案取显示名。 */
 			const channelOptions = (0, react.useMemo)(() => channels.map((channel) => ({
 				value: channel.provider,
@@ -10381,6 +10527,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: t("tab.overview")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OverviewTab, {
 									previousCost: previousUsage === null || previousUsage.totals === null ? null : previousUsage.totals.cost,
+									previousUsage: scopedPreviousUsage,
 									channels,
 									summary,
 									quotas,
