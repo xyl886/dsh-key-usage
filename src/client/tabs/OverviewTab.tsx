@@ -320,13 +320,21 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const hasHeatData = heatValues.size > 0
   /** 趋势空态：活跃度缺按天调用数时讲清原因，不给笼统的「暂无数据」。 */
   const trendEmptyText = trendMetric === 'activity' && !hasDailyCalls ? t('overview.noCalls') : t('overview.noData')
-  const drawnDates = isAllRange ? [...heatValues.keys()] : barDays.filter((_, index) => (barValues[index] ?? 0) > 0).map((day) => day.date)
-  const drawnValues = isAllRange ? [...heatValues.values()] : barValues.filter((value): value is number => value !== null && value > 0)
+  // 脚注跟着粒度走：分时视图里「连续天数」没有意义，改成「活跃时段数」，最忙的时间标签直接用它自己的文案
+  const statsDays = granularDays === null ? barDays : granularDays
+  const statsValues = displayValues
+  const drawnDates = isAllRange ? [...heatValues.keys()] : statsDays.filter((_, index) => (statsValues[index] ?? 0) > 0).map((day) => day.date)
+  const drawnValues = isAllRange ? [...heatValues.values()] : statsValues.filter((value): value is number => value !== null && value > 0)
   const busiest = busiestOf(drawnDates, drawnValues)
   const trendStats = [
-    drawnDates.length > 0 ? t('overview.streak', { count: streakOf(drawnDates) }) : null,
-    busiest === null ? null : t('overview.busiest', { date: fmtShortDate(busiest.date), value: metricTextOf(trendMetric, busiest.value) }),
-    drawnDates.length > 0 ? t('overview.activeDays', { count: drawnDates.length }) : null,
+    granularDays === null
+      ? (drawnDates.length > 0 ? t('overview.streak', { count: streakOf(drawnDates) }) : null)
+      : (drawnDates.length > 0 ? t('overview.activeBuckets', { count: drawnDates.length }) : null),
+    busiest === null ? null : t('overview.busiest', {
+      date: granularDays === null ? fmtShortDate(busiest.date) : busiest.date,
+      value: metricTextOf(trendMetric, busiest.value),
+    }),
+    granularDays === null && drawnDates.length > 0 ? t('overview.activeDays', { count: drawnDates.length }) : null,
   ].filter((part): part is string => part !== null).join(' · ')
   const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]))
   const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null
@@ -868,7 +876,7 @@ function granularTrendOf(range: RangeKey, usage: UsageResponse | null | undefine
   if (range === 'today') {
     const date = dates[dates.length - 1]
     const dayCells = byDate[date] ?? []
-    return dayCells.map((cell, hour) => rowOf(String(hour).padStart(2, '0') + '时', [cell]))
+    return dayCells.map((cell, hour) => rowOf(date.slice(5) + ' ' + String(hour).padStart(2, '0') + '时', [cell]))
   }
   if (range === 'week') {
     const rows: TrendDay[] = []

@@ -505,6 +505,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCacheRead": "缓存读",
 			"overview.kpiDailyTokens": "日均 Tokens",
 			"overview.hoursLongTerm": "长期",
+			"overview.activeBuckets": "活跃 {count} 个时段",
 			"detail.hourlyCost": "分时成本",
 			"overview.kpiDailyCost": "日均成本",
 			"overview.pp": "pp",
@@ -1034,6 +1035,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCacheRead": "Cache read",
 			"overview.kpiDailyTokens": "Daily tokens",
 			"overview.hoursLongTerm": "Long-term",
+			"overview.activeBuckets": "{count} active buckets",
 			"detail.hourlyCost": "Hourly cost",
 			"overview.kpiDailyCost": "Daily cost",
 			"overview.pp": "pp",
@@ -5324,15 +5326,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const hasHeatData = heatValues.size > 0;
 			/** 趋势空态：活跃度缺按天调用数时讲清原因，不给笼统的「暂无数据」。 */
 			const trendEmptyText = trendMetric === "activity" && !hasDailyCalls ? t("overview.noCalls") : t("overview.noData");
-			const drawnDates = isAllRange ? [...heatValues.keys()] : barDays.filter((_, index) => (barValues[index] ?? 0) > 0).map((day) => day.date);
-			const busiest = busiestOf(drawnDates, isAllRange ? [...heatValues.values()] : barValues.filter((value) => value !== null && value > 0));
+			const statsDays = granularDays === null ? barDays : granularDays;
+			const statsValues = displayValues;
+			const drawnDates = isAllRange ? [...heatValues.keys()] : statsDays.filter((_, index) => (statsValues[index] ?? 0) > 0).map((day) => day.date);
+			const busiest = busiestOf(drawnDates, isAllRange ? [...heatValues.values()] : statsValues.filter((value) => value !== null && value > 0));
 			const trendStats = [
-				drawnDates.length > 0 ? t("overview.streak", { count: streakOf(drawnDates) }) : null,
+				granularDays === null ? drawnDates.length > 0 ? t("overview.streak", { count: streakOf(drawnDates) }) : null : drawnDates.length > 0 ? t("overview.activeBuckets", { count: drawnDates.length }) : null,
 				busiest === null ? null : t("overview.busiest", {
-					date: fmtShortDate(busiest.date),
+					date: granularDays === null ? fmtShortDate(busiest.date) : busiest.date,
 					value: metricTextOf(trendMetric, busiest.value)
 				}),
-				drawnDates.length > 0 ? t("overview.activeDays", { count: drawnDates.length }) : null
+				granularDays === null && drawnDates.length > 0 ? t("overview.activeDays", { count: drawnDates.length }) : null
 			].filter((part) => part !== null).join(" · ");
 			const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]));
 			const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null;
@@ -5887,7 +5891,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					sessions: list.reduce((total, cell) => total + cell.sessions, 0)
 				};
 			};
-			if (range === "today") return (byDate[dates[dates.length - 1]] ?? []).map((cell, hour) => rowOf(String(hour).padStart(2, "0") + "时", [cell]));
+			if (range === "today") {
+				const date = dates[dates.length - 1];
+				return (byDate[date] ?? []).map((cell, hour) => rowOf(date.slice(5) + " " + String(hour).padStart(2, "0") + "时", [cell]));
+			}
 			if (range === "week") {
 				const rows = [];
 				for (const date of dates) {
