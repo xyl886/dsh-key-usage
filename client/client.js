@@ -9744,6 +9744,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}
 				return map;
 			}, [usage]);
+			/** 额度页跟随通道筛选：只渲染选中通道的卡片与配额 */
+			const selectedChannels = (0, react.useMemo)(() => {
+				const chosen = selectionOf(channelFilter);
+				if (chosen.length === 0) return channels;
+				return channels.filter((channel) => chosen.includes(channel.provider));
+			}, [channels, channelFilter]);
+			const selectedQuotas = (0, react.useMemo)(() => {
+				const chosen = selectionOf(channelFilter);
+				if (chosen.length === 0) return quotas;
+				return quotas.filter((provider) => chosen.includes(provider.provider));
+			}, [quotas, channelFilter]);
 			/** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
 			const scopedUsage = (0, react.useMemo)(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter]);
 			/** 通道下拉：值取 provider，文案取显示名。 */
@@ -10075,8 +10086,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									children: t("tab.quota")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(QuotaTab, {
 									onOpenProvider: (provider) => setQuotaDialog(provider),
-									channels,
-									quotas,
+									channels: selectedChannels,
+									quotas: selectedQuotas,
 									quotaOutcome,
 									reloadToken: pricingRevision,
 									onPricingReload: () => setPricingRevision((previous) => previous + 1)

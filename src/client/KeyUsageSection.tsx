@@ -335,6 +335,18 @@ export function KeyUsageSection() {
     return map
   }, [usage])
 
+  /** 额度页跟随通道筛选：只渲染选中通道的卡片与配额 */
+  const selectedChannels = useMemo(() => {
+    const chosen = selectionOf(channelFilter)
+    if (chosen.length === 0) return channels
+    return channels.filter((channel) => chosen.includes(channel.provider))
+  }, [channels, channelFilter])
+  const selectedQuotas = useMemo(() => {
+    const chosen = selectionOf(channelFilter)
+    if (chosen.length === 0) return quotas
+    return quotas.filter((provider) => chosen.includes(provider.provider))
+  }, [quotas, channelFilter])
+
   /** 通道多选过滤（客户端）：先按通道收窄 `/usage`，各区块再按模型收窄；合计由两次过滤各自重算。 */
   const scopedUsage = useMemo(() => filterUsageByChannels(usage, channelFilter), [usage, channelFilter])
 
@@ -559,8 +571,8 @@ export function KeyUsageSection() {
             <h2 className={styles.pageSectionTitle}>{t('tab.quota')}</h2>
             <QuotaTab
               onOpenProvider={(provider) => setQuotaDialog(provider)}
-              channels={channels}
-              quotas={quotas}
+              channels={selectedChannels}
+              quotas={selectedQuotas}
               quotaOutcome={quotaOutcome}
               reloadToken={pricingRevision}
               onPricingReload={() => setPricingRevision((previous) => previous + 1)}
