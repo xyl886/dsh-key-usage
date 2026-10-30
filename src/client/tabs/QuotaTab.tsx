@@ -158,7 +158,6 @@ export function QuotaTab(props: {
   const filtering = props.onlyProvider === undefined
   const unpricedEntries = unpricedEntriesOf(rateChannels)
     .filter((entry) => !filtering || !hiddenProviders.includes(entry.provider))
-  const unpricedTotal = unpricedEntries.reduce((sum, entry) => sum + entry.models.length, 0)
 
   const shown = props.channels.filter((channel) => (filtering
     ? !hiddenProviders.includes(channel.provider)
@@ -172,8 +171,6 @@ export function QuotaTab(props: {
     ))
     .sort((first, second) => first.rank - second.rank)
   // 未计价汇总卡只在整页出现：弹窗只讲一个通道，跨通道汇总放进去没有意义
-  if (props.onlyProvider === undefined && unpricedTotal > 0) cards.push(unpricedCardOf(unpricedEntries, unpricedTotal))
-
   // 弹窗模式（只渲染一个通道）恒展开：详情弹窗里不留任何展开项
   const openProvider = props.onlyProvider ?? expandedProvider
   const openChannel = shown.find((channel) => channel.provider === openProvider) ?? null
@@ -261,8 +258,8 @@ function CardRowView(props: { row: CardRow }): ReactNode {
       <div className={quotaStyles.windowLine}>
         <div className={quotaStyles.windowTop}>
           <span className={quotaStyles.windowName}>{row.label}</span>
-          <span className={quotaStyles.windowReset} title={t('quota.resetAt')}>{t('quota.resetPrefix')}{row.reset}</span>
           <span className={quotaStyles.windowPercent}>{percent}%</span>
+          <span className={quotaStyles.windowReset} title={t('quota.resetAt')}>{t('quota.resetPrefix')}{row.reset}</span>
         </div>
         <span className={quotaStyles.meter}><i style={{ width: percent + '%', background: quotaBarColor(percent) }} /></span>
       </div>
@@ -419,28 +416,6 @@ function unpricedCountOf(entries: UnpricedEntry[], provider: string): number {
   return entries.find((entry) => entry.provider === provider)?.models.length ?? 0
 }
 
-/** 未计价汇总卡：最多两个通道的模型清单 + 一行影响；没有未计价模型时整张卡不出现。 */
-function unpricedCardOf(entries: UnpricedEntry[], total: number): QuotaCard {
-  const rows: CardRow[] = entries.slice(0, 2).map((entry) => ({
-    kind: 'line',
-    key: entry.provider,
-    label: entry.label,
-    value: modelListTextOf(entry.models),
-  }))
-  rows.push({ kind: 'line', key: 'impact', label: t('quota.impact'), value: t('quota.impactValue') })
-  return {
-    key: '__unpriced__',
-    provider: null,
-    title: t('quota.unpriced'),
-    kindText: fmtCount(total) + t('common.modelSuffix'),
-    checkedText: '—',
-    statusColor: null,
-    rows,
-    rank: 3,
-  }
-}
-
-/** 模型清单：最多三个模型名，余量只说个数（卡片宽度放不下整张清单）。 */
 function modelListTextOf(models: string[]): string {
   const shown = models.slice(0, 3).join(' / ')
   if (models.length <= 3) return shown

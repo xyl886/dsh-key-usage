@@ -7373,10 +7373,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 			const filtering = props.onlyProvider === void 0;
 			const unpricedEntries = unpricedEntriesOf(rateChannels).filter((entry) => !filtering || !hiddenProviders.includes(entry.provider));
-			const unpricedTotal = unpricedEntries.reduce((sum, entry) => sum + entry.models.length, 0);
 			const shown = props.channels.filter((channel) => filtering ? !hiddenProviders.includes(channel.provider) : channel.provider === props.onlyProvider);
 			const cards = shown.map((channel) => channelCardOf(channel, props.quotas.find((item) => item.provider === channel.provider) ?? null, unpricedCountOf(unpricedEntries, channel.provider))).sort((first, second) => first.rank - second.rank);
-			if (props.onlyProvider === void 0 && unpricedTotal > 0) cards.push(unpricedCardOf(unpricedEntries, unpricedTotal));
 			const openProvider = props.onlyProvider ?? expandedProvider;
 			const openChannel = shown.find((channel) => channel.provider === openProvider) ?? null;
 			const drawerId = instanceId + "-rates";
@@ -7485,13 +7483,13 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: row.label
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: quota_module_css_default.windowPercent,
+								children: [percent, "%"]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: quota_module_css_default.windowReset,
 								title: t("quota.resetAt"),
 								children: [t("quota.resetPrefix"), row.reset]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: quota_module_css_default.windowPercent,
-								children: [percent, "%"]
 							})
 						]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -7685,37 +7683,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		function unpricedCountOf(entries, provider) {
 			return entries.find((entry) => entry.provider === provider)?.models.length ?? 0;
-		}
-		/** 未计价汇总卡：最多两个通道的模型清单 + 一行影响；没有未计价模型时整张卡不出现。 */
-		function unpricedCardOf(entries, total) {
-			const rows = entries.slice(0, 2).map((entry) => ({
-				kind: "line",
-				key: entry.provider,
-				label: entry.label,
-				value: modelListTextOf(entry.models)
-			}));
-			rows.push({
-				kind: "line",
-				key: "impact",
-				label: t("quota.impact"),
-				value: t("quota.impactValue")
-			});
-			return {
-				key: "__unpriced__",
-				provider: null,
-				title: t("quota.unpriced"),
-				kindText: fmtCount(total) + t("common.modelSuffix"),
-				checkedText: "—",
-				statusColor: null,
-				rows,
-				rank: 3
-			};
-		}
-		/** 模型清单：最多三个模型名，余量只说个数（卡片宽度放不下整张清单）。 */
-		function modelListTextOf(models) {
-			const shown = models.slice(0, 3).join(" / ");
-			if (models.length <= 3) return shown;
-			return shown + t("sh.morePrefix") + fmtCount(models.length - 3) + t("sh.moreSuffix");
 		}
 		/** 单价表：`rates` 为 null 的行在四档位置显示来源说明（写 0 会被读成「免费」，比「没有依据」更糟）。 */
 		function RateTable(props) {
