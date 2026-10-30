@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 
-const require = createRequire('D:/EasyJob/.plugin/dsh-key-usage/package.json')
+const require = createRequire(new URL('../package.json', import.meta.url))
 const { Database } = require('node-sqlite3-wasm')
 
 const storage = await import('../lib/storage/db.js')
