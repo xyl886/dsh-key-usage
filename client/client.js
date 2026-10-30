@@ -3640,7 +3640,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 													children: t("settings.version")
 												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 													className: settings_module_css_default.value,
-													children: "0.2.2"
+													children: "0.2.3"
 												})]
 											})
 										}),
@@ -3685,7 +3685,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: settings_module_css_default.wrap,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: settings_module_css_default.caliberVersion,
-								children: t("caliber.version", { version: "0.2.2" })
+								children: t("caliber.version", { version: "0.2.3" })
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
 								className: settings_module_css_default.caliberList,
 								children: [
