@@ -49,7 +49,7 @@
 .meter > i { display: block; height: 100%; border-radius: 4px; }
 .windowPercent { font-size: 15px; font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .windowReset {
-  text-align: left; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
+  margin-left: auto; text-align: right; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
