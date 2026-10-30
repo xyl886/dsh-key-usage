@@ -681,7 +681,7 @@ export function DetailTab(props: {
               <button
                 key={key}
                 type="button"
-                className={metric === key ? detailStyles.metricTabOn : detailStyles.metricTab}
+                className={metric === key ? detailStyles.metricTab + ' ' + detailStyles.metricTabOn : detailStyles.metricTab}
                 aria-pressed={metric === key}
                 onClick={() => setMetric(key)}
               >
@@ -733,7 +733,7 @@ export function DetailTab(props: {
               <button
                 key={key}
                 type="button"
-                className={dimension === key ? detailStyles.metricTabOn : detailStyles.metricTab}
+                className={dimension === key ? detailStyles.metricTab + ' ' + detailStyles.metricTabOn : detailStyles.metricTab}
                 aria-pressed={dimension === key}
                 onClick={() => setDimension(key)}
               >

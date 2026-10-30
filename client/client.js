@@ -4708,7 +4708,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								className: detail_module_css_default.metricTabs,
 								children: METRIC_ORDER.map((key) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: metric === key ? detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
+									className: metric === key ? detail_module_css_default.metricTab + " " + detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
 									"aria-pressed": metric === key,
 									onClick: () => setMetric(key),
 									children: t(METRIC_LABEL_KEYS[key])
@@ -4760,7 +4760,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								className: detail_module_css_default.metricTabs,
 								children: DIMENSIONS.map(([key, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: dimension === key ? detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
+									className: dimension === key ? detail_module_css_default.metricTab + " " + detail_module_css_default.metricTabOn : detail_module_css_default.metricTab,
 									"aria-pressed": dimension === key,
 									onClick: () => setDimension(key),
 									children: t(labelKey)
