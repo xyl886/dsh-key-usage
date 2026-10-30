@@ -540,6 +540,7 @@ export function writeModelPricesFile(path: string, text: string): { ok: true; by
       sha256: createHash('sha256').update(text).digest('hex'),
       fetchedAt: new Date().toISOString(),
       count: String(rows.length),
+      upstream: AGGREGATE_SOURCE_URL,
     })
   } catch (error) {
     return { ok: false, error: '写入价目库失败：' + describeError(error) }

@@ -254,6 +254,11 @@ assert.equal(
   2,
   '矩阵只统计窗口内、有小时槽的那两次调用',
 )
+// 按时段多指标：调用 / Token / 会话三档都来自同一批小时槽
+assert.equal(heatmap.body.hourlyMetrics.length, 7)
+const metricsCell = (weekday, hour) => heatmap.body.hourlyMetrics.find((row) => row.weekday === weekday).hours[hour]
+assert.deepEqual({ calls: metricsCell(isoWeekdayOf(ledgerNewerDay), 9).calls, tokens: metricsCell(isoWeekdayOf(ledgerNewerDay), 9).tokens, sessions: metricsCell(isoWeekdayOf(ledgerNewerDay), 9).sessions }, { calls: 1, tokens: 9200, sessions: 1 }, '9:15 那次调用的 Token 与会话数')
+assert.deepEqual({ calls: metricsCell(isoWeekdayOf(sessionOnlyDay), 14).calls, tokens: metricsCell(isoWeekdayOf(sessionOnlyDay), 14).tokens, sessions: metricsCell(isoWeekdayOf(sessionOnlyDay), 14).sessions }, { calls: 1, tokens: 440, sessions: 1 }, '14:30 那次调用的 Token 与会话数')
 
 // 余额 / 窗口：按配置的通道逐个返回；首次构建（还没有快照）就把结果写进快照
 const quota = await callEndpoint('/dsh-key-usage/quota')

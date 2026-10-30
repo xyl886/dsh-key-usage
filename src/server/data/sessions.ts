@@ -873,7 +873,8 @@ export function projectRowsOf(
     .sort((first, second) => (second.lastTime ?? 0) - (first.lastTime ?? 0))
 }
 
-type HourSlot = { calls: number; buckets: Record<string, number> }
+type HourModelBucket = { calls: number; tokens: number; buckets: Record<string, number> }
+type HourSlot = { calls: number; buckets: Record<string, number>; sessions?: number; models?: Map<string, HourModelBucket> }
 const emptyHourSlots = (): HourSlot[] => Array.from({ length: 24 }, () => ({
   calls: 0,
   buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -896,10 +897,28 @@ export function hoursByDateOf(records: SessionUsageRecord[]): Map<string, HourSl
         const source = day.hours[hour]
         if (source === undefined) continue
         hours[hour].calls += source.calls
+        hours[hour].sessions = (hours[hour].sessions ?? 0) + (source.sessions ?? (source.calls > 0 ? 1 : 0))
         hours[hour].buckets.inputTokens += source.buckets.inputTokens
         hours[hour].buckets.outputTokens += source.buckets.outputTokens
         hours[hour].buckets.cacheReadTokens += source.buckets.cacheReadTokens
         hours[hour].buckets.cacheWriteTokens += source.buckets.cacheWriteTokens
+        if (source.models !== undefined) {
+          const merged = hours[hour].models ?? new Map<string, HourModelBucket>()
+          for (const model of source.models) {
+            const existing = merged.get(model.key)
+            if (existing === undefined) {
+              merged.set(model.key, { calls: model.calls, tokens: model.tokens, buckets: { ...model.buckets } })
+            } else {
+              existing.calls += model.calls
+              existing.buckets.inputTokens = (existing.buckets.inputTokens ?? 0) + model.buckets.inputTokens
+              existing.buckets.outputTokens = (existing.buckets.outputTokens ?? 0) + model.buckets.outputTokens
+              existing.buckets.cacheReadTokens = (existing.buckets.cacheReadTokens ?? 0) + model.buckets.cacheReadTokens
+              existing.buckets.cacheWriteTokens = (existing.buckets.cacheWriteTokens ?? 0) + model.buckets.cacheWriteTokens
+              existing.tokens = existing.buckets.inputTokens + existing.buckets.outputTokens + existing.buckets.cacheReadTokens + existing.buckets.cacheWriteTokens
+            }
+          }
+          hours[hour].models = merged
+        }
       }
     }
   }

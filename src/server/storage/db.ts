@@ -19,7 +19,7 @@ const require = createRequire(import.meta.url)
 const { Database } = require('node-sqlite3-wasm') as { Database: new (path: string) => DatabaseHandle }
 
 export const STORAGE_FILE = 'usage.db'
-export const STORAGE_SCHEMA_VERSION = 2
+export const STORAGE_SCHEMA_VERSION = 3
 /** 日志保留天数（超期在写入后清理）。 */
 export const LOG_RETENTION_DAYS = 30
 /** 拒绝把日志写进非 db 路径（迁移前的 JSONL 也走同一套接口，靠这个守卫兜住）。 */
@@ -50,6 +50,7 @@ export function openStorage(path: string = storagePath()): DatabaseHandle {
   const db = new Database(key)
   db.exec('PRAGMA journal_mode = DELETE; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = OFF;')
   createSchema(db)
+  migrateMetaToAppMeta(db)
   ensurePriceColumns(db)
   migrateLegacyFiles(db, dirname(key))
   connections.set(key, db)
@@ -100,6 +101,17 @@ function createSchema(db: DatabaseHandle): void {
     CREATE INDEX IF NOT EXISTS idx_price_model_name ON litellm_price(model_name);
     CREATE INDEX IF NOT EXISTS idx_price_vendor ON litellm_price(vendor);
     CREATE TABLE IF NOT EXISTS litellm_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+    -- 运行期元信息统一表：scope 划分来源域（app / litellm / snapshot），meta 与 litellm_meta 两个旧表只保留双写一轮
+    CREATE TABLE IF NOT EXISTS app_meta (
+      scope TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 0,
+      source TEXT,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (scope, key)
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS idx_app_meta_scope ON app_meta(scope, updated_at DESC);
     CREATE TABLE IF NOT EXISTS fx_rate (
       base TEXT NOT NULL,
       quote TEXT NOT NULL,
@@ -111,6 +123,27 @@ function createSchema(db: DatabaseHandle): void {
     ) STRICT;
     CREATE TABLE IF NOT EXISTS quota_seed (provider TEXT PRIMARY KEY, payload TEXT NOT NULL) STRICT;
   `)
+}
+
+/**
+ * schema 2 → 3：把 meta（scope=app）与 litellm_meta（scope=litellm）搬进 app_meta。
+ * 只在 app_meta 为空时搬一次；旧表保留原样（双写一轮，下一版再删），搬失败不影响读写主流程。
+ */
+function migrateMetaToAppMeta(db: DatabaseHandle): void {
+  try {
+    const row = db.get('SELECT COUNT(*) AS n FROM app_meta') as unknown as { n: number }
+    if (row.n > 0) return
+    const now = new Date().toISOString()
+    db.exec('BEGIN')
+    try {
+      db.run('INSERT INTO app_meta (scope, key, value, version, source, updated_at) SELECT ?, key, value, 0, NULL, ? FROM meta', ['app', now])
+      db.run('INSERT INTO app_meta (scope, key, value, version, source, updated_at) SELECT ?, key, value, 0, NULL, ? FROM litellm_meta', ['litellm', now])
+      db.exec('COMMIT')
+    } catch (error) {
+      try { db.exec('ROLLBACK') } catch { /* 回滚失败保持原状 */ }
+      throw error
+    }
+  } catch { /* 迁移失败保持旧表读取路径，下次打开再试 */ }
 }
 
 /** 旧库补列（schema 1 → 2）：`mode` 是装载优化用的派生列，缺了就加，不动已有数据。 */
@@ -144,12 +177,57 @@ function ensurePriceColumns(db: DatabaseHandle): void {
 
 // ===== meta =====
 
+/** 从统一元信息表取一条（scope 缺省为 app）。 */
+export function dictGet(db: DatabaseHandle, scope: string, key: string): string | null {
+  const row = db.get('SELECT value FROM app_meta WHERE scope = ? AND key = ?', [scope, key]) as unknown as { value: string } | undefined
+  return row == null ? null : row.value
+}
+
+/** 取某个 scope 的全部元信息（键值对）。 */
+export function dictAll(db: DatabaseHandle, scope: string): Record<string, string> {
+  const rows = db.all('SELECT key, value FROM app_meta WHERE scope = ?', [scope]) as unknown as Array<{ key: string; value: string }>
+  const values: Record<string, string> = {}
+  for (const row of rows) values[row.key] = row.value
+  return values
+}
+
+/** 写一条元信息：value 是原文，source 记来源（上游 URL / etag / commit），version 由调用方递增。 */
+export function dictSet(
+  db: DatabaseHandle,
+  scope: string,
+  key: string,
+  value: string,
+  options: { version?: number; source?: string | null } = {},
+): void {
+  db.run(
+    `INSERT INTO app_meta (scope, key, value, version, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value, version = excluded.version,
+       source = excluded.source, updated_at = excluded.updated_at`,
+    [scope, key, value, options.version ?? 0, options.source ?? null, new Date().toISOString()],
+  )
+}
+
+/** 整体替换某个 scope 的元信息（价目快照这类「一次性快照」用）。 */
+export function dictReplaceScope(
+  db: DatabaseHandle,
+  scope: string,
+  values: Record<string, string>,
+  options: { version?: number; source?: string | null } = {},
+): void {
+  db.run('DELETE FROM app_meta WHERE scope = ?', [scope])
+  for (const [key, value] of Object.entries(values)) dictSet(db, scope, key, value, options)
+}
+
+/** 旧调用点沿用：键走 app_meta 的 app scope，读不到时回落旧 meta 表（迁移后半拍）。 */
 export function metaGet(db: DatabaseHandle, key: string): string | null {
+  const value = dictGet(db, 'app', key)
+  if (value !== null) return value
   const row = db.get('SELECT value FROM meta WHERE key = ?', [key]) as unknown as { value: string } | undefined
   return row == null ? null : row.value
 }
 
 export function metaSet(db: DatabaseHandle, key: string, value: string): void {
+  dictSet(db, 'app', key, value)
   db.run('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [key, value])
 }
 
@@ -300,9 +378,21 @@ export function replacePriceRows(db: DatabaseHandle, rows: StoredPriceRow[], met
         [row.modelKey, row.vendor, row.modelName, row.mode, row.inputPerToken, row.outputPerToken, row.cacheReadPerToken, row.cacheWritePerToken, row.raw],
       )
     }
+    // 新表为唯一读源；旧 litellm_meta 双写一轮，等下一版删表
     db.run('DELETE FROM litellm_meta')
     for (const [key, value] of Object.entries(meta)) {
       db.run('INSERT INTO litellm_meta (key, value) VALUES (?, ?)', [key, value])
+    }
+    db.run('DELETE FROM app_meta WHERE scope = ?', ['litellm'])
+    const version = Number(meta.version ?? 0)
+    const source = meta.upstream ?? meta.sha256 ?? null
+    for (const [key, value] of Object.entries(meta)) {
+      db.run(
+        `INSERT INTO app_meta (scope, key, value, version, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value, version = excluded.version,
+           source = excluded.source, updated_at = excluded.updated_at`,
+        ['litellm', key, value, Number.isFinite(version) ? version : 0, source, new Date().toISOString()],
+      )
     }
     db.exec('COMMIT')
   } catch (error) {
@@ -321,8 +411,9 @@ export function readPriceRows(db: DatabaseHandle): StoredPriceRow[] {
 }
 
 export function readPriceMeta(db: DatabaseHandle): Record<string, string> {
+  const meta = dictAll(db, 'litellm')
+  if (Object.keys(meta).length > 0) return meta
   const rows = db.all('SELECT key, value FROM litellm_meta') as unknown as Array<{ key: string; value: string }>
-  const meta: Record<string, string> = {}
   for (const row of rows) meta[row.key] = row.value
   return meta
 }
@@ -330,6 +421,7 @@ export function readPriceMeta(db: DatabaseHandle): Record<string, string> {
 export function clearPrices(db: DatabaseHandle): void {
   db.run('DELETE FROM litellm_price')
   db.run('DELETE FROM litellm_meta')
+  db.run('DELETE FROM app_meta WHERE scope = ?', ['litellm'])
 }
 
 // ===== 汇率 =====

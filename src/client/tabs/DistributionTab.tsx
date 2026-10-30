@@ -109,8 +109,10 @@ export function DistributionTab(props: {
   const [tableOpen, setTableOpen] = useState(false)
   const externalProject = props.projectFilter ?? ''
   const modelFilter = props.modelFilter ?? ''
-  const noProjectSelection = selectionOf(externalProject).length === 0
+  const channelFilter = props.channelFilter ?? ''
+  const noChannelSelection = selectionOf(channelFilter).length === 0
   const noModelSelection = selectionOf(modelFilter).length === 0
+  const noProjectSelection = selectionOf(externalProject).length === 0
   // 外部的全局项目筛选优先（多选时内部联动让位）；没有时才有内部联动（从会话页点工作目录进来）
   const focusWorkspace = noProjectSelection ? (props.focusWorkspace ?? null) : null
   /** 内部联动 / 全局筛选各自的项目命中：项目行按 workspace 与覆盖目录匹配 */
@@ -119,9 +121,13 @@ export function DistributionTab(props: {
     : selectionMatches(projectFilterValuesOf(row.workspace, row.paths), externalProject))
 
   const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows
-  const allModelRows = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
+  const everyModelRow = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
+  /** 通道筛选：模型行带 provider，命中所选通道才保留（三个面板的金额/占比一起重算）。 */
+  const allModelRows = noChannelSelection ? everyModelRow : everyModelRow.filter((row) => selectionMatches([row.provider], channelFilter))
   /** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
-  const modelRows = noModelSelection ? allModelRows : allModelRows.filter((row) => selectionMatches([row.model], modelFilter))
+  /** 模型名归一后再比：项目行与模型行可能一个带厂商前缀、一个不带 */
+  const normalizedSelectedModels = new Set(selectionOf(modelFilter).map(normalizedModelOf))
+  const modelRows = noModelSelection ? allModelRows : allModelRows.filter((row) => normalizedSelectedModels.has(normalizedModelOf(row.model)))
   const scopedProjects = projectRows.filter(projectMatches)
   /** Mekko 的项目块：有模型筛选时每个项目只留选中模型的用量，块宽 / 金额 / 逐模型占比一起重算 */
   const mekkoProjects = noModelSelection
@@ -150,7 +156,11 @@ export function DistributionTab(props: {
       <div className={styles.grid}>
         <CacheSavingsPanel models={modelRows} usage={cacheUsage} loading={props.models === null} />
         <CostMixPanel models={modelRows} loading={props.models === null} />
-        <ChannelCostPanel models={modelRows} channels={props.channels} loading={props.models === null} />
+        <ChannelCostPanel
+          models={modelRows}
+          channels={noChannelSelection ? props.channels : props.channels.filter((channel) => selectionMatches([channel.provider], channelFilter))}
+          loading={props.models === null}
+        />
       </div>
 
       {/* 明细表是原型没有的补充入口：默认收起，收成右上一个按钮，不占版面文字 */}
@@ -199,8 +209,16 @@ function weakestSourceOf(sources: CostSource[]): CostSource | null {
  * 金额只在每个桶都有价目时才给数（缺一个就 null → 该块不参与占比，不拿部分金额冒充合计）；
  * 该项目没有这个模型的用量时返回 null（整块不进 Mekko）。
  */
+/** 模型名归一：去厂商前缀、转小写，避免 'vendor/x' 与 'x' 在筛选时互相漏配。 */
+function normalizedModelOf(value: string): string {
+  const lower = value.toLowerCase()
+  const slash = lower.lastIndexOf('/')
+  return slash >= 0 ? lower.slice(slash + 1) : lower
+}
+
 function projectOfModel(row: ProjectRow, modelFilter: string): ProjectRow | null {
-  const models = (row.models ?? []).filter((entry) => selectionMatches([entry.model], modelFilter))
+  const selected = new Set(selectionOf(modelFilter).map(normalizedModelOf))
+  const models = (row.models ?? []).filter((entry) => selected.has(normalizedModelOf(entry.model)))
   if (models.length === 0) return null
   const costsByCurrency: CostsByCurrency = {}
   const sources: CostSource[] = []

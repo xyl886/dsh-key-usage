@@ -120,6 +120,8 @@ export interface UsageResponse {
   availableTo: string | null
   /** 仅单日范围返回：来自会话事件的 24 小时分桶。 */
   hours: HourBucket[] | null
+  /** 逐日 24 小时桶（趋势按小时 / 按 6 小时取数用）；旧服务端没有这一项时按缺省处理。 */
+  hoursByDate?: Record<string, HourBucket[]> | null
   /** 由会话事件补齐的日期（台账停更后的那些天，界面据此标注来源）。 */
   sessionDates: string[]
 }
@@ -133,6 +135,7 @@ export interface HeatmapDay {
 /** 「按时段」热力图的一行：weekday 1=周一 … 7=周日，hours 长度固定 24（每格是该小时累计调用数）。 */
 export interface WeekdayHours {
   weekday: number
+  /** 每格是该小时的调用数 */
   hours: number[]
 }
 
@@ -141,6 +144,8 @@ export interface HeatmapResponse {
   days: HeatmapDay[]
   /** 旧服务端没有这一项，界面要能只用 `days` 渲染。 */
   hourly?: WeekdayHours[]
+  /** 按时段的多指标矩阵（calls / tokens 为真值）；旧服务端没有这一项时回落到 hourly 的调用数。 */
+  hourlyMetrics?: Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }>
 }
 
 export interface QuotaProvider {

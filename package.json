@@ -1,7 +1,7 @@
 {
   "name": "dsh-key-usage",
   "description": "DeepSeek Harness 侧边栏「使用情况」：按通道展示用量明细、活跃热力图、项目/会话用量与官方余额/配额（实时优先，失败回落快照）",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "packageManager": "pnpm@10.32.1",
   "type": "module",
@@ -57,7 +57,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "node --check lib/index.js && node --check lib/data/ledger.js && node --check lib/data/collect.js && node --check lib/data/log-file.js && node --check lib/routes.js && node --check lib/data/sessions.js && node --check lib/data/session-usage.js && node --check lib/data/session-meta.js && node --check lib/quota/quota-snapshots.js && node --check lib/data/merge.js && node --check lib/quota/live-quota.js && node --check lib/pricing/pricing.js && node --check lib/pricing/pricing-catalog.js && node --check lib/pricing/yaml-lite.js && node --check lib/pricing/model-prices.js && node --check lib/quota/fx-rate.js && node --check lib/snapshot/snapshot.js",
-    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/tools.test.mjs && node test/session-meta.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/pricing.test.mjs && node test/client-pricing.test.mjs && node test/client-currency.test.mjs && node test/yaml-lite.test.mjs && node test/model-prices.test.mjs && node test/fx-rate.test.mjs && node test/snapshot.test.mjs && node test/log-file.test.mjs && node test/client-log.test.mjs && node test/routes.test.mjs",
+    "test": "node test/ledger.test.mjs && node test/collect.test.mjs && node test/channels.test.mjs && node test/session-usage.test.mjs && node test/tools.test.mjs && node test/session-meta.test.mjs && node test/sessions.test.mjs && node test/merge.test.mjs && node test/live-quota.test.mjs && node test/pricing.test.mjs && node test/client-pricing.test.mjs && node test/client-currency.test.mjs && node test/yaml-lite.test.mjs && node test/model-prices.test.mjs && node test/fx-rate.test.mjs && node test/db.test.mjs && node test/snapshot.test.mjs && node test/log-file.test.mjs && node test/client-log.test.mjs && node test/routes.test.mjs",
     "verify": "npm run typecheck && npm run build && npm run check && npm run check:tokens && npm run check:ui && npm run test",
     "check:tokens": "node scripts/check-design-tokens.mjs",
     "check:ui": "node scripts/check-ui-scale.mjs",

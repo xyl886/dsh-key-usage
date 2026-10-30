@@ -34,8 +34,8 @@
 .panelHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .panelTitle { font-size: var(--ov-title); font-weight: 600; color: var(--dsw-alias-label-primary, #e8e8ec); }
 .panelMore {
-  margin-left: auto; color: var(--dsw-alias-label-tertiary, #67676f);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+  margin-left: auto; padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .gridTwo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
 

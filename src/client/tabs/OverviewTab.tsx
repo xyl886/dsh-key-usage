@@ -24,8 +24,10 @@ import type {
   SummaryResponse,
   UsageResponse,
   UsageTotals,
+  HourBucket,
   WeekdayHours,
 } from '../core/types.ts'
+import { Dialog } from '../components/ui/Dialog.tsx'
 import { LEVEL_COLORS, YearHeatmap, levelColorOf, levelOfValue, levelThresholds } from '../components/Heatmap.tsx'
 import { filterUsageByModel, projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
 import shared from '../styles/shared.module.css'
@@ -84,6 +86,8 @@ interface TrendDay {
   outTokens: number | null
   cacheRead: number | null
   cost: number | null
+  /** 当天有活动的会话数；会话段缺失时为 null（趋势「会话」档给空态而不是 0） */
+  sessions?: number | null
 }
 
 export interface OverviewTabProps {
@@ -114,6 +118,8 @@ export interface OverviewTabProps {
   models?: ModelsResponse | null
   /** heatmap 段的 `hourly`（周一 1 … 周日 7 × 24 小时的调用数）：旧服务端没有这一项，按可选处理。 */
   hourly?: WeekdayHours[] | null
+  /** 按时段的多指标矩阵；有它时优先于 hourly（hourly 只有调用数）。 */
+  hourlyMetrics?: Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }> | null
   /** 上期成本（显示币种金额）：服务端没有这个字段，不传时副标题显示 —。 */
   previousCost?: number | null
   /** 上期会话数：同上。 */
@@ -188,10 +194,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const isAllRange = range === 'total'
   /** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
    *  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
-  const rawTrendDays = trendDaysOf(props.usage, props.heatmap)
+  const rawTrendDays = trendDaysOf(props.usage, props.heatmap, props.sessions)
   const trendDays = isAllRange
     ? rawTrendDays
-    : (selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, []))
+    : (selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, [], props.sessions))
   /** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
   const hasDailyCalls = trendDays.some((day) => day.calls !== null)
   const rangeWindow = windowOfRange(range)
@@ -201,7 +207,11 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     ? trendDays
     : trendDays.filter((day) => day.date >= rangeWindow.from && day.date <= rangeWindow.to)
   const barValues = barDays.map((day) => metricValueOf(trendMetric, day))
-  const hasBarData = barValues.some((value) => value !== null && value > 0)
+  /** 粒度：今天按小时（24）、7 天按 6 小时（28）、其余按天；取不到小时桶时退回按天。 */
+  const granularDays = granularTrendOf(range, props.usage)
+  const displayDays = granularDays === null ? barDays : granularDays
+  const displayValues = granularDays === null ? barValues : granularDays.map((day) => metricValueOf(trendMetric, day))
+  const hasBarData = displayValues.some((value) => value !== null && value > 0)
   const heatValues = new Map<string, number>()
   for (const day of trendDays) {
     const value = metricValueOf(trendMetric, day)
@@ -265,7 +275,12 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const modelItems = rankItemsOfModels(modelsOfScope(props.models, modelFilter), modelMetric)
 
   // ===== 按时段 =====
-  const hourMatrix = hourlyMatrixOf(props.hourly)
+  const useMetricsMatrix = props.hourlyMetrics != null && props.hourlyMetrics.length > 0
+  const hourMatrixRaw = hourlyMatrixOf(useMetricsMatrix ? props.hourlyMetrics : props.hourly)
+  /** 多指标矩阵里没有 sessions/cost 时不能拿调用数冒充会话数：清掉回退值，让该档显示 —。 */
+  const hourMatrix = useMetricsMatrix && hourMatrixRaw !== null
+    ? hourMatrixRaw.map((weekday) => weekday.map((cell) => ({ ...cell, sessions: cell.sessions })))
+    : hourMatrixRaw
   const hourValues = hourMatrix === null
     ? null
     : hourMatrix.map((weekday) => weekday.map((cell) => hourMetricValueOf(hourMetric, cell)))
@@ -349,7 +364,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
             )
             : <div className={shared.empty}>{trendEmptyText}</div>)
           : (hasBarData
-            ? <TrendBars days={barDays} values={barValues} tooltip={props.tooltip} tipOf={barTipOf} />
+            ? <TrendBars days={displayDays} values={displayValues} tooltip={props.tooltip} tipOf={barTipOf} />
             : <div className={shared.empty}>{trendEmptyText}</div>)}
         <div className={styles.trendFoot}>
           {isAllRange && hasHeatData && (
@@ -529,6 +544,7 @@ function RankPanel<Key extends string>(props: {
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
+  const [showAll, setShowAll] = useState(false)
   const shown = props.items.slice(0, RANK_ROWS)
   const peak = shown.reduce((maximum, item) => (item.value !== null && item.value > maximum ? item.value : maximum), 0)
   return (
@@ -547,9 +563,13 @@ function RankPanel<Key extends string>(props: {
           ))}
         </div>
         {props.total > shown.length && (
-          <span className={styles.panelMore}>
-            {t('overview.more', { total: props.total, rest: Math.max(0, props.total - shown.length) })}
-          </span>
+          <button
+            type="button"
+            className={styles.panelMore}
+            onClick={() => setShowAll(true)}
+            title={t('overview.moreHint')}
+          >{t('overview.more', { total: props.total, rest: Math.max(0, props.total - shown.length) })}
+          </button>
         )}
       </div>
       {shown.length === 0
@@ -567,6 +587,19 @@ function RankPanel<Key extends string>(props: {
             <span className={styles.rankSub}>{item.subText}</span>
           </div>
         ))}
+      {showAll && (
+        <Dialog title={props.title} closeLabel={t('action.close')} onClose={() => setShowAll(false)}>
+          {props.items.length === 0
+            ? <div className={shared.empty}>{t('overview.noData')}</div>
+            : props.items.map((item) => (
+              <div className={styles.rankRow} key={item.key} title={item.title}>
+                <span className={styles.rankName}>{item.name}</span>
+                <span className={styles.rankValue}>{item.valueText}</span>
+                <span className={styles.rankSub}>{item.subText}</span>
+              </div>
+            ))}
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -675,9 +708,54 @@ function tokenTextOf(count: number): string {
 }
 
 /** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
-function trendDaysOf(usage: UsageResponse | null | undefined, heatmap: HeatmapDay[]): TrendDay[] {
+/** 按范围的粒度取桶：今天 → 24 小时；7 天 → 每天 4 个 6 小时桶；其余返回 null（按天）。 */
+function granularTrendOf(range: RangeKey, usage: UsageResponse | null | undefined): TrendDay[] | null {
+  if (usage == null) return null
+  const byDate = usage.hoursByDate ?? null
+  const hourRowOf = (label: string, slot: HourBucket | undefined): TrendDay => ({
+    date: label,
+    tokens: slot === undefined ? 0 : slot.buckets.inputTokens + slot.buckets.outputTokens + slot.buckets.cacheReadTokens,
+    calls: slot === undefined ? 0 : slot.calls,
+    outTokens: slot === undefined ? 0 : slot.buckets.outputTokens,
+    cacheRead: slot === undefined ? 0 : slot.buckets.cacheReadTokens,
+    cost: null,
+    sessions: null,
+  })
+  if (range === 'today') {
+    const hours = usage.hours ?? (byDate === null ? null : byDate[isoDate(new Date())] ?? null)
+    if (hours === null) return null
+    return hours.map((slot, hour) => hourRowOf(String(hour).padStart(2, '0') + '时', slot))
+  }
+  if (range === 'week' && byDate !== null) {
+    const dates = Object.keys(byDate).sort()
+    if (dates.length === 0) return null
+    const rows: TrendDay[] = []
+    for (const date of dates) {
+      const hours = byDate[date]
+      for (let start = 0; start < 24; start += 6) {
+        const merged: HourBucket = { calls: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }
+        for (let hour = start; hour < start + 6; hour += 1) {
+          const slot = hours[hour]
+          if (slot === undefined) continue
+          merged.calls += slot.calls
+          merged.buckets.inputTokens += slot.buckets.inputTokens
+          merged.buckets.outputTokens += slot.buckets.outputTokens
+          merged.buckets.cacheReadTokens += slot.buckets.cacheReadTokens
+          merged.buckets.cacheWriteTokens += slot.buckets.cacheWriteTokens
+        }
+        rows.push(hourRowOf(date.slice(5) + ' ' + String(start).padStart(2, '0') + '时', merged))
+      }
+    }
+    return rows
+  }
+  return null
+}
+
+function trendDaysOf(usage: UsageResponse | null | undefined, heatmap: HeatmapDay[], sessions?: SessionsResponse | null): TrendDay[] {
   const usageDays = usage?.days ?? []
-  if (usageDays.length > 0) return usageDays.map(trendDayOfDay).sort((first, second) => first.date.localeCompare(second.date))
+  const sessionCounts = sessionCountsByDateOf(sessions)
+  const withSessions = (day: TrendDay): TrendDay => ({ ...day, sessions: sessionCounts.get(day.date) ?? 0 })
+  if (usageDays.length > 0) return usageDays.map(trendDayOfDay).map(withSessions).sort((first, second) => first.date.localeCompare(second.date))
   return heatmap
     .map((day) => ({
       date: day.date,
@@ -686,6 +764,7 @@ function trendDaysOf(usage: UsageResponse | null | undefined, heatmap: HeatmapDa
       outTokens: null,
       cacheRead: null,
       cost: null,
+      sessions: sessionCounts.get(day.date) ?? 0,
     }))
     .sort((first, second) => first.date.localeCompare(second.date))
 }
@@ -720,6 +799,7 @@ function metricValueOf(metric: TrendMetric, day: TrendDay): number | null {
   if (metric === 'outTokens') return day.outTokens
   if (metric === 'cacheRead') return day.cacheRead
   if (metric === 'cost') return day.cost
+  if (metric === 'sessions') return day.sessions ?? null
   return null
 }
 
@@ -918,6 +998,28 @@ function hourlyMatrixOf(raw: unknown): HourCell[][] | null {
     matrix[displayIndex] = row.hours
   }
   return matrix
+}
+
+/** 逐日「有活动的会话数」：会话在首末时间覆盖到的每一天都计一次（跨天会话每天各算 1）。 */
+function sessionCountsByDateOf(sessions: SessionsResponse | null | undefined): Map<string, number> {
+  const counts = new Map<string, number>()
+  const dateOf = (ms: number): string => {
+    const date = new Date(ms)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+  for (const row of sessions?.rows ?? []) {
+    const startMs = row.firstTime ?? row.lastTime
+    const endMs = row.lastTime ?? row.firstTime
+    if (startMs === null || endMs === null) continue
+    const start = new Date(startMs)
+    start.setHours(0, 0, 0, 0)
+    const limit = Math.min(endMs, startMs + 365 * 86400000)
+    for (let cursor = start.getTime(); cursor <= limit; cursor += 86400000) {
+      const key = dateOf(cursor)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+  }
+  return counts
 }
 
 /** 取承载七行的那一层数组：原子数组，或 `{ rows: [...] }` / `{ weekdays: [...] }` 这种包一层的写法。 */

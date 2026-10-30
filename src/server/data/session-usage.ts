@@ -120,6 +120,10 @@ export interface ModelUsageRow {
 export interface HourBucket {
   calls: number
   buckets: TokenBuckets
+  /** 该小时有调用的会话数（按会话汇总时每会话记 1，跨会话相加即去重会话数）。 */
+  sessions?: number
+  /** 该小时逐模型 token 桶：按小时计价用（契约只增不减，老消费方忽略即可）。 */
+  models?: ModelUsageRow[]
 }
 
 export interface SessionDaySummary {
@@ -685,7 +689,7 @@ function emptyHours(): HourBucket[] {
 
 /** 把折叠结果汇总成可直接下发的会话用量（按天升序、天内按模型降序）。 */
 export function summarizeSession(fold: SessionFold): SessionSummary {
-  interface DayBucket { calls: number; buckets: TokenBuckets; hours: HourBucket[]; models: Map<string, ModelUsageRow> }
+  interface DayBucket { calls: number; buckets: TokenBuckets; hours: HourBucket[]; models: Map<string, ModelUsageRow>; hourModels: Array<Map<string, ModelUsageRow>> }
   const byDay = new Map<string, DayBucket>()
   const byModel = new Map<string, ModelUsageRow>()
   const totals = zeroBuckets()
@@ -693,13 +697,23 @@ export function summarizeSession(fold: SessionFold): SessionSummary {
   for (const sample of fold.samples.values()) {
     let dayBucket = byDay.get(sample.day)
     if (dayBucket === undefined) {
-      dayBucket = { calls: 0, buckets: zeroBuckets(), hours: emptyHours(), models: new Map() }
+      dayBucket = { calls: 0, buckets: zeroBuckets(), hours: emptyHours(), models: new Map(), hourModels: Array.from({ length: 24 }, () => new Map<string, ModelUsageRow>()) }
       byDay.set(sample.day, dayBucket)
     }
     dayBucket.calls += 1
     addBuckets(dayBucket.buckets, sample.buckets)
     dayBucket.hours[sample.hour].calls += 1
+    dayBucket.hours[sample.hour].sessions = 1
     addBuckets(dayBucket.hours[sample.hour].buckets, sample.buckets)
+    const hourMap = dayBucket.hourModels[sample.hour]
+    let hourModel = hourMap.get(sample.model)
+    if (hourModel === undefined) {
+      hourModel = { key: sample.model, calls: 0, tokens: 0, buckets: zeroBuckets() }
+      hourMap.set(sample.model, hourModel)
+    }
+    hourModel.calls += 1
+    addBuckets(hourModel.buckets, sample.buckets)
+    hourModel.tokens = totalTokens(hourModel.buckets)
     let dayModel = dayBucket.models.get(sample.model)
     if (dayModel === undefined) {
       dayModel = { key: sample.model, calls: 0, tokens: 0, buckets: zeroBuckets() }
@@ -725,7 +739,10 @@ export function summarizeSession(fold: SessionFold): SessionSummary {
       calls: bucket.calls,
       tokens: totalTokens(bucket.buckets),
       buckets: bucket.buckets,
-      hours: bucket.hours,
+      hours: bucket.hours.map((slot, hour) => ({
+        ...slot,
+        models: [...bucket.hourModels[hour].values()].sort((first, second) => second.tokens - first.tokens),
+      })),
       models: [...bucket.models.values()].sort((first, second) => second.tokens - first.tokens),
     }))
     .sort((first, second) => (first.date < second.date ? -1 : first.date > second.date ? 1 : 0))

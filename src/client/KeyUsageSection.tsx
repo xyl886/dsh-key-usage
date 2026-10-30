@@ -87,6 +87,8 @@ export function KeyUsageSection() {
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([])
   /** 「按时段」7×24 矩阵：/heatmap 的 hourly（服务端只给调用数）。 */
   const [hourly, setHourly] = useState<WeekdayHours[]>([])
+  /** 按时段的多指标矩阵（calls / tokens）：服务端没给时留空，回落到 hourly 的调用数。 */
+  const [hourlyMetrics, setHourlyMetrics] = useState<Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }>>([])
   const [usage, setUsage] = useState<UsageResponse | null>(null)
   const [sessions, setSessions] = useState<SessionsResponse | null>(null)
   const [prompts, setPrompts] = useState<PromptsResponse | null>(null)
@@ -168,6 +170,7 @@ export function KeyUsageSection() {
     if (sections.heatmap !== undefined && sections.heatmap !== null) {
       setHeatmap(sections.heatmap.days ?? [])
       setHourly(sections.heatmap.hourly ?? [])
+      setHourlyMetrics(sections.heatmap.hourlyMetrics ?? [])
     }
     // 段为 null 说明这次构建失败（sections 全置 null）：此时不能覆盖已按需取来的数据
     if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
@@ -216,6 +219,7 @@ export function KeyUsageSection() {
     setSummary(summaryResult)
     setHeatmap(heatmapResult?.days ?? [])
     setHourly(heatmapResult?.hourly ?? [])
+    setHourlyMetrics(heatmapResult?.hourlyMetrics ?? [])
     if (includeSessionData) {
       const [sessionResult, projectResult, modelResult] = await Promise.all([loadSessions(), loadProjects(), loadModels()])
       setSessions(sessionResult)
@@ -661,6 +665,7 @@ export function KeyUsageSection() {
               quotas={quotas}
               heatmap={heatmap}
               hourly={hourly}
+              hourlyMetrics={hourlyMetrics}
               range={range}
               usage={scopedUsage}
               sessions={sessions}
