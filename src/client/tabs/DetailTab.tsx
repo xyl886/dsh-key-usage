@@ -11,7 +11,7 @@ import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, useCurrencyDisplay, typ
 import { fmtCalls, fmtShortDate, fmtTokens, isoDate } from '../core/format.ts'
 import { useT } from '../core/i18n.ts'
 import { selectionOf } from '../core/filter-selection.ts'
-import type { Channel, ChannelDailySummary, CostSource, DaySummary, ModelSummary, UsageResponse, UsageTotals } from '../core/types.ts'
+import type { Channel, ChannelDailySummary, CostSource, DaySummary, HourMetricCell, ModelSummary, SessionsResponse, UsageResponse, UsageTotals } from '../core/types.ts'
 import { costSourceLabelOf } from '../core/pricing.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import detailStyles from '../styles/detail.module.css'
@@ -513,10 +513,35 @@ function metricTextOf(day: ChannelDailySummary, metric: MetricKey): string {
   return '—'
 }
 
-function buildDailyBars(props: { usage: UsageResponse; from: string; to: string; metric: MetricKey }): DailyBar[] {
+/** 某天有活动的会话数：会话首末时间与该日有交集即计 1。 */
+function daySessionCountsOf(sessions: SessionsResponse | null): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const row of sessions?.rows ?? []) {
+    if (row.calls <= 0) continue
+    const startMs = row.firstTime ?? row.lastTime
+    const endMs = row.lastTime ?? row.firstTime
+    if (startMs === null || endMs === null) continue
+    const start = new Date(startMs)
+    start.setHours(0, 0, 0, 0)
+    const limit = Math.min(endMs, startMs + 120 * 86400000)
+    for (let cursor = start.getTime(); cursor <= limit; cursor += 86400000) {
+      const date = new Date(cursor)
+      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+  }
+  return counts
+}
+
+function buildDailyBars(props: { usage: UsageResponse; from: string; to: string; metric: MetricKey; sessions: SessionsResponse | null }): DailyBar[] {
   const byDate = new Map(props.usage.days.map((day) => [day.date, day]))
+  const sessionCounts = daySessionCountsOf(props.sessions)
   const raw = dateKeysOfRange(props.from, props.to).map((date) => {
     const day = byDate.get(date) ?? null
+    if (props.metric === 'sessions') {
+      const value = sessionCounts.get(date) ?? 0
+      return { date, value, text: value > 0 ? fmtCalls(value) : '—' }
+    }
     return {
       date,
       value: day === null ? 0 : metricValueOf(day, props.metric),
@@ -536,6 +561,62 @@ function buildDailyBars(props: { usage: UsageResponse; from: string; to: string;
 }
 
 /** 横轴刻度：固定 `AXIS_LABEL_COUNT` 个等距日期（首尾都含）；跨度不足这个数时逐根标。 */
+/** 分时桶的指标值：费用 / Token / 输出 Token / 会话四档都来自 /usage 的 hoursByDate。 */
+function hourCellValueOf(cell: HourMetricCell, metric: MetricKey): number {
+  if (metric === 'tokens') return cell.tokens
+  if (metric === 'output') return cell.outputTokens
+  if (metric === 'sessions') return cell.sessions
+  return 0
+}
+
+/** 今天 → 24 根小时柱；7 天 → 28 根 6 小时柱（标签带日期段，悬停看原始区间）。 */
+function buildHourBucketBars(props: { usage: UsageResponse; range: RangeKey; metric: MetricKey; currency: string }): DailyBar[] {
+  const byDate = props.usage.hoursByDate ?? null
+  if (byDate === null) return []
+  const dates = Object.keys(byDate).sort()
+  const raw: Array<{ date: string; short: string; value: number; text: string }> = []
+  const push = (date: string, short: string, cells: HourMetricCell[]): void => {
+    const value = props.metric === 'cost'
+      ? Math.round(cells.reduce((total, cell) => total + (cell.cost ?? 0), 0) * 100) / 100
+      : cells.reduce((total, cell) => total + hourCellValueOf(cell, props.metric), 0)
+    const costsByCurrency: Record<string, number> = {}
+    for (const cell of cells) {
+      const byCurrency: Record<string, number> = cell.costsByCurrency ?? {}
+      for (const [key, amount] of Object.entries(byCurrency)) costsByCurrency[key] = (costsByCurrency[key] ?? 0) + amount
+    }
+    const text = props.metric === 'cost'
+      ? (value > 0 ? moneyTextOf(props.currency, value) : '—')
+      : props.metric === 'sessions' ? fmtCalls(value) : fmtTokens(value)
+    void costsByCurrency
+    raw.push({ date, short, value, text })
+  }
+  if (props.range === 'today') {
+    const date = dates[dates.length - 1]
+    if (date === undefined) return []
+    const cells = byDate[date] ?? []
+    for (let hour = 0; hour < 24; hour += 1) {
+      push(date + ' ' + String(hour).padStart(2, '0') + ':00', String(hour).padStart(2, '0') + '时', cells[hour] === undefined ? [] : [cells[hour]])
+    }
+  } else {
+    for (const date of dates) {
+      const cells = byDate[date] ?? []
+      for (let start = 0; start < 24; start += 6) {
+        push(date + ' ' + String(start).padStart(2, '0') + ':00-' + String(start + 6).padStart(2, '0') + ':00', date.slice(5) + ' ' + String(start).padStart(2, '0') + '时', cells.slice(start, start + 6))
+      }
+    }
+  }
+  let peak = 0
+  for (const item of raw) if (item.value > peak) peak = item.value
+  return raw.map((item) => ({
+    date: item.date,
+    short: item.short,
+    value: item.value,
+    height: peak > 0 ? String(Math.max(1, Math.round(item.value / peak * 100))) + '%' : '0%',
+    peak: item.value === peak && peak > 0,
+    text: item.text,
+  }))
+}
+
 function axisTicksOf(bars: DailyBar[]): DailyBar[] {
   if (bars.length <= AXIS_LABEL_COUNT) return bars
   const step = (bars.length - 1) / (AXIS_LABEL_COUNT - 1)
@@ -561,6 +642,8 @@ export function DetailTab(props: {
   pricingRevision: number
   /** 全局模型筛选（逗号分隔多选，空串 = 不过滤）：只作用于 `/usage` 的模型桶，通道过滤已在页头做完。 */
   modelFilter?: string
+  /** 会话段：按天粒度画「会话」档时用（窗口内有活动的会话数）。 */
+  sessions?: SessionsResponse | null
 }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
@@ -590,9 +673,13 @@ export function DetailTab(props: {
     [scopedUsage, channels, dimension, moneyKey],
   )
   const sortedRows = useMemo(() => sortDetailRows(rows, sortKey, sortDirection), [rows, sortKey, sortDirection])
+  /** 分时范围：今天按小时（24 桶）、7 天按 6 小时（28 桶）；其余范围仍按天。 */
+  const granularRange = props.range === 'today' || props.range === 'week'
   const bars = useMemo(
-    () => (scopedUsage === null || metric === 'sessions' ? [] : buildDailyBars({ usage: scopedUsage, from: bounds.from, to: bounds.to, metric })),
-    [scopedUsage, metric, bounds.from, bounds.to, moneyKey],
+    () => (scopedUsage === null ? [] : granularRange
+      ? buildHourBucketBars({ usage: scopedUsage, range: props.range, metric, currency: currency.display })
+      : buildDailyBars({ usage: scopedUsage, from: bounds.from, to: bounds.to, metric, sessions: props.sessions ?? null })),
+    [scopedUsage, metric, granularRange, props.range, props.sessions, bounds.from, bounds.to, moneyKey],
   )
   if (scopedUsage === null) return <div className={styles.empty}>{t('d.ledgerLoading')}</div>
 
@@ -614,28 +701,35 @@ export function DetailTab(props: {
     : deltaOf(totalAmount, comparableMoneyOf(previousTotal))
 
   const summaryText = (() => {
-    if (metric === 'sessions') return '—'
-    const totalText = metric === 'cost'
-      ? totalCostText
-      : metric === 'tokens' ? fmtTokens(totalTokens) : fmtTokens(safeTotals.outputTokens)
+    const totalText = metric === 'sessions'
+      ? fmtCalls(bars.reduce((total, bar) => total + bar.value, 0))
+      : metric === 'cost'
+        ? totalCostText
+        : metric === 'tokens' ? fmtTokens(totalTokens) : fmtTokens(safeTotals.outputTokens)
+    // 分时范围按「有数的桶」求均值，按天范围按活跃天（分母含义不同，文案也随之切换）
+    const bucketCount = bars.filter((bar) => bar.value > 0).length
     let averageText = '—'
-    if (activeDays > 0) {
+    if (metric === 'sessions') {
+      averageText = bucketCount === 0 ? '—' : fmtCalls(Math.round(bars.reduce((total, bar) => total + bar.value, 0) / bucketCount))
+    } else if (activeDays > 0) {
       if (metric === 'cost') {
         const view = rowMoneyViewOf(safeTotals)
         if (!view.mixed && view.currency !== '' && view.amount > 0) {
-          averageText = (view.converted ? '≈' : '') + moneyTextOf(view.currency, view.amount / activeDays)
+          const divisor = granularRange ? Math.max(1, bucketCount) : activeDays
+          averageText = (view.converted ? '≈' : '') + moneyTextOf(view.currency, view.amount / divisor)
         }
       } else {
         const total = metric === 'tokens' ? totalTokens : safeTotals.outputTokens
-        averageText = fmtTokens(Math.round(total / activeDays))
+        const divisor = granularRange ? Math.max(1, bucketCount) : activeDays
+        averageText = fmtTokens(Math.round(total / divisor))
       }
     }
     let peakBar: DailyBar | null = null
     for (const bar of bars) if (bar.value > 0 && (peakBar === null || bar.value > peakBar.value)) peakBar = bar
     return [
       t('detail.total') + ' ' + totalText,
-      t('detail.dailyAvg') + ' ' + averageText,
-      t('detail.peak') + ' ' + (peakBar === null ? '—' : fmtShortDate(peakBar.date)),
+      t(granularRange ? 'detail.avgPerBucket' : 'detail.dailyAvg') + ' ' + averageText,
+      t('detail.peak') + ' ' + (peakBar === null ? '—' : peakBar.short),
     ].join(' · ')
   })()
 
@@ -675,7 +769,7 @@ export function DetailTab(props: {
 
       <div className={detailStyles.panel}>
         <div className={detailStyles.panelHead}>
-          <span className={detailStyles.panelTitle}>{t('detail.dailyCost')}</span>
+          <span className={detailStyles.panelTitle}>{t(granularRange ? 'detail.hourlyCost' : 'detail.dailyCost')}</span>
           <div className={detailStyles.metricTabs}>
             {METRIC_ORDER.map((key) => (
               <button
@@ -691,8 +785,8 @@ export function DetailTab(props: {
           </div>
           <span className={detailStyles.panelMore}>{summaryText}</span>
         </div>
-        {metric === 'sessions' || scopedUsage.days.length === 0
-          ? <div className={styles.empty}>{metric === 'sessions' ? '—' : t('empty.noUsage')}</div>
+        {scopedUsage.days.length === 0
+          ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : (
             <>
               <div

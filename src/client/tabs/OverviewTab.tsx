@@ -24,7 +24,7 @@ import type {
   SummaryResponse,
   UsageResponse,
   UsageTotals,
-  HourBucket,
+  HourMetricCell,
   WeekdayHours,
 } from '../core/types.ts'
 import { Dialog } from '../components/ui/Dialog.tsx'
@@ -185,8 +185,11 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   /** 会话数：窗口内有活动即计（列表被截断时退回服务端统计，不拿 — 冒充没有会话）。 */
   const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter)
   const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length
-  const sessionFrom = isMonthRange ? monthFrom : sessionFromOf(range)
-  const sessionCount = sessionCountOf(scopedSessions, sessionFrom, rawSessionRowCount)
+  const sessionWindow = isMonthRange
+    ? (monthFrom === null || monthTo === null ? null : { from: monthFrom, to: monthTo })
+    : windowOfRange(range)
+  const sessionCount = sessionCountInWindowOf(scopedSessions, sessionWindow)
+    ?? (range === 'total' ? sessionCountOf(scopedSessions, 'all', rawSessionRowCount) : null)
 
   // ===== 上期：同一组筛选、上一等长窗口 =====
   const prevTotals = scopedPrev?.totals ?? null
@@ -469,6 +472,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
       <div className={styles.panel}>
         <div className={styles.panelHead}>
           <b className={styles.panelTitle}>{t('overview.hourly')}</b>
+          <span className={styles.panelHint}>{t('overview.hoursLongTerm')}</span>
           <div className={styles.metricTabs}>
             {HOUR_METRICS.map(([metric, labelKey]) => (
               <button
@@ -840,42 +844,38 @@ function tokenTextOf(count: number): string {
 }
 
 /** 逐日序列：有 usage 只用它的 days（父级已按当前范围请求），否则退回 heatmap 的逐日总量。 */
-/** 按范围的粒度取桶：今天 → 24 小时；7 天 → 每天 4 个 6 小时桶；其余返回 null（按天）。 */
+/** 粒度的桶：今天 → 24 小时；7 天 → 每天 4 个 6 小时桶；其余返回 null（按天）。 */
 function granularTrendOf(range: RangeKey, usage: UsageResponse | null | undefined): TrendDay[] | null {
-  if (usage == null) return null
-  const byDate = usage.hoursByDate ?? null
-  const hourRowOf = (label: string, slot: HourBucket | undefined): TrendDay => ({
-    date: label,
-    tokens: slot === undefined ? 0 : slot.buckets.inputTokens + slot.buckets.outputTokens + slot.buckets.cacheReadTokens,
-    calls: slot === undefined ? 0 : slot.calls,
-    outTokens: slot === undefined ? 0 : slot.buckets.outputTokens,
-    cacheRead: slot === undefined ? 0 : slot.buckets.cacheReadTokens,
-    cost: null,
-    sessions: null,
-  })
-  if (range === 'today') {
-    const hours = usage.hours ?? (byDate === null ? null : byDate[isoDate(new Date())] ?? null)
-    if (hours === null) return null
-    return hours.map((slot, hour) => hourRowOf(String(hour).padStart(2, '0') + '时', slot))
+  const byDate = usage?.hoursByDate ?? null
+  if (byDate === null) return null
+  const dates = Object.keys(byDate).sort()
+  if (dates.length === 0) return null
+  const rowOf = (label: string, cells: HourMetricCell[] | undefined): TrendDay => {
+    const list = cells ?? []
+    const cost = list.some((cell) => cell.cost !== null)
+      ? Math.round(list.reduce((total, cell) => total + (cell.cost ?? 0), 0) * 100) / 100
+      : null
+    return {
+      date: label,
+      tokens: list.reduce((total, cell) => total + cell.tokens, 0),
+      calls: list.reduce((total, cell) => total + cell.calls, 0),
+      outTokens: list.reduce((total, cell) => total + cell.outputTokens, 0),
+      cacheRead: list.reduce((total, cell) => total + cell.cacheReadTokens, 0),
+      cost,
+      sessions: list.reduce((total, cell) => total + cell.sessions, 0),
+    }
   }
-  if (range === 'week' && byDate !== null) {
-    const dates = Object.keys(byDate).sort()
-    if (dates.length === 0) return null
+  if (range === 'today') {
+    const date = dates[dates.length - 1]
+    const dayCells = byDate[date] ?? []
+    return dayCells.map((cell, hour) => rowOf(String(hour).padStart(2, '0') + '时', [cell]))
+  }
+  if (range === 'week') {
     const rows: TrendDay[] = []
     for (const date of dates) {
-      const hours = byDate[date]
+      const dayCells = byDate[date] ?? []
       for (let start = 0; start < 24; start += 6) {
-        const merged: HourBucket = { calls: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }
-        for (let hour = start; hour < start + 6; hour += 1) {
-          const slot = hours[hour]
-          if (slot === undefined) continue
-          merged.calls += slot.calls
-          merged.buckets.inputTokens += slot.buckets.inputTokens
-          merged.buckets.outputTokens += slot.buckets.outputTokens
-          merged.buckets.cacheReadTokens += slot.buckets.cacheReadTokens
-          merged.buckets.cacheWriteTokens += slot.buckets.cacheWriteTokens
-        }
-        rows.push(hourRowOf(date.slice(5) + ' ' + String(start).padStart(2, '0') + '时', merged))
+        rows.push(rowOf(date.slice(5) + ' ' + String(start).padStart(2, '0') + '时', dayCells.slice(start, start + 6)))
       }
     }
     return rows

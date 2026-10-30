@@ -161,3 +161,7 @@
 /* KPI 副标一行内截断：卡片更矮更齐，长文案不再把卡片撑成两行 */
 .kpiDetail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+
+/* 口径标签（按时段是长期画像，不随范围变） */
+.panelHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; margin-left: 6px; font-weight: 400; }
+

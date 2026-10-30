@@ -221,6 +221,77 @@ function pricingHoursByDateOf(records: Parameters<typeof hoursByDateOf>[0]): Map
  * 一周 × 24 小时的调用数矩阵（原型「按时段」热力图）：weekday 1=周一 … 7=周日，hours 长度固定 24。
  * 每格是该星期几在该小时的调用数累加。
  */
+export interface HourMetricCell {
+  calls: number
+  tokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  sessions: number
+  cost: number | null
+  /** 逐币种小计：与按天成本同口径（混币种直接相加的 cost 只作兜底）。 */
+  costsByCurrency: Record<string, number>
+}
+
+/** 单个小时槽的金额：该槽的逐模型桶按价目算，错峰按「星期几 + 小时」判定（与按天成本同一套价目）。 */
+function hourCostOf(slot: { models?: ReadonlyMap<string, { calls: number; tokens: number; buckets: Record<string, number> }> }, weekday: number, hour: number): { cost: number | null; costsByCurrency: Record<string, number> } {
+  const empty = { cost: null as number | null, costsByCurrency: {} as Record<string, number> }
+  const models = slot.models
+  if (models === undefined || models.size === 0) return empty
+  const hourSlots: PricingUsageRow[] = Array.from({ length: 24 }, () => ({
+    provider: '', model: '', calls: 0, tokens: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+  }))
+  let total: number | null = null
+  const byCurrency: Record<string, number> = {}
+  for (const [key, model] of models) {
+    const cut = key.indexOf('|')
+    const provider = cut > 0 ? key.slice(0, cut) : ''
+    const name = cut > 0 ? key.slice(cut + 1) : key
+    const inputTokens = model.buckets.inputTokens ?? 0
+    const outputTokens = model.buckets.outputTokens ?? 0
+    const cacheReadTokens = model.buckets.cacheReadTokens ?? 0
+    const cacheWriteTokens = model.buckets.cacheWriteTokens ?? 0
+    const row: PricingUsageRow = { provider, model: name, calls: model.calls, tokens: inputTokens + outputTokens + cacheReadTokens, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }
+    hourSlots[hour] = row
+    const priced = priceRowsOf([row], { hours: hourSlots, hoursDay: weekday })[0]
+    if (priced.cost === null || priced.rule === null) continue
+    total = (total ?? 0) + priced.cost
+    const currency = priced.rule.currency
+    byCurrency[currency] = Math.round(((byCurrency[currency] ?? 0) + priced.cost) * 100) / 100
+  }
+  return { cost: total === null ? null : Math.round(total * 100) / 100, costsByCurrency: byCurrency }
+}
+
+/** 指定窗口内每天 24 小时的指标桶：给「按小时 / 按 6 小时」的图表用。 */
+export function hourMetricsByDateOf(
+  records: Parameters<typeof hoursByDateOf>[0],
+  from: string,
+  to: string,
+): Record<string, HourMetricCell[]> {
+  const out: Record<string, HourMetricCell[]> = {}
+  if (from === '' || to === '' || from > to) return out
+  for (const [date, slots] of hoursByDateOf(records)) {
+    if (date < from || date > to) continue
+    const weekday = isoDayOf(new Date(date + 'T12:00:00'))
+    out[date] = Array.from({ length: 24 }, (_, hour) => {
+      const slot = slots[hour]
+      if (slot === undefined) return { calls: 0, tokens: 0, outputTokens: 0, cacheReadTokens: 0, sessions: 0, cost: null, costsByCurrency: {} }
+      const buckets = slot.buckets ?? {}
+      const inputTokens = buckets.inputTokens ?? 0
+      const outputTokens = buckets.outputTokens ?? 0
+      const cacheReadTokens = buckets.cacheReadTokens ?? 0
+      return {
+        calls: slot.calls,
+        tokens: inputTokens + outputTokens + cacheReadTokens,
+        outputTokens,
+        cacheReadTokens,
+        sessions: slot.sessions ?? (slot.calls > 0 ? 1 : 0),
+        ...hourCostOf(slot, weekday >= 1 && weekday <= 7 ? weekday : 1, hour),
+      }
+    })
+  }
+  return out
+}
+
 /** 一周 × 24 小时的指标矩阵（对象形态，给「按时段」多指标用）：calls / tokens 都是真值，cost 与 sessions 没有逐小时依据，宁可不给。 */
 export function weekHourlyMetricsOf(
   byDate: ReadonlyMap<string, ReadonlyArray<{
@@ -852,6 +923,9 @@ export function mountKeyUsageRoutes(
     const merged = mergeDailySeries(aggregateRange(ledger, from, to, providerFilter).days, sessionRows, from, to)
     // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
     const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
+    // 按日期 × 小时：趋势/明细的分时视图取这里（窗口上限 120 天，避免自定义长窗口把响应撑大）
+    const windowDays = from !== '' && to !== '' ? Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1 : 0
+    const hoursByDate = windowDays > 0 && windowDays <= 120 ? hourMetricsByDateOf(collection.records, from, to) : null
     // 成本一律按天取小时槽加权（单日与多天同口径，多天不再退化成「全按高峰价」）
     const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
     const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
@@ -872,6 +946,7 @@ export function mountKeyUsageRoutes(
       availableFrom,
       availableTo,
       hours,
+      hoursByDate,
     }
   }
 

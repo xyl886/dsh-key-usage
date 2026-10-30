@@ -113,6 +113,20 @@ export interface UsageTotals extends DaySummary {
   cacheSavedByCurrency?: CostsByCurrency
 }
 
+/** 按日期 × 小时的指标桶（/usage 的 hoursByDate）：趋势与明细的分时视图取这里。 */
+export interface HourMetricCell {
+  calls: number
+  tokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  /** 该小时有调用的会话数。 */
+  sessions: number
+  /** 该小时按价目算出的成本（含错峰）；没有价目依据时为 null。 */
+  cost: number | null
+  /** 逐币种小计：与按天成本同口径（cost 是混币种直接相加，只作兜底）。 */
+  costsByCurrency?: Record<string, number>
+}
+
 export interface UsageResponse {
   totals: UsageTotals | null
   days: ChannelDailySummary[]
@@ -121,7 +135,7 @@ export interface UsageResponse {
   /** 仅单日范围返回：来自会话事件的 24 小时分桶。 */
   hours: HourBucket[] | null
   /** 逐日 24 小时桶（趋势按小时 / 按 6 小时取数用）；旧服务端没有这一项时按缺省处理。 */
-  hoursByDate?: Record<string, HourBucket[]> | null
+  hoursByDate?: Record<string, HourMetricCell[]> | null
   /** 由会话事件补齐的日期（台账停更后的那些天，界面据此标注来源）。 */
   sessionDates: string[]
 }

@@ -235,6 +235,16 @@ assert.equal(filtered.body.totals.calls, 1)
 assert.equal(usage.body.totals.cacheSaved, 0)
 assert.deepEqual(usage.body.totals.cacheSavedByCurrency, { USD: 0 })
 
+// 按日期 × 小时的指标桶：趋势 / 明细的分时视图取这里
+assert.ok(usage.body.hoursByDate !== null, '窗口内下发逐日小时桶')
+const ledgerHourCells = usage.body.hoursByDate[ledgerNewerDay]
+assert.ok(Array.isArray(ledgerHourCells), '那一天有 24 个小时桶')
+assert.equal(ledgerHourCells[9].calls, 1, '9:15 那次调用进了小时桶')
+assert.equal(ledgerHourCells[9].sessions, 1, '该小时有 1 个会话')
+assert.equal(typeof ledgerHourCells[9].tokens, 'number', '小时桶带 token 合计')
+const olderHourCells = usage.body.hoursByDate[ledgerOlderDay]
+assert.ok(olderHourCells === undefined || Array.isArray(olderHourCells), '台账天没有小时槽时可以缺省')
+
 // 热力图：台账两天 + 会话补齐的一天
 const heatmap = await callEndpoint('/dsh-key-usage/heatmap')
 assert.equal(heatmap.body.days.length, 3)
