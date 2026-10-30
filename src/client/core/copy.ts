@@ -424,6 +424,7 @@ export const zh: Record<string, string> = {
   'source.aggregate': '聚合',
   'source.none': '无依据',
 
+  'quota.resetPrefix': '重置于 ',
   'quota.resetAt': '重置于',
   'quota.noResponse': '没拿到服务端响应',
   'quota.fxBad': '汇率无法解析',
@@ -960,6 +961,7 @@ export const en: Record<string, string> = {
   'source.aggregate': 'Aggregate',
   'source.none': 'None',
 
+  'quota.resetPrefix': '重置于 ',
   'quota.resetAt': 'Resets',
   'quota.noResponse': 'No response',
   'quota.fxBad': 'Bad FX data',

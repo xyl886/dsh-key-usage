@@ -419,6 +419,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"source.catalog": "官方价",
 			"source.aggregate": "聚合",
 			"source.none": "无依据",
+			"quota.resetPrefix": "重置于 ",
 			"quota.resetAt": "重置于",
 			"quota.noResponse": "没拿到服务端响应",
 			"quota.fxBad": "汇率无法解析",
@@ -937,6 +938,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"source.catalog": "Catalog",
 			"source.aggregate": "Aggregate",
 			"source.none": "None",
+			"quota.resetPrefix": "重置于 ",
 			"quota.resetAt": "Resets",
 			"quota.noResponse": "No response",
 			"quota.fxBad": "Bad FX data",
@@ -7221,7 +7223,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/quota.module.css.mjs
-		const css$5 = ".ohwLxW_cardGrid{grid-template-columns:repeat(auto-fit,minmax(292px,1fr));align-items:start;gap:10px;display:grid}.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}@media (max-width:360px){.ohwLxW_cardGrid,.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}}.ohwLxW_cardToolbar{align-items:center;gap:8px;margin-bottom:12px;display:flex}.ohwLxW_chanCard{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;flex-direction:column;gap:8px;min-width:0;padding:12px 14px;display:flex}.ohwLxW_chanHead{min-width:0;font:inherit;color:inherit;text-align:left;background:0 0;border:0;align-items:center;gap:7px;margin:0;padding:0;display:flex}.ohwLxW_chanHeadButton{cursor:pointer;border-radius:6px;width:100%}.ohwLxW_chanHeadButton:hover .ohwLxW_chanName{color:var(--dsw-alias-state-business-primary,#5b8cff)}.ohwLxW_chanHeadButton:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_chanName{min-width:0;font-size:var(--ku-title,17px);color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-weight:600;overflow:hidden}.ohwLxW_chanKind{white-space:nowrap;background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);border-radius:999px;padding:0 6px}.ohwLxW_chanChecked{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);margin-left:auto}.ohwLxW_chanBody{min-height:0;font-size:var(--ku-body,14px);grid-auto-rows:auto;align-content:start;align-items:center;gap:8px;display:grid}.ohwLxW_windowLine{flex-direction:column;gap:4px;min-width:0;display:flex}.ohwLxW_windowTop{justify-content:space-between;align-items:baseline;gap:10px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_meter{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:8px;display:block;overflow:hidden}.ohwLxW_meter>i{border-radius:4px;height:100%;display:block}.ohwLxW_windowPercent{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px;font-weight:600}.ohwLxW_windowReset{text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.ohwLxW_cardLine{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;display:flex}.ohwLxW_lineKey{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.ohwLxW_lineValue{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_lineValueNumber{font-size:var(--ku-kpi,20px);font-weight:600}.ohwLxW_ratePanel{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;margin-top:10px;padding:14px 16px}.ohwLxW_ratePanelHead{align-items:center;gap:7px;margin-bottom:8px;display:flex}.ohwLxW_ratePanelTitle{font-size:var(--ku-title,17px);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_ratePanelClose{cursor:pointer;font:inherit;font-size:var(--ku-body,14px);color:var(--dsw-alias-label-tertiary,#67676f);background:0 0;border:0;border-radius:4px;margin-left:auto;padding:0 2px}.ohwLxW_ratePanelClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);margin-bottom:8px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:var(--ku-body,14px);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable td{text-align:right;font-size:var(--ku-body,14px);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:var(--ku-body,14px)}.ohwLxW_rateSourceNone{font-size:var(--ku-body,14px);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);padding:8px 0}";
+		const css$5 = ".ohwLxW_cardGrid{grid-template-columns:repeat(auto-fit,minmax(292px,1fr));align-items:start;gap:10px;display:grid}.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}@media (max-width:360px){.ohwLxW_cardGrid,.ohwLxW_cardGrid.ohwLxW_cardGridSingle{grid-template-columns:minmax(0,1fr)}}.ohwLxW_cardToolbar{align-items:center;gap:8px;margin-bottom:12px;display:flex}.ohwLxW_chanCard{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;flex-direction:column;gap:8px;min-width:0;padding:12px 14px;display:flex}.ohwLxW_chanHead{min-width:0;font:inherit;color:inherit;text-align:left;background:0 0;border:0;align-items:center;gap:7px;margin:0;padding:0;display:flex}.ohwLxW_chanHeadButton{cursor:pointer;border-radius:6px;width:100%}.ohwLxW_chanHeadButton:hover .ohwLxW_chanName{color:var(--dsw-alias-state-business-primary,#5b8cff)}.ohwLxW_chanHeadButton:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ohwLxW_chanName{min-width:0;font-size:var(--ku-title,17px);color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;font-weight:600;overflow:hidden}.ohwLxW_chanKind{white-space:nowrap;background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);border-radius:999px;padding:0 6px}.ohwLxW_chanChecked{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);margin-left:auto}.ohwLxW_chanBody{min-height:0;font-size:var(--ku-body,14px);grid-auto-rows:auto;align-content:start;align-items:center;gap:8px;display:grid}.ohwLxW_windowLine{flex-direction:column;gap:4px;min-width:0;display:flex}.ohwLxW_windowTop{align-items:baseline;gap:8px;display:flex}.ohwLxW_windowName{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_meter{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:8px;display:block;overflow:hidden}.ohwLxW_meter>i{border-radius:4px;height:100%;display:block}.ohwLxW_windowPercent{color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px;font-weight:600}.ohwLxW_windowReset{text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.ohwLxW_cardLine{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;display:flex}.ohwLxW_lineKey{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.ohwLxW_lineValue{color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ohwLxW_lineValueNumber{font-size:var(--ku-kpi,20px);font-weight:600}.ohwLxW_ratePanel{border:1px solid var(--dsw-alias-border-l1,#80808c47);background:var(--dsw-alias-bg-layer-2,#1d1d22);border-radius:9px;margin-top:10px;padding:14px 16px}.ohwLxW_ratePanelHead{align-items:center;gap:7px;margin-bottom:8px;display:flex}.ohwLxW_ratePanelTitle{font-size:var(--ku-title,17px);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.ohwLxW_ratePanelClose{cursor:pointer;font:inherit;font-size:var(--ku-body,14px);color:var(--dsw-alias-label-tertiary,#67676f);background:0 0;border:0;border-radius:4px;margin-left:auto;padding:0 2px}.ohwLxW_ratePanelClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateScroll{overflow-x:auto}.ohwLxW_rateHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);margin-bottom:8px;line-height:1.7}.ohwLxW_rateTable{border-collapse:collapse;width:100%}.ohwLxW_rateTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:var(--ku-body,14px);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:6px 8px}.ohwLxW_rateTable td{text-align:right;font-size:var(--ku-body,14px);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:7px 8px}.ohwLxW_rateTable th:first-child,.ohwLxW_rateTable td:first-child{text-align:left}.ohwLxW_rateTable td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.ohwLxW_rateModel{font-family:ui-monospace,Consolas,monospace;font-size:var(--ku-body,14px)}.ohwLxW_rateSourceNone{font-size:var(--ku-body,14px);color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;border:1px dashed;border-radius:999px;padding:0 6px;line-height:1.7;display:inline-block}.ohwLxW_rateEmpty{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-body,14px);padding:8px 0}";
 		const tagId$5 = "dsh-key-usage/quota.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7475,30 +7477,30 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const percent = Math.max(0, Math.min(100, Math.round(row.percent)));
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: quota_module_css_default.windowLine,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: quota_module_css_default.windowTop,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: quota_module_css_default.windowTop,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: quota_module_css_default.windowName,
 								children: row.label
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: quota_module_css_default.windowReset,
+								title: t("quota.resetAt"),
+								children: [t("quota.resetPrefix"), row.reset]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 								className: quota_module_css_default.windowPercent,
 								children: [percent, "%"]
-							})]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: quota_module_css_default.meter,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
-								width: percent + "%",
-								background: quotaBarColor(percent)
-							} })
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: quota_module_css_default.windowReset,
-							title: t("quota.resetAt"),
-							children: row.reset
-						})
-					]
+							})
+						]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: quota_module_css_default.meter,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: {
+							width: percent + "%",
+							background: quotaBarColor(percent)
+						} })
+					})]
 				});
 			}
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {

@@ -261,10 +261,10 @@ function CardRowView(props: { row: CardRow }): ReactNode {
       <div className={quotaStyles.windowLine}>
         <div className={quotaStyles.windowTop}>
           <span className={quotaStyles.windowName}>{row.label}</span>
+          <span className={quotaStyles.windowReset} title={t('quota.resetAt')}>{t('quota.resetPrefix')}{row.reset}</span>
           <span className={quotaStyles.windowPercent}>{percent}%</span>
         </div>
         <span className={quotaStyles.meter}><i style={{ width: percent + '%', background: quotaBarColor(percent) }} /></span>
-        <span className={quotaStyles.windowReset} title={t('quota.resetAt')}>{row.reset}</span>
       </div>
     )
   }

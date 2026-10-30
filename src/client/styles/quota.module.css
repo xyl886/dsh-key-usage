@@ -43,7 +43,7 @@
    百分比列取 46px —— 数字是 18px，原型 13px 下的 38px 放不下 100%。
    进度条吃剩余宽度，卡片越宽越长。 */
 .windowLine { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.windowTop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.windowTop { display: flex; align-items: baseline; gap: 8px; }
 .windowName { color: var(--dsw-alias-label-secondary, #9a9aa6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meter { display: block; height: 8px; border-radius: 4px; overflow: hidden; background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); }
 .meter > i { display: block; height: 100%; border-radius: 4px; }
