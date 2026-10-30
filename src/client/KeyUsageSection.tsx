@@ -552,16 +552,6 @@ export function KeyUsageSection() {
           <button
             type="button"
             className={styles.iconBtn}
-            disabled={loading}
-            onClick={refresh}
-            aria-label={loading ? t('action.refreshing') : t('action.refresh')}
-            aria-busy={loading}
-          >
-            <span className={loading ? styles.refreshIconSpin : styles.refreshIcon} aria-hidden="true">↻</span>
-          </button>
-          <button
-            type="button"
-            className={styles.iconBtn}
             onClick={() => { setSettingsTab('general'); setShowSettings(true) }}
             aria-label={t('action.settings')}
             title={t('action.settings')}
@@ -576,6 +566,16 @@ export function KeyUsageSection() {
     <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
   </svg>
 </a>
+          <button
+            type="button"
+            className={styles.iconBtn}
+            disabled={loading}
+            onClick={refresh}
+            aria-label={loading ? t('action.refreshing') : t('action.refresh')}
+            aria-busy={loading}
+          >
+            <span className={loading ? styles.refreshIconSpin : styles.refreshIcon} aria-hidden="true">↻</span>
+          </button>
 
         </span>
       </div>
@@ -647,7 +647,6 @@ export function KeyUsageSection() {
       <div className={styles.sections}>
         {wants('quota') && (
           <section className={styles.pageSection} id="sec-quota">
-            <h2 className={styles.pageSectionTitle}>{t('tab.quota')}</h2>
             <QuotaTab
               onOpenProvider={(provider) => setQuotaDialog(provider)}
               channels={selectedChannels}
@@ -660,7 +659,6 @@ export function KeyUsageSection() {
         )}
         {wants('overview') && (
           <section className={styles.pageSection} id="sec-overview">
-            <h2 className={styles.pageSectionTitle}>{t('tab.overview')}</h2>
             <OverviewTab
               previousCost={previousUsage === null || previousUsage.totals === null ? null : previousUsage.totals.cost}
               previousUsage={scopedPreviousUsage}
@@ -687,7 +685,6 @@ export function KeyUsageSection() {
         )}
         {wants('detail') && (
           <section className={styles.pageSection} id="sec-detail">
-            <h2 className={styles.pageSectionTitle}>{t('tab.detail')}</h2>
             <DetailTab
               usage={scopedUsage}
               channels={channels}
@@ -708,7 +705,6 @@ export function KeyUsageSection() {
         )}
         {wants('distribution') && (
           <section className={styles.pageSection} id="sec-distribution">
-            <h2 className={styles.pageSectionTitle}>{t('tab.distribution')}</h2>
             <DistributionTab
               channelFilter={channelFilter}
               projects={projects}
@@ -723,7 +719,6 @@ export function KeyUsageSection() {
         )}
         {wants('sessions') && (
           <section className={styles.pageSection} id="sec-sessions">
-            <h2 className={styles.pageSectionTitle}>{t('tab.sessions')}</h2>
             <SessionsTab
               range={range}
               bounds={bounds}
@@ -739,13 +734,11 @@ export function KeyUsageSection() {
         )}
         {wants('tools') && (
           <section className={styles.pageSection} id="sec-tools">
-            <h2 className={styles.pageSectionTitle}>{t('tab.tools')}</h2>
             <ToolsTab data={tools} />
           </section>
         )}
         {wants('words') && (
           <section className={styles.pageSection} id="sec-words">
-            <h2 className={styles.pageSectionTitle}>{t('tab.words')}</h2>
             <WordsTab prompts={prompts} />
           </section>
         )}

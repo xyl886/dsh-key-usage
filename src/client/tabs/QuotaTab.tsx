@@ -15,7 +15,6 @@ import { serverText } from '../core/serverText.ts'
 import { costSourceHintOf, COST_SOURCE_HINTS, type CostSource } from '../core/pricing.ts'
 import type { Channel, ChannelRates, ModelRateRow, QuotaProvider, RatesResponse, SnapshotQuotaOutcome } from '../core/types.ts'
 import { CostSourceChip } from '../components/CostSourceChip.tsx'
-import { ChannelFilter } from '../components/ChannelFilter.tsx'
 import styles from '../styles/shared.module.css'
 import quotaStyles from '../styles/quota.module.css'
 import uiStyles from '../styles/ui.module.css'
@@ -26,28 +25,6 @@ const BALANCE_LABELS: Record<string, string> = {
   totalBalance: 'balance.total', topUpBalance: 'balance.credit', giftBalance: 'balance.grant', balance: 'balance.balance',
 }
 const WINDOW_ORDER = ['5h', 'week', 'month', 'day']
-
-/** 通道筛选：只存被勾掉的 provider（新通道默认可见）；存储不可用或内容坏了都回退全选。 */
-const HIDDEN_CHANNELS_KEY = 'dsh-key-usage:quota:hidden-channels'
-
-function readHiddenProviders(): string[] {
-  try {
-    const raw = window.localStorage.getItem(HIDDEN_CHANNELS_KEY)
-    if (raw === null) return []
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-function writeHiddenProviders(hidden: string[]): void {
-  try {
-    window.localStorage.setItem(HIDDEN_CHANNELS_KEY, JSON.stringify(hidden))
-  } catch {
-    // 隐私模式 / 配额满：筛选只在本次会话生效，不影响渲染
-  }
-}
 
 /** 卡片正文的一行：订阅窗口行（带进度条）或键值行；每张卡固定三行。 */
 type CardRow =
@@ -101,17 +78,6 @@ export function QuotaTab(props: {
   const [rates, setRates] = useState<RatesResponse | null>(null)
   const [ratesLoading, setRatesLoading] = useState(true)
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null)
-  const [hiddenProviders, setHiddenProviders] = useState<string[]>(readHiddenProviders)
-
-  // 勾选结果落 localStorage：重新打开页面时恢复上次的筛选
-  useEffect(() => { writeHiddenProviders(hiddenProviders) }, [hiddenProviders])
-
-  const toggleProvider = (provider: string): void => {
-    setHiddenProviders((previous) => (previous.includes(provider)
-      ? previous.filter((item) => item !== provider)
-      : [...previous, provider]))
-  }
-
   // 单价表：近 30 天用到的模型（刷新价目后价目层变了，要重取）
   useEffect(() => {
     let cancelled = false
@@ -154,14 +120,12 @@ export function QuotaTab(props: {
     const entry = rateChannels.find((item) => item.provider === provider)
     return entry === undefined || !Array.isArray(entry.models) ? [] : entry.models
   }
-  // 弹窗模式只讲一个通道：不吃通道筛选，也不渲染筛选条
-  const filtering = props.onlyProvider === undefined
+  // 通道显隐由页头的全局「通道」筛选决定，本页不再自带筛选条
   const unpricedEntries = unpricedEntriesOf(rateChannels)
-    .filter((entry) => !filtering || !hiddenProviders.includes(entry.provider))
 
-  const shown = props.channels.filter((channel) => (filtering
-    ? !hiddenProviders.includes(channel.provider)
-    : channel.provider === props.onlyProvider))
+  const shown = props.onlyProvider === undefined
+    ? props.channels
+    : props.channels.filter((channel) => channel.provider === props.onlyProvider)
   // 有实时数据的卡排前面：订阅窗口 > 余额 > 通道事实；同档保持通道配置顺序
   const cards: QuotaCard[] = shown
     .map((channel) => channelCardOf(
@@ -178,11 +142,6 @@ export function QuotaTab(props: {
 
   return (
     <div>
-      {filtering && props.channels.length > 0 && (
-        <div className={quotaStyles.cardToolbar}>
-          <ChannelFilter channels={props.channels} hidden={hiddenProviders} onToggle={toggleProvider} />
-        </div>
-      )}
       <div className={[quotaStyles.cardGrid, props.onlyProvider === undefined ? '' : quotaStyles.cardGridSingle].join(' ').trim()}>
         {cards.map((card) => (
           <div className={quotaStyles.chanCard} key={card.key}>
@@ -210,9 +169,6 @@ export function QuotaTab(props: {
         ))}
       </div>
       {props.channels.length === 0 && <div className={styles.empty}>{t('o.noChannels')}</div>}
-      {filtering && props.channels.length > 0 && shown.length === 0 && (
-        <div className={styles.empty}>{t('quota.noChannelSelected')}</div>
-      )}
 
       {openChannel !== null && (
         <div id={drawerId} className={quotaStyles.ratePanel}>
