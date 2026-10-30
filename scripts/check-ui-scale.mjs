@@ -31,6 +31,51 @@ function allowedSetFor(prop) {
   return null
 }
 
+/** 状态类（*On / *Active）必须与基础类同时挂：只挂 On 会丢掉 border:0 等基础样式，露出浏览器默认按钮边框。 */
+function checkStateClassPairs() {
+  const problems = []
+  const directories = ['src/client/components', 'src/client/tabs', 'src/client']
+  for (const directory of directories) {
+    for (const name of readdirSync(join(root, directory), { withFileTypes: true })) {
+      if (!name.isFile() || !name.name.endsWith('.tsx')) continue
+      const relative = join(directory, name.name)
+      const text = readFileSync(join(root, relative), 'utf8')
+      const lines = text.split('\n')
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index]
+        // 形如 `? styles.fooOn : styles.foo` 且真分支没有拼接基础类
+        const match = line.match(/\?\s*([A-Za-z]+Styles|styles)\.(\w+)(On|Active)\s*:/)
+        if (match === null) continue
+        const trueBranch = line.slice(line.indexOf('?'), line.indexOf(':'))
+        if (trueBranch.includes('+')) continue
+        const binding = match[1]
+        const base = match[2]
+        const state = match[2] + match[3]
+        // 如果该状态类在 CSS 里和基础类写在同一个选择器组（`.base, .state { … }`），基础样式是齐的，不算问题
+        const cssImport = text.match(new RegExp(`import\\s+${binding}\\s+from\\s+'([^']+\\.module\\.css)'`))
+        if (cssImport !== null) {
+          const cssPath = join(relative, '..', cssImport[1])
+          try {
+            const css = readFileSync(join(root, cssPath), 'utf8')
+            // 基础类名不存在（命名不是「基础 + 状态」后缀式）时无法判断，跳过
+            if (!new RegExp(`\\.${base}\\b`).test(css)) continue
+            const grouped = new RegExp(`\\.${base}\\s*,[^{}]*\\.${state}\\b|\\.${state}\\s*,[^{}]*\\.${base}\\b`)
+            if (grouped.test(css)) continue
+          } catch { /* 找不到 CSS 就按问题报 */ }
+        }
+        problems.push(`${relative}:${index + 1}  ${state} 未与基础类同时挂（应写成 基础类 + ' ' + 状态类）`)
+      }
+    }
+  }
+  return problems
+}
+
+const stateProblems = checkStateClassPairs()
+if (stateProblems.length > 0) {
+  console.error('状态类缺少基础类 ' + String(stateProblems.length) + ' 处：')
+  for (const item of stateProblems) console.error('  ' + item)
+  process.exit(1)
+}
 const violations = []
 const files = []
 for (const directory of ['src/client/styles', 'src/client/components', 'src/client/tabs']) {
