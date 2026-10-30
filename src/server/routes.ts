@@ -1810,6 +1810,8 @@ export function mountKeyUsageRoutes(
       const query: LogQuery = {}
       if (levelParam === 'info' || levelParam === 'warn' || levelParam === 'error') query.level = levelParam
       if (sourceParam.trim() !== '') query.source = sourceParam.trim().slice(0, 32)
+    const beforeParam = Number(url.searchParams.get('before'))
+    if (Number.isFinite(beforeParam) && beforeParam > 0) query.before = beforeParam
       sendJson(response, 200, { ok: true, records: readLogRecords(parseLimit(url.searchParams.get('limit'), 500), logFilePath(), query) })
     },
   })

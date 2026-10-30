@@ -73,3 +73,5 @@
 .loadMore {
   padding: 10px 0 4px; text-align: center; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px;
 }
+
+.olderBtn { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px; color: var(--dsw-alias-state-business-primary, #5b8cff); cursor: pointer; }

@@ -90,6 +90,13 @@ export function LogPanel(): ReactNode {
     void refreshLog({ level: levelFilter === 'all' ? undefined : levelFilter, source: sourceFilter === '' ? undefined : sourceFilter }).finally(() => setRefreshing(false))
   }
 
+  /** 向前翻：以当前最早一条的时间为游标，再拉一批更早的记录。 */
+  const onLoadOlder = (): void => {
+    const oldest = visible.length === 0 ? null : visible[visible.length - 1].time
+    if (oldest === null) return
+    void refreshLog({ level: levelFilter === 'all' ? undefined : levelFilter, source: sourceFilter === '' ? undefined : sourceFilter, before: oldest })
+  }
+
   const onCopy = (): void => {
     navigator.clipboard?.writeText(logTextOf(visible)).catch(() => logWarn('export', t('log.copyBlocked'), 'clipboard'))
   }
@@ -187,6 +194,7 @@ export function LogPanel(): ReactNode {
               ))}
             </ul>
             {hasMore && <div className={styles.loadMore}>{t('log.loadMore', { loaded: shown.length, total: visible.length })}</div>}
+            <div className={styles.loadMore}><button type="button" className={styles.olderBtn} onClick={onLoadOlder}>{t('log.loadOlder')}</button></div>
           </div>
         )}
     </div>

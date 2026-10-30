@@ -396,15 +396,22 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     ? []
     : hourValues.flat().filter((value): value is number => value !== undefined && value > 0)
   const hasHourData = hourActiveValues.length > 0
+  /** 时段费用档：矩阵里没有任何金额可算时置灰，不铺满一排 —。 */
+  const hasHourCostData = hourMatrix !== null && hourMatrix.some((week) => week.some((cell) => {
+    const cost = (cell as { cost?: number | null }).cost
+    return cost !== null && cost !== undefined
+  }))
   const hourThresholds = levelThresholds(hourActiveValues)
   const busiestHour = busiestHourOf(hourValues)
 
   return (
     <div className={styles.stack}>
       <div className={styles.kpiGrid}>
-        {kpiCards.map(({ key, ...card }) => (
-          <KpiStat key={key} {...card} />
-        ))}
+        {kpiCards
+          .filter((card) => !(range === 'today' && (card.key === 'dailyTokens' || card.key === 'dailyCost')))
+          .map(({ key, ...card }) => (
+            <KpiStat key={key} {...card} hidePrev={range === 'total'} />
+          ))}
       </div>
 
       <div className={styles.panel}>
@@ -486,9 +493,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
               <button
                 key={metric}
                 type="button"
+                disabled={metric === 'cost' && !hasHourCostData}
                 className={metric === hourMetric ? styles.metricTab + ' ' + styles.metricTabOn : styles.metricTab}
                 aria-pressed={metric === hourMetric}
-                onClick={() => setHourMetric(metric)}
+                onClick={() => { if (metric !== 'cost' || hasHourCostData) setHourMetric(metric) }}
               >{t(labelKey)}</button>
             ))}
           </div>
@@ -572,6 +580,8 @@ function KpiStat(props: {
   previousText: string | null
   deltaText: string | null
   tone: 'warn' | 'good' | 'neutral'
+  /** 没有上一等长窗口时（范围=全部）省掉上期行 */
+  hidePrev?: boolean
 }): ReactNode {
   return (
     <div className={styles.kpiCard}>
@@ -581,6 +591,7 @@ function KpiStat(props: {
         </svg>
         <span className={styles.kpiLabel}>{props.label}</span>
       </div>
+      {props.hidePrev !== true && (
       <div className={styles.kpiCompare}>
         <span className={styles.kpiPrev}>{props.previousText ?? '—'}</span>
         {props.deltaText !== null && (
@@ -589,6 +600,7 @@ function KpiStat(props: {
           </span>
         )}
       </div>
+      )}
       <div className={styles.kpiValue}>
         {props.value}
         {props.unit !== undefined && <span className={styles.kpiUnit}>{props.unit}</span>}
@@ -689,6 +701,8 @@ function RankPanel<Key extends string>(props: {
   /** 取词：宿主切语言时重渲染 */
   const t = useT()
   const [showAll, setShowAll] = useState(false)
+  /** 弹窗里的排序方向：默认降序，再点一次改升序。 */
+  const [ascending, setAscending] = useState(false)
   const shown = props.items.slice(0, RANK_ROWS)
   const peak = shown.reduce((maximum, item) => (item.value !== null && item.value > maximum ? item.value : maximum), 0)
   return (
@@ -733,9 +747,18 @@ function RankPanel<Key extends string>(props: {
         ))}
       {showAll && (
         <Dialog title={props.title} closeLabel={t('action.close')} onClose={() => setShowAll(false)}>
+          <div className={styles.dialogTools}>
+            <button
+              type="button"
+              className={styles.dialogSortBtn}
+              onClick={() => setAscending((previous) => !previous)}
+              aria-label={t('overview.sortDirection')}
+              title={t('overview.sortDirection')}
+            >{ascending ? '↑' : '↓'}</button>
+          </div>
           {props.items.length === 0
             ? <div className={shared.empty}>{t('overview.noData')}</div>
-            : props.items.map((item) => (
+            : [...props.items].sort((first, second) => (ascending ? -compareRankValue(first, second) : compareRankValue(first, second))).map((item) => (
               <div className={styles.rankRow} key={item.key} title={item.title}>
                 <span className={styles.rankName}>{item.name}</span>
                 <span className={styles.rankValue}>{item.valueText}</span>

@@ -27,7 +27,44 @@ export function downloadCsv(filename: string, header: string[], rows: Array<Arra
 const todaySuffix = (): string => new Date().toISOString().slice(0, 10)
 
 /** 使用明细：一行 = 一天 × 一个通道（与明细表同口径）。 */
-export function exportUsageCsv(usage: UsageResponse): void {
+export function exportUsageCsv(usage: UsageResponse, range?: string): void {
+  const hourly = range === 'today' || range === 'week'
+  if (hourly && usage.hoursByDate != null) {
+    const slotHours = range === 'today' ? 1 : 6
+    const header = ['日期', '时段', 'calls', 'Tokens', '输出 token', '缓存读 token', '会话', '成本']
+    const rows: Array<Array<string | number | null>> = []
+    for (const date of Object.keys(usage.hoursByDate).sort()) {
+      const cells = usage.hoursByDate[date]
+      if (!Array.isArray(cells)) continue
+      for (let startHour = 0; startHour < 24; startHour += slotHours) {
+        let calls = 0
+        let tokens = 0
+        let output = 0
+        let cacheRead = 0
+        let sessions = 0
+        let cost = 0
+        let hasCost = false
+        for (let offset = 0; offset < slotHours; offset += 1) {
+          const cell = cells[startHour + offset]
+          if (cell === undefined) continue
+          calls += cell.calls ?? 0
+          tokens += cell.tokens ?? 0
+          output += cell.outputTokens ?? 0
+          cacheRead += cell.cacheReadTokens ?? 0
+          sessions += cell.sessions ?? 0
+          if (cell.cost !== null && cell.cost !== undefined) { hasCost = true; cost += cell.cost }
+        }
+        if (calls === 0 && tokens === 0) continue
+        const label = range === 'today'
+          ? String(startHour).padStart(2, '0') + ':00'
+          : String(startHour).padStart(2, '0') + '–' + String(startHour + slotHours).padStart(2, '0') + ':00'
+        rows.push([date, label, calls, tokens, output, cacheRead, sessions, hasCost ? cost.toFixed(4) : '—'])
+      }
+    }
+    downloadCsv('dsh-key-usage-明细分时-' + todaySuffix() + '.csv', header, rows)
+    return
+  }
+
   const header = ['日期', '通道', 'calls', '输入 token', '输出 token', '缓存读 token', '缓存写 token', '成本', '成本来源', '部分计价']
   const rows = usage.days.map((day) => [
     day.date,
@@ -43,7 +80,6 @@ export function exportUsageCsv(usage: UsageResponse): void {
   ])
   downloadCsv('dsh-key-usage-使用明细-' + todaySuffix() + '.csv', header, rows)
 }
-
 /** 会话：一行 = 一个会话（与「最近会话」列表同口径）。 */
 export function exportSessionsCsv(sessions: SessionsResponse): void {
   const header = ['会话', '项目', '通道', '模型数', 'calls', 'Tokens', '缓存命中率', '成本', '成本来源', '首次时间', '最后时间', '归档', '子代理数']

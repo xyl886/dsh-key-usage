@@ -117,6 +117,8 @@ export async function hydrateLog(): Promise<void> {
 export interface LogRefreshFilter {
   level?: string
   source?: string
+  /** 只拉比这个时间更早的记录（日志窗「加载更早」）。 */
+  before?: number
 }
 
 /** 拉取服务端日志；带 level / source 时服务端先过滤（能取到 limit 之外的更早记录）。 */
@@ -130,6 +132,7 @@ async function readFromDisk(filter: LogRefreshFilter = {}): Promise<void> {
     const params = new URLSearchParams({ limit: String(READ_LIMIT) })
   if (filter.level !== undefined && filter.level !== '') params.set('level', filter.level)
   if (filter.source !== undefined && filter.source !== '') params.set('source', filter.source)
+  if (filter.before !== undefined) params.set('before', String(filter.before))
   const response = await fetch(LOG_PATH + '?' + params.toString(), { headers: { Accept: 'application/json' } })
     if (!response.ok) return
     const body = await response.json() as { records?: unknown }

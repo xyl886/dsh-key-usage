@@ -275,3 +275,13 @@
 }
 .exportItem:hover:enabled { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); }
 .exportItem:disabled { color: var(--dsw-alias-label-tertiary, #67676f); cursor: default; }
+
+/* 区块挂载时轻微淡入（切 Tab / 首次加载不闪白） */
+@keyframes kuFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.sections > .pageSection { animation: kuFadeIn 140ms ease-out; }
+
+/* 窄屏：工具栏换行时保持紧凑，不把吸顶区撑得过高 */
+@media (max-width: 1180px) {
+  .toolbarRow { gap: 8px; row-gap: 6px; }
+  .stickyHead { padding-bottom: 6px; }
+}

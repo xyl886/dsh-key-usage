@@ -58,3 +58,6 @@
 
 /* 空面板 / 空状态 */
 .dimLine { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-body, 14px); padding: 6px 0; }
+
+/* 标题旁的口径小标（工具统计没有通道维度） */
+.panelTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; font-weight: 400; }

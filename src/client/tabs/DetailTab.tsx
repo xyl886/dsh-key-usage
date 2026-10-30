@@ -48,7 +48,7 @@ const DIMENSIONS: Array<[Dimension, string]> = [
   ['model', 'detail.byModel'],
 ]
 
-type SortKey = 'date' | 'label' | 'calls' | 'input' | 'output' | 'cacheRead' | 'cost' | 'delta' | 'source'
+type SortKey = 'date' | 'label' | 'calls' | 'input' | 'output' | 'cacheRead' | 'sessions' | 'cost' | 'delta' | 'source'
 type SortDirection = 'asc' | 'desc'
 
 /** 表头（原型顺序）；第一列是展开箭头，没有表头文案。 */
@@ -59,13 +59,14 @@ const SORT_COLUMNS: Array<[SortKey, string]> = [
   ['input', 'c.input'],
   ['output', 'c.output'],
   ['cacheRead', 'c.cacheRead'],
+  ['sessions', 'c.sessions'],
   ['cost', 'c.cost'],
   ['delta', 'detail.delta'],
   ['source', 'detail.source'],
 ]
 
 /** 右对齐的列：数字与来源。 */
-const RIGHT_ALIGNED = new Set<SortKey>(['calls', 'input', 'output', 'cacheRead', 'cost', 'delta', 'source'])
+const RIGHT_ALIGNED = new Set<SortKey>(['calls', 'input', 'output', 'cacheRead', 'sessions', 'cost', 'delta', 'source'])
 
 /** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
 const SOURCE_ORDER: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }
@@ -326,6 +327,8 @@ interface DetailRow {
   input: number
   output: number
   cacheRead: number
+  /** 该行窗口内有活动的会话数；按通道 / 模型 / 小时分不出会话时为 null */
+  sessions: number | null
   costText: string
   costAmount: number | null
   delta: number | null
@@ -347,8 +350,9 @@ interface DetailGroup {
   models: ModelSummary[]
 }
 
-function buildDetailRows(props: { usage: UsageResponse; channels: Channel[]; dimension: Dimension }): DetailRow[] {
+function buildDetailRows(props: { usage: UsageResponse; channels: Channel[]; dimension: Dimension; sessions?: SessionsResponse | null }): DetailRow[] {
   const { usage, channels, dimension } = props
+  const sessionCounts = daySessionCountsOf(props.sessions ?? null)
   const rows: DetailRow[] = []
   const dayMoney = new Map<string, MoneyRow>()
   for (const day of usage.days) dayMoney.set(day.date, moneyRowOf(day))
@@ -397,6 +401,7 @@ function buildDetailRows(props: { usage: UsageResponse; channels: Channel[]; dim
         input: day.inputTokens,
         output: day.outputTokens,
         cacheRead: day.cacheReadTokens,
+        sessions: sessionCounts.get(day.date) ?? 0,
         costText,
         costAmount: amount,
         delta: costText === '—' ? null : deltaOf(amount, previous === null ? null : comparableMoneyOf(previous)),
@@ -450,6 +455,7 @@ function buildDetailRows(props: { usage: UsageResponse; channels: Channel[]; dim
         input: group.input,
         output: group.output,
         cacheRead: group.cacheRead,
+        sessions: null,
         costText,
         costAmount: amount,
         delta: costText === '—' ? null : deltaOf(amount, previous === null ? null : comparableMoneyOf(previous)),
@@ -468,6 +474,7 @@ function sortValueOf(row: DetailRow, sortKey: SortKey): string | number | null {
   if (sortKey === 'input') return row.input
   if (sortKey === 'output') return row.output
   if (sortKey === 'cacheRead') return row.cacheRead
+  if (sortKey === 'sessions') return row.sessions
   if (sortKey === 'cost') return row.costAmount
   if (sortKey === 'delta') return row.delta
   return row.source === null ? null : SOURCE_ORDER[row.source]
@@ -531,6 +538,65 @@ function daySessionCountsOf(sessions: SessionsResponse | null): Map<string, numb
     }
   }
   return counts
+}
+
+/**
+ * 分时范围的表格行：今天 24 行（每小时）、7 天 28 行（每天 4 个 6 小时段）。
+ * 数据与图表同源（`/usage` 的 hoursByDate），没有更细的模型构成，因此不给展开箭头。
+ */
+function buildHourRows(props: { usage: UsageResponse; range: RangeKey }): DetailRow[] {
+  const byDate = props.usage.hoursByDate
+  if (byDate == null) return []
+  const dates = Object.keys(byDate).sort()
+  const slotHours = props.range === 'today' ? 1 : 6
+  const slotsPerDay = 24 / slotHours
+  const rows: DetailRow[] = []
+  for (const date of dates) {
+    const cells = byDate[date]
+    if (!Array.isArray(cells)) continue
+    for (let slot = 0; slot < slotsPerDay; slot += 1) {
+      const startHour = slot * slotHours
+      let calls = 0
+      let tokens = 0
+      let output = 0
+      let cacheRead = 0
+      let sessions = 0
+      const money: MoneyRow = { cost: 0, costsByCurrency: {} }
+      let hasCost = false
+      for (let offset = 0; offset < slotHours; offset += 1) {
+        const cell = cells[startHour + offset]
+        if (cell === undefined) continue
+        calls += cell.calls ?? 0
+        tokens += cell.tokens ?? 0
+        output += cell.outputTokens ?? 0
+        cacheRead += cell.cacheReadTokens ?? 0
+        sessions += cell.sessions ?? 0
+        if (cell.cost !== null && cell.cost !== undefined) hasCost = true
+        if (cell.costsByCurrency !== undefined) addMoneyInto(money, { cost: cell.cost ?? 0, costsByCurrency: cell.costsByCurrency })
+      }
+      if (calls === 0 && tokens === 0 && !hasCost) continue
+      const label = props.range === 'today'
+        ? String(startHour).padStart(2, '0') + '时'
+        : String(startHour).padStart(2, '0') + '–' + String(startHour + slotHours).padStart(2, '0') + '时'
+      rows.push({
+        key: 'hour|' + date + '|' + String(startHour),
+        date: '',
+        label: label,
+        labelDim: dates.length > 1 ? date.slice(5) : null,
+        calls,
+        input: Math.max(0, tokens - output - cacheRead),
+        output,
+        cacheRead,
+        sessions,
+        costText: hasCost ? costTextOf(money, 'catalog') : '—',
+        costAmount: hasCost ? comparableMoneyOf(money) : null,
+        delta: null,
+        source: null,
+        models: [],
+      })
+    }
+  }
+  return rows
 }
 
 function buildDailyBars(props: { usage: UsageResponse; from: string; to: string; metric: MetricKey; sessions: SessionsResponse | null }): DailyBar[] {
@@ -668,10 +734,11 @@ export function DetailTab(props: {
   )
   /** 显示币种或汇率一变，金额文本就得重算（模块级状态变了，memo 自己发现不了）。 */
   const moneyKey = currency.display + '|' + (currency.fx === null ? '' : String(currency.fx.rate))
-  const rows = useMemo(
-    () => (scopedUsage === null ? [] : buildDetailRows({ usage: scopedUsage, channels, dimension })),
-    [scopedUsage, channels, dimension, moneyKey],
-  )
+  const rows = useMemo(() => {
+    if (scopedUsage === null) return []
+    if ((props.range === 'today' || props.range === 'week') && dimension === 'day') return buildHourRows({ usage: scopedUsage, range: props.range })
+    return buildDetailRows({ usage: scopedUsage, channels, dimension, sessions: props.sessions ?? null })
+  }, [scopedUsage, channels, dimension, moneyKey, props.range, props.sessions])
   const sortedRows = useMemo(() => sortDetailRows(rows, sortKey, sortDirection), [rows, sortKey, sortDirection])
   /** 分时范围：今天按小时（24 桶）、7 天按 6 小时（28 桶）；其余范围仍按天。 */
   const granularRange = props.range === 'today' || props.range === 'week'
@@ -885,7 +952,7 @@ export function DetailTab(props: {
                                 </button>
                               )}
                           </td>
-                          <td className={detailStyles.alignLeft}>{fmtShortDate(row.date)}</td>
+                          <td className={detailStyles.alignLeft}>{row.date === '' ? '' : fmtShortDate(row.date)}</td>
                           <td className={detailStyles.alignLeft}>
                             {row.label}
                             {row.labelDim !== null && <span className={styles.dim}> {row.labelDim}</span>}
@@ -894,7 +961,8 @@ export function DetailTab(props: {
                           <td className={detailStyles.alignRight}>{fmtTokens(row.input)}</td>
                           <td className={detailStyles.alignRight}>{fmtTokens(row.output)}</td>
                           <td className={detailStyles.alignRight}>{fmtTokens(row.cacheRead)}</td>
-                          <td className={detailStyles.alignRight + ' ' + detailStyles.costCell}>{row.costText}</td>
+                          <td className={detailStyles.alignRight}>{row.sessions === null ? '—' : fmtCalls(row.sessions)}</td>
+                          <td className={detailStyles.alignRight + ' ' + detailStyles.costCell} title={row.costText === '—' ? t('cost.noBasis') : undefined}>{row.costText}</td>
                           <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>
                           <td className={detailStyles.alignRight}>{costSourceLabelOf(row.source, t)}</td>
                         </tr>

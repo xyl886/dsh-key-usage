@@ -165,3 +165,8 @@
 /* 口径标签（按时段是长期画像，不随范围变） */
 .panelHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; margin-left: 6px; font-weight: 400; }
 
+
+/* 排行弹窗右上角的排序方向开关 */
+.dialogTools { display: flex; justify-content: flex-end; gap: 8px; padding: 0 0 8px; }
+.dialogSortBtn { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px; color: var(--dsw-alias-label-secondary, #9a9aa6); cursor: pointer; }
+.dialogSortBtn:hover { color: var(--dsw-alias-label-primary, #0f1115); }

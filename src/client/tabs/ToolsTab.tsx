@@ -32,6 +32,11 @@ interface RankRowView {
 }
 
 /** 排行榜行：名字 + 横条 + 次数 + 占比（正文 13px）。 */
+/** 工具名归一：MCP 调用显示成「server · tool」，不把双下划线原始名摊到界面上。 */
+function displayToolNameOf(name: string): string {
+  const match = /^mcp__(.+)__(.+)$/.exec(name)
+  return match === null ? name : match[1] + ' · ' + match[2]
+}
 function RankRows(props: { rows: RankRowView[] }): ReactNode {
   return (
     <>
@@ -83,7 +88,7 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
   const maxToolCalls = data.tools.length > 0 ? data.tools[0].calls : 0
   const toolRows: RankRowView[] = data.tools.map((row, index) => ({
     key: 'tool-' + row.name,
-    label: row.name,
+    label: displayToolNameOf(row.name),
     calls: row.calls,
     sharePercent: row.sharePercent,
     barPercent: barPercentOf(row.calls, maxToolCalls),
@@ -136,6 +141,7 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
         <section className={styles.panel}>
           <div className={styles.panelHead}>
             <h3 className={styles.panelTitle}>{t('tools.tools')}</h3>
+            <span className={styles.panelTag}>{t('tools.noChannel')}</span>
             <span className={styles.panelMeta}>
               <span className={styles.headNum}>{fmtTokens(data.calls)}</span> {t('tools.callsUnit')} ·{' '}
               <span className={styles.headNum}>{fmtCount(data.sessions)}</span> {t('tools.sessionsUnit')}

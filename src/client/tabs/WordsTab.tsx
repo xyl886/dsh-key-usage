@@ -1,10 +1,12 @@
 /** 提问：4 张 KPI（带环比）+ 词云（悬停给次数与占比）。数据全部来自快照的 prompts 段。 */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { WordCloud } from '../components/WordCloud.tsx'
 import { fmtCount } from '../core/format.ts'
 import { t, useT } from '../core/i18n.ts'
 import type { PromptsResponse } from '../core/types.ts'
 import styles from '../styles/words.module.css'
+
+const TOP_OPTIONS = [20, 60, 100]
 
 export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode {
   /** 取词：宿主切语言时重渲染 */
@@ -14,6 +16,8 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
   const topWord = words[0]
   const totalPrompts = prompts === null ? null : prompts.totalPrompts
   // 上期字段：服务端没给（上期窗口没有提问 / 旧版本）时保持 null，整段环比不显示
+  /** 词云展示条数：默认前 60，可按需放宽到 100 / 收到 20。 */
+  const [topN, setTopN] = useState(60)
   const prevPrompts = prevOf(prompts?.prevTotalPrompts)
   const prevChars = prevOf(prompts?.prevTotalChars)
   const prevWords = prevOf(prompts?.prevWordCount)
@@ -56,6 +60,19 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
       <div className={styles.panel}>
         <div className={styles.panelHead}>
           <span className={styles.panelTitle}>{t('words.cloud')}</span>
+          {words.length > 20 && (
+            <span className={styles.topN}>
+              {TOP_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={option === topN ? styles.topNBtn + ' ' + styles.topNBtnOn : styles.topNBtn}
+                  aria-pressed={option === topN}
+                  onClick={() => setTopN(option)}
+                >{option}</button>
+              ))}
+            </span>
+          )}
           {prompts !== null && (
             <span className={styles.panelAction}>
               <span className={styles.panelNote}>{t('words.wordCount', { count: words.length })}</span>
@@ -63,7 +80,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
           )}
         </div>
         <WordCloud
-          words={words}
+          words={words.slice(0, topN)}
           emptyText={prompts === null ? t('s.loading') : t('words.noPrompts')}
           tipOf={(word, count) => t('words.cloudTip', {
             word,

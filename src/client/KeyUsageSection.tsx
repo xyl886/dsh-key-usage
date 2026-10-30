@@ -631,7 +631,7 @@ export function KeyUsageSection() {
                 role="menuitem"
                 className={styles.exportItem}
                 disabled={scopedUsage === null}
-                onClick={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage); setExportOpen(false) }}
+                onClick={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage, range); setExportOpen(false) }}
               >{t('action.exportUsage')}</button>
               <button
                 type="button"

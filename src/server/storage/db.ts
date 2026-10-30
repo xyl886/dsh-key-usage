@@ -315,6 +315,8 @@ export interface LogQuery {
   level?: string
   /** 只要这个来源；不传表示全部。 */
   source?: string
+  /** 时间游标（毫秒）：只取比它更早的记录，用于日志窗向前翻页。 */
+  before?: number
 }
 
 /** 读日志：可按 level / source 过滤（两列都有索引），筛选时能查到 limit 之外的更早记录。 */
@@ -328,6 +330,10 @@ export function readLogRows(db: DatabaseHandle, limit: number, query: LogQuery =
   if (query.source !== undefined && query.source !== '') {
     where.push('source = ?')
     params.push(query.source)
+  }
+  if (query.before !== undefined && Number.isFinite(query.before)) {
+    where.push('time < ?')
+    params.push(query.before)
   }
   params.push(limit)
   const clause = where.length === 0 ? '' : ' WHERE ' + where.join(' AND ')

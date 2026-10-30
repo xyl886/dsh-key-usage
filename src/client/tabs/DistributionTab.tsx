@@ -19,6 +19,7 @@ import type {
 import styles from '../styles/distribution.module.css'
 import listStyles from '../styles/lists.module.css'
 import sharedStyles from '../styles/shared.module.css'
+import { Dialog } from '../components/ui/Dialog.tsx'
 import { ModelsTab } from './ModelsTab.tsx'
 import { ProjectsTab, baseNameOf } from './ProjectsTab.tsx'
 
@@ -359,16 +360,26 @@ function CostMixPanel(props: { models: ModelAggregateRow[]; loading: boolean }):
 /** 通道成本：按通道汇总模型行的成本，取前几名 + 「其它」。 */
 function ChannelCostPanel(props: { models: ModelAggregateRow[]; channels: Channel[]; loading: boolean }): ReactNode {
   const t = useT()
+  const [showAll, setShowAll] = useState(false)
   const { rows, channelCount } = channelCostOf(props.models, props.channels)
+  const all = showAll ? channelCostOf(props.models, props.channels, true).rows : []
   return (
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <span className={styles.panelTitle}>{t('dist.channelCost')}</span>
         <span className={styles.panelNote}>{t('dist.countUnit', { count: channelCount })}</span>
+        {rows.length > 0 && channelCount > rows.length - 1 && (
+          <button type="button" className={styles.panelMore} onClick={() => setShowAll(true)}>{t('dist.allRows')}</button>
+        )}
       </div>
       {rows.length === 0
         ? <div className={sharedStyles.empty}>{props.loading ? t('s.loading') : t('s.noCost')}</div>
         : rows.map((row, index) => <RankLine key={row.key} row={row} top={index === 0} />)}
+      {showAll && (
+        <Dialog title={t('dist.channelCost')} closeLabel={t('action.close')} onClose={() => setShowAll(false)}>
+          {all.map((row, index) => <RankLine key={row.key} row={row} top={index === 0} />)}
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -516,7 +527,7 @@ function cacheTotalTextOf(usage: UsageResponse | null): string {
 }
 
 /** 通道成本排行：同通道模型成本相加，取前几名 + 「其它」，条宽按占总成本比例。 */
-function channelCostOf(models: ModelAggregateRow[], channels: Channel[]): { rows: RankRow[]; channelCount: number } {
+function channelCostOf(models: ModelAggregateRow[], channels: Channel[], expand = false): { rows: RankRow[]; channelCount: number } {
   const byProvider = new Map<string, { label: string; costs: CostsByCurrency }>()
   for (const row of models) {
     const entry = byProvider.get(row.provider) ?? {
@@ -543,9 +554,9 @@ function channelCostOf(models: ModelAggregateRow[], channels: Channel[]): { rows
     metaText: Math.round(entry.comparable / total * 100) + '%',
   })
 
-  const named = priced.length <= MAX_CHANNEL_ROWS ? priced : priced.slice(0, MAX_CHANNEL_ROWS - 1)
+  const named = expand || priced.length <= MAX_CHANNEL_ROWS ? priced : priced.slice(0, MAX_CHANNEL_ROWS - 1)
   const rows = named.map((entry) => toRow(entry, 'channel:' + entry.provider))
-  const tail = priced.slice(named.length)
+  const tail = expand ? [] : priced.slice(named.length)
   if (tail.length > 0) {
     const costs: CostsByCurrency = {}
     for (const entry of tail) addCosts(costs, { costsByCurrency: entry.costs })

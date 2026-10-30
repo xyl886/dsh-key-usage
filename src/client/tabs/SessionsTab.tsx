@@ -68,8 +68,12 @@ export function SessionsTab(props: {
   const [topMetric, setTopMetric] = useState<TopMetric>('tokens')
   const [shapeMetric, setShapeMetric] = useState<ShapeMetric>('messages')
   const [scope, setScope] = useState<Scope>('all')
+  /** 全量会话：勾上后忽略页头时间范围（老会话也要能翻到）。 */
+  const [allTime, setAllTime] = useState(false)
   const [query, setQuery] = useState('')
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  /** 每页条数：会话多时一次多载一些，少点几次「加载更多」。 */
+  const [pageStep, setPageStep] = useState(PAGE_SIZE)
   const [detailId, setDetailId] = useState<string | null>(null)
   const projectFilter = props.projectFilter ?? ''
   const modelFilter = props.modelFilter ?? ''
@@ -84,16 +88,16 @@ export function SessionsTab(props: {
     if (!selectionMatches(row.models.map((model) => model.model), modelFilter)) return false
     if (!selectionMatches([row.provider ?? '', ...row.models.map((model) => model.provider)], channelFilter)) return false
     // 时间范围：会话与窗口有交集才保留；首末时间都缺的老会话不参与时间筛选，避免整页清空
-    if (windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
+    if (!allTime && windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
       const startMs = row.firstTime ?? (row.lastTime as number)
       const endMs = row.lastTime ?? (row.firstTime as number)
       if (endMs < windowFromMs || startMs > windowToMs) return false
     }
     return true
-  }), [allRows, projectFilter, modelFilter, channelFilter, windowFromMs, windowToMs])
+  }), [allRows, projectFilter, modelFilter, channelFilter, windowFromMs, windowToMs, allTime])
 
   // 换了范围 / 搜索 / 全局筛选就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
-  useEffect(() => { setPageSize(PAGE_SIZE) }, [scope, query, projectFilter, modelFilter])
+  useEffect(() => { setPageSize(pageStep) }, [scope, query, projectFilter, modelFilter, allTime, pageStep])
 
   /** 只列主会话：子代理不单独占行（详情抽屉里仍可逐个点开）。 */
   const mainRows = useMemo(() => rows.filter((row) => !isSubagentOf(row)), [rows])
@@ -234,6 +238,20 @@ export function SessionsTab(props: {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          <Select
+            ariaLabel={t('sessions.pageSize')}
+            value={String(pageStep)}
+            onChange={(value) => setPageStep(Number(value))}
+            options={[
+              { value: '50', labelKey: 'sessions.page50' },
+              { value: '100', labelKey: 'sessions.page100' },
+              { value: '200', labelKey: 'sessions.page200' },
+            ]}
+          />
+          <label className={styles.modeSwitch} title={t('sessions.allTimeHint')}>
+            <input type="checkbox" checked={allTime} onChange={(event) => setAllTime(event.target.checked)} />
+            {t('sessions.allTime')}
+          </label>
           <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(recentRows.length) })}</span>
         </div>
         {visibleRows.length === 0
