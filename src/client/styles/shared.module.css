@@ -18,14 +18,12 @@
 /* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部） */
 .pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: 960px; }
 .pageTitle { margin: 0; font-size: 20px; font-weight: 500; line-height: 28px; letter-spacing: normal; white-space: nowrap; color: var(--dsw-alias-label-primary, #0f1115); }
-.headActions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* 工具栏：三行（标题+范围+动作 / 筛选 / 区块导航），同类控件成组，窄面板按行换行 */
 .toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; max-width: 960px; margin-left: auto; margin-right: auto; }
 .toolbarRow + .toolbarRow { margin-top: 8px; }
 .toolbarGroup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .rowSpacer { flex: 1 1 auto; }
 /* 组之间一条细竖线（筛选组与操作组分隔） */
-.toolbarDivider { width: 1px; height: 18px; background: var(--dsw-alias-border-l1, #2c2c34); flex: 0 0 auto; }
 /* 标题比正文大一档即可，不做成大标题（正文 13px） */
 /* .brand 已由 .pageTitle 取代 */
 /* 按钮类控件统一 26px 高：导出按钮经 Button 的 className 走进来；
@@ -44,7 +42,6 @@
 .iconBtn:disabled { opacity: .6; cursor: default; }
 .iconBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 /* 筛选行：通道 / 项目 / 模型在左、显示币种在右（原型 .trow 第二行） */
-.filterBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 /* 顶部栏吸顶：页面自己滚（.section 是滚动容器），三行工具栏一起钉住，
    负 margin 抵消 .section 的内边距，滚动内容从它下面穿过 */
 .stickyHead {
@@ -92,10 +89,6 @@
 .card { background: var(--dsw-alias-bg-layer-2, #1d1d22); border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 12px; padding: 14px 16px; }
 /* 六张统计卡：用确定的列数而不是 auto-fit —— auto-fit 在中等宽度下会排成 5+1，
    最后一张孤零零占一行。桌面一行六张，窄屏 3×2，再窄 2×3。 */
-.cardGrid6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 10px; margin-bottom: 20px; }
-
-.statLabel { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); margin-bottom: 6px; }
-.statValue { font-size: max(18px, calc(var(--dsh-content-font-size, 13px) * 1.4)); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary, #e8e8ec); white-space: nowrap; padding-right: 48px; }
 .statExtra { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-top: 4px; }
 
 .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -124,11 +117,8 @@
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }
 .empty { color: var(--dsw-alias-label-tertiary, #67676f); padding: 16px 0; }
 .warning { color: var(--dsw-alias-state-warn-primary, #e0a13c); font-size: inherit; margin-bottom: 10px; }
-.legend { display: inline-flex; gap: 10px; font-size: inherit; color: var(--dsw-alias-label-tertiary, #67676f); align-items: center; flex-wrap: wrap; }
-.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
 
 /* 口径说明分点分行：每条一句话，避免挤成一段 */
-.footnoteList li { margin: 1px 0; }
 
 /* ===== 浮层 ===== */
 .tooltip {
@@ -156,21 +146,15 @@
 /* 图例里的「无数据」色块：CSS Modules 需要独立类才能被引用（原来写成裸 className="ghost" 永不生效） */
 
 /* 口径弹窗里的版本号：弱化一行，便于报问题时报出来 */
-.caliberVersion { margin: 0 0 8px; font-size: inherit; color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; }
 
 /* 系统日志：时间 / 级别 / 来源 / 内容 四列，等宽数字对齐 */
 
 /* 角标贴在当期数值的右上角：数值行两端对齐 */
 /* 角标固定贴在当期数值右上角：数值右侧预留位置，角标绝对定位（不会换行，也不会挤走数值） */
-.statValueRow { position: relative; }
-.statBadge { position: absolute; right: 0; top: 0; white-space: nowrap; font-size: inherit; color: var(--dsw-alias-label-secondary, #9a9aa6); }
-.statAbove { color: var(--dsw-alias-label-tertiary, #67676f); font-size: inherit; margin-top: 2px; }
 
 /* 成本上升的角标用提示色（中性语义，不是错误） */
-.badgeWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
 
 /* 卡片标题行：图标 + 标签 */
-.statLabelRow { display: flex; align-items: center; gap: 6px; }
 
 /* 日志条目：点消息展开详情（只有带 detail 的可点），失败条目右侧给「重试」 */
 
@@ -218,14 +202,6 @@
 .pageSection { min-width: 0; }
 /* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
 /* 分区标题只是锚点标签：比页面标题低两档，避免与顶部导航重名时抢视线 */
-.pageSectionTitle {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 22px;
-  letter-spacing: normal;
-  color: var(--dsw-alias-label-primary, #0f1115);
-}
 /* 页级范围工具栏（原型在页面顶部）：范围按钮 + 自定义起止 */
 /* 范围切换用分段控件（一个外框装按钮）：外框 26px 高，与同排控件齐平 */
 .rangeTabs {

@@ -300,6 +300,7 @@ assert.deepEqual(firstSnapshot.body.sections.prompts, {
   words: [{ word: '分析', count: 3 }, { word: 'snapshot.json', count: 2 }, { word: 'ledger', count: 1 }],
   totalPrompts: 2,
   totalChars: 24,
+  sessionCount: 1,
   from: localDayKey(-29),
   to: localDayKey(0),
   prevTotalPrompts: 3,
@@ -850,7 +851,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/usage',
   ], '21 个端点 = 17 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
 
-  // /update：npm dist-tags 桩 → 有新版本时 hasUpdate=true；缓存期内不再联网
+  // /update：npm dist-tags 桩 → 返回 latest；仓库内运行算 link 模式，hasUpdate 被压制（registry 模式由 update-check 单测覆盖）
   const realFetch = globalThis.fetch
   let distTagsCalls = 0
   globalThis.fetch = async () => {
@@ -861,7 +862,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     const update = await callHandler(contractHandlers, '/dsh-key-usage/update', '127.0.0.1')
     assert.equal(update.status, 200)
     assert.equal(update.body.latest, '999.0.0')
-    assert.equal(update.body.hasUpdate, true, '比当前版本大就要提示')
+    assert.equal(update.body.hasUpdate, false, '仓库内运行算 link 模式，不提示更新')
     assert.ok(update.body.current.length > 0)
     await callHandler(contractHandlers, '/dsh-key-usage/update', '127.0.0.1')
     assert.equal(distTagsCalls, 1, '24 小时缓存期内不再联网')
@@ -1550,11 +1551,12 @@ rmSync(home, { recursive: true, force: true })
   const spanning = await promptsOf(windowQuery)
   assert.deepEqual(Object.keys(spanning).sort(), [
     'from', 'prevTopWordCount', 'prevTotalChars', 'prevTotalPrompts', 'prevWordCount',
-    'to', 'totalChars', 'totalPrompts', 'words',
+    'sessionCount', 'to', 'totalChars', 'totalPrompts', 'words',
   ])
   assert.equal(spanning.from, yesterdayKey)
   assert.equal(spanning.to, todayKey)
   assert.equal(spanning.totalPrompts, 3, 'A 的两条 + B 的一条')
+  assert.equal(spanning.sessionCount, 2, '窗口内有提问的会话数：A + B')
   const spanningWords = spanning.words.map((row) => row.word)
   for (const expectedWord of ['alpha', 'beta', 'gamma', 'deployment', 'cache', 'ledger']) {
     assert.ok(spanningWords.includes(expectedWord), '窗口内的词：' + expectedWord)
@@ -1568,6 +1570,7 @@ rmSync(home, { recursive: true, force: true })
   assert.ok(spanning.prevTopWordCount >= 1)
   // 上期完全没有数据时四个 prev* 全为 null（界面不显示环比，不拿 0 编百分比）
   const noPrevious = await promptsOf('?from=' + twoDaysAgoKey + '&to=' + todayKey)
+  assert.equal(noPrevious.sessionCount, 2, '无上期数据时本期会话数照常下发')
   assert.equal(noPrevious.prevTotalPrompts, null)
   assert.equal(noPrevious.prevTotalChars, null)
   assert.equal(noPrevious.prevWordCount, null)

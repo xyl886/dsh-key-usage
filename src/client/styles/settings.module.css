@@ -17,7 +17,6 @@
 
 .sections { display: flex; flex-direction: column; gap: 20px; min-width: 300px; max-width: 520px; }
 /* 小节标题：15px 次级色，比正文大一号、比页内面板标题弱一档 */
-.sectionTitle { font-size: 14px; font-weight: 500; color: var(--dsw-alias-label-primary, #0f1115); margin-bottom: 4px; }
 
 /* 小节内的一行（标签 + 右侧控件 / 值） */
 .rowLabel { font-size: var(--ku-body, 14px); color: var(--dsw-alias-label-secondary, #9a9aa6); }
@@ -27,15 +26,11 @@
 /* 币种切换：选中态靠边框 + 主色 + 实底三重表达，不只靠颜色深浅 */
 .currencyBtn { min-width: 34px; font-size: var(--ku-body, 14px); line-height: 1.2; }
 
-.value { font-size: var(--ku-sub, 13px); color: var(--dsw-alias-label-tertiary, #67676f); word-break: break-all; }
-.valueWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
-
 /* ===== 「日志」页 ===== */
 .logPane { min-height: 44px; }
 
 /* ===== 「口径」页（保持原样） ===== */
 .wrap { display: flex; flex-direction: column; gap: 16px; min-width: 300px; max-width: 560px; }
-.caliberVersion { color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ku-sub, 13px); }
 .caliberList { margin: 8px 0 0; padding-left: 20px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--ku-sub, 13px); line-height: 1.7; }
 .link { color: var(--dsw-alias-state-business-primary, #5b8cff); text-decoration: none; }
 .link:hover { text-decoration: underline; }

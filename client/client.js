@@ -90,6 +90,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dist.others": "其它 {count} 个",
 			"dist.countUnit": "{count} 个",
 			"words.kpiPrompts": "提问",
+			"words.kpiAvgPerSession": "每会话",
 			"words.kpiChars": "字数",
 			"words.kpiWords": "词表",
 			"words.kpiTop": "最常提",
@@ -133,21 +134,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"common.workspace": "工作区",
 			"common.sessionSuffix": " 个会话",
 			"common.modelSuffix": " 个模型",
-			"common.subagentSuffix": " 个子会话",
-			"s.id": "会话 id",
 			"s.title": "标题",
 			"s.prompt": "首条提问",
-			"s.first": "首次",
 			"s.last": "最近",
 			"s.crossDays": "跨天",
-			"s.parentFocusNote": "只看该会话及其子会话（含父会话行）",
 			"s.loadMore": "加载更多（+{count}）",
 			"s.shownCount": "已显示 {shown} / {total} 个会话",
-			"s.hitRate": "命中率(%)",
-			"s.costNative": "成本(原币合计)",
 			"s.costSource": "成本来源",
 			"s.archived": "已归档",
-			"s.yes": "是",
 			"s.no": "否",
 			"s.loading": "读取中",
 			"s.unavailable": "会话数据不可用",
@@ -156,32 +150,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.searchPlaceholder": "搜索标题 / id",
 			"s.filterChannel": "按通道筛选",
 			"s.allChannels": "全部通道",
-			"s.filterRange": "时间范围",
-			"s.days7": "近 7 天",
-			"s.days30": "近 30 天",
-			"s.rangeAll": "全部",
 			"s.sort": "排序",
-			"s.sortRecent": "最新会话",
 			"s.sortTokensDesc": "Tokens 最多",
 			"s.sortTokensAsc": "Tokens 最少",
-			"s.sortDuration": "时长最长",
 			"s.sortCost": "成本最高",
-			"s.sortHit": "命中率最高",
 			"s.sortCalls": "调用最多",
-			"s.filterArchive": "归档筛选",
-			"s.archiveHide": "隐藏已归档",
-			"s.archiveAll": "含已归档",
-			"s.filterSubagent": "子会话筛选",
-			"s.subagentHide": "只显示主会话",
-			"s.subagentAll": "含子会话",
 			"s.noCost": "无价目依据",
-			"s.expandModels": "展开模型",
-			"s.collapseModels": "收起模型",
 			"s.noPrompt": "（无提问）",
 			"s.noWorkspace": "无工作区",
 			"s.gotoProject": "在项目用量筛选：",
-			"s.focusChildren": "只看该会话与其 ",
-			"s.focusChildrenTail": " 个子会话（tokens 不并入本行）",
 			"d.title": "会话详情",
 			"d.close": "关闭会话详情",
 			"d.unknownReason": "未知原因",
@@ -202,14 +179,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.systemSession": "系统会话",
 			"d.samples": "样本数",
 			"d.noHours": "无按小时用量",
-			"o.noBilling": "无计费",
-			"o.notQueried": "未查询",
 			"r.today": "今天",
 			"r.week": "7 天",
 			"r.month": "30 天",
 			"r.total": "全部",
 			"r.90days": "90 天",
-			"r.custom": "自定义",
 			"c.date": "日期",
 			"c.calls": "调用",
 			"c.input": "输入",
@@ -218,21 +192,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"c.sessions": "会话",
 			"c.hitRate": "命中率(%)",
 			"c.costNative": "成本(原币合计)",
-			"d.chartHourPrefix": "按小时 Tokens（",
-			"d.chartDayPrefix": "按天 Tokens（",
-			"d.chartDaysSuffix": " 天）",
-			"d.chartHourAriaPrefix": "按小时 Tokens 柱状图（",
-			"d.chartAriaMiddle": "），共 ",
-			"d.chartHourAriaSuffix": " 个小时，含输入 / 输出 / 缓存读",
-			"d.chartDayAriaPrefix": "按天 Tokens 柱状图，共 ",
-			"d.chartDayAriaSuffix": " 天（含无用量日），含输入 / 输出 / 缓存读",
-			"d.callCount": "调用次数",
 			"d.backToParent": "← 返回主会话",
 			"d.callTimes": "{count} 次",
-			"d.channelCount": "通道数",
-			"d.activeDayCount": "使用天数",
-			"d.hitRateShort": "缓存命中率",
-			"d.dailyAvg": "日均 Tokens",
 			"detail.dailyCost": "每日成本",
 			"detail.dailyDetail": "逐日明细",
 			"detail.metricCost": "费用",
@@ -275,23 +236,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.archiveSuffix": " 个已归档）",
 			"p.empty": "无匹配项目",
 			"p.noUsage": "没有可展示的用量",
-			"h.month": "月",
-			"h.summaryPrefix": "近 9 个月 · ",
 			"h.summarySuffix": " 个活跃日",
 			"h.noUsage": "当日无用量",
 			"h.noLedger": "台账未覆盖",
-			"sh.shareAll": "全部占比",
-			"sh.channels": "通道占比",
-			"sh.models": "模型占比",
-			"sh.noData": "暂无数据",
 			"sh.morePrefix": "，等 ",
 			"sh.moreSuffix": " 项",
-			"issue.build-failed": "快照构建失败，沿用上一份",
-			"issue.channels-failed": "通道清单读取失败",
-			"issue.quota-refresh": "配额后台补查",
-			"issue.build-duration": "构建耗时偏长",
-			"issue.quota-failed": "配额查询失败",
-			"issue.write-failed": "快照写入失败",
 			"srv.rateNoteEn": "价目细节见下方费率与来源",
 			"srv.code.noSnapshot": "本机还没有快照",
 			"srv.code.noCredential": "没有可用凭据",
@@ -304,10 +253,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"srv.noSessionService": "宿主没有会话服务",
 			"srv.noSingleSession": "不支持单会话查询",
 			"srv.sessionDetailUnavailable": "会话详情不可用",
-			"srv.fxCache": "缓存汇率（{hours} 小时内）",
-			"srv.fxLive": "实时汇率来自 {host}",
-			"srv.fxFailedCache": "上游失败，回落缓存",
-			"srv.fxFailedDefault": "取汇率失败，暂用默认 {rate}",
 			"m.others": "其它",
 			"fx.live": "实时上游",
 			"fx.cache": "缓存",
@@ -348,15 +293,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"csh.unknown": "成本来源未识别",
 			"part.suffix": " · 部分",
 			"part.hint": "缓存写入价未收录，按未命中价计",
-			"s.showPrefix": "显示 ",
-			"s.showSuffix": " 个会话",
 			"s.amount": "金额",
-			"s.unknownDate": "未知日期",
-			"r.yesterday": "昨日",
 			"c.cost": "成本",
-			"q.resetUnknown": "重置于 —",
-			"q.snapshotPrefix": "，快照 ",
-			"q.modelRatesCount": " 个模型",
 			"q.ratesRange": " · 近 30 天",
 			"q.priceEntriesSuffix": " 条价目",
 			"q.noBasis": "无依据",
@@ -364,20 +302,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"export.json": "导出 JSON",
 			"d.hourUnit": " 时 · ",
 			"d.callUnit": " 次",
-			"dd.sum": "合计",
 			"empty.noUsage": "无用量记录",
 			"h.summary": "热力图",
-			"sh.shareByTokens": "占比 · 按 Tokens",
 			"m.share": "占比",
 			"m.empty": "无匹配模型",
 			"p.project": "项目",
-			"o.type": "类型",
-			"o.balanceWindow": "余额 / 窗口",
-			"o.cost30": "30 天成本",
-			"o.detailArrow": "明细 →",
 			"o.noChannels": "未读到通道配置",
-			"o.ledgerHint": "—",
-			"o.snapshotHint": "—",
 			"h.wd0": "日",
 			"h.wd1": "一",
 			"h.wd2": "二",
@@ -392,14 +322,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.byModel": "逐模型用量",
 			"d.hoursNote": "一天里的分布（各小时合计，跨天累加）",
 			"d.ledgerLoading": "台账读取中或不可用",
-			"d.sourceSession": "来源：会话事件（该日台账无记录）",
 			"date.select": "选择日期",
 			"date.startHint": "点击选择开始日期",
 			"date.endHint": "点击选择结束日期",
 			"date.clear": "清除",
 			"date.prevMonth": "上一个月",
 			"date.nextMonth": "下一个月",
-			"s.timeDuration": "时间 / 时长",
 			"s.empty": "无匹配会话",
 			"s.sessionCost": "会话成本",
 			"q.offPeakNow": " · 当前空闲价",
@@ -408,33 +336,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.grant": "赠送",
 			"balance.balance": "余额",
 			"balance.totalInline": "合计 {value}",
-			"window.5h": "5 小时窗口",
 			"w.5h": "5 小时",
 			"w.week": "本周",
 			"w.month": "本月",
 			"w.day": "当日",
-			"window.day": "当日窗口",
-			"window.week": "本周窗口",
-			"window.month": "本月窗口",
 			"unit.perMillion": "每百万 tokens",
-			"source.official": "官方",
-			"source.catalog": "官方价",
-			"source.aggregate": "聚合",
-			"source.none": "无依据",
 			"quota.resetPrefix": "重置于 ",
 			"quota.resetAt": "重置于",
 			"quota.noResponse": "没拿到服务端响应",
 			"quota.fxBad": "汇率无法解析",
 			"quota.fxUnavailable": "汇率不可用",
-			"quota.fxCacheHint": "汇率在服务端缓存 12 小时",
 			"quota.fetchFx": "取汇率",
 			"quota.refreshFx": "刷新汇率",
 			"quota.refreshPrices": "刷新价目",
 			"quota.ratesHint": "近 30 天模型单价",
-			"quota.notQueried": "未查询",
 			"quota.loadingRates": "读取单价",
 			"quota.ratesUnavailable": "单价表不可用",
-			"quota.noUsage": "近 30 天无用量",
 			"quota.noFourRates": "没有四档单价",
 			"quota.sourceLabel": "来源",
 			"quota.updated": "已更新",
@@ -456,12 +373,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.offline": "不联网",
 			"quota.online": "联网",
 			"quota.members": "成员",
-			"quota.impact": "影响",
-			"quota.impactValue": "用量计入，成本显示 —",
-			"quota.channelFilter": "选择在额度页显示的通道",
-			"quota.allChannels": "全部显示",
-			"quota.channelCount": "显示 {count} 个",
-			"quota.noChannelSelected": "未选中通道",
 			"err.noLiveQuery": "未启用实时查询",
 			"err.noApiKey": "未配置 API Key",
 			"err.noSnapshot": "没有快照可用",
@@ -471,12 +382,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"err.badJson": "响应无法解析",
 			"err.tooLarge": "响应异常大",
 			"err.http": "HTTP {code}",
-			"err.detail.noKey": "未配置 Key",
-			"err.detail.rejected": "凭据被拒绝",
-			"err.detail.keyMissing": "Key 未填写",
-			"err.detail.local": "本地端点无接口",
-			"err.detail.free": "免费额度无接口",
-			"err.detail.none": "无余额接口",
 			"sessions.top": "最耗会话",
 			"sessions.shape": "会话形态",
 			"sessions.recent": "最近会话",
@@ -517,12 +422,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.hourlyCost": "分时成本",
 			"overview.kpiDailyCost": "日均成本",
 			"overview.pp": "pp",
-			"overview.prev": "上期 {value}",
-			"overview.ioSplit": "入 {input} · 出 {output}",
-			"overview.cacheLine": "缓存读 {value} · 省 {saved}",
-			"overview.cacheReadOnly": "缓存读 {value}",
-			"overview.kpiCacheSaved": "缓存节省",
-			"overview.ofCost": "占成本 {percent}%",
 			"overview.activeDays": "活跃 {count} 天",
 			"overview.streak": "最长连续 {count} 天",
 			"overview.busiest": "最忙 {date}（{value}）",
@@ -629,6 +528,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"dist.others": "Others ({count})",
 			"dist.countUnit": "{count}",
 			"words.kpiPrompts": "Prompts",
+			"words.kpiAvgPerSession": "Per session",
 			"words.kpiChars": "Chars",
 			"words.kpiWords": "Words",
 			"words.kpiTop": "Top word",
@@ -671,21 +571,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"common.workspace": "Workspace",
 			"common.sessionSuffix": " sessions",
 			"common.modelSuffix": " models",
-			"common.subagentSuffix": " subagents",
-			"s.id": "Session",
 			"s.title": "Title",
 			"s.prompt": "First prompt",
-			"s.first": "First",
 			"s.last": "Last",
 			"s.crossDays": "Days",
-			"s.parentFocusNote": "Showing this session and its subagents (parent row included)",
 			"s.loadMore": "Load more (+{count})",
 			"s.shownCount": "Showing {shown} / {total} sessions",
-			"s.hitRate": "Hit %",
-			"s.costNative": "Cost (native)",
 			"s.costSource": "Cost source",
 			"s.archived": "Archived",
-			"s.yes": "Yes",
 			"s.no": "No",
 			"s.loading": "Loading",
 			"s.unavailable": "Sessions unavailable",
@@ -694,32 +587,15 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"s.searchPlaceholder": "Search title / id",
 			"s.filterChannel": "Channel",
 			"s.allChannels": "All channels",
-			"s.filterRange": "Range",
-			"s.days7": "7 days",
-			"s.days30": "30 days",
-			"s.rangeAll": "All",
 			"s.sort": "Sort",
-			"s.sortRecent": "Latest",
 			"s.sortTokensDesc": "Tokens desc",
 			"s.sortTokensAsc": "Tokens asc",
-			"s.sortDuration": "Longest",
 			"s.sortCost": "Cost desc",
-			"s.sortHit": "Hit % desc",
 			"s.sortCalls": "Calls desc",
-			"s.filterArchive": "Archive",
-			"s.archiveHide": "Hide archived",
-			"s.archiveAll": "With archived",
-			"s.filterSubagent": "Sub-sessions",
-			"s.subagentHide": "Main only",
-			"s.subagentAll": "With sub-sessions",
 			"s.noCost": "No price basis",
-			"s.expandModels": "Show models",
-			"s.collapseModels": "Hide models",
 			"s.noPrompt": "(no prompt)",
 			"s.noWorkspace": "No workspace",
 			"s.gotoProject": "Filter in Projects: ",
-			"s.focusChildren": "Focus this session + ",
-			"s.focusChildrenTail": " sub-sessions (tokens not merged)",
 			"d.title": "Session",
 			"d.close": "Close session",
 			"d.unknownReason": "Unknown reason",
@@ -740,14 +616,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.systemSession": "System session",
 			"d.samples": "Samples",
 			"d.noHours": "No hourly usage",
-			"o.noBilling": "No billing",
-			"o.notQueried": "Not queried",
 			"r.today": "Today",
 			"r.week": "7 days",
 			"r.month": "30 days",
 			"r.total": "All",
 			"r.90days": "90 days",
-			"r.custom": "Custom",
 			"c.date": "Date",
 			"c.calls": "Calls",
 			"c.input": "Input",
@@ -756,21 +629,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"c.sessions": "Sessions",
 			"c.hitRate": "Hit %",
 			"c.costNative": "Cost (native)",
-			"d.chartHourPrefix": "Hourly tokens (",
-			"d.chartDayPrefix": "Daily tokens (",
-			"d.chartDaysSuffix": " days)",
-			"d.chartHourAriaPrefix": "Hourly token bars (",
-			"d.chartAriaMiddle": "), ",
-			"d.chartHourAriaSuffix": " hours, input / output / cache read",
-			"d.chartDayAriaPrefix": "Daily token bars, ",
-			"d.chartDayAriaSuffix": " days (including empty days), input / output / cache read",
-			"d.callCount": "Calls",
 			"d.backToParent": "← Back to parent session",
 			"d.callTimes": "{count} calls",
-			"d.channelCount": "Channels",
-			"d.activeDayCount": "Days used",
-			"d.hitRateShort": "Cache hit rate",
-			"d.dailyAvg": "Daily avg tokens",
 			"detail.dailyCost": "Daily cost",
 			"detail.dailyDetail": "Daily detail",
 			"detail.metricCost": "Cost",
@@ -813,23 +673,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"p.archiveSuffix": " archived included)",
 			"p.empty": "No matches",
 			"p.noUsage": "No usage to show",
-			"h.month": "Month",
-			"h.summaryPrefix": "Last 9 months · ",
 			"h.summarySuffix": " active days",
 			"h.noUsage": "No usage",
 			"h.noLedger": "Not in ledger",
-			"sh.shareAll": "All shares",
-			"sh.channels": "Channels",
-			"sh.models": "Models",
-			"sh.noData": "No data",
 			"sh.morePrefix": ", +",
 			"sh.moreSuffix": " more",
-			"issue.build-failed": "Snapshot build failed; keeping the previous one",
-			"issue.channels-failed": "Channel list read failed",
-			"issue.quota-refresh": "Quota refresh (background)",
-			"issue.build-duration": "Build is slow",
-			"issue.quota-failed": "Quota query failed",
-			"issue.write-failed": "Snapshot write failed",
 			"srv.rateNoteEn": "see rates, source and date below",
 			"srv.code.noSnapshot": "no local snapshot yet",
 			"srv.code.noCredential": "no credential available",
@@ -842,10 +690,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"srv.noSessionService": "host has no session service",
 			"srv.noSingleSession": "single-session query unsupported",
 			"srv.sessionDetailUnavailable": "session detail unavailable",
-			"srv.fxCache": "cached FX (within {hours}h)",
-			"srv.fxLive": "live FX from {host}",
-			"srv.fxFailedCache": "upstream failed, using cache",
-			"srv.fxFailedDefault": "FX unavailable, using default {rate}",
 			"m.others": "Others",
 			"fx.live": "live upstream",
 			"fx.cache": "cached",
@@ -886,15 +730,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"csh.unknown": "Unknown cost source",
 			"part.suffix": " · partial",
 			"part.hint": "cache-write price missing, uses the miss price",
-			"s.showPrefix": "Show ",
-			"s.showSuffix": " sessions",
 			"s.amount": "Amount",
-			"s.unknownDate": "Unknown date",
-			"r.yesterday": "Yesterday",
 			"c.cost": "Cost",
-			"q.resetUnknown": "Resets —",
-			"q.snapshotPrefix": ", snapshot ",
-			"q.modelRatesCount": " models",
 			"q.ratesRange": " · last 30 days",
 			"q.priceEntriesSuffix": " price entries",
 			"q.noBasis": "None",
@@ -902,20 +739,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"export.json": "JSON",
 			"d.hourUnit": "h · ",
 			"d.callUnit": " calls",
-			"dd.sum": "Total",
 			"empty.noUsage": "No usage",
 			"h.summary": "Heatmap",
-			"sh.shareByTokens": "share · by tokens",
 			"m.share": "Share",
 			"m.empty": "No matches",
 			"p.project": "Project",
-			"o.type": "Type",
-			"o.balanceWindow": "Balance / window",
-			"o.cost30": "30d cost",
-			"o.detailArrow": "Details →",
 			"o.noChannels": "No channel config",
-			"o.ledgerHint": "—",
-			"o.snapshotHint": "—",
 			"h.wd0": "S",
 			"h.wd1": "M",
 			"h.wd2": "T",
@@ -930,14 +759,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"d.byModel": "By model",
 			"d.hoursNote": "Distribution over a day (hours summed, cross-day merged)",
 			"d.ledgerLoading": "Ledger loading or unavailable",
-			"d.sourceSession": "Source: session events (no ledger entry that day)",
 			"date.select": "Select date",
 			"date.startHint": "Pick the start date",
 			"date.endHint": "Pick the end date",
 			"date.clear": "Clear",
 			"date.prevMonth": "Previous month",
 			"date.nextMonth": "Next month",
-			"s.timeDuration": "Time / duration",
 			"s.empty": "No matches",
 			"s.sessionCost": "Session cost",
 			"q.offPeakNow": " · off-peak now",
@@ -946,33 +773,22 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"balance.grant": "Granted",
 			"balance.balance": "Balance",
 			"balance.totalInline": "Total {value}",
-			"window.5h": "5-hour",
 			"w.5h": "5h",
 			"w.week": "Weekly",
 			"w.month": "Monthly",
 			"w.day": "Daily",
-			"window.day": "Daily",
-			"window.week": "Weekly",
-			"window.month": "Monthly",
 			"unit.perMillion": "per 1M tokens",
-			"source.official": "Official",
-			"source.catalog": "Catalog",
-			"source.aggregate": "Aggregate",
-			"source.none": "None",
 			"quota.resetPrefix": "重置于 ",
 			"quota.resetAt": "Resets",
 			"quota.noResponse": "No response",
 			"quota.fxBad": "Bad FX data",
 			"quota.fxUnavailable": "FX unavailable",
-			"quota.fxCacheHint": "FX is cached server-side for 12h",
 			"quota.fetchFx": "Get FX",
 			"quota.refreshFx": "Refresh FX",
 			"quota.refreshPrices": "Refresh prices",
 			"quota.ratesHint": "Model rates (30d)",
-			"quota.notQueried": "Not queried",
 			"quota.loadingRates": "Loading rates",
 			"quota.ratesUnavailable": "Rates unavailable",
-			"quota.noUsage": "No usage in 30d",
 			"quota.noFourRates": "No 4-tier rates",
 			"quota.sourceLabel": "Source",
 			"quota.updated": "Updated",
@@ -994,12 +810,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"quota.offline": "Offline",
 			"quota.online": "Online",
 			"quota.members": "Members",
-			"quota.impact": "Impact",
-			"quota.impactValue": "Usage counted, cost shows —",
-			"quota.channelFilter": "Choose channels shown on the quota page",
-			"quota.allChannels": "Show all",
-			"quota.channelCount": "Showing {count}",
-			"quota.noChannelSelected": "No channel selected",
 			"err.noLiveQuery": "Live query off",
 			"err.noApiKey": "No API key",
 			"err.noSnapshot": "No snapshot",
@@ -1009,12 +819,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"err.badJson": "Bad response",
 			"err.tooLarge": "Response too large",
 			"err.http": "HTTP {code}",
-			"err.detail.noKey": "No API key",
-			"err.detail.rejected": "Credentials rejected",
-			"err.detail.keyMissing": "Key empty",
-			"err.detail.local": "Local endpoint",
-			"err.detail.free": "Free tier, no API",
-			"err.detail.none": "No balance API",
 			"sessions.top": "Top sessions",
 			"sessions.shape": "Session shape",
 			"sessions.recent": "Recent sessions",
@@ -1055,12 +859,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"detail.hourlyCost": "Hourly cost",
 			"overview.kpiDailyCost": "Daily cost",
 			"overview.pp": "pp",
-			"overview.prev": "Prev {value}",
-			"overview.ioSplit": "In {input} · Out {output}",
-			"overview.cacheLine": "Cache read {value} · saved {saved}",
-			"overview.cacheReadOnly": "Cache read {value}",
-			"overview.kpiCacheSaved": "Cache saved",
-			"overview.ofCost": "{percent}% of cost",
 			"overview.activeDays": "{count} active days",
 			"overview.streak": "Longest streak {count}d",
 			"overview.busiest": "Busiest {date} ({value})",
@@ -1431,7 +1229,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		const CLIENT_BOOT_AT_MS = typeof performance === "undefined" ? 0 : performance.now();
 		//#endregion
 		//#region \0dsh-css:src/client/styles/shared.module.css.mjs
-		const css$17 = ".d29QNW_section{box-sizing:border-box;--ku-body:max(14px, var(--dsh-content-font-size,14px));--ku-sub:max(13px, calc(var(--dsh-content-font-size,14px) * .92));--ku-title:max(17px, calc(var(--dsh-content-font-size,14px) * 1.2));--ku-kpi:max(20px, calc(var(--dsh-content-font-size,14px) * 1.42));--ku-control:36px;min-height:0;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-body);padding:28px 48px 48px;line-height:1.6;overflow:visible}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:16px}.d29QNW_pageHead{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;max-width:960px;margin:0 auto 16px;display:flex}.d29QNW_pageTitle{letter-spacing:normal;white-space:nowrap;color:var(--dsw-alias-label-primary,#0f1115);margin:0;font-size:20px;font-weight:500;line-height:28px}.d29QNW_headActions{flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;display:inline-flex}.d29QNW_toolbarRow{flex-wrap:wrap;align-items:center;gap:8px 10px;max-width:960px;margin-left:auto;margin-right:auto;display:flex}.d29QNW_toolbarRow+.d29QNW_toolbarRow{margin-top:8px}.d29QNW_toolbarGroup{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:inline-flex}.d29QNW_rowSpacer{flex:auto}.d29QNW_toolbarDivider{background:var(--dsw-alias-border-l1,#2c2c34);flex:none;width:1px;height:18px}.d29QNW_stickyHead .d29QNW_headBtn{height:var(--ku-control);border-radius:12px;padding:0 12px;font-size:13px;font-weight:400}.d29QNW_iconBtn{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;background:0 0;border:1px solid #0000;border-radius:12px;justify-content:center;align-items:center;padding:0;line-height:1;text-decoration:none;display:inline-flex;position:relative}.d29QNW_iconBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_iconBtn:disabled{opacity:.6;cursor:default}.d29QNW_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;display:flex}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);margin:-28px -48px 0;padding:4px 48px 8px;position:sticky;top:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-16px -16px 0;padding:14px 16px 10px}}.d29QNW_ghLink{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border:1px solid #0000;border-radius:12px;justify-content:center;align-items:center;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{background:0 0;border-radius:0;flex-wrap:wrap;gap:8px;padding:0;display:inline-flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:14px;height:28px;padding:0 10px;font-weight:400}.d29QNW_tabBar button:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#2631480f);color:var(--dsw-alias-label-primary,#0f1115);box-shadow:none;font-weight:400}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_cardGrid6{grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:20px;display:grid}.d29QNW_statLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px);margin-bottom:6px}.d29QNW_statValue{font-size:max(18px, calc(var(--dsh-content-font-size,13px) * 1.4));font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;padding-right:48px;font-weight:650}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px;font-size:13px;font-weight:500}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:16px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_legend{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);flex-wrap:wrap;align-items:center;gap:10px;display:inline-flex}.d29QNW_legend i{border-radius:2px;width:10px;height:10px;margin-right:3px;display:inline-block}.d29QNW_footnoteList li{margin:1px 0}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 6px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_caliberVersion{font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;margin:0 0 8px}.d29QNW_statValueRow{position:relative}.d29QNW_statBadge{white-space:nowrap;font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);position:absolute;top:0;right:0}.d29QNW_statAbove{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:2px}.d29QNW_badgeWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.d29QNW_statLabelRow{align-items:center;gap:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_modeSwitch{height:var(--ku-control);color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-body);cursor:pointer;white-space:nowrap;align-items:center;gap:6px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;box-sizing:border-box;height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);text-overflow:ellipsis;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 12px),calc(100% - 8px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border:1px solid #0000;border-radius:12px;max-width:200px;padding:0 24px 0 10px}.d29QNW_refreshSelect:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#0f1115)}.d29QNW_refreshSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_sections{flex-direction:column;gap:32px;max-width:960px;margin:24px auto 0;display:flex}.d29QNW_pageSection{min-width:0}.d29QNW_pageSectionTitle{letter-spacing:normal;color:var(--dsw-alias-label-primary,#0f1115);margin:0 0 8px;font-size:14px;font-weight:500;line-height:22px}.d29QNW_rangeTabs{box-sizing:border-box;height:var(--ku-control);background:0 0;border-radius:0;flex-wrap:wrap;align-items:center;gap:2px;padding:0;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:14px;height:28px;padding:0 10px;font-weight:400}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#2631480f);color:var(--dsw-alias-label-primary,#0f1115);font-weight:400}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_exportMenu{display:inline-flex;position:relative}.d29QNW_exportPanel{z-index:60;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);min-width:132px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:2px;padding:4px;display:flex;position:absolute;top:calc(100% + 6px);right:0}.d29QNW_exportItem{width:100%;color:var(--dsw-alias-label-primary,#0f1115);font:inherit;text-align:left;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:8px 10px;font-size:13px;display:block}.d29QNW_exportItem:hover:enabled{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.d29QNW_exportItem:disabled{color:var(--dsw-alias-label-tertiary,#67676f);cursor:default}@keyframes d29QNW_kuFadeIn{0%{opacity:0}to{opacity:1}}.d29QNW_sections>.d29QNW_pageSection{animation:.14s ease-out d29QNW_kuFadeIn}@media (max-width:1180px){.d29QNW_toolbarRow{gap:6px 8px}.d29QNW_stickyHead{padding-bottom:6px}}.d29QNW_badgeDot{background:var(--dsw-alias-state-warn-primary,#e0a13c);border-radius:999px;width:6px;height:6px;position:absolute;top:6px;right:6px}";
+		const css$17 = ".d29QNW_section{box-sizing:border-box;--ku-body:max(14px, var(--dsh-content-font-size,14px));--ku-sub:max(13px, calc(var(--dsh-content-font-size,14px) * .92));--ku-title:max(17px, calc(var(--dsh-content-font-size,14px) * 1.2));--ku-kpi:max(20px, calc(var(--dsh-content-font-size,14px) * 1.42));--ku-control:36px;min-height:0;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--ku-body);padding:28px 48px 48px;line-height:1.6;overflow:visible}[data-sidebar-right-open] .d29QNW_section,[data-sidebar-right-float-host] .d29QNW_section{padding:16px}.d29QNW_pageHead{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;max-width:960px;margin:0 auto 16px;display:flex}.d29QNW_pageTitle{letter-spacing:normal;white-space:nowrap;color:var(--dsw-alias-label-primary,#0f1115);margin:0;font-size:20px;font-weight:500;line-height:28px}.d29QNW_toolbarRow{flex-wrap:wrap;align-items:center;gap:8px 10px;max-width:960px;margin-left:auto;margin-right:auto;display:flex}.d29QNW_toolbarRow+.d29QNW_toolbarRow{margin-top:8px}.d29QNW_toolbarGroup{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:inline-flex}.d29QNW_rowSpacer{flex:auto}.d29QNW_stickyHead .d29QNW_headBtn{height:var(--ku-control);border-radius:12px;padding:0 12px;font-size:13px;font-weight:400}.d29QNW_iconBtn{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;background:0 0;border:1px solid #0000;border-radius:12px;justify-content:center;align-items:center;padding:0;line-height:1;text-decoration:none;display:inline-flex;position:relative}.d29QNW_iconBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_iconBtn:disabled{opacity:.6;cursor:default}.d29QNW_iconBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_stickyHead{z-index:6;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);margin:-28px -48px 0;padding:4px 48px 8px;position:sticky;top:0}@media (min-width:0){[data-sidebar-right-open] .d29QNW_stickyHead,[data-sidebar-right-float-host] .d29QNW_stickyHead{margin:-16px -16px 0;padding:14px 16px 10px}}.d29QNW_ghLink{box-sizing:border-box;width:var(--ku-control);height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);background:0 0;border:1px solid #0000;border-radius:12px;justify-content:center;align-items:center;line-height:0;text-decoration:none;display:inline-flex}.d29QNW_ghLink:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_ghLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_refreshBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:inherit;cursor:pointer;background:0 0;border-radius:999px;padding:3px 12px;font-family:inherit}.d29QNW_refreshBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:disabled{opacity:.6;cursor:default}.d29QNW_refreshIcon,.d29QNW_refreshIconSpin{display:inline-block}.d29QNW_refreshIconSpin{animation:.9s linear infinite d29QNW_refreshSpin}@keyframes d29QNW_refreshSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.d29QNW_refreshIconSpin{animation:none}}.d29QNW_tabBar{background:0 0;border-radius:0;flex-wrap:wrap;gap:8px;padding:0;display:inline-flex}.d29QNW_tabBar button{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:14px;height:28px;padding:0 10px;font-weight:400}.d29QNW_tabBar button:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_tabBar button.d29QNW_active{background:var(--dsw-alias-interactive-bg-active,#2631480f);color:var(--dsw-alias-label-primary,#0f1115);box-shadow:none;font-weight:400}.d29QNW_card{background:var(--dsw-alias-bg-layer-2,#1d1d22);border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:12px;padding:14px 16px}.d29QNW_statExtra{color:var(--dsw-alias-label-tertiary,#67676f);font-size:inherit;margin-top:4px}.d29QNW_table{border-collapse:collapse;width:100%;margin-top:10px}.d29QNW_table th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px;font-size:13px;font-weight:500}.d29QNW_table td{text-align:right;font-size:inherit;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);vertical-align:middle;border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:normal;overflow-wrap:anywhere;padding:8px}.d29QNW_table th:first-child,.d29QNW_table td:first-child{text-align:left;padding-left:0}.d29QNW_table td:first-child{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_refreshBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_tabBar button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.d29QNW_table tr.d29QNW_clickable{cursor:pointer}.d29QNW_table tr.d29QNW_clickable:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c12)}.d29QNW_statusDot{border-radius:50%;flex-shrink:0;width:8px;height:8px;display:inline-block}.d29QNW_dim{color:var(--dsw-alias-label-tertiary,#67676f)}.d29QNW_empty{color:var(--dsw-alias-label-tertiary,#67676f);padding:16px 0}.d29QNW_warning{color:var(--dsw-alias-state-warn-primary,#e0a13c);font-size:inherit;margin-bottom:10px}.d29QNW_tooltip{z-index:9999;pointer-events:none;background:var(--dsw-alias-bg-layer-3,#232329);border:1px solid var(--dsw-alias-border-l2,#2c2c34);box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);min-width:210px;max-width:300px;font-size:inherit;color:var(--dsw-alias-label-primary,#e8e8ec);border-radius:10px;padding:10px 12px;font-family:inherit;line-height:1.5;position:fixed}.d29QNW_tipTitle{font-size:inherit;margin-bottom:2px;font-weight:650}.d29QNW_tipSub{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:8px}.d29QNW_tipRow{font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);align-items:center;gap:6px;padding:2px 0;display:flex}.d29QNW_tipRow i{border-radius:2px;flex-shrink:0;width:7px;height:7px}.d29QNW_tipName{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.d29QNW_tipAmount{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);text-align:right;width:58px}.d29QNW_tipRate{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.d29QNW_tipBar{background:var(--dsw-alias-interactive-bg-hover,#80808c2e);border-radius:2px;height:3px;margin:1px 0 6px;overflow:hidden}.d29QNW_tipBar>i{border-radius:2px;height:100%;display:block}.d29QNW_tipDivider{border-top:1px solid var(--dsw-alias-border-l1,#2c2c34);font-size:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;display:flex}.d29QNW_pathsCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0f);text-align:left;padding:2px 10px 10px 14px}.d29QNW_pathLine{font-family:ui-monospace,Consolas,monospace;font-size:inherit;color:var(--dsw-alias-label-secondary,#5c6572);word-break:break-all;line-height:1.7}.d29QNW_modeSwitch{height:var(--ku-control);color:var(--dsw-alias-label-tertiary,#8b8b99);font-size:var(--ku-body);cursor:pointer;white-space:nowrap;align-items:center;gap:6px;display:inline-flex}.d29QNW_modeSwitch input{accent-color:var(--dsw-alias-state-business-primary,#5b8cff)}.d29QNW_refreshSelect{-webkit-appearance:none;appearance:none;box-sizing:border-box;height:var(--ku-control);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);text-overflow:ellipsis;cursor:pointer;background-color:#0000;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-position:calc(100% - 12px),calc(100% - 8px);background-repeat:no-repeat;background-size:4px 4px,4px 4px;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;border:1px solid #0000;border-radius:12px;max-width:200px;padding:0 24px 0 10px}.d29QNW_refreshSelect:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#0f1115)}.d29QNW_refreshSelect:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_sections{flex-direction:column;gap:32px;max-width:960px;margin:24px auto 0;display:flex}.d29QNW_pageSection{min-width:0}.d29QNW_rangeTabs{box-sizing:border-box;height:var(--ku-control);background:0 0;border-radius:0;flex-wrap:wrap;align-items:center;gap:2px;padding:0;display:inline-flex}.d29QNW_rangeTab,.d29QNW_rangeTabActive{color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:14px;height:28px;padding:0 10px;font-weight:400}.d29QNW_rangeTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.d29QNW_rangeTabActive{background:var(--dsw-alias-interactive-bg-active,#2631480f);color:var(--dsw-alias-label-primary,#0f1115);font-weight:400}.d29QNW_rangeTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_rangeTabActive:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}.d29QNW_exportMenu{display:inline-flex;position:relative}.d29QNW_exportPanel{z-index:60;border:1px solid var(--dsw-alias-border-l1,#2c2c34);background:var(--dsw-alias-bg-layer-3,#232329);min-width:132px;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);border-radius:10px;flex-direction:column;gap:2px;padding:4px;display:flex;position:absolute;top:calc(100% + 6px);right:0}.d29QNW_exportItem{width:100%;color:var(--dsw-alias-label-primary,#0f1115);font:inherit;text-align:left;cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:8px 10px;font-size:13px;display:block}.d29QNW_exportItem:hover:enabled{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.d29QNW_exportItem:disabled{color:var(--dsw-alias-label-tertiary,#67676f);cursor:default}@keyframes d29QNW_kuFadeIn{0%{opacity:0}to{opacity:1}}.d29QNW_sections>.d29QNW_pageSection{animation:.14s ease-out d29QNW_kuFadeIn}@media (max-width:1180px){.d29QNW_toolbarRow{gap:6px 8px}.d29QNW_stickyHead{padding-bottom:6px}}.d29QNW_badgeDot{background:var(--dsw-alias-state-warn-primary,#e0a13c);border-radius:999px;width:6px;height:6px;position:absolute;top:6px;right:6px}";
 		const tagId$17 = "dsh-key-usage/shared.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$17) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1448,28 +1246,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var shared_module_css_default = {
 			"active": "d29QNW_active",
 			"badgeDot": "d29QNW_badgeDot",
-			"badgeWarn": "d29QNW_badgeWarn",
-			"caliberVersion": "d29QNW_caliberVersion",
 			"card": "d29QNW_card",
-			"cardGrid6": "d29QNW_cardGrid6",
 			"clickable": "d29QNW_clickable",
 			"dim": "d29QNW_dim",
 			"empty": "d29QNW_empty",
 			"exportItem": "d29QNW_exportItem",
 			"exportMenu": "d29QNW_exportMenu",
 			"exportPanel": "d29QNW_exportPanel",
-			"filterBar": "d29QNW_filterBar",
-			"footnoteList": "d29QNW_footnoteList",
 			"ghLink": "d29QNW_ghLink",
-			"headActions": "d29QNW_headActions",
 			"headBtn": "d29QNW_headBtn",
 			"iconBtn": "d29QNW_iconBtn",
 			"kuFadeIn": "d29QNW_kuFadeIn",
-			"legend": "d29QNW_legend",
 			"modeSwitch": "d29QNW_modeSwitch",
 			"pageHead": "d29QNW_pageHead",
 			"pageSection": "d29QNW_pageSection",
-			"pageSectionTitle": "d29QNW_pageSectionTitle",
 			"pageTitle": "d29QNW_pageTitle",
 			"pathLine": "d29QNW_pathLine",
 			"pathsCell": "d29QNW_pathsCell",
@@ -1484,13 +1274,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rowSpacer": "d29QNW_rowSpacer",
 			"section": "d29QNW_section",
 			"sections": "d29QNW_sections",
-			"statAbove": "d29QNW_statAbove",
-			"statBadge": "d29QNW_statBadge",
 			"statExtra": "d29QNW_statExtra",
-			"statLabel": "d29QNW_statLabel",
-			"statLabelRow": "d29QNW_statLabelRow",
-			"statValue": "d29QNW_statValue",
-			"statValueRow": "d29QNW_statValueRow",
 			"statusDot": "d29QNW_statusDot",
 			"stickyHead": "d29QNW_stickyHead",
 			"tabBar": "d29QNW_tabBar",
@@ -1503,7 +1287,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tipRow": "d29QNW_tipRow",
 			"tipSub": "d29QNW_tipSub",
 			"tipTitle": "d29QNW_tipTitle",
-			"toolbarDivider": "d29QNW_toolbarDivider",
 			"toolbarGroup": "d29QNW_toolbarGroup",
 			"toolbarRow": "d29QNW_toolbarRow",
 			"tooltip": "d29QNW_tooltip",
@@ -3529,7 +3312,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/settings.module.css.mjs
-		const css$12 = ".YqBhuW_shell{align-items:stretch;gap:16px;min-width:620px;display:flex}.YqBhuW_tabs{border-right:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);flex-direction:column;flex:0 0 92px;gap:2px;padding-right:8px;display:flex}.YqBhuW_tab{-webkit-appearance:none;appearance:none;cursor:pointer;text-align:left;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:6px;padding:6px 8px}.YqBhuW_tab:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);color:var(--dsw-alias-label-primary,#e8e8ec)}.YqBhuW_tabActive{background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.YqBhuW_panel{flex:auto;min-width:0;max-height:62vh;overflow:auto}.YqBhuW_sections{flex-direction:column;gap:20px;min-width:300px;max-width:520px;display:flex}.YqBhuW_sectionTitle{color:var(--dsw-alias-label-primary,#0f1115);margin-bottom:4px;font-size:14px;font-weight:500}.YqBhuW_rowLabel{font-size:var(--ku-body,14px);color:var(--dsw-alias-label-secondary,#9a9aa6)}.YqBhuW_actions{align-items:center;gap:6px;display:flex}.YqBhuW_currencyBtn{min-width:34px;font-size:var(--ku-body,14px);line-height:1.2}.YqBhuW_value{font-size:var(--ku-sub,13px);color:var(--dsw-alias-label-tertiary,#67676f);word-break:break-all}.YqBhuW_valueWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.YqBhuW_logPane{min-height:44px}.YqBhuW_wrap{flex-direction:column;gap:16px;min-width:300px;max-width:560px;display:flex}.YqBhuW_caliberVersion{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ku-sub,13px)}.YqBhuW_caliberList{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--ku-sub,13px);margin:8px 0 0;padding-left:20px;line-height:1.7}.YqBhuW_link{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:none}.YqBhuW_link:hover{text-decoration:underline}.YqBhuW_row{justify-content:space-between;align-items:center;gap:12px;padding:10px 0;display:flex}.YqBhuW_row+.YqBhuW_row{border-top:1px solid var(--dsw-alias-border-l1,#0000000f)}.YqBhuW_rowInfo{text-align:right;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;overflow:hidden}.YqBhuW_rowInfoWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.YqBhuW_updateLink{font:inherit;color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;background:0 0;border:0;padding:0;font-size:13px}.YqBhuW_updateLink:hover{text-decoration:underline}.YqBhuW_copiedTag{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:6px;font-size:13px}.YqBhuW_updateRefreshBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0 2px;font-size:13px}.YqBhuW_updateRefreshBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}.YqBhuW_skipVersionBtn{font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:4px;padding:0 2px;font-size:13px}.YqBhuW_skipVersionBtn:hover{color:var(--dsw-alias-state-error-primary,#e05a5a)}";
+		const css$12 = ".YqBhuW_shell{align-items:stretch;gap:16px;min-width:620px;display:flex}.YqBhuW_tabs{border-right:1px solid var(--dsw-alias-interactive-bg-active,#80808c2e);flex-direction:column;flex:0 0 92px;gap:2px;padding-right:8px;display:flex}.YqBhuW_tab{-webkit-appearance:none;appearance:none;cursor:pointer;text-align:left;color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:var(--ku-body,14px);background:0 0;border:0;border-radius:6px;padding:6px 8px}.YqBhuW_tab:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);color:var(--dsw-alias-label-primary,#e8e8ec)}.YqBhuW_tabActive{background:var(--dsw-alias-interactive-bg-active,#80808c2e);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.YqBhuW_panel{flex:auto;min-width:0;max-height:62vh;overflow:auto}.YqBhuW_sections{flex-direction:column;gap:20px;min-width:300px;max-width:520px;display:flex}.YqBhuW_rowLabel{font-size:var(--ku-body,14px);color:var(--dsw-alias-label-secondary,#9a9aa6)}.YqBhuW_actions{align-items:center;gap:6px;display:flex}.YqBhuW_currencyBtn{min-width:34px;font-size:var(--ku-body,14px);line-height:1.2}.YqBhuW_logPane{min-height:44px}.YqBhuW_wrap{flex-direction:column;gap:16px;min-width:300px;max-width:560px;display:flex}.YqBhuW_caliberList{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--ku-sub,13px);margin:8px 0 0;padding-left:20px;line-height:1.7}.YqBhuW_link{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:none}.YqBhuW_link:hover{text-decoration:underline}.YqBhuW_row{justify-content:space-between;align-items:center;gap:12px;padding:10px 0;display:flex}.YqBhuW_row+.YqBhuW_row{border-top:1px solid var(--dsw-alias-border-l1,#0000000f)}.YqBhuW_rowInfo{text-align:right;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;overflow:hidden}.YqBhuW_rowInfoWarn{color:var(--dsw-alias-state-warn-primary,#e0a13c)}.YqBhuW_updateLink{font:inherit;color:var(--dsw-alias-state-business-primary,#5b8cff);cursor:pointer;background:0 0;border:0;padding:0;font-size:13px}.YqBhuW_updateLink:hover{text-decoration:underline}.YqBhuW_copiedTag{color:var(--dsw-alias-state-success-primary,#3fb96f);margin-left:6px;font-size:13px}.YqBhuW_updateRefreshBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0 2px;font-size:13px}.YqBhuW_updateRefreshBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}.YqBhuW_skipVersionBtn{font:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:4px;padding:0 2px;font-size:13px}.YqBhuW_skipVersionBtn:hover{color:var(--dsw-alias-state-error-primary,#e05a5a)}";
 		const tagId$12 = "dsh-key-usage/settings.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3546,7 +3329,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		var settings_module_css_default = {
 			"actions": "YqBhuW_actions",
 			"caliberList": "YqBhuW_caliberList",
-			"caliberVersion": "YqBhuW_caliberVersion",
 			"copiedTag": "YqBhuW_copiedTag",
 			"currencyBtn": "YqBhuW_currencyBtn",
 			"link": "YqBhuW_link",
@@ -3556,7 +3338,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"rowInfo": "YqBhuW_rowInfo",
 			"rowInfoWarn": "YqBhuW_rowInfoWarn",
 			"rowLabel": "YqBhuW_rowLabel",
-			"sectionTitle": "YqBhuW_sectionTitle",
 			"sections": "YqBhuW_sections",
 			"shell": "YqBhuW_shell",
 			"skipVersionBtn": "YqBhuW_skipVersionBtn",
@@ -3565,8 +3346,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"tabs": "YqBhuW_tabs",
 			"updateLink": "YqBhuW_updateLink",
 			"updateRefreshBtn": "YqBhuW_updateRefreshBtn",
-			"value": "YqBhuW_value",
-			"valueWarn": "YqBhuW_valueWarn",
 			"wrap": "YqBhuW_wrap"
 		};
 		//#endregion
@@ -3784,7 +3563,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: settings_module_css_default.rowInfo,
 											children: [
-												props.update?.current ?? "0.2.4",
+												props.update?.current ?? "0.2.5",
 												props.update?.hasUpdate === true && props.update.latest !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 													" → ",
 													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -3877,6 +3656,292 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				})]
 			});
 		}
+		//#endregion
+		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
+		const css$11 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;display:grid}.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:1180px){.tXjxsq_kpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:820px){.tXjxsq_kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;display:flex}.tXjxsq_kpiTop{align-items:center;gap:6px;min-width:0;display:flex}.tXjxsq_kpiIcon{width:14px;height:14px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}.tXjxsq_kpiCompare{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;font-size:13px;display:flex}.tXjxsq_kpiPrev{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiDelta{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_kpiDeltaWarn{color:var(--dsw-alias-state-error-primary,#e5484d);white-space:nowrap}.tXjxsq_kpiDeltaGood{color:var(--dsw-alias-state-success-primary,#46a758);white-space:nowrap}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px;font-size:13px;font-weight:400}.tXjxsq_dialogTools{justify-content:flex-end;gap:8px;padding:0 0 8px;display:flex}.tXjxsq_dialogSortBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:13px}.tXjxsq_dialogSortBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}";
+		const tagId$11 = "dsh-key-usage/overview.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "dsh-key-usage";
+			tag.dataset.pluginCss = tagId$11;
+			tag.textContent = css$11;
+			document.head.appendChild(tag);
+		}
+		const cssRegistry$11 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
+		if (!cssRegistry$11.some((e) => e.tagId === tagId$11)) cssRegistry$11.push({
+			tagId: tagId$11,
+			css: css$11
+		});
+		var overview_module_css_default = {
+			"dialogSortBtn": "tXjxsq_dialogSortBtn",
+			"dialogTools": "tXjxsq_dialogTools",
+			"gridTwo": "tXjxsq_gridTwo",
+			"hist": "tXjxsq_hist",
+			"histBar": "tXjxsq_histBar",
+			"histBarPeak": "tXjxsq_histBarPeak",
+			"histColumn": "tXjxsq_histColumn",
+			"histLabels": "tXjxsq_histLabels",
+			"hourAxisLabel": "tXjxsq_hourAxisLabel",
+			"hourCell": "tXjxsq_hourCell",
+			"hourWeekday": "tXjxsq_hourWeekday",
+			"hourWrap": "tXjxsq_hourWrap",
+			"kpiCard": "tXjxsq_kpiCard",
+			"kpiCompare": "tXjxsq_kpiCompare",
+			"kpiDelta": "tXjxsq_kpiDelta",
+			"kpiDeltaGood": "tXjxsq_kpiDeltaGood",
+			"kpiDeltaWarn": "tXjxsq_kpiDeltaWarn",
+			"kpiGrid": "tXjxsq_kpiGrid",
+			"kpiIcon": "tXjxsq_kpiIcon",
+			"kpiLabel": "tXjxsq_kpiLabel",
+			"kpiPrev": "tXjxsq_kpiPrev",
+			"kpiTop": "tXjxsq_kpiTop",
+			"kpiUnit": "tXjxsq_kpiUnit",
+			"kpiValue": "tXjxsq_kpiValue",
+			"legend": "tXjxsq_legend",
+			"legendItem": "tXjxsq_legendItem",
+			"metricTab": "tXjxsq_metricTab",
+			"metricTabOn": "tXjxsq_metricTabOn",
+			"metricTabs": "tXjxsq_metricTabs",
+			"panel": "tXjxsq_panel",
+			"panelHead": "tXjxsq_panelHead",
+			"panelHint": "tXjxsq_panelHint",
+			"panelMore": "tXjxsq_panelMore",
+			"panelTitle": "tXjxsq_panelTitle",
+			"rankBar": "tXjxsq_rankBar",
+			"rankBarTop": "tXjxsq_rankBarTop",
+			"rankDim": "tXjxsq_rankDim",
+			"rankName": "tXjxsq_rankName",
+			"rankRow": "tXjxsq_rankRow",
+			"rankSub": "tXjxsq_rankSub",
+			"rankTrack": "tXjxsq_rankTrack",
+			"rankValue": "tXjxsq_rankValue",
+			"stack": "tXjxsq_stack",
+			"trendFoot": "tXjxsq_trendFoot",
+			"trendStats": "tXjxsq_trendStats",
+			"yearActive": "tXjxsq_yearActive",
+			"yearAxisLabel": "tXjxsq_yearAxisLabel",
+			"yearCell": "tXjxsq_yearCell",
+			"yearEmpty": "tXjxsq_yearEmpty",
+			"yearFuture": "tXjxsq_yearFuture",
+			"yearWeekday": "tXjxsq_yearWeekday",
+			"yearWrap": "tXjxsq_yearWrap"
+		};
+		//#endregion
+		//#region src/client/components/OverviewPanels.tsx
+		/**
+		* 概览的两个大件：趋势柱（只有高度与日期）与排行面板（横条 + 「还有 M 个」弹窗）。
+		* 数据拼装留在 OverviewTab，这里只管渲染与交互。
+		*/
+		const RANK_ROWS = 5;
+		/** 柱状图横轴最多标注几个日期。 */
+		const BAR_TICKS = 8;
+		function TrendBars(props) {
+			const peak = Math.max(0, ...props.values.filter((value) => value !== null));
+			const peakIndex = props.values.findIndex((value) => value !== null && value === peak && peak > 0);
+			const ticks = tickIndexesOf(props.days.length, BAR_TICKS);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: overview_module_css_default.hist,
+				children: props.days.map((day, index) => {
+					const value = props.values[index] ?? null;
+					const percent = value === null || peak <= 0 ? 0 : Math.max(2, value / peak * 100);
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: overview_module_css_default.histColumn,
+						onMouseMove: (event) => props.tooltip.show(event, props.tipOf(day.date, value)),
+						onMouseLeave: props.tooltip.hide,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: index === peakIndex ? overview_module_css_default.histBar + " " + overview_module_css_default.histBarPeak : overview_module_css_default.histBar,
+							style: { height: percent + "%" }
+						})
+					}, day.date);
+				})
+			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: overview_module_css_default.histLabels,
+				children: ticks.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtShortDate(props.days[index].date) }, props.days[index].date))
+			})] });
+		}
+		/** 排行面板：横条 + 右侧数值；行数超出「还有 M 个」。 */
+		function RankPanel(props) {
+			/** 取词：宿主切语言时重渲染 */
+			const t = useT();
+			const [showAll, setShowAll] = (0, react.useState)(false);
+			/** 弹窗里的排序方向：默认降序，再点一次改升序。 */
+			const [ascending, setAscending] = (0, react.useState)(false);
+			const shown = props.items.slice(0, RANK_ROWS);
+			const peak = shown.reduce((maximum, item) => item.value !== null && item.value > maximum ? item.value : maximum, 0);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.panel,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.panelHead,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
+								className: overview_module_css_default.panelTitle,
+								children: props.title
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: overview_module_css_default.metricTabs,
+								children: props.metrics.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: metric === props.active ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
+									"aria-pressed": metric === props.active,
+									onClick: () => props.onActive(metric),
+									children: t(labelKey)
+								}, metric))
+							}),
+							props.total > shown.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: overview_module_css_default.panelMore,
+								onClick: () => setShowAll(true),
+								title: t("overview.moreHint"),
+								children: t("overview.more", {
+									total: props.total,
+									rest: Math.max(0, props.total - shown.length)
+								})
+							})
+						]
+					}),
+					shown.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: shared_module_css_default.empty,
+						children: t("overview.noData")
+					}) : shown.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.rankRow,
+						title: item.title,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: overview_module_css_default.rankName,
+								children: item.name
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: overview_module_css_default.rankTrack,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
+									className: index === 0 ? overview_module_css_default.rankBar + " " + overview_module_css_default.rankBarTop : overview_module_css_default.rankBar,
+									style: { width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + "%" }
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: item.value === null ? overview_module_css_default.rankValue + " " + overview_module_css_default.rankDim : overview_module_css_default.rankValue,
+								children: item.valueText
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: overview_module_css_default.rankSub,
+								children: item.subText
+							})
+						]
+					}, item.key)),
+					showAll && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(Dialog, {
+						title: props.title,
+						closeLabel: t("action.close"),
+						onClose: () => setShowAll(false),
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: overview_module_css_default.dialogTools,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: overview_module_css_default.dialogSortBtn,
+								onClick: () => setAscending((previous) => !previous),
+								"aria-label": t("overview.sortDirection"),
+								title: t("overview.sortDirection"),
+								children: ascending ? "↑" : "↓"
+							})
+						}), props.items.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: shared_module_css_default.empty,
+							children: t("overview.noData")
+						}) : [...props.items].sort((first, second) => ascending ? -compareRankValue(first, second) : compareRankValue(first, second)).map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: overview_module_css_default.rankRow,
+							title: item.title,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.rankName,
+									children: item.name
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.rankValue,
+									children: item.valueText
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: overview_module_css_default.rankSub,
+									children: item.subText
+								})
+							]
+						}, item.key))]
+					})
+				]
+			});
+		}
+		/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
+		function compareRankValue(first, second) {
+			if (first.value === null && second.value === null) return 0;
+			if (first.value === null) return 1;
+			if (second.value === null) return -1;
+			return second.value - first.value;
+		}
+		/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
+		function tickIndexesOf(count, wanted) {
+			if (count <= wanted) return Array.from({ length: count }, (_, index) => index);
+			const step = Math.ceil(count / wanted);
+			const indexes = [];
+			for (let index = 0; index < count; index += step) indexes.push(index);
+			return indexes;
+		}
+		//#endregion
+		//#region src/client/components/KpiStat.tsx
+		/** 线性小图标：只用 currentColor 描边，尺寸固定 14，不依赖任何图标库。 */
+		const KPI_ICON_PATHS = {
+			cost: "M8 2v12M4.5 5h5.2a1.8 1.8 0 0 1 0 3.6H6a1.8 1.8 0 0 0 0 3.6h5.5",
+			tokens: "M2.8 4h10.4v3.2H2.8zM2.8 8.8h10.4V12H2.8z",
+			input: "M8 2.4v7.2m0 0 2.6-2.6M8 9.6 5.4 7M2.8 13.6h10.4",
+			output: "M8 9.6V2.4m0 0L5.4 5M8 2.4 10.6 5M2.8 13.6h10.4",
+			cacheRead: "M4.6 11.4a2.4 2.4 0 0 1 .2-4.8 3.1 3.1 0 0 1 5.9.5 2.4 2.4 0 0 1-.3 4.3H4.6z",
+			hit: "M2.8 2.8h10.4v10.4H2.8zM6 10l4-4M6 6.2h.01M10 9.8h.01",
+			dailyTokens: "M3 12.6V9m3 3.6V5.6m3.2 7V8.2m3 4.4V6.8",
+			dailyCost: "M2.8 4.4h10.4v9.2H2.8zM2.8 7.2h10.4M5.8 2.6v2.4m4.4-2.4v2.4",
+			calls: "M2.6 9.4 5.4 6.2l2.6 3 2.6-4 2.8 3.2",
+			sessions: "M6.2 7.4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.8 13.4c0-1.9 1.5-3.4 3.4-3.4s3.4 1.5 3.4 3.4M11 6.6a1.6 1.6 0 1 0 0-3.2M11.2 13.4c0-1.3-.5-2.4-1.2-3.2"
+		};
+		/** KPI 卡：图标+标签 / 上期与环比同一行 / 大数。十张卡结构完全一致，扫一列就能比出变化。 */
+		function KpiStat(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: overview_module_css_default.kpiCard,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiTop,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+							className: overview_module_css_default.kpiIcon,
+							viewBox: "0 0 16 16",
+							"aria-hidden": "true",
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+								d: KPI_ICON_PATHS[props.icon],
+								fill: "none",
+								stroke: "currentColor",
+								strokeWidth: "1.2",
+								strokeLinecap: "round",
+								strokeLinejoin: "round"
+							})
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiLabel,
+							children: props.label
+						})]
+					}),
+					props.hidePrev !== true && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiCompare,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiPrev,
+							children: props.previousText ?? "—"
+						}), props.deltaText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: props.tone === "warn" ? overview_module_css_default.kpiDeltaWarn : props.tone === "good" ? overview_module_css_default.kpiDeltaGood : overview_module_css_default.kpiDelta,
+							children: props.deltaText
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: overview_module_css_default.kpiValue,
+						children: [props.value, props.unit !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: overview_module_css_default.kpiUnit,
+							children: props.unit
+						})]
+					})
+				]
+			});
+		}
+		/** 环比（%）：上期没有或非正时不编数字，只留上期值。成本类上涨算警示、下降算好。 */
 		//#endregion
 		//#region src/client/core/channels.ts
 		/** 通道展示工具：颜色、显示名、状态与计费模式文案。 */
@@ -4062,79 +4127,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return placed;
 		}
 		//#endregion
-		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$11 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;display:grid}.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:1180px){.tXjxsq_kpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:820px){.tXjxsq_kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;display:flex}.tXjxsq_kpiTop{align-items:center;gap:6px;min-width:0;display:flex}.tXjxsq_kpiIcon{width:14px;height:14px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}.tXjxsq_kpiCompare{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;font-size:13px;display:flex}.tXjxsq_kpiPrev{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiDelta{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_kpiDeltaWarn{color:var(--dsw-alias-state-error-primary,#e5484d);white-space:nowrap}.tXjxsq_kpiDeltaGood{color:var(--dsw-alias-state-success-primary,#46a758);white-space:nowrap}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiDetail{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;flex-wrap:wrap;gap:6px;display:flex}.tXjxsq_rise{color:var(--dsw-alias-state-error-primary,#e05a5a)}.tXjxsq_fall{color:var(--dsw-alias-state-success-primary,#3fb96f)}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_kpiDetail{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px;font-size:13px;font-weight:400}.tXjxsq_dialogTools{justify-content:flex-end;gap:8px;padding:0 0 8px;display:flex}.tXjxsq_dialogSortBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:13px}.tXjxsq_dialogSortBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}";
-		const tagId$11 = "dsh-key-usage/overview.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
-			const tag = document.createElement("style");
-			tag.dataset.plugin = "dsh-key-usage";
-			tag.dataset.pluginCss = tagId$11;
-			tag.textContent = css$11;
-			document.head.appendChild(tag);
-		}
-		const cssRegistry$11 = globalThis.__DSH_PLUGIN_CSS__ ??= [];
-		if (!cssRegistry$11.some((e) => e.tagId === tagId$11)) cssRegistry$11.push({
-			tagId: tagId$11,
-			css: css$11
-		});
-		var overview_module_css_default = {
-			"dialogSortBtn": "tXjxsq_dialogSortBtn",
-			"dialogTools": "tXjxsq_dialogTools",
-			"fall": "tXjxsq_fall",
-			"gridTwo": "tXjxsq_gridTwo",
-			"hist": "tXjxsq_hist",
-			"histBar": "tXjxsq_histBar",
-			"histBarPeak": "tXjxsq_histBarPeak",
-			"histColumn": "tXjxsq_histColumn",
-			"histLabels": "tXjxsq_histLabels",
-			"hourAxisLabel": "tXjxsq_hourAxisLabel",
-			"hourCell": "tXjxsq_hourCell",
-			"hourWeekday": "tXjxsq_hourWeekday",
-			"hourWrap": "tXjxsq_hourWrap",
-			"kpiCard": "tXjxsq_kpiCard",
-			"kpiCompare": "tXjxsq_kpiCompare",
-			"kpiDelta": "tXjxsq_kpiDelta",
-			"kpiDeltaGood": "tXjxsq_kpiDeltaGood",
-			"kpiDeltaWarn": "tXjxsq_kpiDeltaWarn",
-			"kpiDetail": "tXjxsq_kpiDetail",
-			"kpiGrid": "tXjxsq_kpiGrid",
-			"kpiIcon": "tXjxsq_kpiIcon",
-			"kpiLabel": "tXjxsq_kpiLabel",
-			"kpiPrev": "tXjxsq_kpiPrev",
-			"kpiTop": "tXjxsq_kpiTop",
-			"kpiUnit": "tXjxsq_kpiUnit",
-			"kpiValue": "tXjxsq_kpiValue",
-			"legend": "tXjxsq_legend",
-			"legendItem": "tXjxsq_legendItem",
-			"metricTab": "tXjxsq_metricTab",
-			"metricTabOn": "tXjxsq_metricTabOn",
-			"metricTabs": "tXjxsq_metricTabs",
-			"panel": "tXjxsq_panel",
-			"panelHead": "tXjxsq_panelHead",
-			"panelHint": "tXjxsq_panelHint",
-			"panelMore": "tXjxsq_panelMore",
-			"panelTitle": "tXjxsq_panelTitle",
-			"rankBar": "tXjxsq_rankBar",
-			"rankBarTop": "tXjxsq_rankBarTop",
-			"rankDim": "tXjxsq_rankDim",
-			"rankName": "tXjxsq_rankName",
-			"rankRow": "tXjxsq_rankRow",
-			"rankSub": "tXjxsq_rankSub",
-			"rankTrack": "tXjxsq_rankTrack",
-			"rankValue": "tXjxsq_rankValue",
-			"rise": "tXjxsq_rise",
-			"stack": "tXjxsq_stack",
-			"trendFoot": "tXjxsq_trendFoot",
-			"trendStats": "tXjxsq_trendStats",
-			"yearActive": "tXjxsq_yearActive",
-			"yearAxisLabel": "tXjxsq_yearAxisLabel",
-			"yearCell": "tXjxsq_yearCell",
-			"yearEmpty": "tXjxsq_yearEmpty",
-			"yearFuture": "tXjxsq_yearFuture",
-			"yearWeekday": "tXjxsq_yearWeekday",
-			"yearWrap": "tXjxsq_yearWrap"
-		};
-		//#endregion
 		//#region src/client/components/Heatmap.tsx
 		/**
 		* 全年热力图：53 个 ISO 周（周一起）× 7 天，正方形格子；横轴只在每月首次出现的列标月份，
@@ -4314,6 +4306,44 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 		}
 		//#endregion
+		//#region src/client/core/date-range.ts
+		/** 日期区间纯函数：明细表的横轴、环期窗口与按天遍历。 */
+		const DAY_MS = 864e5;
+		/** 横轴最多画多少天（超长范围只画最近这一段）。 */
+		const MAX_AXIS_DAYS = 366;
+		function daysBetween(from, to) {
+			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
+			const toTime = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
+			return Math.max(1, Math.round((toTime - fromTime) / DAY_MS) + 1);
+		}
+		/** 范围内每一天的日期键（无数据的日子也要出现在横轴上，空档才看得出来）；超长范围只画最近的那些天。 */
+		function dateKeysOfRange(from, to) {
+			const end = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
+			const total = Math.min(daysBetween(from, to), MAX_AXIS_DAYS);
+			const start = end - (total - 1) * DAY_MS;
+			const keys = [];
+			for (let offset = 0; offset < total; offset += 1) keys.push(isoDate(new Date(start + offset * DAY_MS)));
+			return keys;
+		}
+		/** 前一个日历日。 */
+		function previousDateOf(date) {
+			return isoDate(/* @__PURE__ */ new Date((/* @__PURE__ */ new Date(date + "T00:00:00")).getTime() - DAY_MS));
+		}
+		/** 上一段等长范围（10-07~10-13 → 09-30~10-06）。 */
+		function previousWindowOf(from, to) {
+			const startTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
+			const span = Math.min(daysBetween(from, to), MAX_AXIS_DAYS);
+			return {
+				from: isoDate(/* @__PURE__ */ new Date(startTime - span * DAY_MS)),
+				to: isoDate(/* @__PURE__ */ new Date(startTime - DAY_MS))
+			};
+		}
+		/**
+		* 合计行的上一期：与统计卡同一口径（按上一段等长范围再取一次 `/usage`，纯客户端，无新端点）。
+		* 通道 / 模型筛选都在客户端做，所以这里固定取全量（传 `'ALL'`），否则环比会拿「过滤后本期」比「全量上期」。
+		* 只用于算一个百分比，取不到就保持 null（界面显示 —），不影响表格本身。
+		*/
+		//#endregion
 		//#region \0dsh-css:src/client/styles/detail.module.css.mjs
 		const css$10 = "._91PKKq_page{--detail-body:var(--ku-body,14px);--detail-title:var(--ku-title,17px);font-size:var(--detail-body);flex-direction:column;gap:10px;display:flex}._91PKKq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 12px}._91PKKq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}._91PKKq_panelTitle{font-size:var(--detail-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_panelMore{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}._91PKKq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}._91PKKq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--detail-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}._91PKKq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}._91PKKq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}._91PKKq_costBars{align-items:flex-end;gap:4px;height:104px;display:flex}._91PKKq_costBarsDense{gap:1px}._91PKKq_costBarCol{cursor:default;border-radius:3px;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}._91PKKq_costBarCol:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c14)}._91PKKq_costBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff59);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:3px 3px 1px 1px;width:100%}._91PKKq_costAxis{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--detail-body);font-variant-numeric:tabular-nums;justify-content:space-between;gap:4px;margin-top:4px;display:flex}._91PKKq_costAxis span{text-align:center;white-space:nowrap;flex:1}._91PKKq_tableScroll{overflow-x:auto}._91PKKq_detailTable{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%;font-size:var(--detail-body)}._91PKKq_detailTable th{color:var(--dsw-alias-label-tertiary,#67676f);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px;font-weight:500}._91PKKq_detailTable td{color:var(--dsw-alias-label-secondary,#9a9aa6);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);white-space:nowrap;padding:4px 8px}._91PKKq_detailTable ._91PKKq_alignLeft{text-align:left}._91PKKq_detailTable ._91PKKq_alignRight{text-align:right}._91PKKq_detailTable ._91PKKq_costCell{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_detailTable tr._91PKKq_totalRow td{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-primary,#e8e8ec);border-bottom:0;font-weight:600}._91PKKq_deltaUp{color:var(--dsw-alias-state-error-primary,#e05a5a)}._91PKKq_deltaDown{color:var(--dsw-alias-state-success-primary,#3fb96f)}._91PKKq_deltaFlat{color:var(--dsw-alias-label-tertiary,#67676f)}._91PKKq_sortBtn{color:inherit;font:inherit;font-weight:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:3px;padding:0;display:inline-flex}._91PKKq_sortBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}._91PKKq_sortBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;border-radius:4px}._91PKKq_sortDir{color:var(--dsw-alias-state-business-primary,#5b8cff)}._91PKKq_expandBtn{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:3px;justify-content:center;align-items:center;padding:0;line-height:1;display:inline-flex}._91PKKq_expandBtn:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}._91PKKq_expandBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:1px}._91PKKq_expandSpacer{width:16px;display:inline-block}._91PKKq_detailTable td._91PKKq_subCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0a);padding:2px 8px 8px 28px}._91PKKq_subTable{border-collapse:collapse;width:100%}._91PKKq_subTable th{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);padding:2px 8px;font-size:13px;font-weight:500}._91PKKq_subTable td{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:var(--detail-body);font-variant-numeric:tabular-nums;padding:2px 8px}._91PKKq_subTable th._91PKKq_alignLeft,._91PKKq_subTable td._91PKKq_alignLeft{text-align:left}";
 		const tagId$10 = "dsh-key-usage/detail.module.css";
@@ -4368,11 +4398,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		* 两张面板的数据都来自同一份 `/usage`，维度聚合与环比全在客户端算；
 		* 范围、通道筛选与导出统一由页头承担，本组件不再重复一份。
 		*/
-		/** 图表最多铺开的列数：超过这个跨度的范围按天全画会挤成一团。 */
-		const MAX_AXIS_DAYS = 366;
 		/** 柱状图底下最多标几个日期（原型是 8 个等距刻度，逐柱都标会糊成一片）。 */
 		const AXIS_LABEL_COUNT = 8;
-		const DAY_MS = 864e5;
 		const METRIC_ORDER = [
 			"cost",
 			"tokens",
@@ -4422,38 +4449,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			model: 3,
 			none: 4
 		};
-		function daysBetween(from, to) {
-			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			const toTime = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
-			return Math.max(1, Math.round((toTime - fromTime) / DAY_MS) + 1);
-		}
-		/** 范围内每一天的日期键（无数据的日子也要出现在横轴上，空档才看得出来）；超长范围只画最近的那些天。 */
-		function dateKeysOfRange(from, to) {
-			const end = (/* @__PURE__ */ new Date(to + "T00:00:00")).getTime();
-			const total = Math.min(daysBetween(from, to), MAX_AXIS_DAYS);
-			const start = end - (total - 1) * DAY_MS;
-			const keys = [];
-			for (let offset = 0; offset < total; offset += 1) keys.push(isoDate(new Date(start + offset * DAY_MS)));
-			return keys;
-		}
-		/** 前一个日历日。 */
-		function previousDateOf(date) {
-			return isoDate(/* @__PURE__ */ new Date((/* @__PURE__ */ new Date(date + "T00:00:00")).getTime() - DAY_MS));
-		}
-		/** 上一段等长范围（10-07~10-13 → 09-30~10-06）。 */
-		function previousWindowOf(from, to) {
-			const startTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
-			const span = Math.min(daysBetween(from, to), MAX_AXIS_DAYS);
-			return {
-				from: isoDate(/* @__PURE__ */ new Date(startTime - span * DAY_MS)),
-				to: isoDate(/* @__PURE__ */ new Date(startTime - DAY_MS))
-			};
-		}
-		/**
-		* 合计行的上一期：与统计卡同一口径（按上一段等长范围再取一次 `/usage`，纯客户端，无新端点）。
-		* 通道 / 模型筛选都在客户端做，所以这里固定取全量（传 `'ALL'`），否则环比会拿「过滤后本期」比「全量上期」。
-		* 只用于算一个百分比，取不到就保持 null（界面显示 —），不影响表格本身。
-		*/
 		function usePreviousUsage(props) {
 			const [previous, setPrevious] = (0, react.useState)(null);
 			const comparable = props.range !== "total";
@@ -5421,10 +5416,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"h.wd6",
 			"h.wd0"
 		];
-		/** 排行面板最多列出的行数，其余收进「还有 M 个」。 */
-		const RANK_ROWS = 5;
-		/** 柱状图横轴最多标注几个日期。 */
-		const BAR_TICKS = 8;
 		function OverviewTab(props) {
 			/** 取词：宿主切语言时重渲染 */
 			const t = useT();
@@ -5835,64 +5826,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				]
 			});
 		}
-		/** 线性小图标：只用 currentColor 描边，尺寸固定 14，不依赖任何图标库。 */
-		const KPI_ICON_PATHS = {
-			cost: "M8 2v12M4.5 5h5.2a1.8 1.8 0 0 1 0 3.6H6a1.8 1.8 0 0 0 0 3.6h5.5",
-			tokens: "M2.8 4h10.4v3.2H2.8zM2.8 8.8h10.4V12H2.8z",
-			input: "M8 2.4v7.2m0 0 2.6-2.6M8 9.6 5.4 7M2.8 13.6h10.4",
-			output: "M8 9.6V2.4m0 0L5.4 5M8 2.4 10.6 5M2.8 13.6h10.4",
-			cacheRead: "M4.6 11.4a2.4 2.4 0 0 1 .2-4.8 3.1 3.1 0 0 1 5.9.5 2.4 2.4 0 0 1-.3 4.3H4.6z",
-			hit: "M2.8 2.8h10.4v10.4H2.8zM6 10l4-4M6 6.2h.01M10 9.8h.01",
-			dailyTokens: "M3 12.6V9m3 3.6V5.6m3.2 7V8.2m3 4.4V6.8",
-			dailyCost: "M2.8 4.4h10.4v9.2H2.8zM2.8 7.2h10.4M5.8 2.6v2.4m4.4-2.4v2.4",
-			calls: "M2.6 9.4 5.4 6.2l2.6 3 2.6-4 2.8 3.2",
-			sessions: "M6.2 7.4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.8 13.4c0-1.9 1.5-3.4 3.4-3.4s3.4 1.5 3.4 3.4M11 6.6a1.6 1.6 0 1 0 0-3.2M11.2 13.4c0-1.3-.5-2.4-1.2-3.2"
-		};
-		/** KPI 卡：图标+标签 / 上期与环比同一行 / 大数。十张卡结构完全一致，扫一列就能比出变化。 */
-		function KpiStat(props) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.kpiCard,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiTop,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
-							className: overview_module_css_default.kpiIcon,
-							viewBox: "0 0 16 16",
-							"aria-hidden": "true",
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-								d: KPI_ICON_PATHS[props.icon],
-								fill: "none",
-								stroke: "currentColor",
-								strokeWidth: "1.2",
-								strokeLinecap: "round",
-								strokeLinejoin: "round"
-							})
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.kpiLabel,
-							children: props.label
-						})]
-					}),
-					props.hidePrev !== true && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiCompare,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.kpiPrev,
-							children: props.previousText ?? "—"
-						}), props.deltaText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: props.tone === "warn" ? overview_module_css_default.kpiDeltaWarn : props.tone === "good" ? overview_module_css_default.kpiDeltaGood : overview_module_css_default.kpiDelta,
-							children: props.deltaText
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.kpiValue,
-						children: [props.value, props.unit !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: overview_module_css_default.kpiUnit,
-							children: props.unit
-						})]
-					})
-				]
-			});
-		}
-		/** 环比（%）：上期没有或非正时不编数字，只留上期值。成本类上涨算警示、下降算好。 */
 		function deltaOf(current, previous, tone) {
 			if (current === null || previous === null || previous <= 0) return {
 				deltaText: null,
@@ -5944,146 +5877,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return active.filter((row) => row.lastTime >= fromMs && row.lastTime <= toMs).length;
 		}
 		/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
-		function TrendBars(props) {
-			const peak = Math.max(0, ...props.values.filter((value) => value !== null));
-			const peakIndex = props.values.findIndex((value) => value !== null && value === peak && peak > 0);
-			const ticks = tickIndexesOf(props.days.length, BAR_TICKS);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: overview_module_css_default.hist,
-				children: props.days.map((day, index) => {
-					const value = props.values[index] ?? null;
-					const percent = value === null || peak <= 0 ? 0 : Math.max(2, value / peak * 100);
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: overview_module_css_default.histColumn,
-						onMouseMove: (event) => props.tooltip.show(event, props.tipOf(day.date, value)),
-						onMouseLeave: props.tooltip.hide,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: index === peakIndex ? overview_module_css_default.histBar + " " + overview_module_css_default.histBarPeak : overview_module_css_default.histBar,
-							style: { height: percent + "%" }
-						})
-					}, day.date);
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: overview_module_css_default.histLabels,
-				children: ticks.map((index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: fmtShortDate(props.days[index].date) }, props.days[index].date))
-			})] });
-		}
-		/** 排行面板：横条 + 右侧数值；行数超出「还有 M 个」。 */
-		function RankPanel(props) {
-			/** 取词：宿主切语言时重渲染 */
-			const t = useT();
-			const [showAll, setShowAll] = (0, react.useState)(false);
-			/** 弹窗里的排序方向：默认降序，再点一次改升序。 */
-			const [ascending, setAscending] = (0, react.useState)(false);
-			const shown = props.items.slice(0, RANK_ROWS);
-			const peak = shown.reduce((maximum, item) => item.value !== null && item.value > maximum ? item.value : maximum, 0);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: overview_module_css_default.panel,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.panelHead,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("b", {
-								className: overview_module_css_default.panelTitle,
-								children: props.title
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: overview_module_css_default.metricTabs,
-								children: props.metrics.map(([metric, labelKey]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: metric === props.active ? overview_module_css_default.metricTab + " " + overview_module_css_default.metricTabOn : overview_module_css_default.metricTab,
-									"aria-pressed": metric === props.active,
-									onClick: () => props.onActive(metric),
-									children: t(labelKey)
-								}, metric))
-							}),
-							props.total > shown.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: overview_module_css_default.panelMore,
-								onClick: () => setShowAll(true),
-								title: t("overview.moreHint"),
-								children: t("overview.more", {
-									total: props.total,
-									rest: Math.max(0, props.total - shown.length)
-								})
-							})
-						]
-					}),
-					shown.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: shared_module_css_default.empty,
-						children: t("overview.noData")
-					}) : shown.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: overview_module_css_default.rankRow,
-						title: item.title,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: overview_module_css_default.rankName,
-								children: item.name
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: overview_module_css_default.rankTrack,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {
-									className: index === 0 ? overview_module_css_default.rankBar + " " + overview_module_css_default.rankBarTop : overview_module_css_default.rankBar,
-									style: { width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + "%" }
-								})
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: item.value === null ? overview_module_css_default.rankValue + " " + overview_module_css_default.rankDim : overview_module_css_default.rankValue,
-								children: item.valueText
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: overview_module_css_default.rankSub,
-								children: item.subText
-							})
-						]
-					}, item.key)),
-					showAll && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(Dialog, {
-						title: props.title,
-						closeLabel: t("action.close"),
-						onClose: () => setShowAll(false),
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: overview_module_css_default.dialogTools,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: overview_module_css_default.dialogSortBtn,
-								onClick: () => setAscending((previous) => !previous),
-								"aria-label": t("overview.sortDirection"),
-								title: t("overview.sortDirection"),
-								children: ascending ? "↑" : "↓"
-							})
-						}), props.items.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: shared_module_css_default.empty,
-							children: t("overview.noData")
-						}) : [...props.items].sort((first, second) => ascending ? -compareRankValue(first, second) : compareRankValue(first, second)).map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: overview_module_css_default.rankRow,
-							title: item.title,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.rankName,
-									children: item.name
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.rankValue,
-									children: item.valueText
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: overview_module_css_default.rankSub,
-									children: item.subText
-								})
-							]
-						}, item.key))]
-					})
-				]
-			});
-		}
-		/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
-		function compareRankValue(first, second) {
-			if (first.value === null && second.value === null) return 0;
-			if (first.value === null) return 1;
-			if (second.value === null) return -1;
-			return second.value - first.value;
-		}
-		/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
 		function monthCostTotalsOf(summary) {
 			const totals = {
 				cost: 0,
@@ -6291,13 +6084,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				};
 			}
 			return busiest;
-		}
-		function tickIndexesOf(count, wanted) {
-			if (count <= wanted) return Array.from({ length: count }, (_, index) => index);
-			const step = Math.ceil(count / wanted);
-			const indexes = [];
-			for (let index = 0; index < count; index += step) indexes.push(index);
-			return indexes;
 		}
 		function projectValueOf(metric, row) {
 			if (metric === "cost") return comparableMoneyOf(row);
@@ -6552,7 +6338,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		};
 		//#endregion
 		//#region \0dsh-css:src/client/styles/lists.module.css.mjs
-		const css$8 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:150px;max-width:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);box-sizing:border-box;background:0 0;border-radius:8px;flex:0 220px;height:30px;padding:0 10px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-interactive-bg-active,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_sessionDay td{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-bottom:1px solid var(--dsw-alias-border-l1,#2c2c34);text-align:left!important;padding:8px 10px!important}.ysq2ha_dayCount{color:var(--dsw-alias-label-tertiary,#67676f);font-weight:500;font-size:calc(var(--dsh-content-font-size,12px) * 1.01);margin-left:8px}.ysq2ha_rowArchived td{opacity:.5}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_subagentTagBtn{font-family:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .92);cursor:pointer;color:var(--dsw-alias-state-business-primary,#5b8cff);border:1px solid var(--dsw-alias-state-business-primary,#5b8cff);background:0 0;border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500;display:inline}.ysq2ha_subagentTagBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_sessionMetaBtn{font-family:inherit;font-size:inherit;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;background:0 0;border:0;margin-left:6px;padding:0}.ysq2ha_sessionMetaBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:4px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable{table-layout:fixed}.ysq2ha_sessionTable th:first-child{width:38%}.ysq2ha_sessionTable th:nth-child(2){width:13%}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_sessionTable th:nth-child(4){width:11%}.ysq2ha_sessionTable th:nth-child(5){width:8%}.ysq2ha_sessionTable th:nth-child(6){width:11%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_sessionMeta{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggle{font:inherit;color:inherit;cursor:pointer;background:0 0;border:0;flex-shrink:0;justify-content:center;align-items:center;gap:0;padding:0;display:inline-flex}.ysq2ha_sessionToggle:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_sessionToggleArrow{width:11px;color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .83);display:inline-block}.ysq2ha_sessionTitleBtn{min-width:0;font:inherit;font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);color:var(--dsw-alias-label-primary,#e8e8ec);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;flex:1;padding:0;overflow:hidden}.ysq2ha_sessionTitleBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_composeCell{background:var(--dsw-alias-interactive-bg-hover,#80808c0d);text-align:left!important;padding:4px 10px 10px 30px!important}.ysq2ha_composeRow{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);grid-template-columns:minmax(120px,1.4fr) minmax(60px,.7fr) minmax(90px,1fr) minmax(70px,.8fr);align-items:center;gap:8px;padding:2px 0;display:grid}.ysq2ha_composeHead{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_composeName{color:var(--dsw-alias-label-primary,#e8e8ec);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_composeChannel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96);margin-left:6px}.ysq2ha_composeNumber{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6)}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 20px 32px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-interactive-bg-hover,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:0;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}";
+		const css$8 = ".ysq2ha_filterBar{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;display:flex}.ysq2ha_searchInput{border:1px solid var(--dsw-alias-border-l2,#2c2c34);min-width:150px;max-width:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);box-sizing:border-box;background:0 0;border-radius:8px;flex:0 220px;height:30px;padding:0 10px}.ysq2ha_searchInput::placeholder{color:var(--dsw-alias-label-tertiary,#67676f)}.ysq2ha_searchInput:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px;height:30px}.ysq2ha_listTitle{align-items:center;gap:10px;min-width:0;display:flex}.ysq2ha_listMain{color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600;font-size:calc(var(--dsh-content-font-size,12px) * 1.15);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_listSub{font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);text-overflow:ellipsis;white-space:nowrap;margin-top:1px;overflow:hidden}.ysq2ha_listBar{background:var(--dsw-alias-interactive-bg-active,#80808c2e);vertical-align:middle;border-radius:3px;width:70px;height:5px;display:inline-block;overflow:hidden}.ysq2ha_listBar>i{border-radius:3px;height:100%;display:block}.ysq2ha_archivedTag{font-size:calc(var(--dsh-content-font-size,12px) * .92);color:var(--dsw-alias-label-tertiary,#67676f);border:1px solid var(--dsw-alias-border-l2,#2c2c34);border-radius:999px;margin-left:6px;padding:0 6px;font-weight:500}.ysq2ha_drawerBack{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border-radius:999px;align-items:center;max-width:100%;margin:4px 0 10px;padding:3px 10px;display:inline-flex;overflow:hidden}.ysq2ha_drawerBack:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerBack:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_subagentBlock{border-top:1px solid var(--dsw-alias-border-l2,#2c2c34);margin-top:14px;padding-top:10px}.ysq2ha_subagentBlockTitle{font-size:calc(var(--dsh-content-font-size,12px) * 1.1);color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px}.ysq2ha_subagentRow{text-align:left;width:100%;color:inherit;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:space-between;gap:10px;padding:4px 6px;display:flex}.ysq2ha_subagentRow:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_subagentRow:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:-2px}.ysq2ha_subagentRowTitle{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.ysq2ha_subagentRowMeta{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;flex:none}.ysq2ha_sessionTable th:nth-child(3){width:19%}.ysq2ha_modelTable{table-layout:fixed}.ysq2ha_modelTable th:first-child{width:30%}.ysq2ha_modelTable th:nth-child(2){width:9%}.ysq2ha_modelTable th:nth-child(3){width:11%}.ysq2ha_modelTable th:nth-child(4){width:12%}.ysq2ha_modelTable th:nth-child(5){width:9%}.ysq2ha_modelTable th:nth-child(6){width:12%}.ysq2ha_modelTable th:nth-child(7){width:17%}.ysq2ha_projectTable{table-layout:fixed}.ysq2ha_projectTable th:first-child{width:38%}.ysq2ha_projectTable th:nth-child(2){width:10%}.ysq2ha_projectTable th:nth-child(3){width:12%}.ysq2ha_projectTable th:nth-child(4){width:13%}.ysq2ha_projectTable th:nth-child(5){width:12%}.ysq2ha_projectTable th:nth-child(6){width:15%}.ysq2ha_linkBtn{font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * .96);text-align:left;color:var(--dsw-alias-label-tertiary,#67676f);cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:0;max-width:100%;padding:0;overflow:hidden}.ysq2ha_linkBtn:hover{color:var(--dsw-alias-state-business-primary,#5b8cff);text-decoration:underline}.ysq2ha_linkBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_focusChip{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.01);border-radius:999px;align-items:center;gap:6px;margin-bottom:10px;padding:3px 10px;display:inline-flex}.ysq2ha_focusClear{color:inherit;font:inherit;cursor:pointer;background:0 0;border:0;padding:0}.ysq2ha_focusClear:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreRow{align-items:center;gap:10px;margin-top:12px;display:flex}.ysq2ha_moreBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;background:0 0;border-radius:999px;padding:4px 14px}.ysq2ha_moreBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.ysq2ha_moreBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_moreText{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_drawerMask{z-index:9000;background:var(--dsw-alias-bg-mask-1,#00000061);justify-content:flex-end;display:flex;position:fixed;top:0;bottom:0;left:0;right:0}.ysq2ha_drawerPanel{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#1d1d22);border-left:1px solid var(--dsw-alias-border-l1,#2c2c34);width:min(880px,96vw);height:100%;box-shadow:var(--dsw-shadow-lv2,0 8px 24px #00000059);padding:14px 20px 32px;overflow-y:auto}.ysq2ha_drawerHead{align-items:flex-start;gap:10px;display:flex}.ysq2ha_drawerTitle{min-width:0;font-size:calc(var(--dsh-content-font-size,12px) * 1.38);color:var(--dsw-alias-label-primary,#e8e8ec);overflow-wrap:anywhere;flex:1;font-weight:650}.ysq2ha_drawerClose{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);width:26px;height:26px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.1);cursor:pointer;background:0 0;border-radius:8px;flex-shrink:0;line-height:1}.ysq2ha_drawerClose:hover{color:var(--dsw-alias-label-primary,#e8e8ec);background:var(--dsw-alias-interactive-bg-hover,#80808c1a)}.ysq2ha_drawerClose:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.ysq2ha_drawerId{font-family:ui-monospace,Consolas,monospace;font-size:calc(var(--dsh-content-font-size,12px) * .96);color:var(--dsw-alias-label-tertiary,#67676f);overflow-wrap:anywhere;margin:2px 0 12px}.ysq2ha_detailGrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 16px;display:grid}.ysq2ha_detailItemWide{grid-column:1/-1}.ysq2ha_detailItemLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .96)}.ysq2ha_detailItemValue{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.ysq2ha_detailItemNote{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * .92)}.ysq2ha_detailStrip{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:10px;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px 12px;margin:12px 0 4px;padding:10px 12px;display:grid}.ysq2ha_detailBlock{margin-top:16px}.ysq2ha_detailBody{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;display:grid}.ysq2ha_detailBody>.ysq2ha_detailGrid,.ysq2ha_detailBody>.ysq2ha_detailStrip,.ysq2ha_detailBody>.ysq2ha_detailBlock{grid-column:1/-1}.ysq2ha_detailBody>.ysq2ha_detailColLeft{grid-column:1}.ysq2ha_detailBody>.ysq2ha_detailColRight{grid-column:2}.ysq2ha_detailBlockTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);font-size:calc(var(--dsh-content-font-size,12px) * 1.05);margin-bottom:6px;font-weight:600}.ysq2ha_detailCost{font-size:calc(var(--dsh-content-font-size,12px) * 1.19);color:var(--dsw-alias-label-primary,#e8e8ec);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center;gap:8px;display:flex}.ysq2ha_detailCostHint{color:var(--dsw-alias-label-tertiary,#67676f);font-size:calc(var(--dsh-content-font-size,12px) * 1.01)}.ysq2ha_promptText{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--dsw-alias-interactive-bg-hover,#80808c0f);max-height:220px;color:var(--dsw-alias-label-primary,#e8e8ec);font-size:calc(var(--dsh-content-font-size,12px) * 1.1);border-radius:8px;padding:8px 10px;line-height:1.6;overflow-y:auto}.ysq2ha_sessionDetailModelTable{table-layout:fixed}.ysq2ha_sessionDetailModelTable th:first-child{width:40%}.ysq2ha_sessionDetailModelTable th:nth-child(2){width:18%}.ysq2ha_sessionDetailModelTable th:nth-child(3){width:24%}.ysq2ha_sessionDetailModelTable th:nth-child(4){width:18%}.ysq2ha_hourChart{align-items:flex-end;gap:2px;height:84px;margin-top:6px;display:flex}.ysq2ha_hourBar{flex-direction:column;flex:1;justify-content:flex-end;gap:2px;height:100%;display:flex}.ysq2ha_hourBarFill{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:2px 2px 0 0;min-height:0;display:block}.ysq2ha_hourBarTick{text-align:center;font-size:calc(var(--dsh-content-font-size,12px) * .83);color:var(--dsw-alias-label-tertiary,#67676f)}";
 		const tagId$8 = "dsh-key-usage/lists.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6568,13 +6354,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		});
 		var lists_module_css_default = {
 			"archivedTag": "ysq2ha_archivedTag",
-			"composeCell": "ysq2ha_composeCell",
-			"composeChannel": "ysq2ha_composeChannel",
-			"composeHead": "ysq2ha_composeHead",
-			"composeName": "ysq2ha_composeName",
-			"composeNumber": "ysq2ha_composeNumber",
-			"composeRow": "ysq2ha_composeRow",
-			"dayCount": "ysq2ha_dayCount",
 			"detailBlock": "ysq2ha_detailBlock",
 			"detailBlockTitle": "ysq2ha_detailBlockTitle",
 			"detailBody": "ysq2ha_detailBody",
@@ -6613,22 +6392,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"moreText": "ysq2ha_moreText",
 			"projectTable": "ysq2ha_projectTable",
 			"promptText": "ysq2ha_promptText",
-			"rowArchived": "ysq2ha_rowArchived",
 			"searchInput": "ysq2ha_searchInput",
-			"sessionDay": "ysq2ha_sessionDay",
 			"sessionDetailModelTable": "ysq2ha_sessionDetailModelTable",
-			"sessionMeta": "ysq2ha_sessionMeta",
-			"sessionMetaBtn": "ysq2ha_sessionMetaBtn",
 			"sessionTable": "ysq2ha_sessionTable",
-			"sessionTitleBtn": "ysq2ha_sessionTitleBtn",
-			"sessionToggle": "ysq2ha_sessionToggle",
-			"sessionToggleArrow": "ysq2ha_sessionToggleArrow",
 			"subagentBlock": "ysq2ha_subagentBlock",
 			"subagentBlockTitle": "ysq2ha_subagentBlockTitle",
 			"subagentRow": "ysq2ha_subagentRow",
 			"subagentRowMeta": "ysq2ha_subagentRowMeta",
-			"subagentRowTitle": "ysq2ha_subagentRowTitle",
-			"subagentTagBtn": "ysq2ha_subagentTagBtn"
+			"subagentRowTitle": "ysq2ha_subagentRowTitle"
 		};
 		//#endregion
 		//#region \0dsh-css:src/client/styles/pricing.module.css.mjs
@@ -6674,7 +6445,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/export.module.css.mjs
-		const css$6 = ".-\\38 z9vG_exportGroup{align-items:center;gap:6px;margin-left:auto;display:inline-flex}.-\\38 z9vG_exportBtn{border:1px solid var(--dsw-alias-border-l2,#2c2c34);color:var(--dsw-alias-label-secondary,#9a9aa6);box-sizing:border-box;height:30px;font:inherit;font-size:calc(var(--dsh-content-font-size,12px) * 1.05);cursor:pointer;white-space:nowrap;background:0 0;border-radius:8px;padding:0 10px}.-\\38 z9vG_exportBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}.-\\38 z9vG_exportBtn:disabled{opacity:.5;cursor:default}.-\\38 z9vG_exportBtn:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}";
+		const css$6 = ".-\\38 z9vG_exportGroup{align-items:center;gap:6px;margin-left:auto;display:inline-flex}.-\\38 z9vG_exportBtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#80808c1a);color:var(--dsw-alias-label-primary,#e8e8ec)}";
 		const tagId$6 = "dsh-key-usage/export.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -9911,6 +9682,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [topN, setTopN] = (0, react.useState)(60);
 			/** 词比档位少时按实际词数截断，避免「选了 100 只有 30」的错觉。 */
 			const effectiveTopN = Math.min(topN, words.length);
+			/** 每会话平均提问条数：分母 = 窗口内有提问的会话数（服务端 0.2.5 起下发）。 */
+			const avgPerSession = prompts === null || typeof prompts.sessionCount !== "number" || prompts.sessionCount <= 0 ? null : prompts.totalPrompts / prompts.sessionCount;
 			const prevPrompts = prevOf(prompts?.prevTotalPrompts);
 			const prevChars = prevOf(prompts?.prevTotalChars);
 			const prevWords = prevOf(prompts?.prevWordCount);
@@ -9928,6 +9701,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								current: totalPrompts,
 								format: fmtCount
 							})
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
+							label: t("words.kpiAvgPerSession"),
+							value: avgPerSession === null ? "—" : avgPerSession.toFixed(1)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(KpiCard, {
 							label: t("words.kpiChars"),

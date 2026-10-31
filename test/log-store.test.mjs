@@ -1,5 +1,5 @@
 /**
- * 系统日志落盘离线测试：追加 / 回读 / 清空、坏输入被丢、上限与字段裁剪、
+ * 系统日志（usage.db 的 log_entry）离线测试：追加 / 回读 / 清空、坏输入被丢、上限与字段裁剪、
  * 写目标守卫、超过上限保留后半段。
  * 运行：node test/log-file.test.mjs（依赖 lib/data/log-file.js，改 src 后要先 npm run build:server）
  */
@@ -7,6 +7,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { appendLogRows, openStorage } from '../lib/storage/db.js'
 import {
   LOG_DETAIL_LIMIT,
   LOG_FILE,
@@ -95,4 +96,13 @@ check('超过 7 天的日志在写入后清理', () => {
 })
 
 
-console.log('log-file: ' + String(passed) + ' 项通过')
+check('读日志时清理过期记录（长期没有新日志也不会一直留着旧条目）', () => {
+  const db = openStorage(join(home, 'dsh-key-usage', LOG_FILE))
+  appendLogRows(db, [{ time: new Date(Date.now() - 8 * 86400000).toISOString(), level: 'info', source: 'fx', message: '超期记录' }])
+  appendLogRows(db, [{ time: new Date().toISOString(), level: 'info', source: 'fx', message: '近期记录' }])
+  const messages = readLogRecords(100).map((item) => item.message)
+  assert.ok(messages.includes('近期记录'), '近期记录保留')
+  assert.ok(!messages.includes('超期记录'), '读日志时清掉超过 7 天的记录')
+})
+
+console.log('log-store: ' + String(passed) + ' 项通过')

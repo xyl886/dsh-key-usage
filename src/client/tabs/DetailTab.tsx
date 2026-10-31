@@ -4,6 +4,7 @@
  * 两张面板的数据都来自同一份 `/usage`，维度聚合与环比全在客户端算；
  * 范围、通道筛选与导出统一由页头承担，本组件不再重复一份。
  */
+import { DAY_MS, dateKeysOfRange, daysBetween, previousDateOf, previousWindowOf } from '../core/date-range.ts'
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { loadUsage } from '../core/api.ts'
 import { displayNameOf } from '../core/channels.ts'
@@ -25,7 +26,6 @@ const MAX_AXIS_DAYS = 366
 /** 柱状图底下最多标几个日期（原型是 8 个等距刻度，逐柱都标会糊成一片）。 */
 const AXIS_LABEL_COUNT = 8
 
-const DAY_MS = 86400000
 
 /** 每日成本面板可切换的指标（会话数当前数据源没有，选中时显示 —）。 */
 type MetricKey = 'cost' | 'tokens' | 'output' | 'sessions'
@@ -71,39 +71,7 @@ const RIGHT_ALIGNED = new Set<SortKey>(['calls', 'input', 'output', 'cacheRead',
 /** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
 const SOURCE_ORDER: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }
 
-function daysBetween(from: string, to: string): number {
-  const fromTime = new Date(from + 'T00:00:00').getTime()
-  const toTime = new Date(to + 'T00:00:00').getTime()
-  return Math.max(1, Math.round((toTime - fromTime) / DAY_MS) + 1)
-}
-
-/** 范围内每一天的日期键（无数据的日子也要出现在横轴上，空档才看得出来）；超长范围只画最近的那些天。 */
-function dateKeysOfRange(from: string, to: string): string[] {
-  const end = new Date(to + 'T00:00:00').getTime()
-  const total = Math.min(daysBetween(from, to), MAX_AXIS_DAYS)
-  const start = end - (total - 1) * DAY_MS
-  const keys: string[] = []
-  for (let offset = 0; offset < total; offset += 1) keys.push(isoDate(new Date(start + offset * DAY_MS)))
-  return keys
-}
-
-/** 前一个日历日。 */
-function previousDateOf(date: string): string {
-  return isoDate(new Date(new Date(date + 'T00:00:00').getTime() - DAY_MS))
-}
-
-/** 上一段等长范围（10-07~10-13 → 09-30~10-06）。 */
-function previousWindowOf(from: string, to: string): { from: string; to: string } {
-  const startTime = new Date(from + 'T00:00:00').getTime()
-  const span = Math.min(daysBetween(from, to), MAX_AXIS_DAYS)
-  return { from: isoDate(new Date(startTime - span * DAY_MS)), to: isoDate(new Date(startTime - DAY_MS)) }
-}
-
-/**
- * 合计行的上一期：与统计卡同一口径（按上一段等长范围再取一次 `/usage`，纯客户端，无新端点）。
- * 通道 / 模型筛选都在客户端做，所以这里固定取全量（传 `'ALL'`），否则环比会拿「过滤后本期」比「全量上期」。
- * 只用于算一个百分比，取不到就保持 null（界面显示 —），不影响表格本身。
- */
+export 
 function usePreviousUsage(props: {
   from: string
   to: string

@@ -98,25 +98,33 @@ export function markUpdateSkipped(version: string, path?: string): void {
   }
 }
 
+/**
+ * 当前是不是 link 热更新模式：插件从仓库直接加载（路径里没有 node_modules）时，
+ * 本地版本号不代表 npm 上那一份 —— 提示更新会把开发环境错误地指向 registry 包。
+ */
+export function isLinkedInstall(moduleUrl: string = import.meta.url): boolean {
+  return !moduleUrl.includes('node_modules')
+}
+
 export async function resolveUpdate(
-  options: { refresh?: boolean; fetchImpl?: typeof fetch; now?: number; storagePath?: string } = {},
+  options: { refresh?: boolean; fetchImpl?: typeof fetch; now?: number; storagePath?: string; localDev?: boolean } = {},
 ): Promise<UpdateView> {
   const now = options.now ?? Date.now()
   const cached = readCache(options.storagePath)
   const fresh = cached.checkedAt !== null && now - cached.checkedAt < CHECK_TTL_MS
   if (fresh && options.refresh !== true) {
-    return viewOf(cached.latest, cached.checkedAt, now, cached.skipped)
+    return viewOf(cached.latest, cached.checkedAt, now, cached.skipped, options.localDev ?? isLinkedInstall())
   }
   const latest = await fetchLatestVersion(options.fetchImpl ?? fetch)
   if (latest === null) {
     return viewOf(cached.latest, cached.checkedAt, now, cached.skipped)
   }
   writeCache(latest, now, options.storagePath)
-  return viewOf(latest, now, now, cached.skipped)
+  return viewOf(latest, now, now, cached.skipped, options.localDev ?? isLinkedInstall())
 }
 
-function viewOf(latest: string | null, checkedAt: number | null, now: number, skipped: string | null = null): UpdateView {
-  const hasUpdate = latest !== null && compareVersions(latest, CURRENT_VERSION) > 0 && latest !== skipped
+function viewOf(latest: string | null, checkedAt: number | null, now: number, skipped: string | null = null, localDev = false): UpdateView {
+  const hasUpdate = !localDev && latest !== null && compareVersions(latest, CURRENT_VERSION) > 0 && latest !== skipped
   return {
     current: CURRENT_VERSION,
     latest,

@@ -3,7 +3,8 @@
  * 运行：node test/tools.test.mjs（依赖 lib/data/session-usage.js，改 src 后要先 npm run build:server）
  */
 import assert from 'node:assert/strict'
-import { TOOLS_WINDOW_MAX_DAYS, buildToolSessionIndex, dayKeyOf, foldSessionEvents, mergeToolStats, mergeToolStatsInWindow } from '../lib/data/session-usage.js'
+import { dayKeyOf, foldSessionEvents } from '../lib/data/session-usage.js'
+import { TOOLS_WINDOW_MAX_DAYS, buildToolSessionIndex, mergeToolStats, mergeToolStatsInWindow } from '../lib/data/tool-stats.js'
 
 /** 相对今天偏移 N 天的本地日期键（与折叠口径同一套计算）。 */
 function localDayKey(offsetDays) {

@@ -10,6 +10,7 @@ import {
   clearLogRows,
   LOG_RETENTION_DAYS,
   openStorage,
+  pruneLogRows,
   readLogRows,
   storagePath,
   type LogQuery,
@@ -94,7 +95,10 @@ export function appendLogRecords(records: unknown[], path: string = logFilePath(
 export function readLogRecords(limit: number = 500, path: string = logFilePath(), query: LogQuery = {}): LogRecord[] {
   const capped = Math.max(1, Math.min(limit, LOG_READ_LIMIT_MAX))
   try {
-    return readLogRows(openStorage(path), capped, query).map((row) => {
+    const db = openStorage(path)
+    // 打开日志窗时顺手清理过期记录：长期没新日志也不会一直留着旧条目
+    try { pruneLogRows(db, LOG_KEEP_DAYS) } catch { /* 清理失败不影响读取 */ }
+    return readLogRows(db, capped, query).map((row) => {
       const record: LogRecord = { time: row.time, level: levelOf(row.level), source: row.source, message: row.message }
       if (typeof row.detail === 'string') record.detail = row.detail
       return record

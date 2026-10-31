@@ -4,6 +4,8 @@
  * KPI 口径跟随页头范围：近 30 天取 `summary` 的月列（官方账单），其余范围取 `usage.totals`（同一窗口）；
  * 拿不到的字段一律显示 —，不编造，也不把两个窗口的数字拼进同一张卡。
  */
+import { RankPanel, TrendBars, compareRankValue, type RankItem, type TrendDay } from '../components/OverviewPanels.tsx'
+import { KpiStat, type KpiCardDescriptor, type KpiIconName } from '../components/KpiStat.tsx'
 import { useState, type ReactNode } from 'react'
 import { channelColorOf, displayNameOf } from '../core/channels.ts'
 import { comparableMoneyOf, displaySymbolOf, moneyTextOf, moneyTotalsTextOf, rowMoneyViewOf, useCurrencyDisplay, type CostRowLike } from '../core/currency.ts'
@@ -73,23 +75,6 @@ const HOUR_METRICS: Array<[HourMetric, string]> = [
 const WEEKDAY_KEYS = ['h.wd1', 'h.wd2', 'h.wd3', 'h.wd4', 'h.wd5', 'h.wd6', 'h.wd0']
 
 /** 排行面板最多列出的行数，其余收进「还有 M 个」。 */
-const RANK_ROWS = 5
-
-/** 柱状图横轴最多标注几个日期。 */
-const BAR_TICKS = 8
-
-interface TrendDay {
-  date: string
-  tokens: number
-  /** 调用次数；没有按天明细时为 null */
-  calls: number | null
-  outTokens: number | null
-  cacheRead: number | null
-  cost: number | null
-  /** 当天有活动的会话数；会话段缺失时为 null（趋势「会话」档给空态而不是 0） */
-  sessions?: number | null
-}
-
 export interface OverviewTabProps {
   channels: Channel[]
   summary: SummaryResponse | null
@@ -546,72 +531,6 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   )
 }
 
-interface KpiCardDescriptor {
-  key: string
-  icon: KpiIconName
-  label: string
-  value: string
-  unit?: string
-  previousText: string | null
-  deltaText: string | null
-  tone: 'warn' | 'good' | 'neutral'
-}
-
-type KpiIconName = 'cost' | 'tokens' | 'input' | 'output' | 'cacheRead' | 'hit' | 'dailyTokens' | 'dailyCost' | 'calls' | 'sessions'
-
-/** 线性小图标：只用 currentColor 描边，尺寸固定 14，不依赖任何图标库。 */
-const KPI_ICON_PATHS: Record<KpiIconName, string> = {
-  cost: 'M8 2v12M4.5 5h5.2a1.8 1.8 0 0 1 0 3.6H6a1.8 1.8 0 0 0 0 3.6h5.5',
-  tokens: 'M2.8 4h10.4v3.2H2.8zM2.8 8.8h10.4V12H2.8z',
-  input: 'M8 2.4v7.2m0 0 2.6-2.6M8 9.6 5.4 7M2.8 13.6h10.4',
-  output: 'M8 9.6V2.4m0 0L5.4 5M8 2.4 10.6 5M2.8 13.6h10.4',
-  cacheRead: 'M4.6 11.4a2.4 2.4 0 0 1 .2-4.8 3.1 3.1 0 0 1 5.9.5 2.4 2.4 0 0 1-.3 4.3H4.6z',
-  hit: 'M2.8 2.8h10.4v10.4H2.8zM6 10l4-4M6 6.2h.01M10 9.8h.01',
-  dailyTokens: 'M3 12.6V9m3 3.6V5.6m3.2 7V8.2m3 4.4V6.8',
-  dailyCost: 'M2.8 4.4h10.4v9.2H2.8zM2.8 7.2h10.4M5.8 2.6v2.4m4.4-2.4v2.4',
-  calls: 'M2.6 9.4 5.4 6.2l2.6 3 2.6-4 2.8 3.2',
-  sessions: 'M6.2 7.4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.8 13.4c0-1.9 1.5-3.4 3.4-3.4s3.4 1.5 3.4 3.4M11 6.6a1.6 1.6 0 1 0 0-3.2M11.2 13.4c0-1.3-.5-2.4-1.2-3.2',
-}
-
-/** KPI 卡：图标+标签 / 上期与环比同一行 / 大数。十张卡结构完全一致，扫一列就能比出变化。 */
-function KpiStat(props: {
-  icon: KpiIconName
-  label: string
-  value: string
-  unit?: string
-  previousText: string | null
-  deltaText: string | null
-  tone: 'warn' | 'good' | 'neutral'
-  /** 没有上一等长窗口时（范围=全部）省掉上期行 */
-  hidePrev?: boolean
-}): ReactNode {
-  return (
-    <div className={styles.kpiCard}>
-      <div className={styles.kpiTop}>
-        <svg className={styles.kpiIcon} viewBox="0 0 16 16" aria-hidden="true">
-          <path d={KPI_ICON_PATHS[props.icon]} fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className={styles.kpiLabel}>{props.label}</span>
-      </div>
-      {props.hidePrev !== true && (
-      <div className={styles.kpiCompare}>
-        <span className={styles.kpiPrev}>{props.previousText ?? '—'}</span>
-        {props.deltaText !== null && (
-          <span className={props.tone === 'warn' ? styles.kpiDeltaWarn : props.tone === 'good' ? styles.kpiDeltaGood : styles.kpiDelta}>
-            {props.deltaText}
-          </span>
-        )}
-      </div>
-      )}
-      <div className={styles.kpiValue}>
-        {props.value}
-        {props.unit !== undefined && <span className={styles.kpiUnit}>{props.unit}</span>}
-      </div>
-    </div>
-  )
-}
-
-/** 环比（%）：上期没有或非正时不编数字，只留上期值。成本类上涨算警示、下降算好。 */
 function deltaOf(current: number | null, previous: number | null, tone: 'warn' | 'good' | 'neutral'): { deltaText: string | null; tone: 'warn' | 'good' | 'neutral' } {
   if (current === null || previous === null || previous <= 0) return { deltaText: null, tone: 'neutral' }
   const percent = (current - previous) / previous * 100
@@ -654,145 +573,6 @@ function sessionCountInWindowOf(sessions: SessionsResponse | null | undefined, r
 }
 
 /** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
-function TrendBars(props: {
-  days: TrendDay[]
-  values: Array<number | null>
-  tooltip: TooltipApi
-  tipOf: (date: string, value: number | null) => ReactNode
-}): ReactNode {
-  const peak = Math.max(0, ...props.values.filter((value): value is number => value !== null))
-  const peakIndex = props.values.findIndex((value) => value !== null && value === peak && peak > 0)
-  const ticks = tickIndexesOf(props.days.length, BAR_TICKS)
-  return (
-    <div>
-      <div className={styles.hist}>
-        {props.days.map((day, index) => {
-          const value = props.values[index] ?? null
-          const percent = value === null || peak <= 0 ? 0 : Math.max(2, value / peak * 100)
-          return (
-            <div
-              key={day.date}
-              className={styles.histColumn}
-              onMouseMove={(event) => props.tooltip.show(event, props.tipOf(day.date, value))}
-              onMouseLeave={props.tooltip.hide}
-            >
-              <div
-                className={index === peakIndex ? styles.histBar + ' ' + styles.histBarPeak : styles.histBar}
-                style={{ height: percent + '%' }}
-              />
-            </div>
-          )
-        })}
-      </div>
-      <div className={styles.histLabels}>
-        {ticks.map((index) => <span key={props.days[index].date}>{fmtShortDate(props.days[index].date)}</span>)}
-      </div>
-    </div>
-  )
-}
-
-/** 排行面板：横条 + 右侧数值；行数超出「还有 M 个」。 */
-function RankPanel<Key extends string>(props: {
-  title: string
-  metrics: Array<[Key, string]>
-  active: Key
-  onActive: (key: Key) => void
-  items: RankItem[]
-  total: number
-}): ReactNode {
-  /** 取词：宿主切语言时重渲染 */
-  const t = useT()
-  const [showAll, setShowAll] = useState(false)
-  /** 弹窗里的排序方向：默认降序，再点一次改升序。 */
-  const [ascending, setAscending] = useState(false)
-  const shown = props.items.slice(0, RANK_ROWS)
-  const peak = shown.reduce((maximum, item) => (item.value !== null && item.value > maximum ? item.value : maximum), 0)
-  return (
-    <div className={styles.panel}>
-      <div className={styles.panelHead}>
-        <b className={styles.panelTitle}>{props.title}</b>
-        <div className={styles.metricTabs}>
-          {props.metrics.map(([metric, labelKey]) => (
-            <button
-              key={metric}
-              type="button"
-              className={metric === props.active ? styles.metricTab + ' ' + styles.metricTabOn : styles.metricTab}
-              aria-pressed={metric === props.active}
-              onClick={() => props.onActive(metric)}
-            >{t(labelKey)}</button>
-          ))}
-        </div>
-        {props.total > shown.length && (
-          <button
-            type="button"
-            className={styles.panelMore}
-            onClick={() => setShowAll(true)}
-            title={t('overview.moreHint')}
-          >{t('overview.more', { total: props.total, rest: Math.max(0, props.total - shown.length) })}
-          </button>
-        )}
-      </div>
-      {shown.length === 0
-        ? <div className={shared.empty}>{t('overview.noData')}</div>
-        : shown.map((item, index) => (
-          <div className={styles.rankRow} key={item.key} title={item.title}>
-            <span className={styles.rankName}>{item.name}</span>
-            <span className={styles.rankTrack}>
-              <i
-                className={index === 0 ? styles.rankBar + ' ' + styles.rankBarTop : styles.rankBar}
-                style={{ width: item.value === null || peak <= 0 ? 0 : Math.max(2, item.value / peak * 100) + '%' }}
-              />
-            </span>
-            <span className={item.value === null ? styles.rankValue + ' ' + styles.rankDim : styles.rankValue}>{item.valueText}</span>
-            <span className={styles.rankSub}>{item.subText}</span>
-          </div>
-        ))}
-      {showAll && (
-        <Dialog title={props.title} closeLabel={t('action.close')} onClose={() => setShowAll(false)}>
-          <div className={styles.dialogTools}>
-            <button
-              type="button"
-              className={styles.dialogSortBtn}
-              onClick={() => setAscending((previous) => !previous)}
-              aria-label={t('overview.sortDirection')}
-              title={t('overview.sortDirection')}
-            >{ascending ? '↑' : '↓'}</button>
-          </div>
-          {props.items.length === 0
-            ? <div className={shared.empty}>{t('overview.noData')}</div>
-            : [...props.items].sort((first, second) => (ascending ? -compareRankValue(first, second) : compareRankValue(first, second))).map((item) => (
-              <div className={styles.rankRow} key={item.key} title={item.title}>
-                <span className={styles.rankName}>{item.name}</span>
-                <span className={styles.rankValue}>{item.valueText}</span>
-                <span className={styles.rankSub}>{item.subText}</span>
-              </div>
-            ))}
-        </Dialog>
-      )}
-    </div>
-  )
-}
-
-interface RankItem {
-  key: string
-  name: string
-  /** 悬停提示：名字被省略号截断时还能看全 */
-  title: string
-  /** 排序 / 柱长用的数值；`null` = 该指标没有依据（成本无价目），显示「—」并排在末尾 */
-  value: number | null
-  valueText: string
-  subText: string
-}
-
-/** 排行排序：有数值的按数值降序在前，没有依据（—）的稳定排在末尾。 */
-function compareRankValue(first: RankItem, second: RankItem): number {
-  if (first.value === null && second.value === null) return 0
-  if (first.value === null) return 1
-  if (second.value === null) return -1
-  return second.value - first.value
-}
-
-/** 汇总 summary 的近 30 天成本：合计只按逐币种小计折算后相加（`cost` 只是兜底）。 */
 function monthCostTotalsOf(summary: SummaryResponse | null): { cost: number; costsByCurrency: Record<string, number> } {
   const totals: { cost: number; costsByCurrency: Record<string, number> } = { cost: 0, costsByCurrency: {} }
   for (const row of summary?.channels ?? []) {
@@ -1007,14 +787,6 @@ function busiestOf(dates: string[], values: number[]): { date: string; value: nu
     if (busiest === null || value > busiest.value) busiest = { date: dates[index], value }
   }
   return busiest
-}
-
-function tickIndexesOf(count: number, wanted: number): number[] {
-  if (count <= wanted) return Array.from({ length: count }, (_, index) => index)
-  const step = Math.ceil(count / wanted)
-  const indexes: number[] = []
-  for (let index = 0; index < count; index += step) indexes.push(index)
-  return indexes
 }
 
 function projectValueOf(metric: ProjectMetric, row: ProjectRow): number | null {

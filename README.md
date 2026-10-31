@@ -236,11 +236,12 @@ dsh plugin --profile desktop add dsh-key-usage
 pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
 pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
 pnpm run typecheck    # 客户端 + 服务端类型检查
-pnpm run test         # 20 个离线测试
-pnpm run check        # lib/*.js 语法检查
+pnpm run test         # 全部离线测试（自动枚举 test/*.test.mjs）
+pnpm run check        # lib/**/*.js 语法检查（自动枚举）
 pnpm run check:tokens # 颜色令牌必须在宿主里真实声明过
 pnpm run check:ui     # 间距 / 圆角 / 字号 / 控件高必须在 UI 刻度内
 pnpm run check:css    # 组件引用的 CSS Module 类名必须真实存在
+pnpm run check:eol    # 源码必须 LF（避免 sourcemap 与 CI 不一致）
 pnpm run check:i18n   # 中英词典键必须一致
 pnpm run verify       # 上面全套（CI 跑的就是这条）
 pnpm run pack:dry     # 发布清单自检

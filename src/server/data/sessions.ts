@@ -5,6 +5,7 @@
  * 只走官方 read handle（open("read") → read(0) → close），不自行解压、不改写历史日志。
  * 服务缺失或读取失败时降级为空结果 + coverage 说明，绝不影响台账相关的其它端点。
  */
+import type { ToolStatsRecord } from './tool-stats.js'
 import {
   attributeModelKey,
   foldSessionEvents,
@@ -19,7 +20,6 @@ import {
   type SessionSummary,
   type TokenBuckets,
   type ToolDayStat,
-  type ToolStatsRecord,
 } from './session-usage.js'
 import { normalizeSessionId } from './session-meta.js'
 

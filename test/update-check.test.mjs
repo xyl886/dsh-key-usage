@@ -8,7 +8,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const { compareVersions, resolveUpdate, markUpdateSkipped, CURRENT_VERSION } = await import('../lib/update-check.js')
+const { compareVersions, resolveUpdate, markUpdateSkipped, isLinkedInstall, CURRENT_VERSION } = await import('../lib/update-check.js')
 
 let passed = 0
 async function check(name, run) {
@@ -34,7 +34,7 @@ await check('版本比较：主次修订，预发布低于同号正式版', asyn
 
 await check('首次检查：联网一次并给 hasUpdate', async () => {
   fetchCalls = 0
-  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, now: 1_000_000 })
+  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, localDev: false, now: 1_000_000 })
   assert.equal(fetchCalls, 1)
   assert.equal(view.latest, '99.0.0')
   assert.equal(view.hasUpdate, true)
@@ -43,7 +43,7 @@ await check('首次检查：联网一次并给 hasUpdate', async () => {
 
 await check('24 小时内缓存命中：不再联网', async () => {
   fetchCalls = 0
-  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, now: 1_000_000 + 60_000 })
+  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, localDev: false, now: 1_000_000 + 60_000 })
   assert.equal(fetchCalls, 0)
   assert.equal(view.hasUpdate, true)
   assert.equal(view.stale, false)
@@ -51,23 +51,32 @@ await check('24 小时内缓存命中：不再联网', async () => {
 
 await check('refresh=1 强制联网', async () => {
   fetchCalls = 0
-  await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, now: 1_000_000 + 60_000, refresh: true })
+  await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, localDev: false, now: 1_000_000 + 60_000, refresh: true })
   assert.equal(fetchCalls, 1)
 })
 
 await check('忽略此版本：同版本不再提示，但 latest 仍可下载', async () => {
   markUpdateSkipped('99.0.0', storePath)
-  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, now: 1_000_000 + 120_000 })
+  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, localDev: false, now: 1_000_000 + 120_000 })
   assert.equal(view.latest, '99.0.0')
   assert.equal(view.hasUpdate, false)
 })
 
 await check('上游失败：保留上次结果，不抛错', async () => {
   const failing = async () => { throw new Error('network down') }
-  const view = await resolveUpdate({ fetchImpl: failing, storagePath: storePath, now: 1_000_000 + 3_600_000, refresh: true })
+  const view = await resolveUpdate({ fetchImpl: failing, storagePath: storePath, localDev: false, now: 1_000_000 + 3_600_000, refresh: true })
   assert.equal(view.latest, '99.0.0')
   assert.equal(view.hasUpdate, false, '已忽略的版本仍然不提示')
   assert.equal(typeof view.checkedAt, 'number')
+})
+
+await check('link 模式不提示更新（本地仓库版本不代表 registry 包）', async () => {
+  assert.equal(isLinkedInstall('file:///D:/EasyJob/.plugin/dsh-key-usage/lib/update-check.js'), true)
+  assert.equal(isLinkedInstall('file:///C:/Users/x/.dsh/profiles/desktop/node_modules/dsh-key-usage/lib/update-check.js'), false)
+  fetchCalls = 0
+  const view = await resolveUpdate({ fetchImpl: stubFetch, storagePath: storePath, now: 1_000_000, refresh: true, localDev: true })
+  assert.equal(view.latest, '99.0.0')
+  assert.equal(view.hasUpdate, false)
 })
 
 console.log('update-check: ' + String(passed) + ' 项通过')

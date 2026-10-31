@@ -40,13 +40,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpiUnit { font-size: var(--ov-body); font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 1px; }
-.kpiDetail {
-  display: flex; gap: 6px; flex-wrap: wrap; color: var(--dsw-alias-label-tertiary, #67676f);
-  font-size: var(--ov-body); font-variant-numeric: tabular-nums;
-}
 /* 涨红跌绿（原型口径）：上升用错误色、下降用成功色 */
-.rise { color: var(--dsw-alias-state-error-primary, #e05a5a); }
-.fall { color: var(--dsw-alias-state-success-primary, #3fb96f); }
 
 /* ===== 面板 ===== */
 .panel { border: 1px solid var(--dsw-alias-border-l1, #2c2c34); border-radius: 9px; padding: 10px 12px; min-width: 0; }
@@ -161,7 +155,6 @@
 }
 
 /* KPI 副标一行内截断：卡片更矮更齐，长文案不再把卡片撑成两行 */
-.kpiDetail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 
 /* 口径标签（按时段是长期画像，不随范围变） */

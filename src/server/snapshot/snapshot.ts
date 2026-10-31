@@ -26,7 +26,7 @@ import {
   writeSnapshotSections,
   type StoredSection,
 } from '../storage/db.js'
-import { appendLogRecords, logFilePath } from '../data/log-file.js'
+import { appendLogRecords, logFilePath } from '../data/log-store.js'
 
 /** 旧快照文件名（迁移来源；运行时只写 usage.db）。 */
 export const SNAPSHOT_FILE = 'snapshot.json'

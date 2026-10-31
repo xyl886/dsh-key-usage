@@ -6,7 +6,7 @@
 import { mountKeyUsageRoutes } from './routes.js'
 import { createLiveQuotaService } from './quota/live-quota.js'
 import { createSessionSource } from './data/sessions.js'
-import { appendLogRecords, logFilePath } from './data/log-file.js'
+import { appendLogRecords, logFilePath } from './data/log-store.js'
 
 export const name = 'dsh-key-usage'
 

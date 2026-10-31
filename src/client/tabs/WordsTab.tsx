@@ -20,6 +20,10 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
   const [topN, setTopN] = useState(60)
   /** 词比档位少时按实际词数截断，避免「选了 100 只有 30」的错觉。 */
   const effectiveTopN = Math.min(topN, words.length)
+  /** 每会话平均提问条数：分母 = 窗口内有提问的会话数（服务端 0.2.5 起下发）。 */
+  const avgPerSession = prompts === null || typeof prompts.sessionCount !== 'number' || prompts.sessionCount <= 0
+    ? null
+    : prompts.totalPrompts / prompts.sessionCount
   const prevPrompts = prevOf(prompts?.prevTotalPrompts)
   const prevChars = prevOf(prompts?.prevTotalChars)
   const prevWords = prevOf(prompts?.prevWordCount)
@@ -32,6 +36,10 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
           label={t('words.kpiPrompts')}
           value={totalPrompts === null ? '—' : fmtCount(totalPrompts)}
           detail={prevPrompts === null ? undefined : <PrevLine previous={prevPrompts} current={totalPrompts} format={fmtCount} />}
+        />
+        <KpiCard
+          label={t('words.kpiAvgPerSession')}
+          value={avgPerSession === null ? '—' : avgPerSession.toFixed(1)}
         />
         <KpiCard
           label={t('words.kpiChars')}
