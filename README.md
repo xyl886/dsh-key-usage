@@ -66,7 +66,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 旧版按文件存的 `snapshot.json` / `model-prices.json` / `fx-rate.json` / `plugin.log` / `quota-snapshots.json` 只在首次启动时导入一次并移入 `.trash`，之后不再读写。**不读凭据文件、不改宿主配置、所有端点仅接受回环请求** —— 完整约束见 [AGENTS.md](./AGENTS.md)。
 
-**会联网的三个动作，都要你触发**：
+**会联网的四个动作，都要你触发**：
 
 **会联网的三个动作，都要你触发**：
 
@@ -74,6 +74,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | --- | --- |
 | **打开插件页** / 打开总览的通道详情弹窗 | 按通道查官方余额 / 窗口接口：**打开页面时若余额数据超过 60 秒就后台补查一次**（不阻塞首屏，几秒后自动刷新出来），其余时候读缓存；6 秒超时、64 KiB 上限、结果缓存 60 秒（点「刷新」强制重查），失败回落本机快照，原因写进系统日志 |
 | 设置里的「刷新价目」 | `POST /dsh-key-usage/pricing/refresh`：先 `raw.githubusercontent.com`、失败再试 jsDelivr 镜像；服务端 20 秒预算、响应上限 12 MiB，校验不过**不覆盖**已有文件；界面最多等 30 秒 |
+| **打开插件页时的更新检查** | `GET /dsh-key-usage/update`：打开页面后台查一次 npm 的 `latest` 版本（24 小时节流、5 秒超时）；有新版本时只在「设置 → 版本」行显示 `0.2.4 → 0.2.5` 与页头一个小圆点，点击复制升级命令，**不会自动下载或安装** |
 | **设置弹窗里的「刷新汇率」**（打开页面也会顺带取一次缓存的汇率） | `GET /dsh-key-usage/fx`：主 `open.er-api.com`、备 `api.frankfurter.app`；6 秒超时、64 KiB 上限、12 小时 TTL 内不联网；失败回落缓存，再失败用默认 7.1 并在界面明示 |
 
 **不做开机拉取、不做定时轮询、不在其它端点里隐式联网**。打开页面触发的重算只走本地数据（台账 + 会话），联网的只有上面这三个动作。
@@ -254,7 +255,7 @@ pnpm run pack:dry     # 发布清单自检
 | `src/client/**` | `pnpm run build` → **刷新页面** |
 | `src/server/**` | `pnpm run build` → **退出重开 DSH**（模块在宿主启动时进入 ESM 缓存，重装插件也不会重新导入） |
 
-**验证安装**（共 **19 个端点 = 16 个只读 `GET` + 3 个写 `POST`**，全部只接受回环请求）：
+**验证安装**（共 **21 个端点 = 17 个只读 `GET` + 4 个写 `POST`**，全部只接受回环请求）：
 
 装好后点侧边栏「使用情况」能出内容即可 —— **不要用 curl / 别的进程去请求桌面端 GUI 的端口**：那个端口带宿主自身的鉴权，外部请求只会拿到 `dsh web authentication required`，看不到插件端点。要直接验端点，只能用宿主自己打开的页面（浏览器里跑 `fetch('/dsh-key-usage/channels')`），或 `dsh web` 打印出来的带 token 的地址。
 

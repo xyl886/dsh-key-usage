@@ -845,8 +845,35 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/snapshot',
     '/dsh-key-usage/summary',
     '/dsh-key-usage/tools',
+    '/dsh-key-usage/update',
+    '/dsh-key-usage/update/skip',
     '/dsh-key-usage/usage',
-  ], '19 个端点 = 16 个只读 GET + 3 个写 POST（手动刷新 / 价目刷新 / 日志）')
+  ], '21 个端点 = 17 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
+
+  // /update：npm dist-tags 桩 → 有新版本时 hasUpdate=true；缓存期内不再联网
+  const realFetch = globalThis.fetch
+  let distTagsCalls = 0
+  globalThis.fetch = async () => {
+    distTagsCalls += 1
+    return { ok: true, json: async () => ({ latest: '999.0.0' }) }
+  }
+  try {
+    const update = await callHandler(contractHandlers, '/dsh-key-usage/update', '127.0.0.1')
+    assert.equal(update.status, 200)
+    assert.equal(update.body.latest, '999.0.0')
+    assert.equal(update.body.hasUpdate, true, '比当前版本大就要提示')
+    assert.ok(update.body.current.length > 0)
+    await callHandler(contractHandlers, '/dsh-key-usage/update', '127.0.0.1')
+    assert.equal(distTagsCalls, 1, '24 小时缓存期内不再联网')
+    await callHandler(contractHandlers, '/dsh-key-usage/update?refresh=1', '127.0.0.1')
+    assert.equal(distTagsCalls, 2, 'refresh=1 强制联网')
+    const skip = await callHandler(contractHandlers, '/dsh-key-usage/update/skip', '127.0.0.1', JSON.stringify({ version: '999.0.0' }))
+    assert.equal(skip.body.ok, true)
+    const afterSkip = await callHandler(contractHandlers, '/dsh-key-usage/update', '127.0.0.1')
+    assert.equal(afterSkip.body.hasUpdate, false, '忽略版本后不再提示')
+  } finally {
+    globalThis.fetch = realFetch
+  }
 
   // /log：POST 追加 → GET 回读 → POST 清空；坏请求体与非回环都被挡住
   const logAppend = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({

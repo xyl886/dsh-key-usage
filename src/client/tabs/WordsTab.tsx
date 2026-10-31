@@ -18,6 +18,8 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
   // 上期字段：服务端没给（上期窗口没有提问 / 旧版本）时保持 null，整段环比不显示
   /** 词云展示条数：默认前 60，可按需放宽到 100 / 收到 20。 */
   const [topN, setTopN] = useState(60)
+  /** 词比档位少时按实际词数截断，避免「选了 100 只有 30」的错觉。 */
+  const effectiveTopN = Math.min(topN, words.length)
   const prevPrompts = prevOf(prompts?.prevTotalPrompts)
   const prevChars = prevOf(prompts?.prevTotalChars)
   const prevWords = prevOf(prompts?.prevWordCount)
@@ -66,6 +68,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
                 <button
                   key={option}
                   type="button"
+                  disabled={option > words.length}
                   className={option === topN ? styles.topNBtn + ' ' + styles.topNBtnOn : styles.topNBtn}
                   aria-pressed={option === topN}
                   onClick={() => setTopN(option)}
@@ -80,7 +83,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
           )}
         </div>
         <WordCloud
-          words={words.slice(0, topN)}
+          words={words.slice(0, effectiveTopN)}
           emptyText={prompts === null ? t('s.loading') : t('words.noPrompts')}
           tipOf={(word, count) => t('words.cloudTip', {
             word,

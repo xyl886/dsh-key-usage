@@ -34,7 +34,7 @@ interface RankRowView {
 /** 排行榜行：名字 + 横条 + 次数 + 占比（正文 13px）。 */
 /** 工具名归一：MCP 调用显示成「server · tool」，不把双下划线原始名摊到界面上。 */
 function displayToolNameOf(name: string): string {
-  const match = /^mcp__(.+)__(.+)$/.exec(name)
+  const match = /^mcp__([A-Za-z0-9_-]+?)__(.+)$/.exec(name)
   return match === null ? name : match[1] + ' · ' + match[2]
 }
 function RankRows(props: { rows: RankRowView[] }): ReactNode {

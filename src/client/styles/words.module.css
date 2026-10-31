@@ -47,3 +47,4 @@
 .topNBtn { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer; }
 .topNBtn:hover { color: var(--dsw-alias-label-primary, #0f1115); }
 .topNBtnOn { color: var(--dsw-alias-label-primary, #0f1115); font-weight: 500; }
+.topNBtn:disabled { opacity: .45; cursor: default; }

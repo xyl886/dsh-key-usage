@@ -9,8 +9,6 @@
   .cardGrid, .cardGrid.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* 卡片上方的通道筛选条 */
-.cardToolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 
 /* 卡片：标题行 + 正文（同行等高靠外层 grid-auto-rows，正文行等分剩余高度）；
    内边距与行距按「卡片过于紧凑」的反馈放大，原型是 9px 11px / gap 5。 */

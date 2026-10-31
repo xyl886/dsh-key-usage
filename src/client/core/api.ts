@@ -18,6 +18,7 @@ import type {
   SummaryResponse,
   ToolsResponse,
   UsageResponse,
+  UpdateInfo,
 } from './types.ts'
 import { t } from './i18n.ts'
 import { logWarn } from './log.ts'
@@ -230,5 +231,34 @@ export async function refreshAll(): Promise<SnapshotResponse | null> {
   } catch (error) {
     failureReasons.set(REFRESH_PATH, t('api.requestFailed') + (error instanceof Error ? error.message : String(error)))
     return null
+  }
+}
+
+/** 更新检查：打开页面时调一次（服务端 24 小时节流）；refresh=true 强制联网。 */
+export async function loadUpdate(refresh = false): Promise<UpdateInfo | null> {
+  try {
+    const response = await fetch('/dsh-key-usage/update' + (refresh ? '?refresh=1' : ''), {
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) return null
+    return await response.json() as UpdateInfo
+  } catch {
+    return null
+  }
+}
+
+/** 忽略某个版本：写服务端 app_meta，同版本不再提示。 */
+export async function skipUpdate(version: string): Promise<boolean> {
+  try {
+    const response = await fetch('/dsh-key-usage/update/skip', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version }),
+    })
+    if (!response.ok) return false
+    const body = await response.json() as { ok?: unknown }
+    return body.ok === true
+  } catch {
+    return false
   }
 }

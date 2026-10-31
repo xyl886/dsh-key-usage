@@ -248,10 +248,13 @@ export function SessionsTab(props: {
               { value: '200', labelKey: 'sessions.page200' },
             ]}
           />
-          <label className={styles.modeSwitch} title={t('sessions.allTimeHint')}>
-            <input type="checkbox" checked={allTime} onChange={(event) => setAllTime(event.target.checked)} />
-            {t('sessions.allTime')}
-          </label>
+          <button
+            type="button"
+            className={allTime ? sessionsStyles.allTime + ' ' + sessionsStyles.allTimeOn : sessionsStyles.allTime}
+            aria-pressed={allTime}
+            title={t('sessions.allTimeHint')}
+            onClick={() => setAllTime(!allTime)}
+          >{t('sessions.allTime')}</button>
           <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(recentRows.length) })}</span>
         </div>
         {visibleRows.length === 0

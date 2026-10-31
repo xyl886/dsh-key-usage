@@ -84,3 +84,11 @@
 /* 搜索框：原型 .search 的最小宽度 150px（同排下拉仍是共享控件规格）；
    用元素+类选择器压过 lists.module.css 里的同名类，避免样式注入顺序影响宽度 */
 input.searchInput { flex: 0 1 150px; min-width: 150px; max-width: 150px; box-sizing: border-box; font-size: var(--ku-body, 14px); }
+
+/* 「全部时间」切换：和会话范围 / 每页条数同一层级的小胶囊 */
+.allTime {
+  box-sizing: border-box; height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: 14px;
+  background: none; color: var(--dsw-alias-label-secondary, #9a9aa6); font: inherit; font-size: 13px; cursor: pointer;
+}
+.allTime:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); color: var(--dsw-alias-label-primary, #0f1115); }
+.allTimeOn { background: var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); color: var(--dsw-alias-label-primary, #0f1115); }

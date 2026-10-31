@@ -122,22 +122,24 @@ export interface LogRefreshFilter {
 }
 
 /** 拉取服务端日志；带 level / source 时服务端先过滤（能取到 limit 之外的更早记录）。 */
-export async function refreshLog(filter: LogRefreshFilter = {}): Promise<void> {
+/** 返回本次新读入的条数（0 = 没有更早的记录，「加载更早」据此收起）。 */
+export async function refreshLog(filter: LogRefreshFilter = {}): Promise<number> {
   hydrated = true
-  await readFromDisk(filter)
+  return await readFromDisk(filter)
 }
 
-async function readFromDisk(filter: LogRefreshFilter = {}): Promise<void> {
+async function readFromDisk(filter: LogRefreshFilter = {}): Promise<number> {
   try {
     const params = new URLSearchParams({ limit: String(READ_LIMIT) })
   if (filter.level !== undefined && filter.level !== '') params.set('level', filter.level)
   if (filter.source !== undefined && filter.source !== '') params.set('source', filter.source)
   if (filter.before !== undefined) params.set('before', String(filter.before))
   const response = await fetch(LOG_PATH + '?' + params.toString(), { headers: { Accept: 'application/json' } })
-    if (!response.ok) return
+    if (!response.ok) return 0
     const body = await response.json() as { records?: unknown }
-    if (!Array.isArray(body.records)) return
+    if (!Array.isArray(body.records)) return 0
     let changed = false
+    let added = 0
     /**
      * 同一条内容在文件里可能真的出现多次（同一次失败被记了两遍），所以去重键要带「第几次出现」：
      * 文件没变时重复读不会虚增，文件里两条一模一样的记录仍各自计入次数。
@@ -158,13 +160,16 @@ async function readFromDisk(filter: LogRefreshFilter = {}): Promise<void> {
       storedKeys.add(key)
       fold(level, source, record.message, typeof record.detail === 'string' ? record.detail : undefined, time)
       changed = true
+      added += 1
     }
-    if (!changed) return
+    if (!changed) return 0
     entries = [...entries].sort((first, second) => first.time - second.time)
     trim()
     notify()
+    return added
   } catch {
     // 没有 /log 端点（服务端旧版本）时静默
+    return 0
   }
 }
 

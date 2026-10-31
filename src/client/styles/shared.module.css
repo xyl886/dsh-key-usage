@@ -33,6 +33,7 @@
 .stickyHead .headBtn { height: var(--ku-control); padding: 0 12px; border-radius: 12px; font-size: 13px; font-weight: 400; }
 /* 纯图标控件（刷新 / 设置 / 仓库）：与按钮同高同宽，不抢视觉 */
 .iconBtn {
+  position: relative;
   box-sizing: border-box; width: var(--ku-control); height: var(--ku-control); padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid transparent; border-radius: 12px;
@@ -44,7 +45,6 @@
 .iconBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 2px; }
 /* 筛选行：通道 / 项目 / 模型在左、显示币种在右（原型 .trow 第二行） */
 .filterBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-.filterLabel { color: var(--dsw-alias-label-tertiary, #8b8b99); white-space: nowrap; font-size: var(--ku-body); }
 /* 顶部栏吸顶：页面自己滚（.section 是滚动容器），三行工具栏一起钉住，
    负 margin 抵消 .section 的内边距，滚动内容从它下面穿过 */
 .stickyHead {
@@ -285,3 +285,6 @@
   .toolbarRow { gap: 8px; row-gap: 6px; }
   .stickyHead { padding-bottom: 6px; }
 }
+
+/* 设置按钮上的「有新版本」小圆点（无文案） */
+.badgeDot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 999px; background: var(--dsw-alias-state-warn-primary, #e0a13c); }

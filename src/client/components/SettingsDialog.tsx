@@ -12,8 +12,10 @@ import {
 import { t, useT } from '../core/i18n.ts'
 import { logError, logInfo, logWarn } from '../core/log.ts'
 import { modelPriceRefreshTextOf } from '../core/pricing.ts'
+import { fmtDateTime } from '../core/format.ts'
 import { PLUGIN_VERSION } from '../core/version.ts'
 import { LogPanel } from './LogPanel.tsx'
+import type { UpdateInfo } from '../core/types.ts'
 import { Button } from './ui/Button.tsx'
 import styles from '../styles/settings.module.css'
 
@@ -28,6 +30,12 @@ const TAB_KEYS: Array<{ key: SettingsTab; labelKey: string }> = [
 ]
 
 export function SettingsDialog(props: {
+  /** 更新检查结果（打开页面时由外壳拉取）：只在版本行给一个新版本入口。 */
+  update?: UpdateInfo | null
+  /** 手动重新检查更新（设置页版本行的 ↻）。 */
+  onRefreshUpdate?: () => void
+  /** 忽略当前提示的版本。 */
+  onSkipUpdate?: () => void
   /** 刷新价目成功后通知页面重取 /pricing 与用量（成本口径整体变了） */
   onPricingReload: () => void
   /** 从「日志提示」或旧入口过来时落地到指定页签 */
@@ -43,6 +51,7 @@ export function SettingsDialog(props: {
   const [fxError, setFxError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshElapsed, setRefreshElapsed] = useState(0)
+  const [copied, setCopied] = useState(false)
   const [refreshStatus, setRefreshStatus] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
 
   // 外部（日志提示 / 入口）要求切页签时跟随
@@ -130,6 +139,21 @@ export function SettingsDialog(props: {
 
   const fxWarn = display.fx === null || display.fx.source === 'default'
 
+  /** 复制升级命令：只复制文本，不执行安装（插件不碰 profile 的包管理）。 */
+  const copyUpgradeCommand = (): void => {
+    const target = 'dsh-key-usage@' + (props.update?.latest ?? 'latest')
+    const pnpm = 'node ~/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/pnpm/bin/pnpm.mjs'
+    // dsh plugin --profile desktop add 被 CLI 拦截，按 AGENTS 的 pnpm 方式；两种 profile 各给一条
+    const command = [
+      pnpm + ' --dir ~/.dsh/profiles/desktop add ' + target,
+      pnpm + ' --dir ~/.dsh/profiles/web add ' + target,
+    ].join('\n')
+    void navigator.clipboard?.writeText(command).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => { /* 剪贴板不可用时静默 */ })
+  }
+
   return (
     <div className={styles.shell}>
       <div className={styles.tabs} role="tablist" aria-orientation="vertical">
@@ -190,7 +214,26 @@ export function SettingsDialog(props: {
             </div>
             <div className={styles.row}>
               <span className={styles.rowLabel}>{t('settings.version')}</span>
-              <span className={styles.rowInfo}>{PLUGIN_VERSION}</span>
+              <span className={styles.rowInfo}>
+                {props.update?.current ?? PLUGIN_VERSION}
+                {props.update?.hasUpdate === true && props.update.latest !== null && (
+                  <>
+                    {' → '}
+                    <button type="button" className={styles.updateLink} title={t('settings.copyUpgrade')} onClick={copyUpgradeCommand}>
+                      {props.update.latest}
+                    </button>
+                    <button type="button" className={styles.skipVersionBtn} title={t('settings.skipVersion')} aria-label={t('settings.skipVersion')} onClick={() => props.onSkipUpdate?.()}>×</button>
+                  </>
+                )}
+                {copied === true && <span className={styles.copiedTag}>{t('settings.copied')}</span>}
+                <button
+                  type="button"
+                  className={styles.updateRefreshBtn}
+                  title={props.update?.checkedAt === null || props.update?.checkedAt === undefined ? t('settings.checkUpdate') : t('settings.lastChecked', { time: fmtDateTime(props.update.checkedAt) })}
+                  aria-label={t('settings.checkUpdate')}
+                  onClick={() => props.onRefreshUpdate?.()}
+                >↻</button>
+              </span>
               <span className={styles.actions} />
             </div>
             <div className={styles.row}>

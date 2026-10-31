@@ -290,6 +290,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     },
   ]
 
+  /** 今天范围只有一天，「日均」两张卡没有意义：隐藏后剩 8 张，按 4 列排。 */
+  const visibleKpiCards = kpiCards.filter((card) => !(range === 'today' && (card.key === 'dailyTokens' || card.key === 'dailyCost')))
+
+
   // ===== 使用趋势 =====
   const isAllRange = range === 'total'
   /** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
@@ -406,12 +410,10 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
 
   return (
     <div className={styles.stack}>
-      <div className={styles.kpiGrid}>
-        {kpiCards
-          .filter((card) => !(range === 'today' && (card.key === 'dailyTokens' || card.key === 'dailyCost')))
-          .map(({ key, ...card }) => (
-            <KpiStat key={key} {...card} hidePrev={range === 'total'} />
-          ))}
+      <div className={styles.kpiGrid} data-cards={visibleKpiCards.length}>
+        {visibleKpiCards.map(({ key, ...card }) => (
+          <KpiStat key={key} {...card} hidePrev={range === 'total'} />
+        ))}
       </div>
 
       <div className={styles.panel}>

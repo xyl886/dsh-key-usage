@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadProjects, loadPrompts, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH } from './core/api.ts'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { loadChannels, loadHeatmap, loadModels, loadProjects, loadPrompts, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH , loadUpdate, skipUpdate } from './core/api.ts'
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { selectionOf } from './core/filter-selection.ts'
@@ -35,6 +35,7 @@ import type {
   ToolsResponse,
   UsageResponse,
   WeekdayHours,
+  UpdateInfo,
 } from './core/types.ts'
 import styles from './styles/shared.module.css'
 
@@ -118,9 +119,39 @@ export function KeyUsageSection() {
   const lastSnapshotAt = useRef(0)
   const tooltip = useTooltip()
 
+  /** 更新检查：打开页面查一次（服务端 24 小时节流），只用来提示新版本。 */
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  useEffect(() => { void loadUpdate().then(setUpdateInfo) }, [])
+
   /** 导出下拉：两个导出动作合并成一个菜单。 */
   const [exportOpen, setExportOpen] = useState(false)
   const exportMenuRef = useRef<HTMLSpanElement>(null)
+  const exportItemRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  /** 打开菜单后焦点落到第一项；↑↓ / Home / End 在两项之间移动。 */
+  useEffect(() => {
+    if (!exportOpen) return
+    exportItemRefs.current[0]?.focus()
+  }, [exportOpen])
+
+  const onExportMenuKeyDown = (event: ReactKeyboardEvent<HTMLSpanElement>): void => {
+    const items = exportItemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled)
+    if (items.length === 0) return
+    const index = items.findIndex((item) => item === document.activeElement)
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      items[(index + 1 + items.length) % items.length].focus()
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      items[(index - 1 + items.length) % items.length].focus()
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      items[0].focus()
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      items[items.length - 1].focus()
+    }
+  }
   useEffect(() => {
     if (!exportOpen) return
     const onDown = (event: MouseEvent): void => {
@@ -562,6 +593,7 @@ export function KeyUsageSection() {
             aria-label={t('action.settings')}
             title={t('action.settings')}
           >
+            {updateInfo?.hasUpdate === true && <span className={styles.badgeDot} aria-hidden="true" />}
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
               <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
               <path fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
@@ -625,10 +657,11 @@ export function KeyUsageSection() {
             title={t('action.export')}
           >{t('action.export')} ▾</Button>
           {exportOpen && (
-            <span className={styles.exportPanel} role="menu">
+            <span className={styles.exportPanel} role="menu" onKeyDown={onExportMenuKeyDown}>
               <button
                 type="button"
                 role="menuitem"
+                ref={(element) => { exportItemRefs.current[0] = element }}
                 className={styles.exportItem}
                 disabled={scopedUsage === null}
                 onClick={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage, range); setExportOpen(false) }}
@@ -636,6 +669,7 @@ export function KeyUsageSection() {
               <button
                 type="button"
                 role="menuitem"
+                ref={(element) => { exportItemRefs.current[1] = element }}
                 className={styles.exportItem}
                 disabled={sessions === null}
                 onClick={() => { if (sessions !== null) exportSessionsCsv(sessions); setExportOpen(false) }}
@@ -785,6 +819,13 @@ export function KeyUsageSection() {
       {showSettings && (
         <Dialog title={t('settings.title')} closeLabel={t('action.close')} onClose={() => setShowSettings(false)}>
           <SettingsDialog
+          update={updateInfo}
+          onRefreshUpdate={() => { void loadUpdate(true).then(setUpdateInfo) }}
+          onSkipUpdate={() => {
+            const latest = updateInfo?.latest
+            if (latest === null || latest === undefined) return
+            void skipUpdate(latest).then((ok) => { if (ok) void loadUpdate().then(setUpdateInfo) })
+          }}
             onPricingReload={() => setPricingRevision((previous) => previous + 1)}
             initialTab={settingsTab}
             todaySource={summary === null ? null : summary.todaySource}

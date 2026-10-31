@@ -571,3 +571,12 @@ export interface SnapshotResponse {
   quotaOutcome: SnapshotQuotaOutcome
   issues: Array<{ kind: string; message: string }>
 }
+
+/** GET /update 的响应：只表示「有没有新版本」，不含任何安装动作。 */
+export interface UpdateInfo {
+  current: string
+  latest: string | null
+  checkedAt: number | null
+  stale: boolean
+  hasUpdate: boolean
+}

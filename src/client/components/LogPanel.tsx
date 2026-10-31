@@ -33,6 +33,8 @@ export function LogPanel(): ReactNode {
   const [sourceFilter, setSourceFilter] = useState('')
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  /** 服务端已经没有更早的记录：收起「加载更早」。 */
+  const [noOlder, setNoOlder] = useState(false)
   /** 已渲染条数：到列表底部时再追加一批（滚动加载）。 */
   const [pageSize, setPageSize] = useState(LOAD_STEP)
   const listRef = useRef<HTMLDivElement>(null)
@@ -63,7 +65,7 @@ export function LogPanel(): ReactNode {
   }, [snapshot.list, levelFilter, sourceFilter, search])
 
   /** 换筛选 / 搜索就回到第一批，避免停在很后面。 */
-  useEffect(() => { setPageSize(LOAD_STEP) }, [levelFilter, sourceFilter, search])
+  useEffect(() => { setPageSize(LOAD_STEP); setNoOlder(false) }, [levelFilter, sourceFilter, search])
 
   /** 列表没占满容器时继续补，直到出现滚动条（否则滚动加载永远触发不了）。 */
   useEffect(() => {
@@ -95,6 +97,7 @@ export function LogPanel(): ReactNode {
     const oldest = visible.length === 0 ? null : visible[visible.length - 1].time
     if (oldest === null) return
     void refreshLog({ level: levelFilter === 'all' ? undefined : levelFilter, source: sourceFilter === '' ? undefined : sourceFilter, before: oldest })
+      .then((added) => { if (added === 0) setNoOlder(true) })
   }
 
   const onCopy = (): void => {
@@ -193,8 +196,13 @@ export function LogPanel(): ReactNode {
                 </li>
               ))}
             </ul>
-            {hasMore && <div className={styles.loadMore}>{t('log.loadMore', { loaded: shown.length, total: visible.length })}</div>}
-            <div className={styles.loadMore}><button type="button" className={styles.olderBtn} onClick={onLoadOlder}>{t('log.loadOlder')}</button></div>
+            {(hasMore || !noOlder) && (
+              <div className={styles.loadMore}>
+                {hasMore && <span>{t('log.loadMore', { loaded: shown.length, total: visible.length })}</span>}
+                {hasMore && !noOlder && ' · '}
+                {!noOlder && <button type="button" className={styles.olderBtn} onClick={onLoadOlder}>{t('log.loadOlder')}</button>}
+              </div>
+            )}
           </div>
         )}
     </div>

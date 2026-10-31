@@ -90,7 +90,3 @@
 .subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 8px; font-variant-numeric: tabular-nums; }
 .subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }
 
-/* 窄屏：明细表横向滚动而不是把列挤成两行 */
-@media (max-width: 1180px) {
-  .tableWrap { overflow-x: auto; }
-}

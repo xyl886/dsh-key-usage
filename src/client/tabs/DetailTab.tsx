@@ -578,11 +578,12 @@ function buildHourRows(props: { usage: UsageResponse; range: RangeKey }): Detail
       const label = props.range === 'today'
         ? String(startHour).padStart(2, '0') + '时'
         : String(startHour).padStart(2, '0') + '–' + String(startHour + slotHours).padStart(2, '0') + '时'
+      const dateCell = props.range === 'today' ? '' : date
       rows.push({
         key: 'hour|' + date + '|' + String(startHour),
-        date: '',
+        date: dateCell,
         label: label,
-        labelDim: dates.length > 1 ? date.slice(5) : null,
+        labelDim: null,
         calls,
         input: Math.max(0, tokens - output - cacheRead),
         output,
@@ -734,11 +735,15 @@ export function DetailTab(props: {
   )
   /** 显示币种或汇率一变，金额文本就得重算（模块级状态变了，memo 自己发现不了）。 */
   const moneyKey = currency.display + '|' + (currency.fx === null ? '' : String(currency.fx.rate))
+  /** 分时范围 + 按天维度：表格也是小时行，没有环比与来源列。 */
+  const hourlyTable = (props.range === 'today' || props.range === 'week') && dimension === 'day'
+  /** 分时表隐藏「环比 / 来源」两列（小时桶没有这两个维度）。 */
+  const tableColumns = hourlyTable ? SORT_COLUMNS.filter(([key]) => key !== 'delta' && key !== 'source') : SORT_COLUMNS
   const rows = useMemo(() => {
     if (scopedUsage === null) return []
-    if ((props.range === 'today' || props.range === 'week') && dimension === 'day') return buildHourRows({ usage: scopedUsage, range: props.range })
+    if (hourlyTable) return buildHourRows({ usage: scopedUsage, range: props.range })
     return buildDetailRows({ usage: scopedUsage, channels, dimension, sessions: props.sessions ?? null })
-  }, [scopedUsage, channels, dimension, moneyKey, props.range, props.sessions])
+  }, [scopedUsage, channels, dimension, moneyKey, props.range, props.sessions, hourlyTable])
   const sortedRows = useMemo(() => sortDetailRows(rows, sortKey, sortDirection), [rows, sortKey, sortDirection])
   /** 分时范围：今天按小时（24 桶）、7 天按 6 小时（28 桶）；其余范围仍按天。 */
   const granularRange = props.range === 'today' || props.range === 'week'
@@ -912,7 +917,7 @@ export function DetailTab(props: {
                 <thead>
                   <tr>
                     <th scope="col" />
-                    {SORT_COLUMNS.map(([key, labelKey]) => {
+                    {tableColumns.map(([key, labelKey]) => {
                       const active = sortKey === key
                       return (
                         <th
@@ -963,12 +968,12 @@ export function DetailTab(props: {
                           <td className={detailStyles.alignRight}>{fmtTokens(row.cacheRead)}</td>
                           <td className={detailStyles.alignRight}>{row.sessions === null ? '—' : fmtCalls(row.sessions)}</td>
                           <td className={detailStyles.alignRight + ' ' + detailStyles.costCell} title={row.costText === '—' ? t('cost.noBasis') : undefined}>{row.costText}</td>
-                          <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>
-                          <td className={detailStyles.alignRight}>{costSourceLabelOf(row.source, t)}</td>
+                          {!hourlyTable && <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>}
+                          {!hourlyTable && <td className={detailStyles.alignRight}>{costSourceLabelOf(row.source, t)}</td>}
                         </tr>
                         {open && (
                           <tr>
-                            <td className={detailStyles.subCell} colSpan={SORT_COLUMNS.length + 1}>
+                            <td className={detailStyles.subCell} colSpan={tableColumns.length + 1}>
                               <table className={detailStyles.subTable}>
                                 <thead>
                                   <tr>

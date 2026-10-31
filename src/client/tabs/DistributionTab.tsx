@@ -361,14 +361,14 @@ function CostMixPanel(props: { models: ModelAggregateRow[]; loading: boolean }):
 function ChannelCostPanel(props: { models: ModelAggregateRow[]; channels: Channel[]; loading: boolean }): ReactNode {
   const t = useT()
   const [showAll, setShowAll] = useState(false)
-  const { rows, channelCount } = channelCostOf(props.models, props.channels)
+  const { rows, channelCount, hasTail } = channelCostOf(props.models, props.channels)
   const all = showAll ? channelCostOf(props.models, props.channels, true).rows : []
   return (
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <span className={styles.panelTitle}>{t('dist.channelCost')}</span>
         <span className={styles.panelNote}>{t('dist.countUnit', { count: channelCount })}</span>
-        {rows.length > 0 && channelCount > rows.length - 1 && (
+        {rows.length > 0 && hasTail && (
           <button type="button" className={styles.panelMore} onClick={() => setShowAll(true)}>{t('dist.allRows')}</button>
         )}
       </div>
@@ -527,7 +527,7 @@ function cacheTotalTextOf(usage: UsageResponse | null): string {
 }
 
 /** 通道成本排行：同通道模型成本相加，取前几名 + 「其它」，条宽按占总成本比例。 */
-function channelCostOf(models: ModelAggregateRow[], channels: Channel[], expand = false): { rows: RankRow[]; channelCount: number } {
+function channelCostOf(models: ModelAggregateRow[], channels: Channel[], expand = false): { rows: RankRow[]; channelCount: number; hasTail: boolean } {
   const byProvider = new Map<string, { label: string; costs: CostsByCurrency }>()
   for (const row of models) {
     const entry = byProvider.get(row.provider) ?? {
@@ -543,7 +543,7 @@ function channelCostOf(models: ModelAggregateRow[], channels: Channel[], expand 
     .filter((entry): entry is { provider: string; label: string; costs: CostsByCurrency; comparable: number } => entry.comparable !== null && entry.comparable > 0)
     .sort((first, second) => second.comparable - first.comparable)
   const total = priced.reduce((sum, entry) => sum + entry.comparable, 0)
-  if (total <= 0) return { rows: [], channelCount: 0 }
+  if (total <= 0) return { rows: [], channelCount: 0, hasTail: false }
 
   const top = priced[0]
   const toRow = (entry: { provider: string; label: string; costs: CostsByCurrency; comparable: number }, key: string): RankRow => ({
@@ -569,7 +569,7 @@ function channelCostOf(models: ModelAggregateRow[], channels: Channel[], expand 
       metaText: Math.round(comparable / total * 100) + '%',
     })
   }
-  return { rows, channelCount: priced.length }
+  return { rows, channelCount: priced.length, hasTail: tail.length > 0 }
 }
 
 /** 一行金额累加进逐币种小计；没有 `costsByCurrency` 时按 `cost` 兜底记 CNY。 */
