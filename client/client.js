@@ -1230,9 +1230,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				return 0;
 			}
 		}
+		/** 同类日志（级别 + 来源 + 消息）60 秒内只记一条：失败重试、页面反复打开不该把日志刷满。 */
+		const RATE_LIMIT_MS = 6e4;
+		const recentPushTimes = /* @__PURE__ */ new Map();
 		function logPush(level, source, message, detail, retry) {
 			if (message === "") return;
-			const entry = fold(level, source, message, detail, Date.now());
+			const now = Date.now();
+			const rateKey = level + "|" + source + "|" + message;
+			const last = recentPushTimes.get(rateKey);
+			if (last !== void 0 && now - last < RATE_LIMIT_MS) return;
+			recentPushTimes.set(rateKey, now);
+			if (recentPushTimes.size > 500) recentPushTimes.clear();
+			const entry = fold(level, source, message, detail, now);
 			if (retry !== void 0) entry.retry = retry;
 			pending.set(entry.id, entry);
 			trim();
@@ -1835,11 +1844,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			CNY: "¥",
 			USD: "$"
 		};
-		const FX_SOURCE_LABELS = {
-			upstream: t("fx.live"),
-			cache: t("fx.cache"),
-			default: t("fx.default")
-		};
+		t("fx.live"), t("fx.cache"), t("fx.default");
 		/** 显示币种与汇率都在这里；`fx: null` = 还没取到汇率（跨币种金额按原币种显示）。 */
 		let state = {
 			display: "CNY",
@@ -2044,16 +2049,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				total += view.amount;
 			}
 			return total;
-		}
-		/** 汇率说明：`1 USD = 7.10 CNY · 实时上游 · 08-14 10:22`；没取到时说明为什么。 */
-		function fxSummaryTextOf(fx) {
-			if (fx === null) return t("fx.missing");
-			const parts = ["1 " + fx.base + " = " + rateValueTextOf(fx.rate) + " " + fx.quote];
-			parts.push(FX_SOURCE_LABELS[fx.source] ?? fx.source);
-			const time = localTimeTextOf(fx.fetchedAt);
-			if (time !== null) parts.push(time);
-			if (fx.stale) parts.push(t("fx.stale"));
-			return parts.join(" · ");
 		}
 		/** 把服务端 `/fx` 的响应归一化成内部结构；rate 非法时返回 null（宁可不算也不猜）。 */
 		function normalizeFxRate(raw) {
@@ -3629,7 +3624,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					return;
 				}
 				setFxRate(normalized);
-				if (force) logInfo("fx", t("quota.refreshFx"), fxSummaryTextOf(normalized));
 			}, [t]);
 			(0, react.useEffect)(() => {
 				fetchFx(false);
@@ -3677,7 +3671,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					tone: "ok",
 					text: modelPriceRefreshTextOf(outcome)
 				});
-				logInfo("pricing", t("quota.refreshPrices"), modelPriceRefreshTextOf(outcome) + "\n" + outcome.url);
 				props.onPricingReload();
 			};
 			/** 设置页只展示一行汇率结论（来源与时间进不到版面上）。 */
@@ -6510,7 +6503,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/distribution.module.css.mjs
-		const css$9 = ".P_kW7q_page{--dist-body:var(--ku-body,14px);--dist-title:var(--ku-title,17px);font-size:var(--dist-body);flex-direction:column;gap:10px;display:flex}.P_kW7q_focusNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px}.P_kW7q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 12px}.P_kW7q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.P_kW7q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--dist-title);font-weight:600}.P_kW7q_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.P_kW7q_mekko{border-radius:6px;align-items:stretch;height:132px;display:flex;overflow:hidden}.P_kW7q_mekkoBlock{box-sizing:border-box;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:3px;min-width:0;padding:8px;display:flex;overflow:hidden}.P_kW7q_mekkoBlockCompact{gap:2px;padding:6px 4px}.P_kW7q_mekkoHead{align-items:baseline;gap:4px;min-width:0;max-width:100%;display:flex}.P_kW7q_mekkoName{text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%;font-weight:600;overflow:hidden}.P_kW7q_mekkoAmount{text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:.92;min-width:0;max-width:100%;overflow:hidden}.P_kW7q_mekkoHead .P_kW7q_mekkoAmount{opacity:1;flex:none;font-weight:600}.P_kW7q_mekkoModel{text-overflow:ellipsis;white-space:nowrap;opacity:.92;max-width:100%;overflow:hidden}.P_kW7q_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.P_kW7q_row{grid-template-columns:minmax(76px,112px) minmax(0,1fr) minmax(58px,auto) minmax(56px,auto);align-items:center;gap:8px;padding:4px 0;display:grid}.P_kW7q_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.P_kW7q_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.P_kW7q_rowFill,.P_kW7q_rowFillTop{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.P_kW7q_rowFill{opacity:.58}.P_kW7q_rowFillTop{opacity:1}.P_kW7q_rowAmount{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_rowMeta{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_stackBar{border-radius:6px;height:22px;display:flex;overflow:hidden}.P_kW7q_stackOutput,.P_kW7q_stackCache{box-sizing:border-box;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);flex-basis:0;justify-content:center;align-items:center;padding:0 6px;display:flex;overflow:hidden}.P_kW7q_stackOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_stackCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:8px;display:flex}.P_kW7q_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:4px;display:inline-flex}.P_kW7q_legendOutput,.P_kW7q_legendCache{border-radius:2px;width:8px;height:8px;display:inline-block}.P_kW7q_legendOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legendCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_detailsBar{justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;display:flex}.P_kW7q_tables{flex-direction:column;gap:16px;display:flex}.P_kW7q_tableTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px;font-weight:600}";
+		const css$9 = ".P_kW7q_page{--dist-body:var(--ku-body,14px);--dist-title:var(--ku-title,17px);font-size:var(--dist-body);flex-direction:column;gap:10px;display:flex}.P_kW7q_focusNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:8px}.P_kW7q_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);box-sizing:border-box;border-radius:9px;min-width:0;padding:10px 12px}.P_kW7q_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.P_kW7q_panelTitle{color:var(--dsw-alias-label-primary,#e8e8ec);font-size:var(--dist-title);font-weight:600}.P_kW7q_panelNote{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.P_kW7q_mekko{border-radius:6px;align-items:stretch;height:132px;display:flex;overflow:hidden}.P_kW7q_mekkoBlock{box-sizing:border-box;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:3px;min-width:0;padding:8px;display:flex;overflow:hidden}.P_kW7q_mekkoBlockCompact{gap:2px;padding:6px 4px}.P_kW7q_mekkoHead{align-items:baseline;gap:4px;min-width:0;max-width:100%;display:flex}.P_kW7q_mekkoName{text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%;font-weight:600;overflow:hidden}.P_kW7q_mekkoAmount{text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:.92;min-width:0;max-width:100%;overflow:hidden}.P_kW7q_mekkoHead .P_kW7q_mekkoAmount{opacity:1;flex:none;font-weight:600}.P_kW7q_mekkoModel{text-overflow:ellipsis;white-space:nowrap;opacity:.92;max-width:100%;overflow:hidden}.P_kW7q_grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:stretch;gap:10px;display:grid}.P_kW7q_row{grid-template-columns:minmax(76px,112px) minmax(0,1fr) minmax(58px,auto) minmax(56px,auto);align-items:center;gap:8px;padding:4px 0;display:grid}.P_kW7q_rowName{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.P_kW7q_rowTrack{background:var(--dsw-alias-interactive-bg-active,#80808c2e);border-radius:4px;height:9px;overflow:hidden}.P_kW7q_rowFill,.P_kW7q_rowFillTop{background:var(--dsw-alias-state-business-primary,#5b8cff);border-radius:4px;height:100%;display:block}.P_kW7q_rowFill{opacity:.58}.P_kW7q_rowFillTop{opacity:1}.P_kW7q_rowAmount{text-align:right;color:var(--dsw-alias-label-secondary,#9a9aa6);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_rowMeta{text-align:right;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap}.P_kW7q_stackBar{border-radius:6px;height:22px;display:flex;overflow:hidden}.P_kW7q_stackOutput,.P_kW7q_stackCache{box-sizing:border-box;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-primary-foreground,#fff);flex-basis:0;justify-content:center;align-items:center;padding:0 6px;display:flex;overflow:hidden}.P_kW7q_stackOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_stackCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legend{color:var(--dsw-alias-label-secondary,#9a9aa6);flex-wrap:wrap;gap:12px;margin-top:8px;display:flex}.P_kW7q_legend span{font-variant-numeric:tabular-nums;align-items:center;gap:4px;display:inline-flex}.P_kW7q_legendOutput,.P_kW7q_legendCache{border-radius:2px;width:8px;height:8px;display:inline-block}.P_kW7q_legendOutput{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#5b8cff) 85%, var(--dsw-alias-label-primary,#111))}.P_kW7q_legendCache{background:color-mix(in srgb, var(--dsw-alias-state-success-primary,#3fb96f) 60%, var(--dsw-alias-label-primary,#111))}.P_kW7q_detailsBar{justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;display:flex}.P_kW7q_tables{flex-direction:column;gap:16px;display:flex}.P_kW7q_tableTitle{color:var(--dsw-alias-label-secondary,#9a9aa6);margin-bottom:6px;font-weight:600}.P_kW7q_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.P_kW7q_panelMore:hover{color:var(--dsw-alias-label-primary,#0f1115)}";
 		const tagId$9 = "dsh-key-usage/distribution.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$9) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6541,6 +6534,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"page": "P_kW7q_page",
 			"panel": "P_kW7q_panel",
 			"panelHead": "P_kW7q_panelHead",
+			"panelMore": "P_kW7q_panelMore",
 			"panelNote": "P_kW7q_panelNote",
 			"panelTitle": "P_kW7q_panelTitle",
 			"row": "P_kW7q_row",
@@ -7954,22 +7948,23 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			* 出问题时去日志窗按通道查。
 			*/
 			(0, react.useEffect)(() => {
+				const failed = [];
 				for (const channel of props.channels) {
 					if (channel.status === "off") {
-						logWarn("quota", t("quota.liveFailedShort") + " · " + channel.displayName, t("err.noApiKey"));
+						failed.push(channel.displayName + "（未配置 Key）");
 						continue;
 					}
 					const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null;
 					if (snapshot === null || snapshot.source === "live" || !snapshot.supported || snapshot.error === null || snapshot.error === "") continue;
-					const stale = snapshot.updatedAt === null ? "" : t("q.snapshotPrefix") + fmtDateTime(snapshot.updatedAt);
-					logWarn("quota", t("quota.liveFailedShort") + " · " + channel.displayName, errorTextOf(snapshot.error) + stale);
+					failed.push(channel.displayName);
 				}
 				for (const provider of props.quotaOutcome?.providers ?? []) {
 					if (provider.ok !== false) continue;
 					const quota = props.quotas.find((item) => item.provider === provider.provider);
 					if (quota !== void 0 && !quota.supported) continue;
-					logWarn("quota", t("quota.liveFailedShort") + " · " + provider.provider, provider.error ?? t("quota.notQueried"));
+					failed.push(provider.provider);
 				}
+				if (failed.length > 0) logWarn("quota", t("quota.liveFailedShort") + " · " + String(failed.length) + " 个通道", failed.join("、"));
 			}, [
 				props.channels,
 				props.quotas,
@@ -8372,18 +8367,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (/[\u4e00-\u9fa5]/.test(note)) return t("srv.rateNoteEn");
 			}
 			return note === "" ? "" : serverText(note);
-		}
-		function errorTextOf(error) {
-			if (error === null) return t("err.noLiveQuery");
-			if (error === "no-key") return t("err.noApiKey");
-			if (error === "no-snapshot") return t("err.noSnapshot");
-			if (error === "network") return t("err.network");
-			if (error === "timeout") return t("err.timeout");
-			if (error === "unauthorized") return t("err.unauthorized");
-			if (error === "bad-json") return t("err.badJson");
-			if (error === "too-large") return t("err.tooLarge");
-			if (error.startsWith("http-")) return t("err.http", { code: error.slice(5) });
-			return error;
 		}
 		function orderedBalanceEntries(balance) {
 			const entries = Object.entries(balance).filter(([key]) => key !== "updatedAt");

@@ -48,17 +48,17 @@ await check('重复刷新磁盘不虚增条数（日志窗「刷新」幂等）'
   assert.deepEqual(log.logEntries().map((entry) => entry.source), ['fx', 'pricing', 'pricing'])
 })
 
-await check('同来源同消息逐条记录（不合并），攒批只发一次 POST', async () => {
+await check('同来源同消息 60 秒内只记一条，其余照常记录并攒批', async () => {
   calls.length = 0
   const before = log.logEntries().length
   log.logError('quota', '实时查询未成功 · local', '未配置 API Key')
   log.logError('quota', '实时查询未成功 · local', '未配置 API Key')
   log.logInfo('pricing', '刷新价目')
-  assert.equal(log.logEntries().length, before + 3, '每条都独立记录')
+  assert.equal(log.logEntries().length, before + 2, '重复的一条被限流，另外两条独立记录')
   await sleep(1300)
   const bodies = postBodies()
-  assert.equal(bodies.length, 1, '1 秒内的三条合成一批')
-  assert.equal(bodies[0].records.length, 3, '三条都写盘')
+  assert.equal(bodies.length, 1, '1 秒内的记录合成一批')
+  assert.equal(bodies[0].records.length, 2, '两条写盘')
   const quotaRecord = bodies[0].records.find((record) => record.source === 'quota')
   assert.equal(quotaRecord.message, '实时查询未成功 · local')
   assert.equal(quotaRecord.detail, '未配置 API Key')
@@ -71,19 +71,22 @@ await check('已发送的条目不会重复写盘', async () => {
   assert.equal(postBodies().length, 0)
 })
 
-await check('同一问题再次出现也单独成条并落盘', async () => {
+await check('同类日志 60 秒内只记一条，不同消息照常记录', async () => {
   calls.length = 0
   log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
   await sleep(1300)
   assert.equal(postBodies().length, 1, '第一次出现要落盘')
   calls.length = 0
-  // 同一个问题第二次出现：这次也单独记一条（页面要求一条一条列，不做 ×N 合并）
+  // 同类日志 60 秒内只记一条：页面反复打开 / 失败重试不该把日志刷满
   log.logWarn('quota', '实时查询未成功 · sensenova', 'no-snapshot')
   await sleep(1300)
-  assert.equal(postBodies().length, 1, '第二次出现同样写盘')
+  assert.equal(postBodies().length, 0, '60 秒内重复的同一条不重复写盘')
   const rows = log.logEntries().filter((item) => item.message.includes('sensenova'))
-  assert.equal(rows.length, 2, '内存里是两条独立记录')
-  assert.deepEqual(rows.map((item) => item.count), [1, 1])
+  assert.equal(rows.length, 1, '内存里也只有一条')
+  // 换一个来源 / 消息仍然各自记录
+  log.logWarn('quota', '实时查询未成功 · other', 'no-snapshot')
+  await sleep(1300)
+  assert.equal(postBodies().length, 1, '不同消息照常落盘')
 })
 
 await check('导出文本：带时间 / 级别 / 来源，详情缩进一行，不再标 ×N', async () => {

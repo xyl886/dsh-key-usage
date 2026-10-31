@@ -61,7 +61,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | `litellm_price` | 聚合价目行级表（刷新价目成功后写入，校验不过不覆盖） |
 | `app_meta` | 运行期元信息（schema 版本、快照文档版本、价目快照的 count / bytes / sha256 / fetchedAt / upstream） |
 | `fx_rate` | 汇率缓存（成功才写，12 小时内复用） |
-| `log_entry` | 系统日志（保留 30 天）：刷新价目 / 汇率 / 余额失败原因、端点失败、快照问题 |
+| `log_entry` | 系统日志（保留 7 天）：刷新价目 / 汇率 / 余额失败原因、端点失败、快照问题 |
 | `quota_seed` | 历史配额种子（只读） |
 
 旧版按文件存的 `snapshot.json` / `model-prices.json` / `fx-rate.json` / `plugin.log` / `quota-snapshots.json` 只在首次启动时导入一次并移入 `.trash`，之后不再读写。**不读凭据文件、不改宿主配置、所有端点仅接受回环请求** —— 完整约束见 [AGENTS.md](./AGENTS.md)。
@@ -240,6 +240,8 @@ pnpm run test         # 20 个离线测试
 pnpm run check        # lib/*.js 语法检查
 pnpm run check:tokens # 颜色令牌必须在宿主里真实声明过
 pnpm run check:ui     # 间距 / 圆角 / 字号 / 控件高必须在 UI 刻度内
+pnpm run check:css    # 组件引用的 CSS Module 类名必须真实存在
+pnpm run check:i18n   # 中英词典键必须一致
 pnpm run verify       # 上面全套（CI 跑的就是这条）
 pnpm run pack:dry     # 发布清单自检
 ```

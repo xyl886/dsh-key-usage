@@ -173,9 +173,19 @@ async function readFromDisk(filter: LogRefreshFilter = {}): Promise<number> {
   }
 }
 
+/** 同类日志（级别 + 来源 + 消息）60 秒内只记一条：失败重试、页面反复打开不该把日志刷满。 */
+const RATE_LIMIT_MS = 60 * 1000
+const recentPushTimes = new Map<string, number>()
+
 export function logPush(level: LogLevel, source: string, message: string, detail?: string, retry?: () => void): void {
   if (message === '') return
-  const entry = fold(level, source, message, detail, Date.now())
+  const now = Date.now()
+  const rateKey = level + '|' + source + '|' + message
+  const last = recentPushTimes.get(rateKey)
+  if (last !== undefined && now - last < RATE_LIMIT_MS) return
+  recentPushTimes.set(rateKey, now)
+  if (recentPushTimes.size > 500) recentPushTimes.clear()
+  const entry = fold(level, source, message, detail, now)
   if (retry !== undefined) entry.retry = retry
   pending.set(entry.id, entry)
   trim()

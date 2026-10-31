@@ -10,7 +10,7 @@ import {
   setDisplayCurrency, setFxRate, useCurrencyDisplay, type DisplayCurrency,
 } from '../core/currency.ts'
 import { t, useT } from '../core/i18n.ts'
-import { logError, logInfo, logWarn } from '../core/log.ts'
+import { logError, logWarn } from '../core/log.ts'
 import { modelPriceRefreshTextOf } from '../core/pricing.ts'
 import { fmtDateTime } from '../core/format.ts'
 import { PLUGIN_VERSION } from '../core/version.ts'
@@ -80,7 +80,6 @@ export function SettingsDialog(props: {
       return
     }
     setFxRate(normalized)
-    if (force) logInfo('fx', t('quota.refreshFx'), fxSummaryTextOf(normalized))
   }, [t])
 
   // 打开设置时确保有一次汇率：缓存内不联网，缺了才打上游
@@ -127,7 +126,6 @@ export function SettingsDialog(props: {
       return
     }
     setRefreshStatus({ tone: 'ok', text: modelPriceRefreshTextOf(outcome) })
-    logInfo('pricing', t('quota.refreshPrices'), modelPriceRefreshTextOf(outcome) + '\n' + outcome.url)
     props.onPricingReload()
   }
 

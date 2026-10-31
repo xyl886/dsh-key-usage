@@ -384,17 +384,6 @@ export function createSnapshotService(options: SnapshotServiceOptions): Snapshot
     const written = writeSnapshotFile(document, path)
     if (!written.ok) {
       issues.push({ kind: 'write-failed', message: written.error })
-    } else {
-      // 成功也留一行（info）：首次部署或换存储时，靠它确认快照真的落进库里
-      try {
-        appendLogRecords([{
-          time: new Date().toISOString(),
-          level: 'info',
-          source: 'snapshot',
-          message: '快照已写入',
-          detail: 'buildSource=' + document.buildSource + '，段数=' + String(Object.keys(document.sections).length) + '，path=' + path,
-        }], logFilePath())
-      } catch { /* 落日志失败不影响主流程 */ }
     }
     current = document
     return { ok: true, view: view(false) }

@@ -877,7 +877,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
 
   // /log：POST 追加 → GET 回读 → POST 清空；坏请求体与非回环都被挡住
   const logAppend = await callHandler(contractHandlers, '/dsh-key-usage/log', '127.0.0.1', JSON.stringify({
-    records: [{ time: '2026-10-15T10:00:00.000Z', level: 'error', source: 'pricing', message: '刷新价目失败', detail: 'HTTP 502 · https://example.test/prices.json' }],
+    records: [{ time: new Date().toISOString(), level: 'error', source: 'pricing', message: '刷新价目失败', detail: 'HTTP 502 · https://example.test/prices.json' }],
   }))
   assert.equal(logAppend.status, 200)
   assert.deepEqual(logAppend.body, { ok: true, written: 1 })

@@ -95,24 +95,24 @@ export function QuotaTab(props: {
    * 出问题时去日志窗按通道查。
    */
   useEffect(() => {
+    const failed: string[] = []
     for (const channel of props.channels) {
       if (channel.status === 'off') {
-        logWarn('quota', t('quota.liveFailedShort') + ' · ' + channel.displayName, t('err.noApiKey'))
+        failed.push(channel.displayName + '（未配置 Key）')
         continue
       }
       const snapshot = props.quotas.find((item) => item.provider === channel.provider) ?? null
       if (snapshot === null || snapshot.source === 'live' || !snapshot.supported || snapshot.error === null || snapshot.error === '') continue
-      const stale = snapshot.updatedAt === null ? '' : t('q.snapshotPrefix') + fmtDateTime(snapshot.updatedAt)
-      logWarn('quota', t('quota.liveFailedShort') + ' · ' + channel.displayName, errorTextOf(snapshot.error) + stale)
+      failed.push(channel.displayName)
     }
     for (const provider of props.quotaOutcome?.providers ?? []) {
       if (provider.ok !== false) continue
-      // 没有余额接口的通道（`supported: false`）插件根本没查过它，别记成「实时查询未成功」——
-      // 那是配置事实，卡片上已经写了「无余额接口」，再往日志里写一条只会淹没真正的失败。
       const quota = props.quotas.find((item) => item.provider === provider.provider)
       if (quota !== undefined && !quota.supported) continue
-      logWarn('quota', t('quota.liveFailedShort') + ' · ' + provider.provider, provider.error ?? t('quota.notQueried'))
+      failed.push(provider.provider)
     }
+    // 每次打开聚合一条，而不是每个通道一条：失败原因在卡片 / 系统日志里都能查到
+    if (failed.length > 0) logWarn('quota', t('quota.liveFailedShort') + ' · ' + String(failed.length) + ' 个通道', failed.join('、'))
   }, [props.channels, props.quotas, props.quotaOutcome, t])
 
   const rateChannels: ChannelRates[] = Array.isArray(rates?.channels) ? rates.channels : []

@@ -21,7 +21,7 @@ const home = mkdtempSync(join(tmpdir(), 'dsh-key-usage-log-'))
 process.env.DSH_HOME = home
 const path = join(home, 'dsh-key-usage', LOG_FILE)
 
-const record = (message, extra = {}) => ({ time: '2026-10-15T10:00:00.000Z', level: 'warn', source: 'pricing', message, ...extra })
+const record = (message, extra = {}) => ({ time: new Date().toISOString(), level: 'warn', source: 'pricing', message, ...extra })
 
 let passed = 0
 function check(name, run) {
@@ -85,13 +85,13 @@ check('存储路径可自定义（测试与迁移用）', () => {
   assert.deepEqual(readLogRecords(10, customPath), [])
 })
 
-check('超过 30 天的日志在写入后清理', () => {
-  const oldTime = new Date(Date.now() - 40 * 86400000).toISOString()
+check('超过 7 天的日志在写入后清理', () => {
+  const oldTime = new Date(Date.now() - 10 * 86400000).toISOString()
   appendLogRecords([{ time: oldTime, level: 'info', source: 'fx', message: '老记录' }])
   appendLogRecords([record('新记录')])
   const messages = readLogRecords(2000).map((item) => item.message)
   assert.ok(messages.includes('新记录'), '新记录要保留')
-  assert.ok(!messages.includes('老记录'), '超过 30 天的记录应被清掉')
+  assert.ok(!messages.includes('老记录'), '超过 7 天的记录应被清掉')
 })
 
 

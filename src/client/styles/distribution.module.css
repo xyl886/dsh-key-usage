@@ -110,3 +110,10 @@
 .detailsBar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .tables { display: flex; flex-direction: column; gap: 16px; }
 .tableTitle { margin-bottom: 6px; color: var(--dsw-alias-label-secondary, #9a9aa6); font-weight: 600; }
+
+/* 面板标题右侧的文字按钮（与概览排行同一规格：无边框、三级色、tabular 数字） */
+.panelMore {
+  margin-left: auto; padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
+  color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.panelMore:hover { color: var(--dsw-alias-label-primary, #0f1115); }
