@@ -49,3 +49,18 @@
 .updateRefreshBtn:hover { color: var(--dsw-alias-label-primary, #0f1115); }
 .skipVersionBtn { border: 0; background: none; margin-left: 4px; padding: 0 2px; font: inherit; font-size: 13px; color: var(--dsw-alias-label-tertiary, #67676f); cursor: pointer; }
 .skipVersionBtn:hover { color: var(--dsw-alias-state-error-primary, #e05a5a); }
+
+/* ===== 移动端：设置弹窗适配视口 ===== */
+@media (max-width: 720px) {
+  .shell { flex-direction: column; min-width: 0; width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); gap: 8px; }
+  .tabs { flex-direction: row; flex: 0 0 auto; gap: 4px; padding: 0 0 8px; border-right: 0; border-bottom: 1px solid var(--dsw-alias-interactive-bg-active, rgba(128, 128, 140, .18)); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .panel { max-height: none; }
+  .sections, .wrap { min-width: 0; max-width: 100%; }
+  .row { flex-wrap: wrap; gap: 8px; }
+  .rowLabel { white-space: normal; }
+  .rowInfo { text-align: left; flex-basis: 100%; white-space: normal; }
+}
+@media (pointer: coarse) {
+  .tab, .currencyBtn, .updateLink, .updateRefreshBtn, .skipVersionBtn { min-height: 40px; }
+}

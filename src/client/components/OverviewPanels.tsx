@@ -48,6 +48,7 @@ export function TrendBars(props: {
               className={styles.histColumn}
               onMouseMove={(event) => props.tooltip.show(event, props.tipOf(day.date, value))}
               onMouseLeave={props.tooltip.hide}
+              onTouchStart={(event) => props.tooltip.show(event, props.tipOf(day.date, value))}
             >
               <div
                 className={index === peakIndex ? styles.histBar + ' ' + styles.histBarPeak : styles.histBar}

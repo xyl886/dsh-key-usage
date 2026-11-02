@@ -91,3 +91,13 @@
   border: 1px dashed currentColor; color: var(--dsw-alias-label-tertiary, #67676f); white-space: nowrap;
 }
 .rateEmpty { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; padding: 8px 0; }
+
+/* ===== 移动端：额度卡单列 ===== */
+@media (max-width: 720px) {
+  .cardGrid { grid-template-columns: 1fr; }
+  .chanCard { padding: 10px; }
+}
+
+@media (pointer: coarse) {
+  .chanHeadButton { min-height: 40px; }
+}

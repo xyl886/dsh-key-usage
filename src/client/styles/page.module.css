@@ -17,3 +17,8 @@
   margin: 0 auto;
   padding: 20px 24px 28px;
 }
+
+/* ===== 移动端：页面内边距收紧 ===== */
+@media (max-width: 720px) {
+  .inner { padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+}

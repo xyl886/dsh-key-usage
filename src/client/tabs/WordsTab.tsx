@@ -65,7 +65,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
               </>
             )}
         />
-      </div>
+        </div>
 
       <div className={styles.panel}>
         <div className={styles.panelHead}>
@@ -90,6 +90,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
             </span>
           )}
         </div>
+        <div className={styles.cloudScroll}>
         <WordCloud
           words={words.slice(0, effectiveTopN)}
           emptyText={prompts === null ? t('s.loading') : t('words.noPrompts')}
@@ -99,6 +100,7 @@ export function WordsTab(props: { prompts: PromptsResponse | null }): ReactNode 
             share: sharePercentOf(count, totalPrompts),
           })}
         />
+        </div>
       </div>
     </div>
   )

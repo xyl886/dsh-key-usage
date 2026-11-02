@@ -847,6 +847,14 @@ export function DetailTab(props: {
                       ), pinOf(event.currentTarget))
                       : undefined}
                     onMouseLeave={tooltip.hide}
+                    onTouchStart={bar.value > 0
+                      ? (event) => tooltip.show(event, (
+                        <>
+                          <TipTitle>{bar.date}</TipTitle>
+                          <TipSub>{t(METRIC_LABEL_KEYS[metric])} <b>{bar.text}</b></TipSub>
+                        </>
+                      ), pinOf(event.currentTarget))
+                      : undefined}
                   >
                     {bar.value > 0 && <span className={bar.peak ? detailStyles.costBarPeak : detailStyles.costBar} style={{ height: bar.height }} />}
                   </div>

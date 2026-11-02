@@ -17,7 +17,7 @@ export function UsagePage(_props: Record<string, unknown>): ReactNode {
       + String(Math.round(performance.now() - CLIENT_BOOT_AT_MS)) + ' ms')
   }, [])
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-usage-scroll>
       <div className={styles.inner}>
         <ErrorBoundary>
           <KeyUsageSection />

@@ -67,9 +67,8 @@ export function SessionsTab(props: {
   const [nowMs] = useState(() => Date.now())
   const [topMetric, setTopMetric] = useState<TopMetric>('tokens')
   const [shapeMetric, setShapeMetric] = useState<ShapeMetric>('messages')
-  const [scope, setScope] = useState<Scope>('all')
-  /** 全量会话：勾上后忽略页头时间范围（老会话也要能翻到）。 */
-  const [allTime, setAllTime] = useState(false)
+  /** 默认隐藏已归档；归档只影响列出与否，统计口径仍按全部会话。 */
+  const [scope, setScope] = useState<Scope>('hideArchived')
   const [query, setQuery] = useState('')
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   /** 每页条数：会话多时一次多载一些，少点几次「加载更多」。 */
@@ -88,16 +87,17 @@ export function SessionsTab(props: {
     if (!selectionMatches(row.models.map((model) => model.model), modelFilter)) return false
     if (!selectionMatches([row.provider ?? '', ...row.models.map((model) => model.provider)], channelFilter)) return false
     // 时间范围：会话与窗口有交集才保留；首末时间都缺的老会话不参与时间筛选，避免整页清空
-    if (!allTime && windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
+    // 会话与顶部时间窗口有交集才保留（列表与榜单都跟随页头范围）；首末时间都缺的老会话不参与时间筛选
+    if (windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
       const startMs = row.firstTime ?? (row.lastTime as number)
       const endMs = row.lastTime ?? (row.firstTime as number)
       if (endMs < windowFromMs || startMs > windowToMs) return false
     }
     return true
-  }), [allRows, projectFilter, modelFilter, channelFilter, windowFromMs, windowToMs, allTime])
+  }), [allRows, projectFilter, modelFilter, channelFilter, windowFromMs, windowToMs])
 
   // 换了范围 / 搜索 / 全局筛选就回到第一页：否则用户改了条件还停在第 N 屏，看着像没生效
-  useEffect(() => { setPageSize(pageStep) }, [scope, query, projectFilter, modelFilter, allTime, pageStep])
+  useEffect(() => { setPageSize(pageStep) }, [scope, query, projectFilter, modelFilter, pageStep])
 
   /** 只列主会话：子代理不单独占行（详情抽屉里仍可逐个点开）。 */
   const mainRows = useMemo(() => rows.filter((row) => !isSubagentOf(row)), [rows])
@@ -248,13 +248,6 @@ export function SessionsTab(props: {
               { value: '200', labelKey: 'sessions.page200' },
             ]}
           />
-          <button
-            type="button"
-            className={allTime ? sessionsStyles.allTime + ' ' + sessionsStyles.allTimeOn : sessionsStyles.allTime}
-            aria-pressed={allTime}
-            title={t('sessions.allTimeHint')}
-            onClick={() => setAllTime(!allTime)}
-          >{t('sessions.allTime')}</button>
           <span className={sessionsStyles.panelTotal}>{t('sessions.count', { count: fmtCount(recentRows.length) })}</span>
         </div>
         {visibleRows.length === 0
@@ -414,6 +407,7 @@ function recentRowOf(row: SessionRow, options: RowOptions): ReactNode {
         onMouseEnter={(event) => options.tooltip.show(event, costTipOf(row))}
         onMouseMove={(event) => options.tooltip.show(event, costTipOf(row))}
         onMouseLeave={options.tooltip.hide}
+                    onTouchStart={(event) => options.tooltip.show(event, costTipOf(row))}
       >
         {costTextOf(channel, row)}
       </div>

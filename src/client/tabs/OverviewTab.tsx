@@ -419,14 +419,14 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
         {isAllRange
           ? (hasHeatData
             ? (
-              <YearHeatmap
+              <div className={styles.heatScroll}><YearHeatmap
                 valuesByDate={heatValues}
                 dataStart={dataStart}
                 tooltip={props.tooltip}
                 tipOf={tipOfDay}
                 onPickDay={props.onPickDay}
                 ariaLabel={t('overview.trend') + ' · ' + String(heatValues.size) + t('h.summarySuffix')}
-              />
+              /></div>
             )
             : <div className={shared.empty}>{trendEmptyText}</div>)
           : (hasBarData
@@ -497,7 +497,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
         {hourValues === null || hourMatrix === null || !hasHourData
           ? <div className={shared.empty}>{t('overview.noHourly')}</div>
           : (
-            <div className={styles.hourWrap} role="group" aria-label={t('overview.hourly')}>
+            <div className={styles.hourScroll}><div className={styles.hourWrap} role="group" aria-label={t('overview.hourly')}>
               {WEEKDAY_KEYS.map((key, weekdayIndex) => (
                 <span key={key} className={styles.hourWeekday} style={{ gridColumn: 1, gridRow: weekdayIndex + 2 }}>{t(key)}</span>
               ))}
@@ -521,10 +521,16 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
                       </>
                     ))}
                     onMouseLeave={props.tooltip.hide}
+                    onTouchStart={(event) => props.tooltip.show(event, (
+                      <>
+                        <TipTitle>{t(WEEKDAY_KEYS[weekdayIndex]) + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
+                        <TipSub>{t(labelKeyOf(HOUR_METRICS, hourMetric))} <b>{value === undefined ? '—' : metricTextOf(hourMetric, value)}</b></TipSub>
+                      </>
+                    ))}
                   />
                 )
               }))}
-            </div>
+            </div></div>
           )}
       </div>
     </div>

@@ -8,7 +8,7 @@
 2. [`docs/架构与数据契约.md`](./docs/架构与数据契约.md) —— 端点字段与统计口径，改数据前必读。
 3. 想知道**历史怎么走到今天的**（原型差异、Tab 拆分、各批取舍）读 [`docs/process/`](./docs/process/) —— 按版本分文件，只作历史参考。
 
-4. **接下来要做什么**读 [`docs/process/`](./docs/process/) 里最新一卷（当前是 [`v0.2.4-0.2.5.md`](./docs/process/v0.2.4-0.2.5.md)）的「待办」一节。
+4. **接下来要做什么**读 [`docs/process/`](./docs/process/) 里最新一卷（当前是 [`v0.2.6.md`](./docs/process/v0.2.6.md)）的「待办」一节。
 5. 要改代码时：常用命令与「改了没反应」的坑在 README 的**开发**一节；目录结构、产物契约、CI 与发布、离线自检读 [`docs/开发与构建.md`](./docs/开发与构建.md)。
 6. 基线核对：重新构建（命令见下）后刷新 DSH 界面（桌面端建议 `Ctrl+Shift+R`），确认看到的界面与 `src/` 一致，再改。服务端改动要退出重开 DSH 才生效。**不要用 curl / 别的进程去请求桌面端 GUI 的端口**：那个端口带宿主鉴权，外部请求只会拿到 `dsh web authentication required`，看不到插件端点。
 
@@ -39,7 +39,8 @@
 - **唯一的运行时依赖 `jieba-wasm`（2.4.0，MIT）**：只用于服务端提问词云的中文分词（`session-usage.ts` 的 `preparePromptSegmenter`）。体积理由：wasm 3.9 MB 由安装方按 dependencies 解析、**不进 npm tarball**（包仍是 1.4 MB）；质量理由：滑动 2-gram 会把「数据库」「画蛇添足」切碎。两条硬要求：**懒加载**（只在 `collect()` 时预热，宿主启动路径不碰；加载失败静默回退 2-gram）与**只在服务端**用（`src/client/**` 不许出现 wasm 或新依赖）。
 - **CSS 文件 basename 必须全局唯一**：`tsdown.config.ts` 用 `${插件id}/${basename}` 作为 `<style>` 的 `data-plugin-css` 去重键 —— 两个不同目录下的同名 `*.module.css` 会导致后一个**静默不注入**，样式整块丢失。拆分样式时用 `overview.module.css` / `detail.module.css` 这类唯一名，不要用 `styles/index.module.css` + `tabs/index.module.css`。
 - **主题令牌**：颜色一律走宿主 `--dsw-alias-*`（如 `--dsw-alias-label-primary`、`--dsw-alias-bg-layer-2`、`--dsw-alias-state-business-primary`；**`state-accent-primary` 在宿主里不存在**，写了只会吃兜底色），不要硬编码明暗两套色。注意 `--dsw-text-2` **不是**宿主令牌前缀（应为 `--dsw-alias-label-secondary`）；历史写法已在 2026-10-13 重构中清理，新增代码不要再引入。**写完务必核对令牌是否真实存在**：跑 `npm run check:tokens`（`scripts/check-design-tokens.mjs` 扫 `src/client/styles/*.css` **与** `src/client/**/*.ts(x)` 的内联 style，逐个在宿主归档里核对；宿主共 120 个 `--dsw-alias-*`）。2026-10-16 修掉过 5 个「只被 `var()` 引用、从未声明」的令牌（`bg-mask` → `bg-mask-1`、`fill-l1` → `interactive-bg-hover`、`fill-l2` → `interactive-bg-active`、`state-danger-primary` → `state-error-primary`、`state-warning-primary` → `state-warn-primary`），组件内联 style 里另有 3 处（含 `state-business-secondary` → `state-business-tertiary`，宿主没有 secondary 这一档）—— 一共 8 处。
-- **中文文案**：注释与文档一律简体中文，UTF-8。**界面文案一律走 i18n 词典**（`src/client/core/copy.ts`，中英成对，值只放词典键；界面标签 ≤6 字、提示 ≤8 字），禁止在组件里写死可见中文 —— 手写文案一律走 `t()`。
+- **移动端不另写一套组件**：窄屏只允许加 `@media` 样式与横滚容器，交互差异（触控浮层、表格横滚）在共享组件里解决，禁止复制一份移动版页面；断点 820 / 720 / 480，触控目标 ≥40px，宽表必须包 `tableScroll`，浮层宽度用 `calc(100vw - 16px)`。
+- **中文文案**：注释与文档一律简体中文，UTF-8。**界面文案一律走 i18n 词典**（词条在 `src/client/core/locale/zh.json` / `en.json`，`core/copy.ts` 只做加载与导出；中英成对、值只放词典键；界面标签 ≤6 字、提示 ≤8 字），禁止在组件里写死可见中文 —— 手写文案一律走 `t()`。
 - **导入风格**：客户端相对导入带 `.ts` / `.tsx` 后缀（`allowImportingTsExtensions: true`）；**服务端相对导入必须带 `.js` 后缀**（NodeNext 编译），两者不要混。
 
 ## 改完必须做的验证（默认允许，不需额外授权）

@@ -61,3 +61,17 @@
 - **主按钮**：宿主主按钮是实心深色（`#0f1115 + 白字`），我们是 ghost 描边。原因：深色写死会在深色主题下失效，等宿主提供实心按钮令牌后再改。
 - **卡片圆角 20 / 无边框**：宿主「插件」页列表行是透明无边框容器；我们的数据面板需要分组感，保留发丝边框，圆角取 9–12。
 - **表格**：宿主这两页没有表格，表头/行高按我们自己的可读性定（14px、行分隔 1px）。
+
+## 移动端（2026-11-02）
+
+- 断点：820 / 720 / 480；样式只加在各模块 CSS 的 `@media` 块里，组件结构不变（除横滚容器与触控事件）。
+- 触控目标：`@media (pointer: coarse)` 下按钮 / Tab / 筛选条目 / 输入框最小高度 40px（刻度表允许的 40）。
+- 浮层：弹窗 `align-items: flex-end` 贴底、`max-height: calc(100dvh - 24px)`；日历 / 筛选面板宽度 `calc(100vw - 16px)`；会话抽屉 `width: 100%`。
+- 宽表：统一 `tableScroll` 容器 + `-webkit-overflow-scrolling: touch`，表格最小宽度 640~720px。
+- 触控浮层：`useTooltip` 同时接受 Mouse / Touch 事件 —— 点按显示、同目标再点关闭、点外部关闭；图表 / 热力图 / 会话成本单元格均已接线。
+- 热力图：移动端放进 `.heatScroll` 横向滚动，年视图最小宽度 640px，保持格子可读。
+- 分页模式切 Tab 时滚的是页面自己的滚动容器（`[data-usage-scroll]`），不是 window；滚动模式锚点用 `scroll-margin-top: 120px` 避开吸顶栏。
+- iOS Safari 上输入框 / 筛选条目字号 16px，避免聚焦自动放大页面。
+- 底部安全区：页面与抽屉的底部内边距加 `env(safe-area-inset-bottom)`。
+- 横滚容器统一 `overscroll-behavior-x: contain`，滑到边缘不带动整页。
+- 所有数值仍受 `scripts/ui-scale.json` 约束（`check:ui` 会拦截越界值）。

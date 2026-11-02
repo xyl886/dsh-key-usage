@@ -49,7 +49,7 @@ export function MultiSelect(props: MultiSelectProps): ReactNode {
     const place = (): void => {
       const rect = triggerRef.current?.getBoundingClientRect()
       if (rect === undefined) return
-      const width = 260
+      const width = Math.min(260, window.innerWidth - 16)
       setAnchor({ top: rect.bottom + 6, left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)) })
     }
     place()

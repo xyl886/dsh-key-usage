@@ -182,7 +182,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
         {session.models.length === 0
           ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : (
-            <table className={styles.table + ' ' + listStyles.sessionDetailModelTable}>
+            <div className={listStyles.tableScroll}><table className={styles.table + ' ' + listStyles.sessionDetailModelTable}>
               <thead>
                 <tr><th>{t('m.model')}</th><th>Tokens</th><th>{t('m.share')}</th><th>{t('c.cost')}</th></tr>
               </thead>
@@ -210,7 +210,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                   )
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
       </div>
 

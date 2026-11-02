@@ -69,3 +69,10 @@
 /* 自定义范围生效中：与分段控件选中项同一底色 */
 .triggerActive { background: var(--dsw-alias-interactive-bg-active, rgba(38, 49, 72, .06)); color: var(--dsw-alias-label-primary, #0f1115); }
 
+
+/* ===== 移动端：日历占满宽度、格子放大到可点 ===== */
+@media (max-width: 720px) {
+  .panel { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 96px); overflow-y: auto; }
+  .weekday, .cell { flex: 1 1 0; }
+  .cell { height: 40px; }
+}

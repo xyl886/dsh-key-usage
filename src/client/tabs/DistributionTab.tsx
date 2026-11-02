@@ -269,7 +269,7 @@ function MekkoPanel(props: { projects: ProjectRow[]; loading: boolean }): ReactN
       {blocks.length === 0
         ? <div className={sharedStyles.empty}>{props.loading ? t('s.loading') : t('s.noCost')}</div>
         : (
-          <div className={styles.mekko}>
+          <div className={styles.mekkoScroll}><div className={styles.mekko}>
             {blocks.map((block, index) => {
               // 第一名即使不宽也尽量给逐模型占比：它是这张图最该回答的问题
               const wide = block.percent >= WIDE_BLOCK_PERCENT || (index === 0 && block.percent >= 8)
@@ -294,7 +294,7 @@ function MekkoPanel(props: { projects: ProjectRow[]; loading: boolean }): ReactN
                 </div>
               )
             })}
-          </div>
+          </div></div>
         )}
     </div>
   )

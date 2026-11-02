@@ -48,3 +48,9 @@
 .topNBtn:hover { color: var(--dsw-alias-label-primary, #0f1115); }
 .topNBtnOn { color: var(--dsw-alias-label-primary, #0f1115); font-weight: 500; }
 .topNBtn:disabled { opacity: .45; cursor: default; }
+
+/* ===== 移动端：词云横滚，保持字号可读 ===== */
+@media (max-width: 720px) {
+  .cloudScroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cloudScroll svg { min-width: 560px; }
+}

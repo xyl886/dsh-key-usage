@@ -1,5 +1,5 @@
 /** 共享浮层：跟随鼠标的 fixed 层，内容用 React 节点渲染（不再拼接 innerHTML）。 */
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import styles from '../styles/shared.module.css'
 
 export interface TooltipContent {
@@ -14,26 +14,51 @@ export interface TooltipContent {
   pinTop?: number
 }
 
+export type TooltipEvent = React.MouseEvent | React.TouchEvent
+
 export interface TooltipApi {
   tooltip: TooltipContent | null
-  show: (event: React.MouseEvent, node: ReactNode, pin?: { right: number; top: number }) => void
+  show: (event: TooltipEvent, node: ReactNode, pin?: { right: number; top: number }) => void
   hide: () => void
 }
 
 export function useTooltip(): TooltipApi {
   const [tooltip, setTooltip] = useState<TooltipContent | null>(null)
-  const show = useCallback((event: React.MouseEvent, node: ReactNode, pin?: { right: number; top: number }) => {
+  /** 触摸目标：同一目标再点一次关闭浮层（手机上悬停不可用）。 */
+  const touchTarget = useRef<HTMLElement | null>(null)
+  const show = useCallback((event: TooltipEvent, node: ReactNode, pin?: { right: number; top: number }) => {
     const target = event.currentTarget as HTMLElement | null
     const rect = target?.getBoundingClientRect()
+    const isTouch = 'touches' in event
+    const point = isTouch ? event.touches[0] : (event as React.MouseEvent)
+    const clientX = point?.clientX ?? 0
+    const clientY = point?.clientY ?? 0
+    if (isTouch && target !== null && touchTarget.current === target) {
+      touchTarget.current = null
+      setTooltip(null)
+      return
+    }
+    touchTarget.current = isTouch ? target : null
     setTooltip({
-      x: event.clientX,
-      y: event.clientY,
+      x: clientX,
+      y: clientY,
       node,
-      anchorLeft: rect === undefined ? event.clientX : rect.left,
-      anchorRight: rect === undefined ? event.clientX : rect.right,
+      anchorLeft: rect === undefined ? clientX : rect.left,
+      anchorRight: rect === undefined ? clientX : rect.right,
       pinRight: pin?.right,
       pinTop: pin?.top,
     })
+  }, [])
+  // 点浮层外面关闭（触摸端没有 mouseleave）
+  useEffect(() => {
+    const onTouchStart = (event: TouchEvent): void => {
+      const target = event.target as HTMLElement | null
+      if (target !== null && touchTarget.current !== null && (touchTarget.current === target || touchTarget.current.contains(target))) return
+      touchTarget.current = null
+      setTooltip(null)
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    return () => document.removeEventListener('touchstart', onTouchStart)
   }, [])
   const hide = useCallback(() => setTooltip(null), [])
   return { tooltip, show, hide }

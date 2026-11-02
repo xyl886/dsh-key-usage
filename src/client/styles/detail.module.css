@@ -90,3 +90,15 @@
 .subTable td { text-align: right; color: var(--dsw-alias-label-secondary, #9a9aa6); font-size: var(--detail-body); padding: 2px 8px; font-variant-numeric: tabular-nums; }
 .subTable th.alignLeft, .subTable td.alignLeft { text-align: left; }
 
+
+/* ===== 移动端：明细表横滚、单元格收紧 ===== */
+@media (max-width: 720px) {
+  .tableScroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .tableScroll table { min-width: 680px; }
+  .panel { padding: 10px; }
+  .detailTable th, .detailTable td { padding: 6px 6px; }
+}
+
+@media (pointer: coarse) {
+  .sortBtn, .expandBtn { min-height: 40px; }
+}

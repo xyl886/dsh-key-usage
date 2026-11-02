@@ -13,7 +13,7 @@ function walk(dir) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name)
     if (statSync(full).isDirectory()) { walk(full); continue }
-    if (!/\.(ts|tsx|css|mjs|js)$/.test(name)) continue
+    if (!/\.(ts|tsx|css|mjs|js|json)$/.test(name)) continue
     if (readFileSync(full, 'utf8').includes('\r\n')) bad.push(relative(root, full))
   }
 }

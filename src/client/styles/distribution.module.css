@@ -117,3 +117,13 @@
   color: var(--dsw-alias-label-tertiary, #67676f); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .panelMore:hover { color: var(--dsw-alias-label-primary, #0f1115); }
+
+/* ===== 移动端：单列、头部换行 ===== */
+@media (max-width: 720px) {
+  .grid { grid-template-columns: 1fr; }
+  .panel { padding: 10px; }
+  .panelHead { gap: 6px; }
+  .mekkoScroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mekkoScroll .mekko { min-width: 560px; }
+  .row { grid-template-columns: minmax(64px, 96px) minmax(0, 1fr) minmax(52px, auto) minmax(48px, auto); gap: 6px; }
+}

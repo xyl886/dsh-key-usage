@@ -61,3 +61,10 @@
 
 /* 标题旁的口径小标（工具统计没有通道维度） */
 .panelTag { margin-left: 6px; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; font-weight: 400; }
+
+/* ===== 移动端：单列 ===== */
+@media (max-width: 720px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .panel { padding: 10px; }
+  .row { grid-template-columns: minmax(64px, 96px) minmax(0, 1fr) 48px 48px; gap: 6px; }
+}

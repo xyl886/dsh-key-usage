@@ -122,3 +122,18 @@
 .logHintError { color: var(--dsw-alias-state-error-primary, #e05a5a); }
 .logHintWarn { color: var(--dsw-alias-state-warn-primary, #e0a13c); }
 .logHintTail { color: var(--dsw-alias-label-secondary, #9a9aa6); }
+
+/* ===== 移动端：弹窗贴底、宽表横滚 ===== */
+@media (max-width: 720px) {
+  .dialogMask { padding: 12px; align-items: flex-end; }
+  .dialog { max-width: 100%; max-height: calc(100dvh - 24px); padding: 14px; border-radius: 14px; }
+  .dialogClose { min-height: 36px; padding: 4px 8px; }
+  .tableScroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .tableScroll table { min-width: 640px; }
+  .selectBtn { max-width: 60vw; }
+  .selectList { max-width: calc(100vw - 24px); }
+  .selectOption { font-size: 16px; }
+}
+@media (pointer: coarse) {
+  .btn, .selectBtn, .selectOption { min-height: 40px; }
+}

@@ -28,7 +28,8 @@
 /* .brand 已由 .pageTitle 取代 */
 /* 按钮类控件统一 26px 高：导出按钮经 Button 的 className 走进来；
    用 .stickyHead 前缀提高优先级，压住 Button 原语自带的 30px/8px 圆角 */
-.stickyHead .headBtn { height: var(--ku-control); padding: 0 12px; border-radius: 12px; font-size: 13px; font-weight: 400; }
+.stickyHead .headBtn { height: var(--ku-control); padding: 0 10px; border: 1px solid transparent; background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6); border-radius: 12px; font-size: 13px; font-weight: 400; }
+.stickyHead .headBtn:hover:not(:disabled) { color: var(--dsw-alias-label-primary, #0f1115); }
 /* 纯图标控件（刷新 / 设置 / 仓库）：与按钮同高同宽，不抢视觉 */
 .iconBtn {
   position: relative;
@@ -174,6 +175,15 @@
   white-space: nowrap;
 }
 .modeSwitch input { accent-color: var(--dsw-alias-state-business-primary, #5b8cff); }
+.resetBtn {
+  border: 1px solid transparent; border-radius: 12px; height: var(--ku-control);
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9aa6);
+  font: inherit; font-size: var(--ku-body); padding: 0 10px; cursor: pointer; white-space: nowrap;
+}
+.resetBtn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .1)); color: var(--dsw-alias-label-primary, #0f1115); }
+.resetBtn:disabled { color: var(--dsw-alias-label-tertiary, #67676f); opacity: .55; cursor: default; }
+.resetBtn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
+
 /* 工具栏下拉：与同排控件统一 26px 高、同一套圆角与字号（刷新周期 / 通道 / 项目 / 模型 / 显示币种共用） */
 .refreshSelect {
   appearance: none;
@@ -264,3 +274,29 @@
 
 /* 设置按钮上的「有新版本」小圆点（无文案） */
 .badgeDot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 999px; background: var(--dsw-alias-state-warn-primary, #e0a13c); }
+
+/* ===== 移动端（≤720px）：内边距收紧、工具栏换行、标题压缩、浮层贴边 ===== */
+@media (max-width: 720px) {
+  .section { padding: 12px 12px 24px; }
+  .stickyHead { margin: -12px -12px 0; padding: 4px 12px 8px; }
+  .pageHead { gap: 8px; margin-bottom: 12px; }
+  .pageTitle { font-size: 18px; line-height: 24px; white-space: normal; }
+  .toolbarRow { gap: 8px; row-gap: 8px; }
+  .rowSpacer { display: none; }
+  .rangeTabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .rangeTabs::-webkit-scrollbar { display: none; }
+  .tabBar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .tabBar::-webkit-scrollbar { display: none; }
+  .sections { gap: 20px; margin-top: 16px; }
+  .pageSection { scroll-margin-top: 120px; }
+  .exportPanel { max-width: calc(100vw - 24px); }
+  .tooltip { min-width: 0; max-width: calc(100vw - 32px); padding: 8px 10px; }
+  .ghLink { display: none; }
+  .refreshSelect { max-width: 140px; }
+}
+/* 触控设备：所有可点控件至少 40px 高，避免手指点不中（视觉尺寸不变） */
+@media (pointer: coarse) {
+  .iconBtn, .ghLink { width: 40px; height: 40px; min-height: 40px; }
+  .tabBar button, .rangeTab, .rangeTabActive { min-height: 40px; }
+  .headBtn, .exportItem, .refreshSelect, .resetBtn { min-height: 40px; }
+}

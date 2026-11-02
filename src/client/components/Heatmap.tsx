@@ -186,6 +186,7 @@ export function YearHeatmap(props: YearHeatmapProps): ReactNode {
           }}
           onMouseMove={(event) => props.tooltip.show(event, props.tipOf(cell.date))}
           onMouseLeave={props.tooltip.hide}
+              onTouchStart={(event) => props.tooltip.show(event, props.tipOf(cell.date))}
           onClick={cell.state === 'active' ? () => props.onPickDay?.(cell.date) : undefined}
         />
       )))}

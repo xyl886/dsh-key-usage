@@ -81,6 +81,17 @@ export function KeyUsageSection() {
   /** 项目值取 `projects` 段的 workspace（'' = 未归入工作区）；模型值取模型名。 */
   const [projectFilter, setProjectFilter] = useState('')
   const [modelFilter, setModelFilter] = useState('')
+  /** 是否偏离默认筛选：范围不是近 30 天，或三个多选任一非空。 */
+  const filtersActive = range !== 'month' || channelFilter !== '' || projectFilter !== '' || modelFilter !== ''
+  /** 重置全部筛选（范围 / 三个多选）；分页/滚动模式与刷新周期不属于筛选，保持不动。 */
+  const resetFilters = useCallback((): void => {
+    setRange('month')
+    setCustomFrom(shiftedIsoDate(-29))
+    setCustomTo(isoDate(new Date()))
+    setChannelFilter('')
+    setProjectFilter('')
+    setModelFilter('')
+  }, [])
 
   const [channels, setChannels] = useState<Channel[]>([])
   const [quotas, setQuotas] = useState<QuotaProvider[]>([])
@@ -520,18 +531,25 @@ export function KeyUsageSection() {
     return t('refresh.minutes', { count: Math.round(seconds / 60) })
   }, [t])
 
+  /** 分页切换时把页面自己的滚动容器回到顶部（宿主主内容区不滚，window 滚不动）。 */
+  const scrollPageTop = useCallback((): void => {
+    const container = document.querySelector('[data-usage-scroll]')
+    if (container instanceof HTMLElement) container.scrollTo({ top: 0, behavior: 'smooth' })
+    else window.scrollTo({ top: 0 })
+  }, [])
+
   /** 滚到某个区块（滚动式）；分页式直接切过去。 */
   const goSection = useCallback((tab: TabId): void => {
     setActiveTab(tab)
-    if (paged) { window.scrollTo({ top: 0 }); return }
+    if (paged) { scrollPageTop(); return }
     document.getElementById('sec-' + tab)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [paged])
 
   /** 点导航：分页式切换区块，滚动式滚过去。 */
   const pickSection = useCallback((tab: TabId): void => {
-    if (paged) { setActiveTab(tab); window.scrollTo({ top: 0 }); return }
+    if (paged) { setActiveTab(tab); scrollPageTop(); return }
     goSection(tab)
-  }, [paged, goSection])
+  }, [paged, goSection, scrollPageTop])
 
   // 滚动式下跟随滚动高亮当前区块（分页式不监听）
   useEffect(() => {
@@ -647,6 +665,14 @@ export function KeyUsageSection() {
           <input type="checkbox" checked={!paged} onChange={(event) => setPaged(!event.target.checked)} />
           {paged ? t('section.paged') : t('section.scroll')}
         </label>
+        <button
+          type="button"
+          className={styles.resetBtn}
+          disabled={!filtersActive}
+          onClick={resetFilters}
+          title={t('action.resetFilters')}
+          aria-label={t('action.resetFilters')}
+        >{t('action.resetFilters')}</button>
         <span className={styles.exportMenu} ref={exportMenuRef}>
           <Button
             size="sm"
