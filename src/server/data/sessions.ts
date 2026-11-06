@@ -18,6 +18,7 @@ import {
   type SessionFold,
   type PromptDayStat,
   type SessionSummary,
+  type ModelUsageRow,
   type TokenBuckets,
   type ToolDayStat,
 } from './session-usage.js'
@@ -793,6 +794,74 @@ export interface ProjectRow {
   lastTime: number | null
   providers: Record<string, number>
   models: Array<{ key: string; provider: string; model: string; tokens: number; calls: number; buckets: Record<string, number> }>
+}
+
+/** 本地日期键（与 session-usage 的 dayKeyOf 同口径）。 */
+function dayKeyOfTime(timeMs: number): string {
+  const date = new Date(timeMs)
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
+/**
+ * 按 `from`/`to`（本地日期、含首尾）切会话的按天明细，并把 summary 重新累加成窗口内口径。
+ * 只保留窗口内有调用的会话；项目 / 模型列表直接喂给现有聚合函数，避免再复制一套聚合逻辑。
+ */
+export function sliceSessionRecords(
+  records: SessionUsageRecord[],
+  from: string,
+  to: string,
+): SessionUsageRecord[] {
+  const sliced: SessionUsageRecord[] = []
+  for (const record of records) {
+    const days = record.summary.days.filter((day) => day.date >= from && day.date <= to)
+    if (days.length === 0) continue
+    let calls = 0
+    let tokens = 0
+    const buckets = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
+    const models = new Map<string, ModelUsageRow>()
+    for (const day of days) {
+      calls += day.calls
+      tokens += day.tokens
+      buckets.inputTokens += day.buckets.inputTokens
+      buckets.outputTokens += day.buckets.outputTokens
+      buckets.cacheReadTokens += day.buckets.cacheReadTokens
+      buckets.cacheWriteTokens += day.buckets.cacheWriteTokens
+      for (const model of day.models) {
+        let merged = models.get(model.key)
+        if (merged === undefined) {
+          merged = { key: model.key, calls: 0, tokens: 0, buckets: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }
+          models.set(model.key, merged)
+        }
+        merged.calls += model.calls
+        merged.tokens += model.tokens
+        merged.buckets.inputTokens += model.buckets.inputTokens
+        merged.buckets.outputTokens += model.buckets.outputTokens
+        merged.buckets.cacheReadTokens += model.buckets.cacheReadTokens
+        merged.buckets.cacheWriteTokens += model.buckets.cacheWriteTokens
+      }
+    }
+    const promptTokens = buckets.inputTokens + buckets.cacheReadTokens
+    const firstTime = record.summary.firstTime !== null && dayKeyOfTime(record.summary.firstTime) >= from && dayKeyOfTime(record.summary.firstTime) <= to
+      ? record.summary.firstTime : null
+    const lastTime = record.summary.lastTime !== null && dayKeyOfTime(record.summary.lastTime) >= from && dayKeyOfTime(record.summary.lastTime) <= to
+      ? record.summary.lastTime : null
+    sliced.push({
+      ...record,
+      summary: {
+        calls,
+        tokens,
+        buckets,
+        cacheHitRate: promptTokens > 0 ? buckets.cacheReadTokens / promptTokens : null,
+        firstTime,
+        lastTime,
+        firstPrompt: record.summary.firstPrompt,
+        primaryModelKey: record.summary.primaryModelKey,
+        days,
+        models: [...models.values()],
+      },
+    })
+  }
+  return sliced
 }
 
 export function projectRowsOf(

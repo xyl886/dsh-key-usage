@@ -8,10 +8,14 @@ export function EmptyState(props: {
   title: string
   /** 失败原因或口径补充，可省 */
   reason?: string | null
+  /** 空态类型：读取中给转圈、失败给告警色、无数据保持中性（默认）。 */
+  kind?: 'loading' | 'error' | 'empty'
   children?: ReactNode
 }): ReactNode {
+  const kind = props.kind ?? 'empty'
   return (
-    <div className={styles.emptyState} role="status">
+    <div className={styles.emptyState} role="status" data-kind={kind} aria-busy={kind === 'loading'}>
+      {kind === 'loading' && <span className={styles.emptySpinner} aria-hidden="true" />}
       <div className={styles.emptyTitle}>{props.title}</div>
       {props.reason !== undefined && props.reason !== null && <div>{props.reason}</div>}
       {props.children}

@@ -233,7 +233,7 @@ function CardRowView(props: { row: CardRow }): ReactNode {
  * 通道卡：有订阅窗口先给三个窗口（进度条只属于窗口占用，余额不是进度）；其次余额三行；
  * 都没有时给三行通道事实（额度 / 端点 / 联网 / 成员），不写任何解释性长句。
  */
-function channelCardOf(channel: Channel, snapshot: QuotaProvider | null, unpricedCount: number): QuotaCard {
+export function channelCardOf(channel: Channel, snapshot: QuotaProvider | null, unpricedCount: number): QuotaCard {
   const base = {
     key: channel.provider,
     provider: channel.provider,
@@ -244,6 +244,10 @@ function channelCardOf(channel: Channel, snapshot: QuotaProvider | null, unprice
   }
   const windowRows = windowRowsOf(snapshot)
   if (windowRows.length > 0) return { ...base, rows: windowRows, rank: 0 }
+  // 没有官方余额 / 窗口接口的通道：正文直接给「无」，不摆端点 / 联网 / 成员凑三行
+  if (snapshot !== null && !snapshot.supported && channel.status !== 'off' && channel.costMode !== 'free') {
+    return { ...base, rows: [{ kind: 'line', key: 'quota', label: t('quota.quotaLabel'), value: t('quota.none') }], rank: 2 }
+  }
   const moneyRows = moneyRowsOf(snapshot?.balance ?? null)
   if (moneyRows.length > 0) return { ...base, rows: moneyRows, rank: 1 }
   return { ...base, rows: metaRowsOf(channel, unpricedCount), rank: 2 }

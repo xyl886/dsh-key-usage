@@ -625,6 +625,18 @@ export function parseDayParam(raw: string | null, fallback: string): string {
  * 逗号分隔的多选筛选参数：trim 后去重；参数缺省返回 null（= 不筛）。
  * 空串项是合法值（项目筛选里 = 「未归入工作区」），所以 `project=` 是「只筛未归入工作区」而不是不筛。
  */
+/**
+ * `/models`、`/projects` 的窗口参数：两个都给且都是真实日期才算窗口；起止倒置时交换。
+ * 缺一个 / 非法值返回 null（= 全历史，保持未参数化时的响应形状）。
+ */
+export function parseWindow(fromRaw: string | null, toRaw: string | null): { from: string; to: string } | null {
+  if (fromRaw === null || toRaw === null) return null
+  const from = fromRaw.trim()
+  const to = toRaw.trim()
+  if (!isDayKey(from) || !isDayKey(to)) return null
+  return from <= to ? { from, to } : { from: to, to: from }
+}
+
 export function parseMultiFilter(raw: string | null): string[] | null {
   if (raw === null) return null
   const values = new Set<string>()

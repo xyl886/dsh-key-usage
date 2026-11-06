@@ -42,7 +42,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 | 页面 | 内容 |
 | --- | --- |
-| 额度 | 每通道一张卡：订阅窗口占用或余额、重置时间、单价表入口；跟随顶部「通道」筛选 |
+| 额度 | 每通道一张卡：订阅窗口占用或余额、重置时间、单价表入口；跟随顶部「通道」筛选；方案按通道 `baseURL` 的官方端点识别，自定义中转不猜 |
 | 概览 | 十张 KPI 卡（含上期与环比）；使用趋势（今天按小时、7 天按 6 小时、其余按天、「全部」为年热力图）；项目 / 模型排行；按时段热力（长期画像） |
 | 明细 | 分时 / 每日成本柱状图（费用 · Token · 输出 Token · 会话）；逐日明细表（按天 / 通道 / 模型，可排序、可展开模型） |
 | 分布 | 项目 × 模型 Mekko、缓存节省、Token 构成、通道成本 |
@@ -84,7 +84,7 @@ dsh plugin --profile desktop add dsh-key-usage
 | --- | --- |
 | **打开插件页** / 打开总览的通道详情弹窗 | 按通道查官方余额 / 窗口接口：**打开页面时若余额数据超过 60 秒就后台补查一次**（不阻塞首屏，几秒后自动刷新出来），其余时候读缓存；6 秒超时、64 KiB 上限、结果缓存 60 秒（点「刷新」强制重查），失败回落本机快照，原因写进系统日志 |
 | 设置里的「刷新价目」 | `POST /dsh-key-usage/pricing/refresh`：先 `raw.githubusercontent.com`、失败再试 jsDelivr 镜像；服务端 20 秒预算、响应上限 12 MiB，校验不过**不覆盖**已有文件；界面最多等 30 秒 |
-| **打开插件页时的更新检查** | `GET /dsh-key-usage/update`：打开页面后台查一次 npm 的 `latest` 版本（24 小时节流、5 秒超时）；有新版本时只在「设置 → 版本」行显示 `0.2.4 → 0.2.5` 与页头一个小圆点，点击复制升级命令，**不会自动下载或安装** |
+| **打开插件页时的更新检查** | `GET /dsh-key-usage/update`：打开页面后台查一次 npm 的 `latest` 版本（24 小时节流、5 秒超时）；有新版本时只在「设置 → 版本」行显示「当前版本 → 最新版本」（如 `0.2.6 → 0.2.7`）与页头一个小圆点，点击复制升级命令，**不会自动下载或安装** |
 | **设置弹窗里的「刷新汇率」**（打开页面也会顺带取一次缓存的汇率） | `GET /dsh-key-usage/fx`：主 `open.er-api.com`、备 `api.frankfurter.app`；6 秒超时、64 KiB 上限、12 小时 TTL 内不联网；失败回落缓存，再失败用默认 7.1 并在界面明示 |
 
 **不做开机拉取、不做定时轮询、不在其它端点里隐式联网**。打开页面触发的重算只走本地数据（台账 + 会话），联网的只有上面这三个动作。
@@ -101,7 +101,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 **额度**
 
-- 每通道一张卡：订阅制显示各窗口占用（5 小时 / 本周 / 本月 + 重置时间），按量计费显示余额构成；
+- 每通道一张卡：订阅制显示各窗口占用（5 小时 / 本周 / 本月 + 重置时间），按量计费显示余额构成；没有官方余额 / 窗口接口的通道直接显示「无」；
 - 点卡片标题打开该通道的**模型单价表弹窗**（含官方价 / 聚合 / 模型官方价来源与「· 部分」标记），可切换 ¥ / $ 与刷新汇率、价目；失败原因进系统日志，不占版面。
 
 **概览**
@@ -122,7 +122,7 @@ dsh plugin --profile desktop add dsh-key-usage
 
 **会话**
 
-- 最耗会话 / 会话形态 / 最近会话三个视角；子代理不单独占行（父行标子会话数，详情抽屉里可展开）；
+- 最耗会话 / 会话形态 / 最近会话三个视角，全部跟随顶部时间范围；「最近会话」默认隐藏已归档（可切回全部），不再有绕过范围的「全部时间」开关；子代理不单独占行（父行标子会话数，详情抽屉里可展开）；
 - 会话详情抽屉：首条真实提问、工作区、通道、四类 tokens 与命中率、成本来源、逐模型占比、24 小时分布；
 - 列表首屏 50 条 + 「加载更多」，支持搜索与排序。
 
@@ -246,14 +246,16 @@ dsh plugin --profile desktop add dsh-key-usage
 pnpm install          # 依赖（CI 用 pnpm，见 .github/workflows/ci.yml）
 pnpm run build        # 服务端 → lib/，客户端 → client/client.js（含产物头校验）
 pnpm run typecheck    # 客户端 + 服务端类型检查
-pnpm run test         # 全部离线测试（自动枚举 test/*.test.mjs）
+pnpm run test         # 全部离线测试（自动枚举 test/*.test.mjs；含 jsdom 组件渲染与触控浮层测试）
 pnpm run check        # lib/**/*.js 语法检查（自动枚举）
 pnpm run check:tokens # 颜色令牌必须在宿主里真实声明过
 pnpm run check:ui     # 间距 / 圆角 / 字号 / 控件高必须在 UI 刻度内
 pnpm run check:css    # 组件引用的 CSS Module 类名必须真实存在
+pnpm run check:responsive # 宽表横滚 / 断点白名单 / 触控目标
 pnpm run check:eol    # 源码必须 LF（避免 sourcemap 与 CI 不一致）
 pnpm run check:i18n   # 中英词典键必须一致
 pnpm run verify       # 上面全套（CI 跑的就是这条）
+# 注：本机按 AGENTS 用 `npm run <script>`；pnpm 大版本不一致会触发清空 node_modules
 pnpm run pack:dry     # 发布清单自检
 ```
 

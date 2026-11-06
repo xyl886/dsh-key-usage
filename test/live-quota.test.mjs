@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { createLiveQuotaService, schemeIdOf } from '../lib/quota/live-quota.js'
+import { createLiveQuotaService, schemeOf } from '../lib/quota/live-quota.js'
 
 function channelOf(provider, apiKeyEnv, baseURL = null) {
   return {
@@ -32,13 +32,22 @@ function jsonResponse(body, status = 200) {
   }
 }
 
-// provider → 方案映射（含路由前缀与常见别名）
-assert.equal(schemeIdOf('opencode-go'), 'opencode-go')
-assert.equal(schemeIdOf('pi-ai/opencode'), 'opencode-go')
-assert.equal(schemeIdOf('deepseek-official'), 'deepseek-official')
-assert.equal(schemeIdOf('pi-ai/deepseek'), 'deepseek-official')
-assert.equal(schemeIdOf('kimi-coding'), 'moonshotai')
-assert.equal(schemeIdOf('sensenova'), null, '无方案通道返回 null')
+// 方案映射：端点优先（baseURL），provider 名只在 baseURL 缺失时兜底
+assert.equal(schemeOf(channelOf('opencode-go', 'K', 'https://opencode.ai/inference/go/v1')), 'opencode-go')
+assert.equal(schemeOf(channelOf('opencode-go-rao', 'K', 'https://opencode.ai/zen/go/v1')), 'opencode-go', '自定义命名 + 官方端点 → 按端点识别')
+assert.equal(schemeOf(channelOf('随便起的名', 'K', 'https://opencode.ai/zen/go/v1')), 'opencode-go', '任意命名只要端点对就能查')
+assert.equal(schemeOf(channelOf('pi-ai/opencode', 'K', null)), 'opencode-go', '无 baseURL 时按精确别名兜底')
+assert.equal(schemeOf(channelOf('deepseek', 'K', 'https://api.deepseek.com')), 'deepseek-official')
+assert.equal(schemeOf(channelOf('deepseek-official', 'K', null)), 'deepseek-official')
+assert.equal(schemeOf(channelOf('moonshotai', 'K', 'https://api.moonshot.cn/v1')), 'moonshotai')
+assert.equal(schemeOf(channelOf('kimi-coding', 'K', 'https://api.kimi.com/coding/v1')), 'moonshotai')
+assert.equal(schemeOf(channelOf('zai', 'K', 'https://api.z.ai/api/coding/paas/v4')), 'zai')
+assert.equal(schemeOf(channelOf('openrouter', 'K', 'https://openrouter.ai/api/v1')), 'openrouter')
+assert.equal(schemeOf(channelOf('sensenova', 'K', 'https://api.sensenova.cn/v1')), null, '未知官方端点不猜')
+assert.equal(schemeOf(channelOf('opencode-go', 'K', 'https://example.com/v1')), null, '名字像但端点不对也不查')
+assert.equal(schemeOf(channelOf('local', 'K', 'http://127.0.0.1:11434/v1')), null, '本地端点不支持')
+assert.equal(schemeOf(channelOf('opencode-go', 'K', null)), 'opencode-go')
+assert.equal(schemeOf(channelOf('sensenova', 'K', null)), null)
 
 const resolverOf = (keys) => ({ resolveCredential: async (reference) => keys[reference] ?? '' })
 
@@ -76,13 +85,23 @@ const deepseekEntry = (await deepseekService.refreshIfStale([channelOf('deepseek
 assert.equal(deepseekEntry.ok, true)
 assert.deepEqual(deepseekEntry.balance, { currency: 'CNY', totalBalance: '1.50', giftBalance: '0.50', topUpBalance: '1.00' })
 
-// 自定义 baseURL：路径挂在通道自己的 origin 上
-const selfHostedService = createLiveQuotaService(resolverOf({ DEEPSEEK_API_KEY: 'test-key-not-real' }), async (url) => {
-  assert.equal(url, 'https://proxy.example.com/user/balance')
+// 官方 baseURL：路径挂在通道自己的 origin 上（允许 /v1 等路径后缀）
+const officialBaseURLService = createLiveQuotaService(resolverOf({ DEEPSEEK_API_KEY: 'test-key-not-real' }), async (url) => {
+  assert.equal(url, 'https://api.deepseek.com/user/balance')
   return jsonResponse({ balance_infos: [{ currency: 'CNY', total_balance: '9' }] })
 }, 60000)
-const selfHosted = (await selfHostedService.refreshIfStale([channelOf('deepseek-official', 'DEEPSEEK_API_KEY', 'https://proxy.example.com/v1')])).get('deepseek-official')
-assert.equal(selfHosted.balance.totalBalance, '9')
+const officialBaseURL = (await officialBaseURLService.refreshIfStale([channelOf('deepseek-official', 'DEEPSEEK_API_KEY', 'https://api.deepseek.com/v1')])).get('deepseek-official')
+assert.equal(officialBaseURL.balance.totalBalance, '9')
+
+// 自定义中转（非官方端点）：不做适配、不猜方案，也不发请求
+let proxyRequests = 0
+const proxyService = createLiveQuotaService(resolverOf({ DEEPSEEK_API_KEY: 'test-key-not-real' }), async () => {
+  proxyRequests += 1
+  return jsonResponse({ balance_infos: [{ currency: 'CNY', total_balance: '9' }] })
+}, 60000)
+const proxyLive = await proxyService.refreshIfStale([channelOf('deepseek-official', 'DEEPSEEK_API_KEY', 'https://proxy.example.com/v1')])
+assert.equal(proxyLive.has('deepseek-official'), false, '未知端点不进入查询')
+assert.equal(proxyRequests, 0, '未知端点不发起网络请求')
 
 // 未配置凭据：不发请求
 let requestCount = 0

@@ -9,6 +9,7 @@ import { costSourceHintOf } from '../core/pricing.ts'
 import { t, useT } from '../core/i18n.ts'
 import { serverText } from '../core/serverText.ts'
 import { CostSourceChip } from './CostSourceChip.tsx'
+import { Select } from './ui/Select.tsx'
 import type { Channel, SessionDetail, SessionDetailResponse, SessionRow } from '../core/types.ts'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
@@ -131,6 +132,9 @@ function systemTitleOf(title: string | null): string {
 
 function SessionDetailBody(props: { session: SessionDetail; channels: Channel[]; priced: boolean }): ReactNode {
   const session = props.session
+  /** 逐模型表只看某个通道（'' = 全部通道）；只影响这张表，不改会话总量。 */
+  const [modelChannel, setModelChannel] = useState('')
+  const visibleModels = modelChannel === '' ? session.models : session.models.filter((model) => model.provider === modelChannel)
   const channel = channelOf(props.channels, session.provider)
   const costCell = costCellOf(channel, session)
   return (
@@ -178,8 +182,22 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
       </div>
 
       <div className={listStyles.detailBlock + ' ' + listStyles.detailColLeft}>
-        <div className={listStyles.detailBlockTitle}>{t('d.byModel')}</div>
-        {session.models.length === 0
+        <div className={listStyles.detailBlockTitleRow}>
+          <span className={listStyles.detailBlockTitle}>{t('d.byModel')}</span>
+          {session.models.length > 0 && (
+            <Select
+              ariaLabel={t('d.channelFilter')}
+              value={modelChannel}
+              onChange={setModelChannel}
+              options={[
+                { value: '', labelKey: 's.allChannels' },
+                ...[...new Map(session.models.map((model) => [model.provider, model.providerLabel])).entries()]
+                  .map(([provider, label]) => ({ value: provider, label })),
+              ]}
+            />
+          )}
+        </div>
+        {visibleModels.length === 0
           ? <div className={styles.empty}>{t('empty.noUsage')}</div>
           : (
             <div className={listStyles.tableScroll}><table className={styles.table + ' ' + listStyles.sessionDetailModelTable}>
@@ -187,7 +205,7 @@ function SessionDetailBody(props: { session: SessionDetail; channels: Channel[];
                 <tr><th>{t('m.model')}</th><th>Tokens</th><th>{t('m.share')}</th><th>{t('c.cost')}</th></tr>
               </thead>
               <tbody>
-                {session.models.map((model) => {
+                {visibleModels.map((model) => {
                   const modelCostCell = costCellOf(channelOf(props.channels, model.provider), model)
                   return (
                     <tr key={model.provider + '|' + model.model}>

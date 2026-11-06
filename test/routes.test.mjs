@@ -409,6 +409,27 @@ assert.deepEqual(
   '模型段 = /models 响应体（同一批构建器函数）',
 )
 
+// S1 窗口化：from/to 都给时 /models、/projects 按窗口切片；全范围窗口应与默认全历史一致
+const defaultModels = (await callEndpoint('/dsh-key-usage/models?limit=1000')).body
+const defaultProjects = (await callEndpoint('/dsh-key-usage/projects?limit=1000')).body
+const fullWindowModels = await callEndpoint('/dsh-key-usage/models?limit=1000&from=2020-01-01&to=' + localDayKey(0))
+assert.equal(fullWindowModels.body.from, '2020-01-01')
+assert.equal(fullWindowModels.body.to, localDayKey(0))
+assert.deepEqual(fullWindowModels.body.rows, defaultModels.rows, '全范围窗口的模型行与全历史一致')
+const fullWindowProjects = await callEndpoint('/dsh-key-usage/projects?limit=1000&from=2020-01-01&to=' + localDayKey(0))
+assert.deepEqual(fullWindowProjects.body.rows, defaultProjects.rows, '全范围窗口的项目行与全历史一致')
+
+const narrowModels = await callEndpoint('/dsh-key-usage/models?limit=1000&from=' + localDayKey(0) + '&to=' + localDayKey(0))
+assert.equal(narrowModels.body.from, localDayKey(0))
+assert.ok(narrowModels.body.rows.length <= defaultModels.rows.length, '窄窗口不会多出行')
+
+// 缺一个参数 / 非法日期 → 退化为全历史，响应形状与默认一致（不带 from/to）
+for (const query of ['from=' + localDayKey(0), 'from=2026-02-30&to=' + localDayKey(0), 'from=' + localDayKey(0) + '&to=nope']) {
+  const fellBack = await callEndpoint('/dsh-key-usage/models?limit=1000&' + query)
+  assert.equal('from' in fellBack.body, false, '非法窗口不带 from：' + query)
+  assert.deepEqual(fellBack.body.rows, defaultModels.rows, '非法窗口回落全历史：' + query)
+}
+
 // 手动刷新（POST /refresh）：重算全部 + 查配额（联网），成功的通道标 live
 const liveHandlers = new Map()
 const liveCache = new Map([['opencode-go', {

@@ -16,7 +16,8 @@ import { SessionDetailDrawer } from '../components/SessionDetailDrawer.tsx'
 import { EmptyState } from '../components/ui/EmptyState.tsx'
 import { Select } from '../components/ui/Select.tsx'
 import type { Channel, CostSource, SessionRow, SessionsResponse } from '../core/types.ts'
-import { projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
+import { projectFilterValuesOf } from '../core/usage-scope.ts'
+import type { RangeKey } from './DetailTab.tsx'
 import styles from '../styles/shared.module.css'
 import listStyles from '../styles/lists.module.css'
 import sessionsStyles from '../styles/sessions.module.css'
@@ -87,8 +88,10 @@ export function SessionsTab(props: {
     if (!selectionMatches(row.models.map((model) => model.model), modelFilter)) return false
     if (!selectionMatches([row.provider ?? '', ...row.models.map((model) => model.provider)], channelFilter)) return false
     // 时间范围：会话与窗口有交集才保留；首末时间都缺的老会话不参与时间筛选，避免整页清空
-    // 会话与顶部时间窗口有交集才保留（列表与榜单都跟随页头范围）；首末时间都缺的老会话不参与时间筛选
-    if (windowFromMs !== null && windowToMs !== null && (row.firstTime !== null || row.lastTime !== null)) {
+    // 会话与顶部时间窗口有交集才保留（列表与榜单都跟随页头范围）。
+    // 首末时间都缺的老会话无法证明与窗口有交集：只在「全部时间」保留，窄范围不混入（口径见契约 §6）。
+    if (row.firstTime === null && row.lastTime === null) return props.range === 'total'
+    if (windowFromMs !== null && windowToMs !== null) {
       const startMs = row.firstTime ?? (row.lastTime as number)
       const endMs = row.lastTime ?? (row.firstTime as number)
       if (endMs < windowFromMs || startMs > windowToMs) return false
@@ -136,7 +139,7 @@ export function SessionsTab(props: {
     [recentRows, scope],
   )
 
-  if (props.data === null) return <EmptyState title={t('s.loading')} />
+  if (props.data === null) return <EmptyState title={t('s.loading')} kind="loading" />
 
   const shownRows = visibleRows.slice(0, pageSize)
   const histogramMax = Math.max(1, ...histogram)

@@ -104,6 +104,15 @@ export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
 }
 
+/** 分布页跟随顶部范围：服务端按 `from`/`to` 把会话按天切片后重算的项目 / 模型行。 */
+export function loadProjectsWindow(from: string, to: string, limit = 200): Promise<ProjectsResponse | null> {
+  return fetchJson<ProjectsResponse>('/dsh-key-usage/projects?limit=' + String(limit) + '&from=' + from + '&to=' + to)
+}
+
+export function loadModelsWindow(from: string, to: string, limit = 200): Promise<ModelsResponse | null> {
+  return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit) + '&from=' + from + '&to=' + to)
+}
+
 /** 工具 / 技能 / MCP 参数化端点：窗口 + 项目 / 模型多选（空串筛选值留给「未归入工作区」）。 */
 export const TOOLS_PATH = '/dsh-key-usage/tools'
 

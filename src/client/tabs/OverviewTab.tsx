@@ -12,6 +12,8 @@ import { comparableMoneyOf, displaySymbolOf, moneyTextOf, moneyTotalsTextOf, row
 import { fmtCalls, fmtCount, fmtShortDate, fmtTokens, isoDate, shiftedIsoDate } from '../core/format.ts'
 import { selectionMatches, selectionOf } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
+import { Skeleton } from '../components/ui/Skeleton.tsx'
+import { HourlyPanel } from '../components/HourlyPanel.tsx'
 import { TipBar, TipRow, TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import type {
   Channel,
@@ -31,7 +33,8 @@ import type {
 } from '../core/types.ts'
 import { Dialog } from '../components/ui/Dialog.tsx'
 import { LEVEL_COLORS, YearHeatmap, levelColorOf, levelOfValue, levelThresholds } from '../components/Heatmap.tsx'
-import { filterUsageByChannels, filterUsageByModel, projectFilterValuesOf, type RangeKey } from './DetailTab.tsx'
+import type { RangeKey } from './DetailTab.tsx'
+import { filterUsageByChannels, filterUsageByModel, projectFilterValuesOf } from '../core/usage-scope.ts'
 import shared from '../styles/shared.module.css'
 import styles from '../styles/overview.module.css'
 
@@ -393,6 +396,19 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const hourThresholds = levelThresholds(hourActiveValues)
   const busiestHour = busiestHourOf(hourValues)
 
+  // 首屏：快照与 /usage 都还没回来，用骨架占位（G5）；有任意一份数据后按正常渲染走
+  const firstLoading = props.summary === null && props.usage === null
+  if (firstLoading) {
+    return (
+      <div className={styles.stack} aria-busy="true">
+        <div className={styles.kpiGrid} data-cards="4"><Skeleton rows={1} /></div>
+        <div className={styles.kpiGrid} data-cards="4"><Skeleton rows={1} /></div>
+        <Skeleton rows={5} />
+        <Skeleton rows={4} />
+      </div>
+    )
+  }
+
   return (
     <div className={styles.stack}>
       <div className={styles.kpiGrid} data-cards={visibleKpiCards.length}>
@@ -471,69 +487,22 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
         />
       </div>
 
-      <div className={styles.panel}>
-        <div className={styles.panelHead}>
-          <b className={styles.panelTitle}>{t('overview.hourly')}</b>
-          <span className={styles.panelHint}>{t('overview.hoursLongTerm')}</span>
-          <div className={styles.metricTabs}>
-            {HOUR_METRICS.map(([metric, labelKey]) => (
-              <button
-                key={metric}
-                type="button"
-                disabled={metric === 'cost' && !hasHourCostData}
-                className={metric === hourMetric ? styles.metricTab + ' ' + styles.metricTabOn : styles.metricTab}
-                aria-pressed={metric === hourMetric}
-                onClick={() => { if (metric !== 'cost' || hasHourCostData) setHourMetric(metric) }}
-              >{t(labelKey)}</button>
-            ))}
-          </div>
-          <span className={styles.panelMore}>
-            {busiestHour === null ? '' : t('overview.busiestHour', {
-              weekday: t(WEEKDAY_KEYS[busiestHour.weekday]),
-              hour: String(busiestHour.hour).padStart(2, '0') + ':00',
-            })}
-          </span>
-        </div>
-        {hourValues === null || hourMatrix === null || !hasHourData
-          ? <div className={shared.empty}>{t('overview.noHourly')}</div>
-          : (
-            <div className={styles.hourScroll}><div className={styles.hourWrap} role="group" aria-label={t('overview.hourly')}>
-              {WEEKDAY_KEYS.map((key, weekdayIndex) => (
-                <span key={key} className={styles.hourWeekday} style={{ gridColumn: 1, gridRow: weekdayIndex + 2 }}>{t(key)}</span>
-              ))}
-              {Array.from({ length: 24 }, (_, hour) => (
-                hour % 3 === 0
-                  ? <span key={'axis-' + String(hour)} className={styles.hourAxisLabel} style={{ gridColumn: hour + 2, gridRow: 1 }}>{String(hour)}</span>
-                  : null
-              ))}
-              {hourMatrix.map((weekday, weekdayIndex) => weekday.map((cell, hour) => {
-                const value = hourValues[weekdayIndex][hour]
-                const level = value === undefined ? 0 : levelOfValue(value, hourThresholds)
-                return (
-                  <div
-                    key={weekdayIndex + '-' + hour}
-                    className={styles.hourCell}
-                    style={{ gridColumn: hour + 2, gridRow: weekdayIndex + 2, background: levelColorOf(level) }}
-                    onMouseMove={(event) => props.tooltip.show(event, (
-                      <>
-                        <TipTitle>{t(WEEKDAY_KEYS[weekdayIndex]) + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
-                        <TipSub>{t(labelKeyOf(HOUR_METRICS, hourMetric))} <b>{value === undefined ? '—' : metricTextOf(hourMetric, value)}</b></TipSub>
-                      </>
-                    ))}
-                    onMouseLeave={props.tooltip.hide}
-                    onTouchStart={(event) => props.tooltip.show(event, (
-                      <>
-                        <TipTitle>{t(WEEKDAY_KEYS[weekdayIndex]) + ' ' + String(hour).padStart(2, '0') + ':00'}</TipTitle>
-                        <TipSub>{t(labelKeyOf(HOUR_METRICS, hourMetric))} <b>{value === undefined ? '—' : metricTextOf(hourMetric, value)}</b></TipSub>
-                      </>
-                    ))}
-                  />
-                )
-              }))}
-            </div></div>
-          )}
-      </div>
-    </div>
+      <HourlyPanel
+        metrics={HOUR_METRICS}
+        metric={hourMetric}
+        onMetric={(metric) => setHourMetric(metric as HourMetric)}
+        metricLabelKey={labelKeyOf(HOUR_METRICS, hourMetric)}
+        metricTextOf={(value) => metricTextOf(hourMetric, value)}
+        hasData={hasHourData}
+        hasCostData={hasHourCostData}
+        matrix={hourMatrix}
+        values={hourValues}
+        levelOf={(value) => levelOfValue(value, hourThresholds)}
+        colorOf={levelColorOf}
+        weekdayKeys={WEEKDAY_KEYS}
+        busiestHour={busiestHour}
+        tooltip={props.tooltip}
+      />    </div>
   )
 }
 

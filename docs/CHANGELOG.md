@@ -4,19 +4,57 @@
 
 > 0.1.0 ～ 0.1.2 是发布当日的快速迭代，此处只记要点；逐条改动见仓库提交历史。发布时间取自 npm registry。
 
-## [0.2.6] —— 2026-11-02
+## [0.2.7] —— 未发布
+
+### 修复
+
+- **配额方案改为端点识别**：`schemeOf(channel)` 按 `baseURL` 的 host + 路径前缀匹配官方端点，移除 provider 名前缀 hack；`opencode-go-rao` 等任意命名的官方端点通道都能查到配额，自定义中转不猜也不发请求。没有官方配额接口的内置提供商在额度页直接显示「无」。契约补充 DSH 42 个内置提供商的端点与覆盖清单。
+
+- 数字展示统一去掉百位/千位之间的千分位空格：`126345` 不再显示成 `126 345`（`fmtCount` / `fmtCalls` / `fmtTokens` 回落路径、契约与 UI 规范同步）。
+- 配额方案匹配支持子账号后缀：`opencode-go-rao` 这类 provider 名按 `opencode-go` 方案查询（原来只按最后一段精确匹配，导致该通道一直显示「未查询」）；`schemeIdOf` 增加 `opencode-go-*` 前缀与逐段兜底，并补测试。
+
+### 新增
+
+- **分布页跟随顶部范围（S1）**：`/projects`、`/models` 新增 `from`/`to` 参数，服务端把会话按天切片后重算项目 / 模型行；分布页在范围不是「全部时间」时请求窗口版，失败回落快照全量并显示「范围数据未取到」。
+- **会话空态三分（G1）**：`EmptyState` 支持 `loading` / `error` / `empty` 三态（加载转圈、失败告警色）；会话、工具、日志三处接入。
+- **首屏骨架（G5）**：新增 `Skeleton` 组件，概览首屏在快照与 `/usage` 都未返回时用骨架占位，避免大幅跳动。
+- **会话抽屉按通道筛选（C5）**：详情抽屉的逐模型表新增通道下拉（全部 / 单通道），只收窄这张表，不影响会话总量与小时分布。
+- **会话时间口径**：首末时间都缺的老会话只在「全部时间」保留，窄范围不混入（契约 §6 第 14 条）。
+
+### 重构
+
+- 提问统计（人类提问判定 / 分词 / 词频预算 / 片段截断）从 `session-usage.ts` 拆到 `server/data/prompt-stats.ts`；`session-usage.ts` 只留折叠流程并转发导出（997 → 829 行），行为不变（28 个测试全绿）。
+- 页面头部（标题 / 设置 / GitHub / 刷新周期 / 手动刷新）从 `KeyUsageSection.tsx` 抽到 `components/UsageHead.tsx`；筛选工具栏（范围 / 日期 / 分页开关 / 重置 / 导出菜单）抽到 `components/UsageFilters.tsx`（`RANGES` 随之迁出）；Tab 栏 + 通道/项目/模型多选抽到 `components/UsageTabs.tsx`（`TABS` 随之迁出）；`/usage` 的合并 / 逐币种金额 / 最弱来源 / 通道与模型过滤从 `DetailTab.tsx` 抽到 `core/usage-scope.ts`（概览、分布、会话共用）；每日成本柱状图面板抽到 `components/DetailBarsPanel.tsx`、逐日明细表抽到 `components/DetailTablePanel.tsx`（`DetailTab.tsx` 944 → 623 行）；概览的按时段矩阵抽到 `components/HourlyPanel.tsx`（`OverviewTab.tsx` 932 → 900 行）；服务端 `/fx`、`/update`、`/update/skip`、`/log` 四个端点拆到 `server/routes/misc-routes.ts` / `log-routes.ts`（routes.ts 1260 → 1151 行），其余端点仍共用快照闭包、留在原文件。组件只收 props，状态仍留在页面。
+
+### 测试
+
+- 新增 6 个离线测试：`client-format`、`client-heatmap-axis`、`client-filter-selection`、`client-rows` 纯函数，以及 `components-render`（esbuild 打包 + `react-dom/server` 渲染空态 / KPI / 日志提示 / 成本角标）与 `tooltip-touch`（jsdom + `react-dom/client` 真挂载，验证点按显示 / 再点关闭 / 点外部关闭）。离线测试 22 → 28 个。
+- 新增测试期 devDependency：`esbuild`、`react-dom`、`jsdom`（不进运行时依赖与发布包）。
 
 ### 维护
 
-- 界面词典从单个 `src/client/core/copy.ts` 拆成 `src/client/core/locale/zh.json` / `en.json`（各 434 条），`copy.ts` 只保留加载与 typed 导出；`check:i18n` 改为读 JSON，并新增重复键检测；EOL 守卫覆盖 JSON。
-### 移动端
+- 清理 7 个死词条与 3 个死 CSS 类；新增 `npm run check:responsive`：宽表必须包 `tableScroll`、断点只允许登记过的 5 档、触控目标规则齐全，并挂进 `verify`。
+- CI 新增客户端体积基线：`client/client.js` 超过 700 KB 直接失败。
+- 文档对账：契约 §6 第 12/13 条改为当前真实状态并补 S1 设计；CHANGELOG 0.2.6 重新归类为「界面 / 移动端 / 维护」；README 更新版本示例与会话筛选描述；过程卷补 0.2.6 发布记录。
+
+## [0.2.6] —— 2026-11-02
+
+### 界面
 
 - 会话页「最近会话」默认隐藏已归档；列表 / 榜单 / 会话形态全部跟随顶部时间范围；移除「全部时间」开关（原先可绕过页头范围）；
 - 工具栏「分页 / 滚动」旁新增「重置」按钮：一键把范围恢复为近 30 天并清空通道 / 项目 / 模型筛选（无筛选时置灰）；
+- 导出按钮去掉边框，与「分页 / 重置」统一为无边框文字按钮。
+
+### 移动端
+
 - 窄屏布局：≤820px 概览 KPI 两列；≤720px 页面内边距收紧、工具栏自动换行、区块 Tab 横向滚动、弹窗贴底、日历 / 筛选面板占满宽度、会话抽屉全屏；≤480px 单列与图表压缩；
 - 宽表（明细 / 模型 / 项目 / 额度 / 会话模型表）统一横向滚动，触控滚动带惯性；
 - 触控交互：图表、热力图、会话成本单元格改为点按显示浮层、再点同一目标关闭、点外部关闭（`useTooltip` 同时接受 Mouse / Touch 事件）；触控设备可点控件最小高度 40px；
 - 年热力图在手机上横向滚动（最小宽度 640px），格子不再被压到不可读。
+
+### 维护
+
+- 界面词典从单个 `src/client/core/copy.ts` 拆成 `src/client/core/locale/zh.json` / `en.json`（各 434 条），`copy.ts` 只保留加载与 typed 导出；`check:i18n` 改为读 JSON，并新增重复键检测；EOL 守卫覆盖 JSON。
 
 ## [0.2.5] —— 2026-10-31
 

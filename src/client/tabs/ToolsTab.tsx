@@ -80,7 +80,7 @@ export function ToolsTab(props: { data: ToolsResponse | null }): ReactNode {
     const reason = failureReasonOf(SNAPSHOT_PATH)
     return (
       <div className={styles.page}>
-        <EmptyState title={t('tools.empty')} reason={reason} />
+        <EmptyState title={t('tools.empty')} reason={reason} kind={reason === null ? 'empty' : 'error'} />
       </div>
     )
   }

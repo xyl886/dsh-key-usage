@@ -12,13 +12,13 @@ export function shiftedIsoDate(offsetDays: number): string {
   return isoDate(new Date(Date.now() + offsetDays * 86400000))
 }
 
-/** 空格千分位：不用 toLocaleString（结果跟随浏览器区域设置，导出与截图会不一致）。 */
+/** 整数展示：不加千位分隔符（126345 而不是 126 345），也不走 toLocaleString（区域设置会影响导出与截图）。 */
 export function fmtCount(count: number): string {
   if (!Number.isFinite(count)) return '—'
-  return String(Math.round(count)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  return String(Math.round(count))
 }
 
-/** 大数按 B / M / K 缩写；四舍五入到 1000 就降级显示（999 999 显示 999 999，不显示 1000K）。 */
+/** 大数按 B / M / K 缩写；四舍五入到 1000 就降级显示（999999 显示 999999，不显示 1000K）。 */
 export function fmtTokens(count: number): string {
   if (!Number.isFinite(count)) return '—'
   const units: Array<[number, string]> = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']]

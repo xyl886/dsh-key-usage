@@ -1,7 +1,2 @@
 /* 导出按钮：各 Tab 筛选栏 / 范围条右侧的两个小按钮，走宿主 --dsw-alias-* 令牌。 */
 .exportGroup { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
-.exportBtn:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1));
-  color: var(--dsw-alias-label-primary, #e8e8ec);
-}
-

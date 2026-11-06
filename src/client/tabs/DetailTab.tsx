@@ -14,9 +14,14 @@ import { useT } from '../core/i18n.ts'
 import { selectionOf } from '../core/filter-selection.ts'
 import type { Channel, ChannelDailySummary, CostSource, DaySummary, HourMetricCell, ModelSummary, SessionsResponse, UsageResponse, UsageTotals } from '../core/types.ts'
 import { costSourceLabelOf } from '../core/pricing.ts'
+import {
+  ORPHAN_PROJECT_VALUE, type MoneyRow, SOURCE_ORDER, addMoneyInto, costTextOf, filterUsageByChannels, filterUsageByModel, mergedDayOf, moneyRowOf, projectFilterValuesOf, totalsOfDays, weakSourceOf,
+} from '../core/usage-scope.ts'
 import { TipSub, TipTitle, type TooltipApi } from '../core/tooltip.tsx'
 import detailStyles from '../styles/detail.module.css'
 import styles from '../styles/shared.module.css'
+import { DetailBarsPanel } from '../components/DetailBarsPanel.tsx'
+import { DetailTablePanel, deltaCellOf } from '../components/DetailTablePanel.tsx'
 
 export type RangeKey = 'today' | 'week' | 'month' | 'quarter' | 'total' | 'custom'
 
@@ -48,7 +53,7 @@ const DIMENSIONS: Array<[Dimension, string]> = [
   ['model', 'detail.byModel'],
 ]
 
-type SortKey = 'date' | 'label' | 'calls' | 'input' | 'output' | 'cacheRead' | 'sessions' | 'cost' | 'delta' | 'source'
+export type SortKey = 'date' | 'label' | 'calls' | 'input' | 'output' | 'cacheRead' | 'sessions' | 'cost' | 'delta' | 'source'
 type SortDirection = 'asc' | 'desc'
 
 /** 表头（原型顺序）；第一列是展开箭头，没有表头文案。 */
@@ -66,10 +71,8 @@ const SORT_COLUMNS: Array<[SortKey, string]> = [
 ]
 
 /** 右对齐的列：数字与来源。 */
-const RIGHT_ALIGNED = new Set<SortKey>(['calls', 'input', 'output', 'cacheRead', 'sessions', 'cost', 'delta', 'source'])
 
 /** 成本来源强弱：聚合行取最弱的那一格（与价目层的强弱序一致）。 */
-const SOURCE_ORDER: Record<CostSource, number> = { official: 0, catalog: 1, aggregate: 2, model: 3, none: 4 }
 
 export 
 function usePreviousUsage(props: {
@@ -93,199 +96,19 @@ function usePreviousUsage(props: {
   return comparable ? previous : null
 }
 
-/** 逐行金额：`costsByCurrency` 是逐币种小计，`cost` 只在没有小计时兜底。 */
-interface MoneyRow {
-  cost: number
-  costsByCurrency: Record<string, number>
-}
-
-function moneyRowOf(row: { cost?: number | null; costsByCurrency?: Record<string, number> | null }): MoneyRow {
-  const costsByCurrency: Record<string, number> = {}
-  for (const [currency, amount] of Object.entries(row.costsByCurrency ?? {})) {
-    if (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) costsByCurrency[currency] = amount
-  }
-  return {
-    cost: typeof row.cost === 'number' && Number.isFinite(row.cost) ? row.cost : 0,
-    costsByCurrency,
-  }
-}
-
-function addMoneyInto(target: MoneyRow, source: MoneyRow): void {
-  target.cost += source.cost
-  for (const [currency, amount] of Object.entries(source.costsByCurrency)) {
-    target.costsByCurrency[currency] = (target.costsByCurrency[currency] ?? 0) + amount
-  }
-}
-
-/** 金额文本：没有价目依据（`none`）或金额为 0 时给 —，不拿 0 元冒充「免费」。 */
-function costTextOf(row: CostRowLike, source: CostSource | null): string {
-  if (source === 'none') return '—'
-  const view = rowMoneyViewOf(row)
-  return view.amount > 0 ? view.text : '—'
-}
-
-/** 聚合行取最弱的成本来源。 */
-function weakSourceOf(sources: CostSource[]): CostSource | null {
-  let weakest: CostSource | null = null
-  for (const source of sources) {
-    if (weakest === null || SOURCE_ORDER[source] > SOURCE_ORDER[weakest]) weakest = source
-  }
-  return weakest
-}
-
-/** 把若干模型桶并成一天：调用 / tokens 相加，金额按逐币种小计合并，来源取最弱那一格。 */
-function mergedDayOf(models: ModelSummary[], date: string, provider: string): ChannelDailySummary {
-  const costsByCurrency: Record<string, number> = {}
-  const sources: CostSource[] = []
-  let calls = 0
-  let inputTokens = 0
-  let outputTokens = 0
-  let cacheReadTokens = 0
-  let cacheWriteTokens = 0
-  let reasoningTokens = 0
-  let cost = 0
-  let partial = false
-  for (const model of models) {
-    calls += model.calls
-    inputTokens += model.inputTokens
-    outputTokens += model.outputTokens
-    cacheReadTokens += model.cacheReadTokens
-    cacheWriteTokens += model.cacheWriteTokens
-    reasoningTokens += model.reasoningTokens
-    if (typeof model.cost === 'number' && Number.isFinite(model.cost)) cost += model.cost
-    for (const [currency, amount] of Object.entries(model.costsByCurrency ?? {})) {
-      if (typeof amount === 'number' && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount
-    }
-    if (model.costSource !== undefined) sources.push(model.costSource)
-    if (model.partial === true) partial = true
-  }
-  const costSource = weakSourceOf(sources)
-  return {
-    date,
-    provider,
-    calls,
-    inputTokens,
-    outputTokens,
-    cacheReadTokens,
-    cacheWriteTokens,
-    reasoningTokens,
-    cost,
-    models,
-    ...(Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {}),
-    ...(costSource === null ? {} : { costSource }),
-    ...(partial ? { partial: true } : {}),
-  }
-}
-
-/** 范围合计：由过滤后的逐日行相加；`cacheSaved` 无法从模型桶反推，不给（界面显示 —，不编）。 */
-function totalsOfDays(days: ChannelDailySummary[], date: string): UsageTotals {
-  const costsByCurrency: Record<string, number> = {}
-  const sources: CostSource[] = []
-  let calls = 0
-  let inputTokens = 0
-  let outputTokens = 0
-  let cacheReadTokens = 0
-  let cacheWriteTokens = 0
-  let reasoningTokens = 0
-  let cost = 0
-  let partial = false
-  for (const day of days) {
-    calls += day.calls
-    inputTokens += day.inputTokens
-    outputTokens += day.outputTokens
-    cacheReadTokens += day.cacheReadTokens
-    cacheWriteTokens += day.cacheWriteTokens
-    reasoningTokens += day.reasoningTokens
-    cost += day.cost
-    for (const [currency, amount] of Object.entries(day.costsByCurrency ?? {})) {
-      if (typeof amount === 'number' && Number.isFinite(amount)) costsByCurrency[currency] = (costsByCurrency[currency] ?? 0) + amount
-    }
-    if (day.costSource !== undefined) sources.push(day.costSource)
-    if (day.partial === true) partial = true
-  }
-  const costSource = weakSourceOf(sources)
-  return {
-    date,
-    calls,
-    inputTokens,
-    outputTokens,
-    cacheReadTokens,
-    cacheWriteTokens,
-    reasoningTokens,
-    cost,
-    ...(Object.keys(costsByCurrency).length > 0 ? { costsByCurrency } : {}),
-    ...(costSource === null ? {} : { costSource }),
-    ...(partial ? { partial: true } : {}),
-  }
-}
-
-/** 多选筛选里「未归入工作区」项目的值：空串被 `selectionOf` 当成「全部」，所以用固定 sentinel 表示。 */
-export const ORPHAN_PROJECT_VALUE = '__orphan__'
-
-/**
- * 项目筛选的取值集合：未归入工作区的行（`workspace` 为空）用 sentinel，其余用 workspace + 覆盖目录。
- * 通道 / 模型 / 会话三个 Tab 都用它，保证同一个项目在各处命中同一批行。
- */
-export function projectFilterValuesOf(workspace: string | null | undefined, paths: readonly string[] | undefined): string[] {
-  const self = workspace === undefined || workspace === null || workspace === '' ? ORPHAN_PROJECT_VALUE : workspace
-  return [self, ...(paths ?? [])]
-}
-
-/**
- * 按维度过滤 `/usage`：逐日只留命中的模型桶，当天合计与范围合计都按剩下的桶重算（口径一致）。
- * `hours`（按时段）没有模型 / 通道维度，保持原样、不二次聚合。
- */
-function filterUsageOf(usage: UsageResponse | null | undefined, keep: (model: ModelSummary) => boolean): UsageResponse | null {
-  const raw = usage ?? null
-  if (raw === null) return null
-  const days: ChannelDailySummary[] = []
-  for (const day of raw.days) {
-    const models = day.models.filter(keep)
-    if (models.length === 0) continue
-    days.push(mergedDayOf(models, day.date, day.provider))
-  }
-  return { ...raw, days, totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? '') }
-}
-
-/**
- * 按通道多选过滤（值存逗号分隔串，空串 = 全部；通道维度只在模型桶的 `provider` 上）。
- * 页头把整段选中的通道一起下发，服务端 `/usage` 固定取全量，过滤在客户端做。
- */
-export function filterUsageByChannels(usage: UsageResponse | null | undefined, channelFilter: string | undefined): UsageResponse | null {
-  const raw = usage ?? null
-  const selected = selectionOf(channelFilter)
-  if (raw === null || selected.length === 0) return raw
-  return filterUsageOf(raw, (model) => selected.includes(model.provider))
-}
-
-/** 按模型多选过滤（值同上）；多个模型先合并回逐日行再算，合计 / 图表 / 环比一起重算。 */
-export function filterUsageByModel(usage: UsageResponse | null | undefined, modelFilter: string | undefined): UsageResponse | null {
-  const raw = usage ?? null
-  const selected = selectionOf(modelFilter)
-  if (raw === null || selected.length === 0) return raw
-  return filterUsageOf(raw, (model) => selected.includes(model.model))
-}
-
 /** 环比百分比（一位小数）；缺一侧或上期为 0 时不给数字。 */
 function deltaOf(current: number | null, previous: number | null): number | null {
   if (current === null || previous === null || previous === 0) return null
   return Math.round((current - previous) / previous * 1000) / 10
 }
 
-/** 环比单元格：涨红跌绿，无上期数据给 —。 */
-function deltaCellOf(delta: number | null): ReactNode {
-  if (delta === null) return <span className={detailStyles.deltaFlat}>—</span>
-  if (Math.abs(delta) < 0.05) return <span className={detailStyles.deltaFlat}>0%</span>
-  const text = (delta > 0 ? '+' : '') + String(delta) + '%'
-  return <span className={delta > 0 ? detailStyles.deltaUp : detailStyles.deltaDown}>{text}</span>
-}
 
 function itemKeyOf(model: ModelSummary, dimension: Dimension): string {
   return dimension === 'model' ? model.provider + '|' + model.model : model.provider
 }
 
 /** 表格一行（三个维度共用同一形状，展开后是该行的模型构成）。 */
-interface DetailRow {
+export interface DetailRow {
   key: string
   date: string
   label: string
@@ -658,6 +481,8 @@ function axisTicksOf(bars: DailyBar[]): DailyBar[] {
   return Array.from({ length: AXIS_LABEL_COUNT }, (unused, index) => bars[Math.round(index * step)])
 }
 
+const RIGHT_ALIGNED = new Set<SortKey>(['calls', 'input', 'output', 'cacheRead', 'sessions', 'cost', 'delta', 'source'])
+
 export function DetailTab(props: {
   usage: UsageResponse | null
   channels: Channel[]
@@ -807,195 +632,37 @@ export function DetailTab(props: {
     <div className={detailStyles.page}>
       {/* 范围与导出统一由页头承担，本组件只渲染两张面板。 */}
 
-      <div className={detailStyles.panel}>
-        <div className={detailStyles.panelHead}>
-          <span className={detailStyles.panelTitle}>{t(granularRange ? 'detail.hourlyCost' : 'detail.dailyCost')}</span>
-          <div className={detailStyles.metricTabs}>
-            {METRIC_ORDER.map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={metric === key ? detailStyles.metricTab + ' ' + detailStyles.metricTabOn : detailStyles.metricTab}
-                aria-pressed={metric === key}
-                onClick={() => setMetric(key)}
-              >
-                {t(METRIC_LABEL_KEYS[key])}
-              </button>
-            ))}
-          </div>
-          <span className={detailStyles.panelMore}>{summaryText}</span>
-        </div>
-        {scopedUsage.days.length === 0
-          ? <div className={styles.empty}>{t('empty.noUsage')}</div>
-          : (
-            <>
-              <div
-                className={bars.length > 60 ? detailStyles.costBars + ' ' + detailStyles.costBarsDense : detailStyles.costBars}
-                role="img"
-                aria-label={t('detail.barsAria', { metric: t(METRIC_LABEL_KEYS[metric]), count: bars.length })}
-              >
-                {bars.map((bar) => (
-                  <div
-                    key={bar.date}
-                    className={detailStyles.costBarCol}
-                    onMouseMove={bar.value > 0
-                      ? (event) => tooltip.show(event, (
-                        <>
-                          <TipTitle>{bar.date}</TipTitle>
-                          <TipSub>{t(METRIC_LABEL_KEYS[metric])} <b>{bar.text}</b></TipSub>
-                        </>
-                      ), pinOf(event.currentTarget))
-                      : undefined}
-                    onMouseLeave={tooltip.hide}
-                    onTouchStart={bar.value > 0
-                      ? (event) => tooltip.show(event, (
-                        <>
-                          <TipTitle>{bar.date}</TipTitle>
-                          <TipSub>{t(METRIC_LABEL_KEYS[metric])} <b>{bar.text}</b></TipSub>
-                        </>
-                      ), pinOf(event.currentTarget))
-                      : undefined}
-                  >
-                    {bar.value > 0 && <span className={bar.peak ? detailStyles.costBarPeak : detailStyles.costBar} style={{ height: bar.height }} />}
-                  </div>
-                ))}
-              </div>
-              <div className={detailStyles.costAxis} aria-hidden="true">
-                {axisTicks.map((bar) => <span key={bar.date}>{bar.short}</span>)}
-              </div>
-            </>
-          )}
-      </div>
-
-      <div className={detailStyles.panel}>
-        <div className={detailStyles.panelHead}>
-          <span className={detailStyles.panelTitle}>{t('detail.dailyDetail')}</span>
-          <div className={detailStyles.metricTabs}>
-            {DIMENSIONS.map(([key, labelKey]) => (
-              <button
-                key={key}
-                type="button"
-                className={dimension === key ? detailStyles.metricTab + ' ' + detailStyles.metricTabOn : detailStyles.metricTab}
-                aria-pressed={dimension === key}
-                onClick={() => setDimension(key)}
-              >
-                {t(labelKey)}
-              </button>
-            ))}
-          </div>
-          <span className={detailStyles.panelMore}>{t('detail.rows', { count: sortedRows.length })}</span>
-        </div>
-        {sortedRows.length === 0
-          ? <div className={styles.empty}>{t('empty.noUsage')}</div>
-          : (
-            <div className={detailStyles.tableScroll}>
-              <table className={detailStyles.detailTable}>
-                <thead>
-                  <tr>
-                    <th scope="col" />
-                    {tableColumns.map(([key, labelKey]) => {
-                      const active = sortKey === key
-                      return (
-                        <th
-                          key={key}
-                          scope="col"
-                          aria-sort={active ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                          className={RIGHT_ALIGNED.has(key) ? detailStyles.alignRight : detailStyles.alignLeft}
-                        >
-                          <button type="button" className={detailStyles.sortBtn} onClick={() => toggleSort(key)}>
-                            {t(labelKey)}
-                            {active && <span className={detailStyles.sortDir} aria-hidden="true">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
-                          </button>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedRows.map((row) => {
-                    const open = expanded[row.key] === true
-                    return (
-                      <Fragment key={row.key}>
-                        <tr>
-                          <td>
-                            {row.models.length === 0
-                              // 没有更细的模型构成就不给展开入口，但留出同宽箭头位，避免各行文字错位
-                              ? <span className={detailStyles.expandSpacer} aria-hidden="true" />
-                              : (
-                                <button
-                                  type="button"
-                                  className={detailStyles.expandBtn}
-                                  aria-expanded={open}
-                                  aria-label={open ? t('detail.collapse') : t('detail.expand')}
-                                  onClick={() => toggleExpanded(row.key)}
-                                >
-                                  <span aria-hidden="true">{open ? '▾' : '▸'}</span>
-                                </button>
-                              )}
-                          </td>
-                          <td className={detailStyles.alignLeft}>{row.date === '' ? '' : fmtShortDate(row.date)}</td>
-                          <td className={detailStyles.alignLeft}>
-                            {row.label}
-                            {row.labelDim !== null && <span className={styles.dim}> {row.labelDim}</span>}
-                          </td>
-                          <td className={detailStyles.alignRight}>{fmtCalls(row.calls)}</td>
-                          <td className={detailStyles.alignRight}>{fmtTokens(row.input)}</td>
-                          <td className={detailStyles.alignRight}>{fmtTokens(row.output)}</td>
-                          <td className={detailStyles.alignRight}>{fmtTokens(row.cacheRead)}</td>
-                          <td className={detailStyles.alignRight}>{row.sessions === null ? '—' : fmtCalls(row.sessions)}</td>
-                          <td className={detailStyles.alignRight + ' ' + detailStyles.costCell} title={row.costText === '—' ? t('cost.noBasis') : undefined}>{row.costText}</td>
-                          {!hourlyTable && <td className={detailStyles.alignRight}>{deltaCellOf(row.delta)}</td>}
-                          {!hourlyTable && <td className={detailStyles.alignRight}>{costSourceLabelOf(row.source, t)}</td>}
-                        </tr>
-                        {open && (
-                          <tr>
-                            <td className={detailStyles.subCell} colSpan={tableColumns.length + 1}>
-                              <table className={detailStyles.subTable}>
-                                <thead>
-                                  <tr>
-                                    <th scope="col" className={detailStyles.alignLeft}>{t('detail.model')}</th>
-                                    <th scope="col" className={detailStyles.alignRight}>{t('c.calls')}</th>
-                                    <th scope="col" className={detailStyles.alignRight}>Tokens</th>
-                                    <th scope="col" className={detailStyles.alignRight}>{t('c.cost')}</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {row.models.map((model) => (
-                                    <tr key={model.provider + '|' + model.model}>
-                                      <td className={detailStyles.alignLeft}>
-                                        {model.model}
-                                        <span className={styles.dim}> · {displayNameOf(channels, model.provider)}</span>
-                                      </td>
-                                      <td className={detailStyles.alignRight}>{fmtCalls(model.calls)}</td>
-                                      <td className={detailStyles.alignRight}>{fmtTokens(model.inputTokens + model.outputTokens + model.cacheReadTokens)}</td>
-                                      <td className={detailStyles.alignRight}>{costTextOf(model, model.costSource ?? null)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    )
-                  })}
-                  <tr className={detailStyles.totalRow}>
-                    <td />
-                    <td className={detailStyles.alignLeft}>{t('detail.total')}</td>
-                    <td className={detailStyles.alignLeft}>{t('detail.groupCount', { count: groupCount })}</td>
-                    <td className={detailStyles.alignRight}>{fmtCalls(safeTotals.calls)}</td>
-                    <td className={detailStyles.alignRight}>{fmtTokens(safeTotals.inputTokens)}</td>
-                    <td className={detailStyles.alignRight}>{fmtTokens(safeTotals.outputTokens)}</td>
-                    <td className={detailStyles.alignRight}>{fmtTokens(safeTotals.cacheReadTokens)}</td>
-                    <td className={detailStyles.alignRight}>{totalCostText}</td>
-                    <td className={detailStyles.alignRight}>{deltaCellOf(totalDelta)}</td>
-                    <td className={detailStyles.alignRight}>—</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-      </div>
-    </div>
+      <DetailBarsPanel
+        titleKey={granularRange ? 'detail.hourlyCost' : 'detail.dailyCost'}
+        metricLabelKey={METRIC_LABEL_KEYS[metric]}
+        metrics={METRIC_ORDER.map((key) => ({ key, labelKey: METRIC_LABEL_KEYS[key] }))}
+        metric={metric}
+        onMetric={(key) => setMetric(key as MetricKey)}
+        summaryText={summaryText}
+        bars={bars}
+        axisTicks={axisTicks}
+        tooltip={props.tooltip}
+        pinOf={pinOf}
+        empty={scopedUsage.days.length === 0}
+      />
+      <DetailTablePanel
+        dimensions={DIMENSIONS}
+        dimension={dimension}
+        onDimension={(key) => setDimension(key as Dimension)}
+        sortedRows={sortedRows}
+        tableColumns={tableColumns}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onToggleSort={(key) => toggleSort(key as SortKey)}
+        expanded={expanded}
+        onToggleExpanded={toggleExpanded}
+        hourlyTable={hourlyTable}
+        groupCount={groupCount}
+        safeTotals={safeTotals}
+        totalCostText={totalCostText}
+        totalDeltaCell={deltaCellOf(totalDelta)}
+        rightAligned={RIGHT_ALIGNED}
+        channels={channels}
+      />    </div>
   )
 }

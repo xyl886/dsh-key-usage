@@ -191,14 +191,92 @@ const SCHEMES: Record<string, Scheme> = {
 }
 
 /** provider id → 方案 id（事件里的 provider 可能是路由名，先取末段）。 */
+/**
+ * 配额方案识别：以 baseURL 端点为准（provider 名只是展示/路由别名）。
+ * - 已知官方端点：host + 可选路径前缀 → scheme id；
+ * - 只覆盖有官方余额 / 窗口接口的厂商；其余返回 null，界面显示「无」；
+ * - baseURL 缺失时才回退到精确 provider 别名（老配置兼容），不做名字模糊/前缀匹配。
+ */
+interface EndpointRule {
+  schemeId: string
+  host: string
+  /** 路径前缀（空 = 该 host 下都算）；用于区分同一 host 的不同产品线。 */
+  pathPrefix: string
+}
+
+const ENDPOINT_RULES: EndpointRule[] = [
+  // OpenCode Go：内置通道用 /inference/go，社区/自定义通道常见 /zen/go
+  { schemeId: 'opencode-go', host: 'opencode.ai', pathPrefix: '/zen/go' },
+  { schemeId: 'opencode-go', host: 'opencode.ai', pathPrefix: '/inference/go' },
+  { schemeId: 'deepseek-official', host: 'api.deepseek.com', pathPrefix: '' },
+  { schemeId: 'openrouter', host: 'openrouter.ai', pathPrefix: '/' },
+  { schemeId: 'moonshotai', host: 'api.moonshot.cn', pathPrefix: '' },
+  { schemeId: 'moonshotai', host: 'api.moonshot.ai', pathPrefix: '' },
+  // Kimi Coding 的余额接口与 Moonshot 同一套路径；未命中时服务端按 bad-json 降级
+  { schemeId: 'moonshotai', host: 'api.kimi.com', pathPrefix: '' },
+  { schemeId: 'zai', host: 'api.z.ai', pathPrefix: '' },
+  { schemeId: 'zai', host: 'open.bigmodel.cn', pathPrefix: '' },
+]
+
+/** baseURL 缺失时的精确别名（含历史命名）；不做前缀/模糊匹配。 */
+const PROVIDER_ALIASES: Record<string, string> = {
+  'opencode-go': 'opencode-go',
+  opencode: 'opencode-go',
+  'deepseek-official': 'deepseek-official',
+  deepseek: 'deepseek-official',
+  openrouter: 'openrouter',
+  moonshotai: 'moonshotai',
+  'moonshotai-cn': 'moonshotai',
+  kimi: 'moonshotai',
+  'kimi-coding': 'moonshotai',
+  zai: 'zai',
+  'zai-coding-cn': 'zai',
+}
+
+/** 规范化 baseURL：只保留小写 host 与以 / 开头的 path；非法 URL 返回 null。 */
+function endpointOf(baseURL: string | null): { host: string; path: string } | null {
+  if (baseURL === null || baseURL.trim() === '') return null
+  try {
+    const url = new URL(baseURL)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    const path = url.pathname === '' ? '/' : url.pathname
+    return { host: url.hostname.toLowerCase(), path }
+  } catch {
+    return null
+  }
+}
+
+function ruleMatches(rule: EndpointRule, endpoint: { host: string; path: string }): boolean {
+  if (rule.host !== endpoint.host && !endpoint.host.endsWith('.' + rule.host)) return false
+  return rule.pathPrefix === '' || endpoint.path.startsWith(rule.pathPrefix)
+}
+
+/**
+ * 通道 → 配额方案。
+ * 端点命中优先（路径前缀最长优先），其次才是精确 provider 别名（仅 baseURL 缺失时）。
+ */
+/** 精确别名：先整串，再看路由最后一段（pi-ai/opencode → opencode）；不做模糊匹配。 */
+function aliasOf(provider: string): string | null {
+  const key = provider.trim().toLowerCase()
+  const tail = key.includes('/') ? key.slice(key.lastIndexOf('/') + 1) : key
+  return PROVIDER_ALIASES[key] ?? PROVIDER_ALIASES[tail] ?? null
+}
+
+export function schemeOf(channel: { provider: string; baseURL: string | null }): string | null {
+  const endpoint = endpointOf(channel.baseURL)
+  if (endpoint !== null) {
+    const matches = ENDPOINT_RULES.filter((rule) => ruleMatches(rule, endpoint))
+    matches.sort((first, second) => second.pathPrefix.length - first.pathPrefix.length)
+    if (matches.length > 0) return matches[0].schemeId
+    // 有 baseURL 但不在已知官方端点：不猜；即使 provider 名叫 opencode-go 也不查（可能指向别处）
+    return null
+  }
+  return aliasOf(channel.provider)
+}
+
+/** 兼容旧调用：只按 provider 名（无 baseURL）判定，内部用于 baseURL 缺失的场景。 */
 export function schemeIdOf(provider: string): string | null {
-  const tail = provider.includes('/') ? provider.slice(provider.lastIndexOf('/') + 1) : provider
-  if (tail === 'opencode-go' || tail === 'opencode') return 'opencode-go'
-  if (tail === 'deepseek-official' || tail === 'deepseek') return 'deepseek-official'
-  if (tail === 'openrouter') return 'openrouter'
-  if (tail === 'moonshotai' || tail === 'moonshotai-cn' || tail === 'kimi' || tail === 'kimi-coding') return 'moonshotai'
-  if (tail === 'zai' || tail === 'zai-coding-cn') return 'zai'
-  return null
+  return aliasOf(provider)
 }
 
 export interface CredentialResolver {
@@ -267,7 +345,7 @@ export function createLiveQuotaService(
 
   async function refresh(channels: ChannelInfo[]): Promise<Map<string, LiveQuota>> {
     const targets = channels
-      .map((channel) => ({ channel, schemeId: schemeIdOf(channel.provider) }))
+      .map((channel) => ({ channel, schemeId: schemeOf(channel) }))
       .filter((entry): entry is { channel: ChannelInfo; schemeId: string } => entry.schemeId !== null)
     const results = await Promise.all(targets.map(async ({ channel, schemeId }) => {
       const apiKey = channel.apiKeyEnv === null ? '' : await resolver.resolveCredential(channel.apiKeyEnv)

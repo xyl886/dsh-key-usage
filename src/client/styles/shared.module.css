@@ -111,8 +111,6 @@
   outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff);
   outline-offset: 2px;
 }
-.table tr.clickable { cursor: pointer; }
-.table tr.clickable:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .07)); }
 
 .statusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .dim { color: var(--dsw-alias-label-tertiary, #67676f); }

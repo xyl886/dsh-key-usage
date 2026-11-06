@@ -11,11 +11,14 @@ import { PLUGIN_REPO_URL } from './core/pricing.ts'
 import { TooltipView, useTooltip } from './core/tooltip.tsx'
 import { DateRangePicker } from './components/DateRangePicker.tsx'
 import { MultiSelect } from './components/MultiSelect.tsx'
-import { Button } from './components/ui/Button.tsx'
+import { UsageHead } from './components/UsageHead.tsx'
+import { UsageFilters } from './components/UsageFilters.tsx'
+import { TABS, UsageTabs } from './components/UsageTabs.tsx'
 import { Dialog } from './components/ui/Dialog.tsx'
 import { SettingsDialog, type SettingsTab } from './components/SettingsDialog.tsx'
 import { OverviewTab } from './tabs/OverviewTab.tsx'
-import { DetailTab, ORPHAN_PROJECT_VALUE, filterUsageByChannels, type RangeKey } from './tabs/DetailTab.tsx'
+import { DetailTab, type RangeKey } from './tabs/DetailTab.tsx'
+import { ORPHAN_PROJECT_VALUE, filterUsageByChannels } from './core/usage-scope.ts'
 import { DistributionTab } from './tabs/DistributionTab.tsx'
 import { QuotaTab } from './tabs/QuotaTab.tsx'
 import { SessionsTab } from './tabs/SessionsTab.tsx'
@@ -42,27 +45,11 @@ import styles from './styles/shared.module.css'
 type TabId = 'quota' | 'overview' | 'detail' | 'distribution' | 'sessions' | 'tools' | 'words'
 
 /** 单页顺序：额度在最前（最先想知道「还剩多少」），其余按「总量 → 明细 → 结构 → 会话」展开。 */
-const TABS: Array<[TabId, string]> = [
-  ['quota', 'tab.quota'],
-  ['overview', 'tab.overview'],
-  ['detail', 'tab.detail'],
-  ['distribution', 'tab.distribution'],
-  ['sessions', 'tab.sessions'],
-  ['tools', 'tab.tools'],
-  ['words', 'tab.words'],
-]
 
 /** 滚动式下要一次性取的段（不取 usage：它按范围单独请求）。 */
 const ALL_SECTIONS = ['channels', 'overview', 'heatmap', 'quota', 'sessions', 'projects', 'models', 'prompts', 'tools']
 
 /** 页级范围：与明细同一套 RangeKey（90 天按 90 天算，'total' = 全部）。 */
-const RANGES: Array<[RangeKey, string]> = [
-  ['today', 'r.today'],
-  ['week', 'r.week'],
-  ['month', 'r.month'],
-  ['quarter', 'r.90days'],
-  ['total', 'r.total'],
-]
 
 /** 刷新周期选项（秒，0 = 关闭）。 */
 const REFRESH_OPTIONS = [0, 10, 30, 60, 300]
@@ -600,146 +587,54 @@ export function KeyUsageSection() {
   return (
     <div className={styles.section}>
       <div className={styles.stickyHead}>
-      <div className={styles.pageHead}>
-        <h1 className={styles.pageTitle}>{t('app.title')}</h1>
-        <span className={styles.rowSpacer} />
-        <span className={styles.toolbarGroup}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={() => { setSettingsTab('general'); setShowSettings(true) }}
-            aria-label={t('action.settings')}
-            title={t('action.settings')}
-          >
-            {updateInfo?.hasUpdate === true && <span className={styles.badgeDot} aria-hidden="true" />}
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-              <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
-              <path fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4" />
-            </svg>
-          </button>
-          <a className={styles.ghLink} href={PLUGIN_REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
-              <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-            </svg>
-          </a>
-          <select
-            className={styles.refreshSelect}
-            value={refreshSeconds}
-            onChange={(event) => setRefreshSeconds(Number(event.target.value))}
-            aria-label={t('filter.refreshCycle')}
-            title={t('filter.refreshCycle')}
-          >
-            {REFRESH_OPTIONS.map((seconds) => (
-              <option key={seconds} value={seconds}>{refreshLabel(seconds)}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            disabled={loading}
-            onClick={refresh}
-            aria-label={loading ? t('action.refreshing') : t('action.refresh')}
-            aria-busy={loading}
-          >
-            <span className={loading ? styles.refreshIconSpin : styles.refreshIcon} aria-hidden="true">↻</span>
-          </button>
-        </span>
-      </div>
+      <UsageHead
+        hasUpdate={updateInfo?.hasUpdate === true}
+        onOpenSettings={() => { setSettingsTab('general'); setShowSettings(true) }}
+        ghUrl={PLUGIN_REPO_URL}
+        refreshSeconds={refreshSeconds}
+        onRefreshSecondsChange={setRefreshSeconds}
+        refreshOptions={REFRESH_OPTIONS}
+        refreshLabel={refreshLabel}
+        loading={loading}
+        onRefresh={refresh}
+      />
 
-      <div className={styles.toolbarRow}>
-        <span className={styles.toolbarGroup}>
-          <span className={styles.rangeTabs}>
-            {RANGES.map(([key, labelKey]) => (
-              <button key={key} className={range === key ? styles.rangeTabActive : styles.rangeTab} onClick={() => setRange(key)}>{t(labelKey)}</button>
-            ))}
-          </span>
-          <DateRangePicker
-            from={range === 'custom' ? customFrom : bounds.from}
-            to={range === 'custom' ? customTo : bounds.to}
-            onChange={(from, to) => { setCustomFrom(from); setCustomTo(to); setRange('custom') }}
-            active={range === 'custom'}
-          />
-        </span>
-        <span className={styles.rowSpacer} />
-        <label className={styles.modeSwitch} title={t('section.modeHint')}>
-          <input type="checkbox" checked={!paged} onChange={(event) => setPaged(!event.target.checked)} />
-          {paged ? t('section.paged') : t('section.scroll')}
-        </label>
-        <button
-          type="button"
-          className={styles.resetBtn}
-          disabled={!filtersActive}
-          onClick={resetFilters}
-          title={t('action.resetFilters')}
-          aria-label={t('action.resetFilters')}
-        >{t('action.resetFilters')}</button>
-        <span className={styles.exportMenu} ref={exportMenuRef}>
-          <Button
-            size="sm"
-            className={styles.headBtn}
-            disabled={scopedUsage === null && sessions === null}
-            onClick={() => setExportOpen((previous) => !previous)}
-            ariaLabel={t('action.export')}
-            title={t('action.export')}
-          >{t('action.export')} ▾</Button>
-          {exportOpen && (
-            <span className={styles.exportPanel} role="menu" onKeyDown={onExportMenuKeyDown}>
-              <button
-                type="button"
-                role="menuitem"
-                ref={(element) => { exportItemRefs.current[0] = element }}
-                className={styles.exportItem}
-                disabled={scopedUsage === null}
-                onClick={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage, range); setExportOpen(false) }}
-              >{t('action.exportUsage')}</button>
-              <button
-                type="button"
-                role="menuitem"
-                ref={(element) => { exportItemRefs.current[1] = element }}
-                className={styles.exportItem}
-                disabled={sessions === null}
-                onClick={() => { if (sessions !== null) exportSessionsCsv(sessions); setExportOpen(false) }}
-              >{t('action.exportSessions')}</button>
-            </span>
-          )}
-        </span>
-      </div>
+      <UsageFilters
+        range={range}
+        onRangeChange={setRange}
+        customFrom={customFrom}
+        customTo={customTo}
+        bounds={bounds}
+        onCustomRange={(from, to) => { setCustomFrom(from); setCustomTo(to); setRange('custom') }}
+        paged={paged}
+        onPagedChange={setPaged}
+        filtersActive={filtersActive}
+        onReset={resetFilters}
+        scopedUsage={scopedUsage}
+        sessions={sessions}
+        exportOpen={exportOpen}
+        onExportToggle={() => setExportOpen((previous) => !previous)}
+        onExportMenuKeyDown={onExportMenuKeyDown}
+        exportMenuRef={exportMenuRef}
+        exportItemRefs={exportItemRefs}
+        onExportUsage={() => { if (scopedUsage !== null) exportUsageCsv(scopedUsage, range); setExportOpen(false) }}
+        onExportSessions={() => { if (sessions !== null) exportSessionsCsv(sessions); setExportOpen(false) }}
+      />
 
-      <div className={styles.toolbarRow}>
-        <div className={styles.tabBar}>
-          {TABS.map(([tabId, labelKey]) => (
-            <button key={tabId} className={activeTab === tabId ? styles.active : ''} onClick={() => pickSection(tabId)}>{t(labelKey)}</button>
-          ))}
-        </div>
-        <span className={styles.rowSpacer} />
-        <MultiSelect
-          usageOf={(value) => channelUsage.get(value) ?? 0}
-          options={channelOptions}
-          selected={selectionOf(channelFilter)}
-          onChange={(next) => setChannelFilter(next.join(','))}
-          allLabel={t('s.allChannels')}
-          ariaLabel={t('filter.channel')}
-          searchLabel={t('filter.searchChannel')}
-        />
-        <MultiSelect
-          usageOf={(value) => projectUsage.get(value) ?? 0}
-          options={projectOptions}
-          selected={selectionOf(projectFilter)}
-          onChange={(next) => setProjectFilter(next.join(','))}
-          allLabel={t('filter.allProjects')}
-          ariaLabel={t('filter.project')}
-          searchLabel={t('filter.searchProject')}
-        />
-        <MultiSelect
-          usageOf={(value) => modelUsage.get(value) ?? 0}
-          options={modelOptions}
-          selected={selectionOf(modelFilter)}
-          onChange={(next) => setModelFilter(next.join(','))}
-          allLabel={t('filter.allModels')}
-          ariaLabel={t('filter.model')}
-          searchLabel={t('filter.searchModel')}
-        />
-      </div>
+      <UsageTabs
+        activeTab={activeTab}
+        onPick={pickSection}
+        usage={{ channel: channelUsage, project: projectUsage, model: modelUsage }}
+        channelOptions={channelOptions}
+        projectOptions={projectOptions}
+        modelOptions={modelOptions}
+        channelFilter={channelFilter}
+        onChannelFilter={setChannelFilter}
+        projectFilter={projectFilter}
+        onProjectFilter={setProjectFilter}
+        modelFilter={modelFilter}
+        onModelFilter={setModelFilter}
+      />
       </div>
 
       <div className={styles.sections}>
@@ -812,6 +707,7 @@ export function KeyUsageSection() {
               tooltip={tooltip}
               projectFilter={projectFilter}
               modelFilter={modelFilter}
+              rangeWindow={range === 'total' ? null : bounds}
             />
           </section>
         )}

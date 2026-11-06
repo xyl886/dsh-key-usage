@@ -2,16 +2,18 @@
  * 分布：项目 × 模型（Mekko 成本占比）、缓存节省、Token 构成、通道成本；明细表默认收起。
  * 金额一律走 `currency.ts` 的收口函数；颜色只用宿主 `--dsw-alias-*` 令牌。
  */
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '../components/ui/Button.tsx'
 import { channelOf } from '../core/channels.ts'
 import { comparableMoneyOf, moneyTextOf, rowMoneyViewOf, type CostRowLike } from '../core/currency.ts'
 import { fmtTokens } from '../core/format.ts'
+import { loadModelsWindow, loadProjectsWindow } from '../core/api.ts'
+import { LogHint } from '../components/LogHint.tsx'
 import { selectionMatches, selectionOf } from '../core/filter-selection.ts'
 import { t, useT } from '../core/i18n.ts'
 import { dropEmptyRows } from '../core/rows.ts'
 import type { TooltipApi } from '../core/tooltip.tsx'
-import { projectFilterValuesOf } from './DetailTab.tsx'
+import { projectFilterValuesOf } from '../core/usage-scope.ts'
 import type {
   Channel, CostSource, CostsByCurrency, ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse,
   SessionCoverage, UsageResponse,
@@ -105,9 +107,36 @@ export function DistributionTab(props: {
   modelFilter?: string
   /** 全局通道筛选（逗号分隔多选，空串 = 全部）：模型行带 provider，可按通道再收窄。 */
   channelFilter?: string
+  /** 顶部范围窗口：非空时分布页改请求按窗口聚合的 `/models`、`/projects`（null = 全历史快照，如「全部时间」）。 */
+  rangeWindow?: { from: string; to: string } | null
 }): ReactNode {
   const t = useT()
   const [tableOpen, setTableOpen] = useState(false)
+  const windowFrom = props.rangeWindow?.from ?? null
+  const windowTo = props.rangeWindow?.to ?? null
+  /** 窗口版数据：带请求的起止，范围一变就作废（避免旧范围的数字短暂冒充新范围）。 */
+  const [rangeData, setRangeData] = useState<{
+    from: string
+    to: string
+    models: ModelsResponse | null
+    projects: ProjectsResponse | null
+    failed: boolean
+  } | null>(null)
+  useEffect(() => {
+    if (windowFrom === null || windowTo === null) { setRangeData(null); return }
+    let cancelled = false
+    Promise.all([loadModelsWindow(windowFrom, windowTo), loadProjectsWindow(windowFrom, windowTo)]).then(([models, projects]) => {
+      if (cancelled) return
+      setRangeData({ from: windowFrom, to: windowTo, models, projects, failed: models === null && projects === null })
+    })
+    return () => { cancelled = true }
+  }, [windowFrom, windowTo])
+  const windowActive = windowFrom !== null && windowTo !== null
+  const rangePending = windowActive && (rangeData === null || rangeData.from !== windowFrom || rangeData.to !== windowTo)
+  /** 窗口请求失败时回落快照全量段（与工具 / 提问页同一策略），并用一行结论提示，不静默展示错范围。 */
+  const windowFailed = windowActive && !rangePending && rangeData?.failed === true
+  const modelsData = windowActive ? (rangePending ? null : (windowFailed ? props.models : rangeData?.models ?? null)) : props.models
+  const projectsData = windowActive ? (rangePending ? null : (windowFailed ? props.projects : rangeData?.projects ?? null)) : props.projects
   const externalProject = props.projectFilter ?? ''
   const modelFilter = props.modelFilter ?? ''
   const channelFilter = props.channelFilter ?? ''
@@ -121,8 +150,8 @@ export function DistributionTab(props: {
     ? (focusWorkspace === null || selectionMatches(projectFilterValuesOf(row.workspace, row.paths), focusWorkspace))
     : selectionMatches(projectFilterValuesOf(row.workspace, row.paths), externalProject))
 
-  const projectRows = dropEmptyRows(props.projects?.rows ?? [], (row) => row.tokens).rows
-  const everyModelRow = dropEmptyRows(props.models?.rows ?? [], (row) => row.tokens).rows
+  const projectRows = dropEmptyRows(projectsData?.rows ?? [], (row) => row.tokens).rows
+  const everyModelRow = dropEmptyRows(modelsData?.rows ?? [], (row) => row.tokens).rows
   /** 通道筛选：模型行带 provider，命中所选通道才保留（三个面板的金额/占比一起重算）。 */
   const allModelRows = noChannelSelection ? everyModelRow : everyModelRow.filter((row) => selectionMatches([row.provider], channelFilter))
   /** 模型维度（缓存节省 / Token 构成 / 通道成本）按全局模型筛选收窄；金额与占比都在各自面板内重算 */
@@ -136,10 +165,11 @@ export function DistributionTab(props: {
     : scopedProjects.map((row) => projectOfModel(row, modelFilter)).filter((row): row is ProjectRow => row !== null)
   // 缓存节省的合计只能从 `/usage` 合计取；按模型筛后那份合计不可拆，宁可不给（显示 —）也不编
   const cacheUsage = noModelSelection ? (props.usage ?? null) : null
-  const coverage = props.projects?.coverage ?? props.models?.coverage
+  const coverage = projectsData?.coverage ?? modelsData?.coverage
 
   return (
     <div className={styles.page}>
+      {windowFailed && <LogHint text={t('dist.windowFallback')} />}
       {noProjectSelection && focusWorkspace !== null && (
         <div className={listStyles.focusChip}>
           {t('p.focusPrefix')}{focusWorkspace}
@@ -152,15 +182,15 @@ export function DistributionTab(props: {
         <div className={sharedStyles.warning}>{coverageTextOf(coverage)}</div>
       )}
 
-      <MekkoPanel projects={mekkoProjects} loading={props.projects === null} />
+      <MekkoPanel projects={mekkoProjects} loading={projectsData === null} />
 
       <div className={styles.grid}>
-        <CacheSavingsPanel models={modelRows} usage={cacheUsage} loading={props.models === null} />
-        <CostMixPanel models={modelRows} loading={props.models === null} />
+        <CacheSavingsPanel models={modelRows} usage={cacheUsage} loading={modelsData === null} />
+        <CostMixPanel models={modelRows} loading={modelsData === null} />
         <ChannelCostPanel
           models={modelRows}
           channels={noChannelSelection ? props.channels : props.channels.filter((channel) => selectionMatches([channel.provider], channelFilter))}
-          loading={props.models === null}
+          loading={modelsData === null}
         />
       </div>
 
@@ -176,14 +206,14 @@ export function DistributionTab(props: {
           <section>
             <div className={styles.tableTitle}>{t('dist.modelsDetails')}</div>
             <ModelsTab
-              data={props.models === null ? null : { ...props.models, rows: modelRows }}
+              data={modelsData === null ? null : { ...modelsData, rows: modelRows }}
               channels={props.channels}
             />
           </section>
           <section>
             <div className={styles.tableTitle}>{t('dist.projectsDetails')}</div>
             <ProjectsTab
-              data={props.projects === null ? null : { ...props.projects, rows: scopedProjects }}
+              data={projectsData === null ? null : { ...projectsData, rows: scopedProjects }}
               channels={props.channels}
               focusWorkspace={focusWorkspace}
               hideFocusChip

@@ -24,7 +24,7 @@ import {
   type ChannelInfo,
   type ProviderSnapshot,
 } from './data/collect.js'
-import { schemeIdOf, type LiveQuota, type LiveQuotaService, type LiveWindow } from './quota/live-quota.js'
+import { schemeOf, type LiveQuota, type LiveQuotaService, type LiveWindow } from './quota/live-quota.js'
 import {
   emptySessionDetail,
   hoursByDateOf,
@@ -38,6 +38,7 @@ import {
   type SessionLookup,
   type SessionMetaOptions,
   type SessionRow,
+  sliceSessionRecords,
 } from './data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from './data/session-meta.js'
 import {
@@ -146,6 +147,7 @@ import {
   parseMultiFilter,
   parseRatesLimit,
   parseSections,
+  parseWindow,
   partialOfProvider,
   pricingHoursByDateOf,
   pricingRowOf,
@@ -164,6 +166,8 @@ import {
   readJsonBody,
 } from './routes/helpers.js'
 export * from './routes/helpers.js'
+import { registerLogRoutes } from './routes/log-routes.js'
+import { registerMiscRoutes } from './routes/misc-routes.js'
 
 export function mountKeyUsageRoutes(
   webServer: WebServer,
@@ -467,10 +471,12 @@ export function mountKeyUsageRoutes(
     return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
   }
 
-  /** 项目用量列表。 */
-  const projectsPayload = async (limit: number, collection?: SessionCollection): Promise<Record<string, unknown>> => {
+  /** 项目用量列表；window = 顶部范围窗口（null = 全历史，保持快照段 / 默认响应形状）。 */
+  const projectsPayload = async (limit: number, collection?: SessionCollection, window: { from: string; to: string } | null = null): Promise<Record<string, unknown>> => {
     const known = knownProviders()
-    const { records, coverage } = collection ?? await sessionSource.collect()
+    const collected = collection ?? await sessionSource.collect()
+    const { coverage } = collected
+    const records = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
     const titles = workspaceSource.titles()
     const priced = projectRowsOf(records, known, sessionMeta(records.map((record) => record.id))).map((row) => {
       const costs = rowCostsOf(row.models.map(pricingRowOf))
@@ -496,14 +502,18 @@ export function mountKeyUsageRoutes(
     // 项目页与侧边栏对齐：工作区各占一行，不在工作区里的历史目录合并成一行（否则会出现侧边栏里没有的「项目」）
     const rows = collapseOrphanProjects(priced).slice(0, limit)
     // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
-    return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
+    const payload: Record<string, unknown> = { rows, coverage, priced: rows.some((row) => row.cost !== null) }
+    if (window !== null) { payload.from = window.from; payload.to = window.to }
+    return payload
   }
 
-  /** 按模型用量列表。 */
-  const modelsPayload = async (limit: number, quota: unknown, collection?: SessionCollection): Promise<Record<string, unknown>> => {
+  /** 按模型用量列表；window = 顶部范围窗口（null = 全历史，保持快照段 / 默认响应形状）。 */
+  const modelsPayload = async (limit: number, quota: unknown, collection?: SessionCollection, window: { from: string; to: string } | null = null): Promise<Record<string, unknown>> => {
     const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
     const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
-    const { records, coverage } = collection ?? await sessionSource.collect()
+    const collected = collection ?? await sessionSource.collect()
+    const { coverage } = collected
+    const records = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
     const rows = modelRowsOf(records, channels.map((channel) => channel.provider)).slice(0, limit).map((row) => {
       const costs = rowCostsOf([pricingRowOf(row)])
       const cost = sumOrNull(costs)
@@ -522,7 +532,9 @@ export function mountKeyUsageRoutes(
       }
     })
     // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
-    return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
+    const payload: Record<string, unknown> = { rows, coverage, priced: rows.some((row) => row.cost !== null) }
+    if (window !== null) { payload.from = window.from; payload.to = window.to }
+    return payload
   }
 
   /**
@@ -564,7 +576,7 @@ export function mountKeyUsageRoutes(
     }
     const providers: QuotaProviderRow[] = channels.map((channel) => {
       const liveEntry = live.get(channel.provider)
-      const supported = schemeIdOf(channel.provider) !== null
+      const supported = schemeOf(channel) !== null
       const liveOk = liveEntry !== undefined && liveEntry.ok
       const hostEntry = hostSnapshots.find((entry) => entry.provider === channel.provider) ?? null
       if (liveOk) {
@@ -906,7 +918,8 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
-      sendJson(response, 200, await projectsPayload(parseLimit(url.searchParams.get('limit'), 200)))
+      const window = parseWindow(url.searchParams.get('from'), url.searchParams.get('to'))
+      sendJson(response, 200, await projectsPayload(parseLimit(url.searchParams.get('limit'), 200), undefined, window))
     },
   })
 
@@ -917,7 +930,8 @@ export function mountKeyUsageRoutes(
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
       const view = await snapshotService.view()
-      sendJson(response, 200, await modelsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota))
+      const window = parseWindow(url.searchParams.get('from'), url.searchParams.get('to'))
+      sendJson(response, 200, await modelsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota, undefined, window))
     },
   })
 
@@ -1156,56 +1170,6 @@ export function mountKeyUsageRoutes(
     },
   })
 
-  /** 实时汇率（USD → CNY）：只在用户动作时请求，12 小时 TTL 内吃缓存不联网；失败也恒 200 + `ok:true`。 */
-  webServer.register({
-    kind: 'exact',
-    path: '/dsh-key-usage/fx',
-    handler: async (request, response) => {
-      if (!requireLoopback(request, response)) return
-      const url = new URL(request.url ?? '/', 'http://localhost')
-      const view = await resolveFxRate({ refresh: url.searchParams.get('refresh') === '1' })
-      sendJson(response, 200, view)
-    },
-  })
-
-  /**
-   * 插件更新检查（只读）：返回 npm 上的 latest 版本与本地缓存状态。
-   * 打开插件页时由客户端调一次，服务端 24 小时节流；refresh=1 强制联网。
-   * 失败恒 200（latest 可能为 null），不把上游错误摊到界面上。
-   */
-  webServer.register({
-    kind: 'exact',
-    path: '/dsh-key-usage/update',
-    handler: async (request, response) => {
-      if (!requireLoopback(request, response)) return
-      const url = new URL(request.url ?? '/', 'http://localhost')
-      sendJson(response, 200, await resolveUpdate({ refresh: url.searchParams.get('refresh') === '1' }))
-    },
-  })
-
-  /** 忽略某个版本：写 app_meta 的 update.skipped，同版本不再提示。 */
-  webServer.register({
-    kind: 'exact',
-    path: '/dsh-key-usage/update/skip',
-    handler: async (request, response) => {
-      if (!requireLoopback(request, response)) return
-      if (request.method !== 'POST') {
-        sendJson(response, 405, { ok: false, error: 'method not allowed' })
-        return
-      }
-      const body = await readJsonBody(request)
-      const version = body !== null && typeof body === 'object' && typeof (body as { version?: unknown }).version === 'string'
-        ? (body as { version: string }).version
-        : ''
-      if (!/^\d+\.\d+\.\d+/.test(version)) {
-        sendJson(response, 200, { ok: false, error: 'version 必须是 主.次.修订' })
-        return
-      }
-      markUpdateSkipped(version)
-      sendJson(response, 200, { ok: true })
-    },
-  })
-
   /**
    * 聚合价目刷新：只在用户点面板「刷新价目」按钮时触发。
    * 先 raw 再 jsDelivr 镜像，总超时 20 秒、响应上限 12 MiB；校验不过不覆盖已有本地文件。
@@ -1225,39 +1189,5 @@ export function mountKeyUsageRoutes(
     },
   })
 
-  /**
-   * 系统日志：`GET` 回读（刷新页面后日志还在）、`POST` 批量追加 / 清空。
-   * 客户端攒约 1 秒发一批；写失败只回 `{ok:false}`，界面不因此报错（日志本身不该打断使用）。
-   */
-  webServer.register({
-    kind: 'exact',
-    path: '/dsh-key-usage/log',
-    handler: async (request, response) => {
-      if (!requireLoopback(request, response)) return
-      if (request.method === 'POST') {
-        const body = await readJsonBody(request)
-        if (body === null) {
-          sendJson(response, 200, { ok: false, error: '请求体不是合法 JSON（日志端点只收 {records:[…]} 或 {clear:true}）' })
-          return
-        }
-        if ((body as { clear?: unknown }).clear === true) {
-          sendJson(response, 200, clearLogFile())
-          return
-        }
-        const records = (body as { records?: unknown }).records
-        sendJson(response, 200, appendLogRecords(Array.isArray(records) ? records : []))
-        return
-      }
-      const url = new URL(request.url ?? '/', 'http://localhost')
-      // level / source 过滤在库里做（都有索引）：筛选时能看到 limit 之外的更早记录
-      const levelParam = url.searchParams.get('level') ?? ''
-      const sourceParam = url.searchParams.get('source') ?? ''
-      const query: LogQuery = {}
-      if (levelParam === 'info' || levelParam === 'warn' || levelParam === 'error') query.level = levelParam
-      if (sourceParam.trim() !== '') query.source = sourceParam.trim().slice(0, 32)
-    const beforeParam = Number(url.searchParams.get('before'))
-    if (Number.isFinite(beforeParam) && beforeParam > 0) query.before = beforeParam
-      sendJson(response, 200, { ok: true, records: readLogRecords(parseLimit(url.searchParams.get('limit'), 500), logFilePath(), query) })
-    },
-  })
-}
+  registerMiscRoutes(webServer)
+  registerLogRoutes(webServer)}

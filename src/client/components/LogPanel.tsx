@@ -172,7 +172,7 @@ export function LogPanel(): ReactNode {
       </div>
 
       {empty
-        ? <EmptyState title={t('log.empty')} />
+        ? <EmptyState title={t('log.empty')} kind="empty" />
         : (
           <div className={styles.listScroll} ref={listRef} onScroll={onScroll}>
             <ul className={styles.list}>
