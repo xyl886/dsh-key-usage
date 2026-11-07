@@ -3850,7 +3850,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: settings_module_css_default.rowInfo,
 											children: [
-												props.update?.current ?? "0.2.6",
+												props.update?.current ?? "0.2.7",
 												props.update?.hasUpdate === true && props.update.latest !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 													" → ",
 													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
