@@ -40,6 +40,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpiUnit { font-size: var(--ov-body); font-weight: 500; color: var(--dsw-alias-label-tertiary, #67676f); margin-left: 1px; }
+.kpiNote { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 12px; line-height: 14px; margin-top: 2px; }
 /* 涨红跌绿（原型口径）：上升用错误色、下降用成功色 */
 
 /* ===== 面板 ===== */

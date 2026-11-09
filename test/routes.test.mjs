@@ -537,8 +537,9 @@ assert.equal(
   'model',
   '本通道没有 GLM-5.3-Flash 的价目 → 用同名模型的官方价目（内置价目知道 GLM 的厂商是 zai）',
 )
-assert.equal(sessions.body.rows[0].cost, 0, '有价目依据，但夹具用量太小、四舍五入到分后是 0.00')
-assert.deepEqual(sessions.body.rows[0].costsByCurrency, { USD: 0 }, '有依据的 0 元进币种小计（无依据的 0 元才不进）')
+// 金额内部保留 6 位小数：夹具用量很小，但不再四舍五入到分（否则小额模型会显示成「免费 / 无依据」）
+assert.ok(Math.abs(sessions.body.rows[0].cost - 0.00057) < 1e-6, '夹具用量按价目算出 0.00057 USD')
+assert.ok(Math.abs(sessions.body.rows[0].costsByCurrency.USD - 0.00057) < 1e-6, '有依据的金额进币种小计（无依据的才不进）')
 assert.equal(sessions.body.priced, true, '这份数据里有行命中了价目')
 assert.equal(sessions.body.rows[0].costMode, 'sub')
 assert.equal(sessions.body.coverage.status, 'complete')
@@ -578,8 +579,8 @@ assert.equal(projects.body.rows[0].tokens, 9200 + 440, '两次结算样本的 to
 assert.equal(projects.body.rows[0].dominantProvider, 'opencode-go')
 // 项目行成本 = 行内模型成本之和：GLM-5.3-Flash 走「同模型官方价目」（USD），夹具用量太小 → 0.00
 assert.equal(projects.body.rows[0].costSource, 'model')
-assert.equal(projects.body.rows[0].cost, 0)
-assert.deepEqual(projects.body.rows[0].costsByCurrency, { USD: 0 })
+assert.ok(Math.abs(projects.body.rows[0].cost - 0.00057) < 1e-6, '项目行金额保留 6 位小数')
+assert.ok(Math.abs(projects.body.rows[0].costsByCurrency.USD - 0.00057) < 1e-6)
 
 // 按模型：通道 + 模型聚合，口径与 /sessions 一致（tokens 不含 cacheWrite）
 const models = await callEndpoint('/dsh-key-usage/models')
@@ -598,8 +599,8 @@ assert.equal(modelRow.sessionCount, 1)
 assert.equal(modelRow.costMode, 'sub')
 // 与 /sessions 同口径：GLM-5.3-Flash 通过「同模型官方价目」拿到 Z.ai 的官方价（USD）
 assert.equal(modelRow.costSource, 'model')
-assert.equal(modelRow.cost, 0, '有价目依据，夹具用量太小、四舍五入到分后是 0.00')
-assert.deepEqual(modelRow.costsByCurrency, { USD: 0 })
+assert.ok(Math.abs(modelRow.cost - 0.00057) < 1e-6, '模型行金额保留 6 位小数（不四舍五入到分）')
+assert.ok(Math.abs(modelRow.costsByCurrency.USD - 0.00057) < 1e-6)
 assert.equal(models.body.coverage.status, 'complete')
 assert.equal(models.body.priced, true)
 
@@ -608,6 +609,42 @@ const limited = await callEndpoint('/dsh-key-usage/models?limit=0')
 assert.equal(limited.body.rows.length, 1, 'limit 非法时回落默认值')
 const loopbackOnly = await callEndpoint('/dsh-key-usage/models', '10.0.0.7')
 assert.equal(loopbackOnly.status, 403, '按模型端点同样只允许回环')
+
+// ===== 顶部筛选联动：项目 / 模型 / 通道参数与 /hourly =====
+{
+  // 项目筛选下台账没有 workspace 维度：只剩会话事件估算，且明确标 officialIncomplete
+  const projectUsage = await callEndpoint('/dsh-key-usage/usage?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay + '&project=' + encodeURIComponent('D:\\EasyJob'))
+  assert.equal(projectUsage.body.totals.officialIncomplete, true, '项目筛选下官方账单不完整要标出来')
+  assert.equal(projectUsage.body.totals.estimated, true, '只剩估算天')
+  const projectDates = projectUsage.body.days.map((day) => day.date)
+  assert.ok(projectDates.includes(sessionOnlyDay), '会话补位的今天在')
+  assert.ok(projectUsage.body.totals.unpricedTokens >= 0)
+  for (const day of projectUsage.body.days) assert.equal(day.estimated, true, '项目筛选下所有天都是估算口径')
+  assert.deepEqual(projectUsage.body.totals.officialCostByCurrency, {}, '没有官方台账天，官方金额为空')
+
+  // 通道 / 模型参数：不命中的筛选返回空行，不做模糊匹配
+  const filteredProjects = await callEndpoint('/dsh-key-usage/projects?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay + '&model=GLM-5.3-Flash')
+  assert.equal(filteredProjects.body.rows.length, 1, '模型筛选保留命中行')
+  assert.equal(filteredProjects.body.rows[0].tokens, 9640, '行内 tokens 也要按筛选重算（不是全量）')
+  const emptyProjects = await callEndpoint('/dsh-key-usage/projects?provider=nope')
+  assert.equal(emptyProjects.body.rows.length, 0, '不存在的通道 → 空行')
+  const emptyModels = await callEndpoint('/dsh-key-usage/models?model=nope')
+  assert.equal(emptyModels.body.rows.length, 0, '不存在的模型 → 空行')
+
+  // 订阅制通道：金额仍按量估算，但行上要能标出来
+  const subSessions = await callEndpoint('/dsh-key-usage/sessions')
+  assert.equal(subSessions.body.rows[0].subEstimate, true, '订阅制通道的估算金额标 subEstimate')
+
+  // /hourly：跟随窗口与筛选，返回 7×24 两套矩阵
+  const hourly = await callEndpoint('/dsh-key-usage/hourly?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay)
+  assert.deepEqual([hourly.body.hourly.length, hourly.body.hourlyMetrics.length], [7, 7])
+  assert.equal(hourly.body.hourly[0].hours.length, 24)
+  const hourlyCalls = hourly.body.hourly.reduce((total, row) => total + row.hours.reduce((sum, value) => sum + value, 0), 0)
+  assert.ok(hourlyCalls > 0, '窗口内有调用数')
+  const hourlyFiltered = await callEndpoint('/dsh-key-usage/hourly?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay + '&provider=nope')
+  const filteredCalls = hourlyFiltered.body.hourly.reduce((total, row) => total + row.hours.reduce((sum, value) => sum + value, 0), 0)
+  assert.equal(filteredCalls, 0, '不存在的通道 → 矩阵全 0')
+}
 
 // 非回环一律 403
 const foreign = await callEndpoint('/dsh-key-usage/channels', '192.168.1.9')
@@ -625,11 +662,12 @@ assert.equal(spanning.body.days[2].inputTokens, 400, '会话补齐的那天带�
 assert.deepEqual(spanning.body.days[0].costsByCurrency, { CNY: 0 }, '台账金额带台账币种（该通道无内置价目 → 基准 CNY）')
 assert.equal(spanning.body.days[0].models[0].costSource, 'official')
 assert.deepEqual(spanning.body.days[0].models[0].costsByCurrency, { CNY: 0 })
-assert.deepEqual(spanning.body.days[2].costsByCurrency, { USD: 0 }, '会话天按「同模型官方价目」算（GLM-5.3-Flash → zai）')
-assert.deepEqual(spanning.body.days[2].models[0].costsByCurrency, { USD: 0 })
+assert.ok(Math.abs(spanning.body.days[2].costsByCurrency.USD - 0.00008) < 1e-6, '会话天按「同模型官方价目」算（GLM-5.3-Flash → zai，内部保留 6 位小数）')
+assert.ok(Math.abs(spanning.body.days[2].models[0].costsByCurrency.USD - 0.00008) < 1e-6)
 assert.equal(spanning.body.days[2].models[0].costSource, 'model')
-assert.equal(spanning.body.totals.cost, 0)
-assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两个币种各 0 元：台账天 CNY + 会话天 USD')
+assert.ok(Math.abs(spanning.body.totals.cost - 0.00008) < 1e-6)
+assert.deepEqual(Object.keys(spanning.body.totals.costsByCurrency).sort(), ['CNY', 'USD'], '两个币种分开：台账天 CNY + 会话天 USD')
+assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
 
 // ===== 单会话详情端点 /session：只折一个会话、404 / 403 / 降级、标题过滤、模型构成截断 =====
 {
@@ -720,10 +758,10 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
   assert.equal(session.models[0].sharePercent, 100)
   // GLM-5.3-Flash 走「同模型官方价目」（zai，USD）；夹具用量太小 → 0.00，但来源与币种都要如实给出
   assert.equal(session.models[0].costSource, 'model')
-  assert.equal(session.models[0].cost, 0)
-  assert.deepEqual(session.models[0].costsByCurrency, { USD: 0 })
-  assert.equal(session.cost, 0)
-  assert.deepEqual(session.costsByCurrency, { USD: 0 })
+  assert.ok(Math.abs(session.models[0].cost - 0.00084) < 1e-6, '详情金额保留 6 位小数')
+  assert.ok(Math.abs(session.models[0].costsByCurrency.USD - 0.00084) < 1e-6)
+  assert.ok(Math.abs(session.cost - 0.00084) < 1e-6)
+  assert.ok(Math.abs(session.costsByCurrency.USD - 0.00084) < 1e-6)
   assert.equal(session.costSource, 'model')
   assert.equal(detail.body.priced, true)
 
@@ -827,8 +865,8 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     'savingsByCurrency', 'savingsDetail', 'to', 'unpricedModels',
   ])
   // 近 30 天覆盖度含「台账两天 + 会话补齐的今天」：GLM 三段用量按同模型官方价目（USD）累加
-  assert.deepEqual(pricing.body.coverage.costByCurrency, { USD: 0.0016 }, '命中价目的行按币种累加')
-  assert.deepEqual(pricing.body.coverage.savingsByCurrency, { USD: 0.0029 })
+  assert.deepEqual(pricing.body.coverage.costByCurrency, { USD: 0.00155 }, '命中价目的行按币种累加（内部 6 位小数，不再逐行四舍五入到分）')
+  assert.deepEqual(pricing.body.coverage.savingsByCurrency, { USD: 0.00288 })
   assert.equal(pricing.body.coverage.savingsDetail.length, 1)
   assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.from), true)
   assert.equal(/^\d{4}-\d{2}-\d{2}$/.test(pricing.body.coverage.to), true)
@@ -853,6 +891,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/channels',
     '/dsh-key-usage/fx',
     '/dsh-key-usage/heatmap',
+    '/dsh-key-usage/hourly',
     '/dsh-key-usage/log',
     '/dsh-key-usage/models',
     '/dsh-key-usage/pricing',
@@ -870,7 +909,7 @@ assert.deepEqual(spanning.body.totals.costsByCurrency, { CNY: 0, USD: 0 }, '两�
     '/dsh-key-usage/update',
     '/dsh-key-usage/update/skip',
     '/dsh-key-usage/usage',
-  ], '21 个端点 = 17 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
+  ], '22 个端点 = 18 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
 
   // /update：npm dist-tags 桩 → 返回 latest；仓库内运行算 link 模式，hasUpdate 被压制（registry 模式由 update-check 单测覆盖）
   const realFetch = globalThis.fetch

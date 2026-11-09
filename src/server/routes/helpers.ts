@@ -159,11 +159,19 @@ type AnnotatedModelSummary = ModelSummary & {
   costSource: CostSource
   partial: boolean
   costsByCurrency: MoneyByCurrency
+  /** 该格没有价目依据的 tokens（有依据时为 0）。 */
+  unpricedTokens: number
 }
 export type AnnotatedDaySummary = ChannelDailySummary & {
   costSource: CostSource
   partial: boolean
   costsByCurrency: MoneyByCurrency
+  /** 这一天是不是按价目估算的（false = 台账官方成本）。 */
+  estimated: boolean
+  /** 金额里是否包含订阅制通道的按量估算。 */
+  subEstimate: boolean
+  /** 这一天没有价目依据的 tokens。 */
+  unpricedTokens: number
   models: AnnotatedModelSummary[]
 }
 
@@ -738,6 +746,12 @@ export function collapseOrphanProjects<Row extends CollapsibleProjectRow>(rows: 
     costsByCurrency: sumMoneyByCurrency(orphans.map((row) => row.costsByCurrency)),
     costSource: weakestSource(orphans.map((row) => row.costSource as CostSource)),
     partial: orphans.some((row) => row.partial === true),
+    // 合并行同样保留口径标记：未计价 tokens 求和；订阅制估算只要有一行就标
+    unpricedTokens: orphans.reduce((sum, row) => sum + ((row as { unpricedTokens?: number }).unpricedTokens ?? 0), 0),
+    subEstimate: orphans.some((row) => (row as { subEstimate?: boolean }).subEstimate === true),
+    costMode: orphans.some((row) => (row as { costMode?: string | null }).costMode === 'sub')
+      ? 'sub'
+      : (orphans[0] as { costMode?: string | null }).costMode ?? null,
   }
   return [...rows.filter((row) => row.registered), merged as unknown as Row]
 }

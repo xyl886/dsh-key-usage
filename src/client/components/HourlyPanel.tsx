@@ -25,7 +25,7 @@ export function HourlyPanel(props: {
         <div className={styles.panel}>
           <div className={styles.panelHead}>
             <b className={styles.panelTitle}>{t('overview.hourly')}</b>
-            <span className={styles.panelHint}>{t('overview.hoursLongTerm')}</span>
+            <span className={styles.panelHint}>{t('overview.hoursScope')}</span>
             <div className={styles.metricTabs}>
               {props.metrics.map(([metric, labelKey]) => (
                 <button

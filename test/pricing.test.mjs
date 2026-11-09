@@ -529,6 +529,11 @@ assert.equal(clockMinutes(900), null)
   assert.equal(matchPricedRule('deepseek-official', 'deepseek-flash').source, 'catalog')
   assert.equal(matchPricedRule('opencode-go', 'moonshot-v1-8k').source, 'model', '跨通道同名唯一 → 同模型官方价目')
   assert.equal(matchPricedRule('zzz-unknown', 'zzz-model'), null)
+  // 模型名版本尾巴（日期 / @版本 / -latest）归一到同一条价目，不因发布快照改名变「无依据」
+  assert.notEqual(catalogRuleFor('deepseek-official', 'deepseek-flash-20260101'), null, '日期后缀可归一')
+  assert.notEqual(catalogRuleFor('deepseek-official', 'deepseek-flash@2026-01'), null, '@版本可归一')
+  assert.notEqual(catalogRuleFor('deepseek-official', 'deepseek-flash-latest'), null, '-latest 可归一')
+  assert.equal(catalogRuleFor('deepseek-official', 'deepseek-flash-extra'), null, '不做模糊匹配：非版本尾巴仍然不命中')
 }
 
 // ===== 15. 错峰窗口命中（含跨午夜、按星期限定）与币种不换算 =====

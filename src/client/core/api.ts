@@ -5,6 +5,7 @@ import type {
   FxResponse,
   HeatmapDay,
   HeatmapResponse,
+  HourlyResponse,
   ModelsResponse,
   PricingRefreshResult,
   PricingResponse,
@@ -62,9 +63,23 @@ export async function loadChannels(): Promise<Channel[] | null> {
   return result === null ? null : result.channels
 }
 
-export async function loadUsage(from: string, to: string, provider: string): Promise<UsageResponse | null> {
+/** 顶部筛选的三个多选值：空串 = 不限；项目空串元素 = 「未归入工作区」。 */
+export interface UsageScopeFilter {
+  provider?: string
+  project?: string
+  model?: string
+}
+
+function scopedParams(from: string, to: string, filter: UsageScopeFilter): URLSearchParams {
   const params = new URLSearchParams({ from, to })
-  if (provider !== 'ALL') params.set('provider', provider)
+  if (filter.provider !== undefined && filter.provider !== '' && filter.provider !== 'ALL') params.set('provider', filter.provider)
+  if (filter.project !== undefined && filter.project !== '') params.set('project', filter.project)
+  if (filter.model !== undefined && filter.model !== '') params.set('model', filter.model)
+  return params
+}
+
+export async function loadUsage(from: string, to: string, provider: string, filter: UsageScopeFilter = {}): Promise<UsageResponse | null> {
+  const params = scopedParams(from, to, { ...filter, provider })
   return fetchJson<UsageResponse>('/dsh-key-usage/usage?' + params.toString())
 }
 
@@ -104,13 +119,23 @@ export function loadModels(limit = 200): Promise<ModelsResponse | null> {
   return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit))
 }
 
-/** 分布页跟随顶部范围：服务端按 `from`/`to` 把会话按天切片后重算的项目 / 模型行。 */
-export function loadProjectsWindow(from: string, to: string, limit = 200): Promise<ProjectsResponse | null> {
-  return fetchJson<ProjectsResponse>('/dsh-key-usage/projects?limit=' + String(limit) + '&from=' + from + '&to=' + to)
+/** 分布页 / 概览排行跟随顶部范围与通道、模型、项目：服务端按窗口切会话后重算。 */
+export function loadProjectsWindow(from: string, to: string, limit = 200, filter: UsageScopeFilter = {}): Promise<ProjectsResponse | null> {
+  const params = scopedParams(from, to, filter)
+  params.set('limit', String(limit))
+  return fetchJson<ProjectsResponse>('/dsh-key-usage/projects?' + params.toString())
 }
 
-export function loadModelsWindow(from: string, to: string, limit = 200): Promise<ModelsResponse | null> {
-  return fetchJson<ModelsResponse>('/dsh-key-usage/models?limit=' + String(limit) + '&from=' + from + '&to=' + to)
+export function loadModelsWindow(from: string, to: string, limit = 200, filter: UsageScopeFilter = {}): Promise<ModelsResponse | null> {
+  const params = scopedParams(from, to, filter)
+  params.set('limit', String(limit))
+  return fetchJson<ModelsResponse>('/dsh-key-usage/models?' + params.toString())
+}
+
+/** 按时段矩阵（星期 × 小时）：跟随窗口 + 通道 / 模型 / 项目筛选。 */
+export function loadHourly(from: string, to: string, filter: UsageScopeFilter = {}): Promise<HourlyResponse | null> {
+  const params = scopedParams(from, to, filter)
+  return fetchJson<HourlyResponse>('/dsh-key-usage/hourly?' + params.toString())
 }
 
 /** 工具 / 技能 / MCP 参数化端点：窗口 + 项目 / 模型多选（空串筛选值留给「未归入工作区」）。 */

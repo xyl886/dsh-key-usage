@@ -1,7 +1,8 @@
 /**
- * HTTP 路由：15 个只读 `GET` + 3 个写 `POST`（快照刷新、价目刷新、系统日志）；非本机回环一律 403。
+ * HTTP 路由：18 个只读 `GET` + 4 个写 `POST`（快照刷新、价目刷新、系统日志）；非本机回环一律 403。
  * 成本逐格取值：台账官方账单 > 通道内价目（内置价目 / 聚合价按通道别名）> 同模型官方价目 > 无依据（另有 `costSource` / `partial`
- * / `costsByCurrency` 三个并列字段）；台账缺的日期由会话事件补位（见 merge.ts）。
+ * / `costsByCurrency` / `subEstimate` / `unpricedTokens` 并列字段）；台账缺的日期由会话事件补位（见 merge.ts），
+ * 所有页面的成本都走 `data/costing.ts` 的同一份「天 × 模型」索引（逐日错峰）。
  * 外网只有三处、都由用户动作触发：余额查询（live-quota.ts）、价目刷新（model-prices.ts）、汇率（fx-rate.ts）。
  */
 import { readFileSync } from 'node:fs'
@@ -36,6 +37,7 @@ import {
   type AttributedModel,
   type SessionCollection,
   type SessionLookup,
+  type SessionUsageRecord,
   type SessionMetaOptions,
   type SessionRow,
   sliceSessionRecords,
@@ -61,6 +63,7 @@ import {
   mergeToolStats,
   mergeToolStatsInWindow,
 } from './data/tool-stats.js'
+import { buildCostIndex, hoursByDateFiltered, tallyOf, type CostIndex, type PricedCell } from './data/costing.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-store.js'
 import type { LogQuery } from './storage/db.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
@@ -78,6 +81,7 @@ import {
   matchPricedRule,
   priceRowsOf,
   ratesAt,
+  round6,
   rowCostsOf,
   summarizeCoverage,
   sumMoneyByCurrency,
@@ -209,15 +213,30 @@ export function mountKeyUsageRoutes(
    */
   const ledgerCurrencyOf = (provider: string): string => catalogProviderCurrency(provider) ?? catalogCurrency()
 
+  /** 成本索引按「会话记录数组 + 通道集合」缓存：一次构建只算一遍，各段共用同一份金额。 */
+  const costIndexCache = new WeakMap<object, { key: string; index: CostIndex }>()
+  const costIndexOf = (
+    records: Parameters<typeof buildCostIndex>[0],
+    knownProviders: string[],
+    costModeOf: ReadonlyMap<string, string>,
+  ): CostIndex => {
+    const key = knownProviders.join('|') + '#' + [...new Set(costModeOf.values())].sort().join(',')
+    const cached = costIndexCache.get(records)
+    if (cached !== undefined && cached.key === key) return cached.index
+    const index = buildCostIndex(records, knownProviders, costModeOf)
+    costIndexCache.set(records, { key, index })
+    return index
+  }
+
   /**
    * 给合并序列补成本与来源：台账天保留官方成本（official，不重算），
-   * 会话补位天逐模型按价目算（通道内价目 → 同模型官方价目），两层都不命中就是 none。
-   * @param hourlyByDate - 按天聚合的 24 小时槽（PricingUsageRow 形态）；每天用自己那天的曲线加权
+   * 会话补位天按「天 × 模型」格取统一成本索引（逐日错峰 + 逐币种小计），两层都不命中就是 none。
+   * 金额内部保留 6 位小数，展示层再收两位。
    */
   const annotateCosts = (
     days: ChannelDailySummary[],
     sessionDates: string[],
-    hourlyByDate: Map<string, PricingUsageRow[]> | null,
+    costIndex: CostIndex,
   ): AnnotatedDaySummary[] => {
     const sessionSet = new Set(sessionDates)
     return days.map((day) => {
@@ -228,46 +247,55 @@ export function mountKeyUsageRoutes(
           costSource: 'official' as CostSource,
           partial: false,
           costsByCurrency: costsByCurrencyOf([{ cost: model.cost, currency: ledgerCurrencyOf(model.provider) }]),
+          unpricedTokens: 0,
         }))
         return {
           ...day,
           costSource: 'official' as CostSource,
           partial: false,
+          estimated: false,
+          subEstimate: false,
+          unpricedTokens: 0,
           models,
           costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(models.map((model) => model.costsByCurrency)), day.cost),
         }
       }
+      const dayCells = costIndex.byDate.get(day.date) ?? []
+      const tally = tallyOf(dayCells)
       const models = day.models.map((model) => {
-        const row = dayModelPricingRow(model)
-        // 逐日取当天的小时槽与星期：错峰窗口按星期区分（周末全天 vs 工作日 9-12/14-18），
-        // 缺了星期会把工作日整天也按半价算（成本凭空减半）
-        const dayHours = hourlyByDate?.get(day.date) ?? null
-        const priced = priceRowsOf([row], {
-          hours: dayHours,
-          hoursDay: dayHours === null ? undefined : isoDayOf(new Date(day.date + 'T12:00:00')),
-        })[0]
-        const priced0 = priced.cost !== null && priced.rule !== null
-        // 价目没命中就是「无依据」：金额记 0 只是为了合计不炸，来源会标 none，界面显示 —
-        const cost = priced0 ? Math.round((priced.cost ?? 0) * 100) / 100 : 0
-        const currency = priced.rule !== null ? priced.rule.currency : ledgerCurrencyOf(model.provider)
-        const source: CostSource = priced0 ? priced.source : 'none'
+        const cell = costIndex.byDateModel.get(day.date + '|' + model.provider + '|' + model.model)
+        if (cell !== undefined) {
+          return {
+            ...model,
+            cost: cell.cost ?? 0,
+            costSource: (cell.cost === null ? 'none' : cell.source) as CostSource,
+            partial: cell.partial,
+            costsByCurrency: cell.cost === null || cell.currency === null ? {} : { [cell.currency]: round6(cell.cost) },
+            unpricedTokens: cell.unpricedTokens,
+          }
+        }
+        // 兜底路径：索引里没有这一格（理论上不会），按标准价算并标「无依据」之外的最弱来源
+        const priced = priceRowsOf([dayModelPricingRow(model)])[0]
+        const cost = priced.cost === null ? 0 : round6(priced.cost)
         return {
           ...model,
           cost,
-          costSource: source,
-          partial: priced0 ? priced.partial : false,
-          // 只有真有依据的格子才进币种小计：`none` 的 0 元不是金额，混进去会凭空造出一个币种
-          costsByCurrency: source === 'none' ? {} : costsByCurrencyOf([{ cost, currency }]),
+          costSource: (priced.cost === null ? 'none' : priced.source) as CostSource,
+          partial: priced.partial,
+          costsByCurrency: priced.cost === null || priced.rule === null ? {} : { [priced.rule.currency]: cost },
+          unpricedTokens: priced.cost === null ? model.inputTokens + model.outputTokens + model.cacheReadTokens : 0,
         }
       })
-      const dayCost = Math.round(models.reduce((total, model) => total + model.cost, 0) * 100) / 100
       return {
         ...day,
-        cost: dayCost,
-        costSource: weakestSource(models.map((model) => model.costSource)),
-        partial: models.some((model) => model.partial),
+        cost: tally.cost ?? 0,
+        costSource: tally.source,
+        partial: tally.partial,
+        estimated: true,
+        subEstimate: tally.subEstimate,
+        unpricedTokens: tally.unpricedTokens,
         models,
-        costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(models.map((model) => model.costsByCurrency)), dayCost),
+        costsByCurrency: tally.costsByCurrency,
       }
     })
   }
@@ -320,35 +348,67 @@ export function mountKeyUsageRoutes(
     }
   }
 
-  /** 使用明细：默认范围由快照物化；参数化请求走同一函数、同一份本地缓存，不另算一份。 */
-  const usagePayload = async (from: string, to: string, providerFilter: string[] | null): Promise<Record<string, unknown>> => {
+  /**
+   * 使用明细：默认范围由快照物化；参数化请求走同一函数、同一份本地缓存，不另算一份。
+   * 项目筛选时台账天无法按 workspace 拆分 → 只用会话事件估算，并置 officialIncomplete（界面标「估算」）。
+   */
+  const usagePayload = async (
+    from: string,
+    to: string,
+    providerFilter: string[] | null,
+    projectFilter: string[] | null = null,
+  ): Promise<Record<string, unknown>> => {
     const ledger = loadLedger()
     const collection = await sessionSource.collect()
-    const sessionRows = sessionDayRows(collection.records, knownProviders())
+    const channels = classifyChannels(readChannelConfig(), [])
+    const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+    const providers = channels.map((channel) => channel.provider)
+    const records = projectFilter === null
+      ? collection.records
+      : collection.records.filter((record) => projectFilter.includes(record.workspace ?? ''))
+    const sessionRows = sessionDayRows(records, providers)
       .filter((row) => providerFilter === null || providerFilter.includes(row.provider))
     const sessionDates = [...new Set(sessionRows.map((row) => row.date))].sort()
     const dayKeys = Object.keys(ledger.days).sort()
     const availableFrom = minKey(dayKeys[0], sessionDates[0]) ?? null
     const availableTo = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? null
-    const merged = mergeDailySeries(aggregateRange(ledger, from, to, providerFilter).days, sessionRows, from, to)
+    // 项目筛选下台账没有 workspace 维度：拿掉台账天，只用会话事件估算（不混算）
+    const ledgerDays = projectFilter === null ? aggregateRange(ledger, from, to, providerFilter).days : []
+    const merged = mergeDailySeries(ledgerDays, sessionRows, from, to)
     // 单日范围才提供小时细分（来自会话事件，口径与台账不同，见页脚口径说明）
-    const hours = from !== '' && from === to ? hoursOfDate(collection.records, from) : null
+    const hours = from !== '' && from === to ? hoursOfDate(records, from) : null
     // 按日期 × 小时：趋势/明细的分时视图取这里（窗口上限 120 天，避免自定义长窗口把响应撑大）
     const windowDays = from !== '' && to !== '' ? Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1 : 0
-    const hoursByDate = windowDays > 0 && windowDays <= 120 ? hourMetricsByDateOf(collection.records, from, to) : null
-    // 成本一律按天取小时槽加权（单日与多天同口径，多天不再退化成「全按高峰价」）
-    const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
+    const hoursByDate = windowDays > 0 && windowDays <= 120 ? hourMetricsByDateOf(records, from, to) : null
+    // 成本一律按「天 × 模型」格取统一索引（逐日错峰、逐币种小计）
+    const costIndex = costIndexOf(records, providers, costModeOf)
+    const days = annotateCosts(merged.days, merged.sessionDates, costIndex)
     const rawTotals = days.length > 0 ? totalsOfMerged(days) : null
-    const totalsCost = rawTotals === null ? null : Math.round(rawTotals.cost * 100) / 100
+    // 合计以「天」为准（台账天没有成本索引格，不能只用索引格求和，否则官方金额会凭空消失）
+    const officialMoney = sumMoneyByCurrency(days.filter((day) => !day.estimated).map((day) => day.costsByCurrency))
+    const estimatedMoney = sumMoneyByCurrency(days.filter((day) => day.estimated).map((day) => day.costsByCurrency))
+    const totalMoney = sumMoneyByCurrency([officialMoney, estimatedMoney])
+    const totalsCost = days.length === 0 ? null : round6(days.reduce((total, day) => total + day.cost, 0))
+    const totalsSource = days.length === 0 ? 'none' : weakestSource(days.map((day) => day.costSource))
+    const totalsPartial = days.some((day) => day.partial)
+    const totalsUnpriced = days.reduce((total, day) => total + day.unpricedTokens, 0)
+    const totalsSub = days.some((day) => day.subEstimate)
     const savings = cacheSavingsOf(days)
     return {
       days,
       totals: rawTotals === null ? null : {
         ...rawTotals,
         cost: totalsCost,
-        costSource: weakestSource(days.map((day) => day.costSource)),
-        partial: days.some((day) => day.partial),
-        costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(days.map((day) => day.costsByCurrency)), totalsCost),
+        costSource: totalsSource,
+        partial: totalsPartial,
+        costsByCurrency: totalMoney,
+        // 口径标记：估算 / 订阅制估算 / 未计价 tokens / 官方与估算拆开
+        estimated: days.some((day) => day.estimated),
+        officialIncomplete: projectFilter !== null,
+        subEstimate: totalsSub,
+        unpricedTokens: totalsUnpriced,
+        officialCostByCurrency: officialMoney,
+        estimatedCostByCurrency: estimatedMoney,
         // 缓存省钱只给范围合计：逐天 / 逐模型行不带，避免界面在错误粒度上展示
         ...savings,
       },
@@ -372,7 +432,9 @@ export function mountKeyUsageRoutes(
     const from = earliest > yearAgo ? earliest : yearAgo
     const to = maxKey(dayKeys[dayKeys.length - 1], sessionDates[sessionDates.length - 1]) ?? from
     const merged = mergeDailySeries(aggregateRange(ledger, from, to, null).days, sessionRows, from, to)
-    const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
+    const heatmapChannels = classifyChannels(readChannelConfig(), [])
+    const heatmapIndex = costIndexOf(collection.records, heatmapChannels.map((channel) => channel.provider), new Map(heatmapChannels.map((channel) => [channel.provider, channel.costMode])))
+    const days = annotateCosts(merged.days, merged.sessionDates, heatmapIndex)
     // 时段矩阵只取同一窗口内的日期：窗口外的小时槽算进来，会和 days 的数字对不上
     const hoursByDate = hoursByDateOf(collection.records)
     const inWindow = new Map([...hoursByDate].filter(([date]) => date >= from && date <= to))
@@ -407,14 +469,15 @@ export function mountKeyUsageRoutes(
     const channels = classifyChannels(readChannelConfig(), [])
     const sessionRows = sessionDayRows(collection.records, channels.map((channel) => channel.provider))
     const merged = mergeDailySeries(aggregateRange(ledger, monthFrom, today, null).days, sessionRows, monthFrom, today)
-    const days = annotateCosts(merged.days, merged.sessionDates, pricingHoursByDateOf(collection.records))
+    const costIndex = costIndexOf(collection.records, channels.map((channel) => channel.provider), new Map(channels.map((channel) => [channel.provider, channel.costMode])))
+    const days = annotateCosts(merged.days, merged.sessionDates, costIndex)
     const todaySummary = summarizeMergedByProvider(days, today, today)
     const monthSummary = summarizeMergedByProvider(days, monthFrom, today)
     const rows = channels.map((channel) => {
       const todayRow = todaySummary.find((row) => row.provider === channel.provider)
       const monthRow = monthSummary.find((row) => row.provider === channel.provider)
-      const todayCost = todayRow === undefined ? 0 : Math.round(todayRow.cost * 100) / 100
-      const monthCost = monthRow === undefined ? 0 : Math.round(monthRow.cost * 100) / 100
+      const todayCost = todayRow === undefined ? 0 : round6(todayRow.cost)
+      const monthCost = monthRow === undefined ? 0 : round6(monthRow.cost)
       const currency = ledgerCurrencyOf(channel.provider)
       return {
         provider: channel.provider,
@@ -442,6 +505,38 @@ export function mountKeyUsageRoutes(
     }
   }
 
+  /** 顶部筛选的多选值：通道 / 模型 / 项目（逗号分隔，空 = 不限）。 */
+  interface CostFilterInput {
+    providers: string[] | null
+    models: string[] | null
+    projects: string[] | null
+  }
+  const emptyFilter = (): CostFilterInput => ({ providers: null, models: null, projects: null })
+  const hasCostFilter = (filter: CostFilterInput): boolean =>
+    filter.providers !== null || filter.models !== null || filter.projects !== null
+  /** 项目筛选值：'' 表示「未归入工作区」；其余按工作区路径比对（大小写不敏感）。 */
+  const projectMatches = (filter: CostFilterInput, workspace: string | null, titles: Map<string, string>): boolean => {
+    if (filter.projects === null) return true
+    const path = (workspace ?? '').toLowerCase()
+    const registered = path !== '' && titles.has(path)
+    for (const value of filter.projects) {
+      if (value === '') { if (!registered) return true; continue }
+      if (path !== '' && value.toLowerCase() === path) return true
+    }
+    return false
+  }
+  const cellMatches = (filter: CostFilterInput, cell: { provider: string; model: string }): boolean =>
+    (filter.providers === null || filter.providers.includes(cell.provider))
+    && (filter.models === null || filter.models.includes(cell.model))
+  /** 过滤后的时代格：先按通道 / 模型筛格，项目由调用方按记录范围筛。 */
+  const scopedCells = (index: CostIndex, recordIds: Iterable<string>, filter: CostFilterInput): PricedCell[] => {
+    const kept: PricedCell[] = []
+    for (const id of recordIds) {
+      for (const cell of index.byRecord.get(id) ?? []) if (cellMatches(filter, cell)) kept.push(cell)
+    }
+    return kept
+  }
+
   /** 会话用量列表（`limit` 只影响展示条数；快照段用大 limit 物化全量）。 */
   const sessionsPayload = async (limit: number, quota: unknown, collection?: SessionCollection): Promise<Record<string, unknown>> => {
     const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
@@ -449,88 +544,164 @@ export function mountKeyUsageRoutes(
     const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
     const { records, coverage } = collection ?? await sessionSource.collect()
     const meta = sessionMeta(records.map((record) => record.id))
+    const costIndex = costIndexOf(records, known, costModeOf)
     const rows = sessionRowsOf(records, known, meta).slice(0, limit).map((row) => {
-      const costs = rowCostsOf(row.models.map(pricingRowOf))
-      const cost = costs.length === 0 ? null : sumOrNull(costs)
+      const cells = costIndex.byRecord.get(row.id) ?? []
+      const tally = tallyOf(cells)
+      const costs = row.models.map((model) => {
+        const modelTally = tallyOf(cells.filter((cell) => cell.provider === model.provider && cell.model === model.model))
+        return {
+          cost: modelTally.cost,
+          source: modelTally.source,
+          rule: null,
+          partial: modelTally.partial,
+          cacheSavings: modelTally.cacheSavings,
+          currency: Object.keys(modelTally.costsByCurrency)[0] ?? null,
+        }
+      })
       return {
         ...row,
         providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
         costMode: row.provider === null ? null : costModeOf.get(row.provider) ?? null,
-        cost,
-        costsByCurrency: alignMoneyWithCost(
-          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-          cost,
-        ),
-        costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
-        partial: costs.some((entry) => entry.partial),
+        cost: tally.cost,
+        costsByCurrency: tally.costsByCurrency,
+        costSource: tally.source,
+        partial: tally.partial,
+        unpricedTokens: tally.unpricedTokens,
+        subEstimate: tally.subEstimate,
         // 行内展开的模型构成：全量算成本（总额不受截断影响），只把长尾合并成「其它」
-        models: cappedModelRows(row, costs),
+        models: cappedModelRows(row, costs as RowCost[]),
       }
     })
     // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
     return { rows, coverage, priced: rows.some((row) => row.cost !== null) }
   }
 
-  /** 项目用量列表；window = 顶部范围窗口（null = 全历史，保持快照段 / 默认响应形状）。 */
-  const projectsPayload = async (limit: number, collection?: SessionCollection, window: { from: string; to: string } | null = null): Promise<Record<string, unknown>> => {
-    const known = knownProviders()
+  /** 项目用量列表；window = 顶部范围窗口；filter = 顶部通道 / 模型 / 项目筛选。 */
+  const projectsPayload = async (
+    limit: number,
+    collection?: SessionCollection,
+    window: { from: string; to: string } | null = null,
+    filter: CostFilterInput = emptyFilter(),
+  ): Promise<Record<string, unknown>> => {
+    const channels = classifyChannels(readChannelConfig(), [])
+    const known = channels.map((channel) => channel.provider)
+    const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
     const collected = collection ?? await sessionSource.collect()
     const { coverage } = collected
-    const records = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
+    const windowed = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
     const titles = workspaceSource.titles()
+    const records = windowed.filter((record) => projectMatches(filter, record.workspace, titles))
+    const costIndex = costIndexOf(records, known, costModeOf)
+    const idsOfWorkspace = new Map<string, string[]>()
+    for (const record of records) {
+      const path = record.workspace ?? ''
+      const bucket = idsOfWorkspace.get(path)
+      if (bucket === undefined) idsOfWorkspace.set(path, [record.id])
+      else bucket.push(record.id)
+    }
     const priced = projectRowsOf(records, known, sessionMeta(records.map((record) => record.id))).map((row) => {
-      const costs = rowCostsOf(row.models.map(pricingRowOf))
-      const cost = costs.length === 0 ? null : sumOrNull(costs)
+      const ids = idsOfWorkspace.get(row.workspace) ?? []
+      const tally = tallyOf(scopedCells(costIndex, ids, filter))
       const title = titles.get(row.workspace.toLowerCase()) ?? null
+      // 通道 / 模型筛选要同时收窄行内的 tokens 与 calls（否则会出现「金额是筛后的、Tokens 是全部的」）
+      const rowModels = filter.providers === null && filter.models === null
+        ? row.models
+        : row.models.filter((model) => (filter.providers === null || filter.providers.includes(model.provider)) && (filter.models === null || filter.models.includes(model.model)))
+      const scoped = filter.providers === null && filter.models === null
+        ? row
+        : (() => {
+          const buckets = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
+          let calls = 0
+          let tokens = 0
+          for (const model of rowModels) {
+            calls += model.calls
+            tokens += model.tokens
+            buckets.inputTokens += model.buckets.inputTokens ?? 0
+            buckets.outputTokens += model.buckets.outputTokens ?? 0
+            buckets.cacheReadTokens += model.buckets.cacheReadTokens ?? 0
+            buckets.cacheWriteTokens += model.buckets.cacheWriteTokens ?? 0
+          }
+          const sessionCount = ids.filter((id) => (costIndex.byRecord.get(id) ?? []).some((cell) => cellMatches(filter, cell))).length
+          return {
+            ...row,
+            calls,
+            tokens,
+            models: rowModels,
+            sessionCount,
+            cacheHitRate: tokens > 0 ? Math.round(buckets.cacheReadTokens / tokens * 1000) / 10 : null,
+          }
+        })()
+      const dominant = Object.entries(scoped.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null
+      const dominantMode = dominant === null ? null : costModeOf.get(dominant) ?? null
       return {
-        ...row,
+        ...scoped,
         /** 宿主工作区名（侧边栏显示名）；目录不在工作区表里时为 null。 */
         workspaceTitle: title,
         /** 这一行覆盖的目录（工作区行 = 1 个；「未归入工作区」行 = 多个）。 */
         paths: [row.workspace],
         registered: title !== null,
-        dominantProvider: Object.entries(row.providers).sort((first, second) => second[1] - first[1])[0]?.[0] ?? null,
-        cost,
-        costsByCurrency: alignMoneyWithCost(
-          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-          cost,
-        ),
-        costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
-        partial: costs.some((entry) => entry.partial),
+        dominantProvider: dominant,
+        costMode: dominantMode,
+        cost: tally.cost,
+        costsByCurrency: tally.costsByCurrency,
+        costSource: tally.source,
+        partial: tally.partial,
+        unpricedTokens: tally.unpricedTokens,
+        subEstimate: tally.subEstimate,
       }
     })
+    // 通道 / 模型筛选把一行的用量清零时，这一行不该继续占位（筛「不存在的通道」应该是空表，而不是 0 行）
+    const visibleRows = hasCostFilter(filter) ? priced.filter((row) => row.tokens > 0 || row.sessionCount > 0) : priced
     // 项目页与侧边栏对齐：工作区各占一行，不在工作区里的历史目录合并成一行（否则会出现侧边栏里没有的「项目」）
-    const rows = collapseOrphanProjects(priced).slice(0, limit)
+    const rows = collapseOrphanProjects(visibleRows).slice(0, limit)
     // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
     const payload: Record<string, unknown> = { rows, coverage, priced: rows.some((row) => row.cost !== null) }
     if (window !== null) { payload.from = window.from; payload.to = window.to }
     return payload
   }
 
-  /** 按模型用量列表；window = 顶部范围窗口（null = 全历史，保持快照段 / 默认响应形状）。 */
-  const modelsPayload = async (limit: number, quota: unknown, collection?: SessionCollection, window: { from: string; to: string } | null = null): Promise<Record<string, unknown>> => {
+  /** 按模型用量列表；window = 顶部范围窗口；filter = 顶部通道 / 模型 / 项目筛选。 */
+  const modelsPayload = async (
+    limit: number,
+    quota: unknown,
+    collection?: SessionCollection,
+    window: { from: string; to: string } | null = null,
+    filter: CostFilterInput = emptyFilter(),
+  ): Promise<Record<string, unknown>> => {
     const channels = classifyChannels(readChannelConfig(), quotaRowsOf(quota))
     const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
     const collected = collection ?? await sessionSource.collect()
     const { coverage } = collected
-    const records = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
-    const rows = modelRowsOf(records, channels.map((channel) => channel.provider)).slice(0, limit).map((row) => {
-      const costs = rowCostsOf([pricingRowOf(row)])
-      const cost = sumOrNull(costs)
-      return {
-        ...row,
-        providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
-        costMode: costModeOf.get(row.provider) ?? null,
-        // 与 /sessions 同一口径：内置官方价目 → 聚合价（通道别名）→ 同模型官方价目 → 无依据
-        cost,
-        costsByCurrency: alignMoneyWithCost(
-          costsByCurrencyOf(costs.map((entry) => ({ cost: entry.cost, currency: entry.currency }))),
-          cost,
-        ),
-        costSource: costs[0]?.source ?? 'none',
-        partial: costs[0]?.partial === true,
-      }
-    })
+    const windowed = window === null ? collected.records : sliceSessionRecords(collected.records, window.from, window.to)
+    const titles = workspaceSource.titles()
+    const records = windowed.filter((record) => projectMatches(filter, record.workspace, titles))
+    const costIndex = costIndexOf(records, channels.map((channel) => channel.provider), costModeOf)
+    const rows = modelRowsOf(records, channels.map((channel) => channel.provider))
+      .filter((row) => (filter.providers === null || filter.providers.includes(row.provider)))
+      .filter((row) => (filter.models === null || filter.models.includes(row.model)))
+      .slice(0, limit)
+      .map((row) => {
+        const cells: PricedCell[] = []
+        for (const record of records) {
+          for (const cell of costIndex.byRecord.get(record.id) ?? []) {
+            if (cell.provider === row.provider && cell.model === row.model) cells.push(cell)
+          }
+        }
+        const tally = tallyOf(cells)
+        return {
+          ...row,
+          providerLabel: channels.find((channel) => channel.provider === row.provider)?.displayName ?? row.provider,
+          costMode: costModeOf.get(row.provider) ?? null,
+          // 与 /sessions 同一口径：统一成本索引（逐日错峰、逐币种小计）
+          cost: tally.cost,
+          costsByCurrency: tally.costsByCurrency,
+          costSource: tally.source,
+          partial: tally.partial,
+          unpricedTokens: tally.unpricedTokens,
+          subEstimate: tally.subEstimate,
+        }
+      })
     // priced = 这份数据里至少有一行真的命中了价目（界面据此决定要不要提示「无价目依据」）
     const payload: Record<string, unknown> = { rows, coverage, priced: rows.some((row) => row.cost !== null) }
     if (window !== null) { payload.from = window.from; payload.to = window.to }
@@ -790,8 +961,9 @@ export function mountKeyUsageRoutes(
       const to = url.searchParams.get('to') ?? available?.availableTo ?? ''
       const providerParam = url.searchParams.get('provider')
       const providerFilter = providerParam !== null && providerParam !== '' ? providerParam.split(',').filter(Boolean) : null
+      const projectFilter = parseMultiFilter(url.searchParams.get('project'))
       // 参数化请求与快照同源：同一套聚合函数、同一份本地 mtime 缓存
-      sendJson(response, 200, await usagePayload(from, to, providerFilter))
+      sendJson(response, 200, await usagePayload(from, to, providerFilter, projectFilter))
     },
   })
 
@@ -801,6 +973,45 @@ export function mountKeyUsageRoutes(
     handler: async (request, response) => {
       if (!requireLoopback(request, response)) return
       sendJson(response, 200, await heatmapPayload())
+    },
+  })
+
+  /**
+   * 按时段矩阵（星期 × 小时）：跟随顶部范围 + 通道 / 模型 / 项目筛选。
+   * 与 /usage 的 hoursByDate 同源（会话事件），只是重新聚合到「长期画像」的坐标上。
+   */
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/hourly',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const window = parseWindow(url.searchParams.get('from'), url.searchParams.get('to'))
+      const today = dayKeyOf(new Date())
+      const from = window?.from ?? shiftedDayKey(-29)
+      const to = window?.to ?? today
+      const filter: CostFilterInput = {
+        providers: parseMultiFilter(url.searchParams.get('provider')),
+        models: parseMultiFilter(url.searchParams.get('model')),
+        projects: parseMultiFilter(url.searchParams.get('project')),
+      }
+      const channels = await channelsWithQuota()
+      const known = channels.map((channel) => channel.provider)
+      const collection = await sessionSource.collect()
+      const titles = workspaceSource.titles()
+      const records = collection.records.filter((record) => projectMatches(filter, record.workspace, titles))
+      const byDate = hoursByDateFiltered(records, known, {
+        providers: filter.providers === null ? null : new Set(filter.providers),
+        models: filter.models === null ? null : new Set(filter.models),
+      })
+      // 只统计窗口内的日期：范围切片与其它面板同口径
+      const scoped = new Map([...byDate].filter(([date]) => date >= from && date <= to))
+      sendJson(response, 200, {
+        from,
+        to,
+        hourly: weekHourlyOf(scoped),
+        hourlyMetrics: weekHourlyMetricsOf(scoped),
+      })
     },
   })
 
@@ -879,19 +1090,24 @@ export function mountKeyUsageRoutes(
           (meta.archived ?? new Set<string>()).has(normalizeSessionId(lookup.id)),
         )
         : sessionDetailOf(lookup.record, knownProviders, meta)
-      const costs = rowCostsOf(detail.models.map(pricingRowOf))
-      const models = detail.models.map((model, index) => {
-        const cost = costs[index]?.cost ?? null
+      // 详情与列表同一口径：单会话按记录建同一份成本索引（逐日错峰、逐币种小计）
+      const detailIndex = costIndexOf(lookup.record === null ? [] : [lookup.record], knownProviders, new Map(channels.map((channel) => [channel.provider, channel.costMode])))
+      const detailCells = detailIndex.cells
+      const detailTally = tallyOf(detailCells)
+      const models = detail.models.map((model) => {
+        const tally = tallyOf(detailCells.filter((cell) => cell.provider === model.provider && cell.model === model.model))
         return {
           ...model,
           providerLabel: channels.find((channel) => channel.provider === model.provider)?.displayName ?? model.provider,
-          cost,
-          costSource: costs[index]?.source ?? 'none',
-          partial: costs[index]?.partial === true,
-          costsByCurrency: costsByCurrencyOf([{ cost, currency: costs[index]?.currency ?? null }]),
+          cost: tally.cost,
+          costSource: tally.source,
+          partial: tally.partial,
+          costsByCurrency: tally.costsByCurrency,
+          unpricedTokens: tally.unpricedTokens,
+          subEstimate: tally.subEstimate,
         }
       })
-      const detailCost = costs.length === 0 ? null : sumOrNull(costs)
+      const detailCost = detailTally.cost
       sendJson(response, 200, {
         session: {
           ...detail,
@@ -899,15 +1115,17 @@ export function mountKeyUsageRoutes(
           providerLabel: detail.provider === null ? null : channels.find((channel) => channel.provider === detail.provider)?.displayName ?? detail.provider,
           costMode: detail.provider === null ? null : channels.find((channel) => channel.provider === detail.provider)?.costMode ?? null,
           cost: detailCost,
-          costsByCurrency: alignMoneyWithCost(sumMoneyByCurrency(models.map((model) => model.costsByCurrency)), detailCost),
-          costSource: costs.length === 0 ? 'none' : weakestSource(costs.map((entry) => entry.source)),
-          partial: costs.some((entry) => entry.partial),
+          costsByCurrency: detailTally.costsByCurrency,
+          costSource: detailTally.source,
+          partial: detailTally.partial,
+          unpricedTokens: detailTally.unpricedTokens,
+          subEstimate: detailTally.subEstimate,
         },
         coverage: {
           status: lookup.status === 'ok' ? 'complete' : lookup.status === 'degraded' ? 'partial' : 'unavailable',
           reason: lookup.reason,
         },
-        priced: costs.some((entry) => entry.cost !== null),
+        priced: detailTally.cost !== null,
       })
     },
   })
@@ -919,7 +1137,12 @@ export function mountKeyUsageRoutes(
       if (!requireLoopback(request, response)) return
       const url = new URL(request.url ?? '/', 'http://localhost')
       const window = parseWindow(url.searchParams.get('from'), url.searchParams.get('to'))
-      sendJson(response, 200, await projectsPayload(parseLimit(url.searchParams.get('limit'), 200), undefined, window))
+      const filter: CostFilterInput = {
+        providers: parseMultiFilter(url.searchParams.get('provider')),
+        models: parseMultiFilter(url.searchParams.get('model')),
+        projects: parseMultiFilter(url.searchParams.get('project')),
+      }
+      sendJson(response, 200, await projectsPayload(parseLimit(url.searchParams.get('limit'), 200), undefined, window, filter))
     },
   })
 
@@ -931,7 +1154,12 @@ export function mountKeyUsageRoutes(
       const url = new URL(request.url ?? '/', 'http://localhost')
       const view = await snapshotService.view()
       const window = parseWindow(url.searchParams.get('from'), url.searchParams.get('to'))
-      sendJson(response, 200, await modelsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota, undefined, window))
+      const filter: CostFilterInput = {
+        providers: parseMultiFilter(url.searchParams.get('provider')),
+        models: parseMultiFilter(url.searchParams.get('model')),
+        projects: parseMultiFilter(url.searchParams.get('project')),
+      }
+      sendJson(response, 200, await modelsPayload(parseLimit(url.searchParams.get('limit'), 200), view.sections.quota, undefined, window, filter))
     },
   })
 

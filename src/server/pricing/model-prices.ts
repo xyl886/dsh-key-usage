@@ -139,11 +139,15 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** 模型名归一：取最后一段并转小写（与 pricing-catalog 的 `normalizeModelId` 同一口径）。 */
+/** 模型名归一：取最后一段、转小写、去掉版本尾巴（与 pricing-catalog 的 `normalizeModelId` 同一口径）。 */
 function lastSegmentOf(text: string): string {
   const trimmed = text.trim()
   const slash = trimmed.lastIndexOf('/')
-  return (slash >= 0 ? trimmed.slice(slash + 1) : trimmed).toLowerCase()
+  return (slash >= 0 ? trimmed.slice(slash + 1) : trimmed)
+    .toLowerCase()
+    .replace(/@[\w.-]+$/, '')
+    .replace(/-(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/, '')
+    .replace(/-latest$/, '')
 }
 
 /** 非负有限数字才算「收录了这一档」：0 是有效价（免费），不是缺档。 */
@@ -252,6 +256,8 @@ function readCandidate(path: string, label: 'local' | 'shipped'): CandidateFile 
         output_cost_per_token: row.outputPerToken,
         cache_read_input_token_cost: row.cacheReadPerToken,
         cache_creation_input_token_cost: row.cacheWritePerToken,
+        // 本地副本必须带回厂商：否则重建后只能用键前缀当厂商，别名匹配会退化成「唯一 / 歧义」
+        ...(row.vendor === null ? {} : { litellm_provider: row.vendor }),
       }
     }
     const entries = buildEntries(raw)

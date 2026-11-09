@@ -1,7 +1,7 @@
 /**
  * 总览：KPI 卡片行 + 使用趋势（「全部」看全年热力图，其余范围看柱状图）+ 项目 / 模型排行 + 按时段热力。
  * 按原型不再列通道表：通道余额与配额在「额度与订阅」，这里只留结论。
- * KPI 口径跟随页头范围：近 30 天取 `summary` 的月列（官方账单），其余范围取 `usage.totals`（同一窗口）；
+ * KPI 口径与使用明细同源：一律取当前窗口的 `usage.totals`（估算 / 订阅制估算 / 部分未计价都带角标）；
  * 拿不到的字段一律显示 —，不编造，也不把两个窗口的数字拼进同一张卡。
  */
 import { RankPanel, TrendBars, compareRankValue, type RankItem, type TrendDay } from '../components/OverviewPanels.tsx'
@@ -118,8 +118,10 @@ export interface OverviewTabProps {
   projectFilter?: string
   /** 全局模型筛选（逗号分隔多选，空串 = 全部）：只作用于 `/usage` 的模型桶与模型排行，热力图 / 按时段保持全量。 */
   modelFilter?: string
-  /** 全局通道筛选（逗号分隔多选，空串 = 全部）：激活后 KPI 改由过滤后的 usage 计算（summary 月列没有通道维度）。 */
+  /** 全局通道筛选（逗号分隔多选，空串 = 全部）：激活后 KPI 改由过滤后的 usage 计算。 */
   channelFilter?: string
+  /** 当前窗口的真实起止（父级已经按它请求 `/usage`）：会话数 KPI 与「本期」口径用它。 */
+  bounds?: { from: string; to: string }
 }
 
 export function OverviewTab(props: OverviewTabProps): ReactNode {
@@ -133,51 +135,35 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const [hourMetric, setHourMetric] = useState<HourMetric>('sessions')
 
   const range: RangeKey = props.range ?? 'month'
-  const summary = props.summary
   const modelFilter = props.modelFilter ?? ''
   const projectFilter = props.projectFilter ?? ''
   const channelFilter = props.channelFilter ?? ''
-  /** 任一筛选激活时，KPI 必须从过滤后的 usage 算：summary 的月列没有通道/项目/模型维度 */
-  const anyFilterActive = selectionOf(channelFilter).length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0
   /** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
   const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter)
 
-  // ===== KPI：本期 = 当前筛选后的 usage；上期 = 上一等长窗口（同样套筛选）=====
+  // ===== KPI：本期 = 当前窗口 + 当前筛选的 usage（与使用明细同源）；上期 = 上一等长窗口 =====
   const scopedPrev = filterUsageByModel(filterUsageByChannels(props.previousUsage ?? null, channelFilter), modelFilter)
-  // 近 30 天且无筛选时，成本仍取 summary 的官方账单列（与台账同源）；有筛选就没有官方列可用了。
-  const isMonthRange = range === 'month'
-  const monthRows = summary === null ? [] : summary.channels.map((row) => row.month)
-  const monthCost = monthCostTotalsOf(summary)
-  const monthTokens = monthRows.reduce((total, row) => total + row.tokens, 0)
-  const monthFrom = summary === null ? null : summary.range.monthFrom
-  const monthTo = summary === null ? null : summary.range.today
-  const activeDaysOfMonth = monthFrom === null || monthTo === null
-    ? 0
-    : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length
-
-  const useSummaryKpi = isMonthRange && !anyFilterActive
-  const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range)
-  const splitTotals: UsageTotals | null = useSummaryKpi ? (props.usage?.totals ?? null) : rangeTotals
-  const costRow: CostRowLike | null = useSummaryKpi
-    ? (summary === null ? null : monthCost)
-    : (rangeTotals === null ? null : { cost: rangeTotals.cost, costsByCurrency: rangeTotals.costsByCurrency })
+  const splitTotals: UsageTotals | null = scopedUsage?.totals ?? null
+  const costRow: CostRowLike | null = splitTotals === null
+    ? null
+    : { cost: splitTotals.cost, costsByCurrency: splitTotals.costsByCurrency }
   const costAmount = costRow === null ? null : comparableMoneyOf(costRow)
-  const tokenCount = useSummaryKpi
-    ? (summary === null ? null : monthTokens)
-    : (rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens)
+  const tokenCount = splitTotals === null
+    ? null
+    : splitTotals.inputTokens + splitTotals.outputTokens + splitTotals.cacheReadTokens
   const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount)
   const hitRate = hitRateOf(splitTotals)
-  const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range)
+  const activeDays = usageDayCountOf(scopedUsage, range)
   const dailyCost = costAmount === null || activeDays === 0 ? null : costAmount / activeDays
   const dailyTokens = tokenCount === null || activeDays === 0 ? null : tokenCount / activeDays
   /** 会话数：窗口内有活动即计（列表被截断时退回服务端统计，不拿 — 冒充没有会话）。 */
-  const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter)
+  const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter, channelFilter)
   const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length
-  const sessionWindow = isMonthRange
-    ? (monthFrom === null || monthTo === null ? null : { from: monthFrom, to: monthTo })
-    : windowOfRange(range)
+  const sessionWindow = props.bounds ?? windowOfRange(range)
   const sessionCount = sessionCountInWindowOf(scopedSessions, sessionWindow)
     ?? (range === 'total' ? sessionCountOf(scopedSessions, 'all', rawSessionRowCount) : null)
+  /** 成本口径角标：官方 / 估算 / 订阅制估算 / 仅估算 / 部分未计价（来源不明时也如实标）。 */
+  const costNote = splitTotals === null ? undefined : costNoteOf(splitTotals)
 
   // ===== 上期：同一组筛选、上一等长窗口 =====
   const prevTotals = scopedPrev?.totals ?? null
@@ -199,6 +185,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
       icon: 'cost',
       label: t('overview.kpiCost'),
       value: costRow === null ? '—' : moneyTotalsTextOf(costRow),
+      note: costNote,
       previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
       ...deltaOf(costAmount, prevCost, 'warn'),
     },
@@ -284,12 +271,12 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
 
   // ===== 使用趋势 =====
   const isAllRange = range === 'total'
-  /** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
-   *  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
-  const rawTrendDays = trendDaysOf(props.usage, props.heatmap, props.sessions)
-  const trendDays = isAllRange
-    ? rawTrendDays
-    : (selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, [], props.sessions))
+  /** 趋势跟随顶部筛选：有项目 / 模型筛选时不能用台账热力图（它没有这两维），改由过滤后的 usage 重建；
+   *  没有筛选时才用 heatmap 的全量口径。 */
+  const trendFiltered = selectionOf(modelFilter).length > 0 || selectionOf(projectFilter).length > 0
+  const trendHeatmap = trendFiltered ? heatmapDaysOfUsage(scopedUsage) : props.heatmap
+  const rawTrendDays = trendDaysOf(props.usage, trendHeatmap, props.sessions)
+  const trendDays = trendFiltered ? trendDaysOf(scopedUsage, [], props.sessions) : rawTrendDays
   /** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
   const hasDailyCalls = trendDays.some((day) => day.calls !== null)
   const rangeWindow = windowOfRange(range)
@@ -328,8 +315,8 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
     }),
     granularDays === null && drawnDates.length > 0 ? t('overview.activeDays', { count: drawnDates.length }) : null,
   ].filter((part): part is string => part !== null).join(' · ')
-  const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]))
-  const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null
+  const heatmapByDate = new Map(trendHeatmap.map((day) => [day.date, day]))
+  const dataStart = trendHeatmap.length > 0 ? trendHeatmap[0].date : null
 
   /** 热力图悬停：先讲当前指标的值，Tokens 类指标再补逐模型占比（模型构成只有 tokens 口径）。 */
   const tipOfDay = (date: string): ReactNode => {
@@ -547,16 +534,30 @@ function sessionCountInWindowOf(sessions: SessionsResponse | null | undefined, r
   return active.filter((row) => (row.lastTime as number) >= fromMs && (row.lastTime as number) <= toMs).length
 }
 
-/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
-function monthCostTotalsOf(summary: SummaryResponse | null): { cost: number; costsByCurrency: Record<string, number> } {
-  const totals: { cost: number; costsByCurrency: Record<string, number> } = { cost: 0, costsByCurrency: {} }
-  for (const row of summary?.channels ?? []) {
-    totals.cost += row.month.cost
-    for (const [currency, amount] of Object.entries(row.month.costsByCurrency ?? {})) {
-      totals.costsByCurrency[currency] = (totals.costsByCurrency[currency] ?? 0) + amount
+/** 成本口径角标：先报「部分未计价」这种最影响解读的状态，再报来源。 */
+function costNoteOf(totals: UsageTotals): string {
+  if (typeof totals.unpricedTokens === 'number' && totals.unpricedTokens > 0) return t('overview.costNotePartial')
+  if (totals.officialIncomplete === true) return t('overview.costNoteEstimateOnly')
+  if (totals.subEstimate === true) return t('overview.costNoteSub')
+  if (totals.estimated === true) return t('overview.costNoteEstimate')
+  return t('overview.costNoteOfficial')
+}
+
+/** 用过滤后的 usage 逐日 bucket 重建热力图（项目 / 模型筛选时台账热力图没有这两个维度）。 */
+function heatmapDaysOfUsage(usage: UsageResponse | null | undefined): HeatmapDay[] {
+  if (usage == null) return []
+  return usage.days.map((day) => {
+    const models = day.models.map((model) => ({
+      provider: model.provider,
+      model: model.model,
+      totalTokens: model.inputTokens + model.outputTokens + model.cacheReadTokens,
+    }))
+    return {
+      date: day.date,
+      totalTokens: models.reduce((total, model) => total + model.totalTokens, 0),
+      models,
     }
-  }
-  return totals
+  })
 }
 
 /** 缓存命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）；没有拆分数据时给 null。 */
@@ -588,19 +589,6 @@ function sessionCountOf(sessions: SessionsResponse | null | undefined, from: str
 function sessionFromOf(range: RangeKey): string | 'all' | null {
   if (range === 'total') return 'all'
   return windowOfRange(range)?.from ?? null
-}
-
-/**
- * 非近 30 天范围的可信合计：父级按当前范围请求 `/usage`，分页时可能还没跟上；
- * 逐日明细越出当前窗口就按没有数据处理（宁可显示 —，也不把上一个范围的数字贴到本范围）。
- */
-function rangeTotalsOf(usage: UsageResponse | null | undefined, range: RangeKey): UsageTotals | null {
-  const totals = usage?.totals ?? null
-  if (totals === null) return null
-  const window = windowOfRange(range)
-  if (window === null) return totals
-  const mismatch = (usage?.days ?? []).some((day) => day.date < window.from || day.date > window.to)
-  return mismatch ? null : totals
 }
 
 /** 当前范围里有数据的天数（日均的分母）：`usage.days` 的日期去重，只数窗口内的日子。 */
@@ -796,13 +784,19 @@ function sessionsOfScope(
   sessions: SessionsResponse | null | undefined,
   projectFilter: string,
   modelFilter: string,
+  channelFilter: string = '',
 ): SessionsResponse | null {
-  if (sessions == null || (selectionOf(projectFilter).length === 0 && selectionOf(modelFilter).length === 0)) return sessions ?? null
+  const noProject = selectionOf(projectFilter).length === 0
+  const noModel = selectionOf(modelFilter).length === 0
+  const noChannel = selectionOf(channelFilter).length === 0
+  if (sessions == null || (noProject && noModel && noChannel)) return sessions ?? null
   return {
     ...sessions,
     rows: sessions.rows.filter((row) => (
       selectionMatches(projectFilterValuesOf(row.workspace, undefined), projectFilter)
       && selectionMatches(row.models.map((model) => model.model), modelFilter)
+      // 通道维度在同一条会话的模型桶 provider 上：任一模型命中该通道即算「这片会话有该通道」
+      && selectionMatches(row.models.map((model) => model.provider), channelFilter)
     )),
   }
 }

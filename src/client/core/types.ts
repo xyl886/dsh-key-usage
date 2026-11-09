@@ -111,6 +111,17 @@ export interface UsageTotals extends DaySummary {
   cacheSaved?: number | null
   /** 省钱金额的逐币种小计（`cacheSaved` 是混币种直接相加，语义同 `cost`）。 */
   cacheSavedByCurrency?: CostsByCurrency
+  /** 窗口内是否含估算天（台账停更后由会话事件补位）；false 且无估算才是全官方。 */
+  estimated?: boolean
+  /** 项目筛选下台账没有 workspace 维度：只剩会话事件估算，官方账单不完整。 */
+  officialIncomplete?: boolean
+  /** 金额里包含订阅制通道的按量估算。 */
+  subEstimate?: boolean
+  /** 没有价目依据的 tokens（有它就应该标「部分未计价」）。 */
+  unpricedTokens?: number
+  /** 官方天 / 估算天的逐币种小计。 */
+  officialCostByCurrency?: CostsByCurrency
+  estimatedCostByCurrency?: CostsByCurrency
 }
 
 /** 按日期 × 小时的指标桶（/usage 的 hoursByDate）：趋势与明细的分时视图取这里。 */
@@ -154,6 +165,14 @@ export interface WeekdayHours {
 }
 
 /** `/heatmap` 与快照 `heatmap` 段：逐日活动 + 一周 × 24 小时的调用数矩阵。 */
+/** `/hourly`：按时段矩阵跟随窗口与筛选。 */
+export interface HourlyResponse {
+  from: string
+  to: string
+  hourly: WeekdayHours[]
+  hourlyMetrics: Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }>
+}
+
 export interface HeatmapResponse {
   days: HeatmapDay[]
   /** 旧服务端没有这一项，界面要能只用 `days` 渲染。 */

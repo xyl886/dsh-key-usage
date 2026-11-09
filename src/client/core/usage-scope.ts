@@ -159,7 +159,17 @@ function filterUsageOf(usage: UsageResponse | null | undefined, keep: (model: Mo
     if (models.length === 0) continue
     days.push(mergedDayOf(models, day.date, day.provider))
   }
-  return { ...raw, days, totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? '') }
+  // 过滤只改金额与用量，不改「是不是估算 / 订阅制」这类口径标记：从原合计原样继承
+  const totals = days.length === 0
+    ? null
+    : {
+      ...totalsOfDays(days, raw.totals?.date ?? ''),
+      ...(raw.totals?.estimated === undefined ? {} : { estimated: raw.totals.estimated }),
+      ...(raw.totals?.officialIncomplete === undefined ? {} : { officialIncomplete: raw.totals.officialIncomplete }),
+      ...(raw.totals?.subEstimate === undefined ? {} : { subEstimate: raw.totals.subEstimate }),
+      ...(raw.totals?.unpricedTokens === undefined ? {} : { unpricedTokens: raw.totals.unpricedTokens }),
+    }
+  return { ...raw, days, totals }
 }
 
 /**

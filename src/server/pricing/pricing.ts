@@ -351,11 +351,13 @@ export interface RowCost {
 
 /** 台账反推均价已整层移除：`AveragePrice` / `AveragePriceLookup` 与对应的回落逻辑不再存在。 */
 
-function round4(value: number): number {
-  return Math.round(value * 10000) / 10000
+/** 内部金额精度：6 位小数（展示层再收成两位，避免逐层 round2 后求和丢钱）。 */
+export function round6(value: number): number {
+  return Math.round(value * 1e6) / 1e6
 }
 
-function round2(value: number): number {
+/** 兼容旧调用：展示层的两位小数。 */
+export function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
@@ -372,7 +374,7 @@ export function rowCostsOf(
     const hit = priced[index]
     if (hit.cost !== null && hit.rule !== null) {
       return {
-        cost: round2(hit.cost),
+        cost: round6(hit.cost),
         source: hit.source as CostSource,
         rule: hit.rule,
         partial: hit.partial,
@@ -388,7 +390,7 @@ export function rowCostsOf(
 export type MoneyByCurrency = Record<string, number>
 
 export function addMoney(target: MoneyByCurrency, currency: string, amount: number): MoneyByCurrency {
-  target[currency] = round4((target[currency] ?? 0) + amount)
+  target[currency] = round6((target[currency] ?? 0) + amount)
   return target
 }
 
@@ -403,7 +405,7 @@ export function costsByCurrencyOf(cells: Array<{ cost: number | null; currency: 
     if (cell.cost === null || cell.currency === null) continue
     sums[cell.currency] = (sums[cell.currency] ?? 0) + cell.cost
   }
-  for (const currency of Object.keys(sums)) sums[currency] = round2(sums[currency])
+  for (const currency of Object.keys(sums)) sums[currency] = round6(sums[currency])
   return sums
 }
 
@@ -413,7 +415,7 @@ export function sumMoneyByCurrency(parts: MoneyByCurrency[]): MoneyByCurrency {
   for (const part of parts) {
     for (const [currency, amount] of Object.entries(part)) sums[currency] = (sums[currency] ?? 0) + amount
   }
-  for (const currency of Object.keys(sums)) sums[currency] = round2(sums[currency])
+  for (const currency of Object.keys(sums)) sums[currency] = round6(sums[currency])
   return sums
 }
 
@@ -477,7 +479,7 @@ export function summarizeCoverage(
     bucket.amount += priced.cacheSavings
   }
   const savingsDetail = [...savingsByModel.values()]
-    .map((entry) => ({ ...entry, amount: round4(entry.amount) }))
+    .map((entry) => ({ ...entry, amount: round6(entry.amount) }))
     .sort((first, second) => second.amount - first.amount)
   return {
     catalogModels: catalogKeys.size,

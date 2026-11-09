@@ -405,6 +405,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCacheRead": "Cache read",
 			"overview.kpiDailyTokens": "Daily tokens",
 			"overview.hoursLongTerm": "Long-term",
+			"overview.hoursScope": "Filtered",
+			"overview.costNoteOfficial": "Official bill",
+			"overview.costNoteEstimate": "Estimated",
+			"overview.costNoteSub": "Subscription estimate",
+			"overview.costNoteEstimateOnly": "Estimate only",
+			"overview.costNotePartial": "Partially unpriced",
 			"overview.activeBuckets": "{count} active buckets",
 			"detail.hourlyCost": "Hourly cost",
 			"overview.kpiDailyCost": "Daily cost",
@@ -844,6 +850,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiCacheRead": "缓存读",
 			"overview.kpiDailyTokens": "日均 Tokens",
 			"overview.hoursLongTerm": "长期",
+			"overview.hoursScope": "随筛选",
+			"overview.costNoteOfficial": "官方账单",
+			"overview.costNoteEstimate": "估算",
+			"overview.costNoteSub": "订阅制估算",
+			"overview.costNoteEstimateOnly": "仅估算",
+			"overview.costNotePartial": "部分未计价",
 			"overview.activeBuckets": "活跃 {count} 个时段",
 			"detail.hourlyCost": "分时成本",
 			"overview.kpiDailyCost": "日均成本",
@@ -1357,13 +1369,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const result = await fetchJson("/dsh-key-usage/channels");
 			return result === null ? null : result.channels;
 		}
-		async function loadUsage(from, to, provider) {
+		function scopedParams(from, to, filter) {
 			const params = new URLSearchParams({
 				from,
 				to
 			});
-			if (provider !== "ALL") params.set("provider", provider);
-			return fetchJson("/dsh-key-usage/usage?" + params.toString());
+			if (filter.provider !== void 0 && filter.provider !== "" && filter.provider !== "ALL") params.set("provider", filter.provider);
+			if (filter.project !== void 0 && filter.project !== "") params.set("project", filter.project);
+			if (filter.model !== void 0 && filter.model !== "") params.set("model", filter.model);
+			return params;
+		}
+		async function loadUsage(from, to, provider, filter = {}) {
+			return fetchJson("/dsh-key-usage/usage?" + scopedParams(from, to, {
+				...filter,
+				provider
+			}).toString());
 		}
 		async function loadHeatmap() {
 			return fetchJson("/dsh-key-usage/heatmap");
@@ -1392,12 +1412,20 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		function loadModels(limit = 200) {
 			return fetchJson("/dsh-key-usage/models?limit=" + String(limit));
 		}
-		/** 分布页跟随顶部范围：服务端按 `from`/`to` 把会话按天切片后重算的项目 / 模型行。 */
-		function loadProjectsWindow(from, to, limit = 200) {
-			return fetchJson("/dsh-key-usage/projects?limit=" + String(limit) + "&from=" + from + "&to=" + to);
+		/** 分布页 / 概览排行跟随顶部范围与通道、模型、项目：服务端按窗口切会话后重算。 */
+		function loadProjectsWindow(from, to, limit = 200, filter = {}) {
+			const params = scopedParams(from, to, filter);
+			params.set("limit", String(limit));
+			return fetchJson("/dsh-key-usage/projects?" + params.toString());
 		}
-		function loadModelsWindow(from, to, limit = 200) {
-			return fetchJson("/dsh-key-usage/models?limit=" + String(limit) + "&from=" + from + "&to=" + to);
+		function loadModelsWindow(from, to, limit = 200, filter = {}) {
+			const params = scopedParams(from, to, filter);
+			params.set("limit", String(limit));
+			return fetchJson("/dsh-key-usage/models?" + params.toString());
+		}
+		/** 按时段矩阵（星期 × 小时）：跟随窗口 + 通道 / 模型 / 项目筛选。 */
+		function loadHourly(from, to, filter = {}) {
+			return fetchJson("/dsh-key-usage/hourly?" + scopedParams(from, to, filter).toString());
 		}
 		/** 工具 / 技能 / MCP 参数化端点：窗口 + 项目 / 模型多选（空串筛选值留给「未归入工作区」）。 */
 		const TOOLS_PATH = "/dsh-key-usage/tools";
@@ -3945,7 +3973,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/overview.module.css.mjs
-		const css$11 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;display:grid}.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:1180px){.tXjxsq_kpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:820px){.tXjxsq_kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;display:flex}.tXjxsq_kpiTop{align-items:center;gap:6px;min-width:0;display:flex}.tXjxsq_kpiIcon{width:14px;height:14px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}.tXjxsq_kpiCompare{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;font-size:13px;display:flex}.tXjxsq_kpiPrev{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiDelta{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_kpiDeltaWarn{color:var(--dsw-alias-state-error-primary,#e5484d);white-space:nowrap}.tXjxsq_kpiDeltaGood{color:var(--dsw-alias-state-success-primary,#46a758);white-space:nowrap}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px;font-size:13px;font-weight:400}.tXjxsq_dialogTools{justify-content:flex-end;gap:8px;padding:0 0 8px;display:flex}.tXjxsq_dialogSortBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:13px}.tXjxsq_dialogSortBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}@media (max-width:820px){.tXjxsq_kpiGrid,.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:480px){.tXjxsq_kpiGrid,.tXjxsq_kpiGrid[data-cards=\"8\"]{gap:8px}.tXjxsq_gridTwo{grid-template-columns:1fr}.tXjxsq_panel{padding:10px}.tXjxsq_hist{height:84px}.tXjxsq_metricTabs{flex-wrap:wrap}.tXjxsq_heatScroll,.tXjxsq_hourScroll{-webkit-overflow-scrolling:touch;overflow-x:auto}.tXjxsq_heatScroll .tXjxsq_yearWrap{min-width:640px}.tXjxsq_hourScroll .tXjxsq_hourWrap{min-width:560px}}";
+		const css$11 = ".tXjxsq_stack{--ov-body:var(--ku-body,14px);--ov-title:var(--ku-title,17px);--ov-kpi:var(--ku-kpi,20px);font-size:var(--ov-body);flex-direction:column;gap:10px;display:flex}.tXjxsq_kpiGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;display:grid}.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:1180px){.tXjxsq_kpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:820px){.tXjxsq_kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.tXjxsq_kpiCard{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;display:flex}.tXjxsq_kpiTop{align-items:center;gap:6px;min-width:0;display:flex}.tXjxsq_kpiIcon{width:14px;height:14px;color:var(--dsw-alias-label-tertiary,#67676f);flex:none}.tXjxsq_kpiCompare{font-variant-numeric:tabular-nums;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;font-size:13px;display:flex}.tXjxsq_kpiPrev{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiDelta{color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_kpiDeltaWarn{color:var(--dsw-alias-state-error-primary,#e5484d);white-space:nowrap}.tXjxsq_kpiDeltaGood{color:var(--dsw-alias-state-success-primary,#46a758);white-space:nowrap}.tXjxsq_kpiLabel{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.tXjxsq_kpiValue{font-size:var(--ov-kpi);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary,#e8e8ec);white-space:nowrap;text-overflow:ellipsis;margin:2px 0;font-weight:700;overflow:hidden}.tXjxsq_kpiUnit{font-size:var(--ov-body);color:var(--dsw-alias-label-tertiary,#67676f);margin-left:1px;font-weight:500}.tXjxsq_kpiNote{color:var(--dsw-alias-label-tertiary,#67676f);margin-top:2px;font-size:12px;line-height:14px}.tXjxsq_panel{border:1px solid var(--dsw-alias-border-l1,#2c2c34);border-radius:9px;min-width:0;padding:10px 12px}.tXjxsq_panelHead{flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;display:flex}.tXjxsq_panelTitle{font-size:var(--ov-title);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_panelMore{font:inherit;cursor:pointer;color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;background:0 0;border:0;margin-left:auto;padding:0}.tXjxsq_gridTwo{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;display:grid}.tXjxsq_metricTabs{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:8px;flex-wrap:wrap;gap:2px;padding:2px;display:inline-flex}.tXjxsq_metricTab{color:var(--dsw-alias-label-tertiary,#67676f);font:inherit;font-size:var(--ov-body);cursor:pointer;white-space:nowrap;background:0 0;border:0;border-radius:6px;padding:2px 8px}.tXjxsq_metricTab:hover{color:var(--dsw-alias-label-primary,#e8e8ec)}.tXjxsq_metricTabOn{background:var(--dsw-alias-bg-layer-2,#1d1d22);color:var(--dsw-alias-label-primary,#e8e8ec);font-weight:600}.tXjxsq_metricTab:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#5b8cff);outline-offset:2px}.tXjxsq_yearWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(53,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_yearWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_yearAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_yearCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-active,#80808c38);cursor:default;border-radius:2px;align-self:start}.tXjxsq_yearActive{cursor:pointer}.tXjxsq_yearEmpty{background:var(--dsw-alias-bg-layer-2,#1d1d22);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1,#2c2c34)}.tXjxsq_yearFuture{box-shadow:none;background:0 0}.tXjxsq_hist{align-items:flex-end;gap:4px;height:104px;display:flex}.tXjxsq_histColumn{cursor:default;flex:1;align-items:flex-end;min-width:0;height:100%;display:flex}.tXjxsq_histBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:3px 3px 1px 1px;width:100%}.tXjxsq_histBarPeak{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_histLabels{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);font-variant-numeric:tabular-nums;gap:4px;margin-top:4px;display:flex}.tXjxsq_histLabels span{text-align:center;white-space:nowrap;flex:1;min-width:0}.tXjxsq_trendFoot{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;display:flex}.tXjxsq_legend{flex-wrap:wrap;align-items:center;gap:12px;display:inline-flex}.tXjxsq_legendItem{color:var(--dsw-alias-label-tertiary,#67676f);align-items:center;gap:4px;display:inline-flex}.tXjxsq_legendItem i{border-radius:2px;width:8px;height:8px;display:inline-block}.tXjxsq_trendStats{font-variant-numeric:tabular-nums;margin-left:auto}.tXjxsq_rankRow{font-size:var(--ov-body);grid-template-columns:minmax(76px,112px) minmax(0,1fr) 72px 56px;align-items:center;gap:8px;padding:4px 0;display:grid}.tXjxsq_rankName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary,#9a9aa6);overflow:hidden}.tXjxsq_rankTrack{background:var(--dsw-alias-interactive-bg-hover,#80808c1f);border-radius:4px;height:9px;overflow:hidden}.tXjxsq_rankBar{background:var(--dsw-alias-state-business-tertiary,#5b8cff47);border-radius:4px;height:100%;display:block}.tXjxsq_rankBarTop{background:var(--dsw-alias-state-business-primary,#5b8cff)}.tXjxsq_rankValue{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#9a9aa6);white-space:nowrap}.tXjxsq_rankDim{color:var(--dsw-alias-label-tertiary,#67676f)}.tXjxsq_rankSub{text-align:right;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary,#67676f);white-space:nowrap}.tXjxsq_hourWrap{grid-template-rows:18px repeat(7,auto);grid-template-columns:26px repeat(24,minmax(0,1fr));gap:3px;display:grid}.tXjxsq_hourWeekday{color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);justify-content:flex-start;align-items:center;line-height:1;display:flex}.tXjxsq_hourAxisLabel{white-space:nowrap;color:var(--dsw-alias-label-tertiary,#67676f);font-size:var(--ov-body);place-self:start;line-height:1}.tXjxsq_hourCell{aspect-ratio:1;background:var(--dsw-alias-interactive-bg-hover,#80808c2e);cursor:default;border-radius:2px;align-self:start}.tXjxsq_panelHint{color:var(--dsw-alias-label-tertiary,#67676f);margin-left:6px;font-size:13px;font-weight:400}.tXjxsq_dialogTools{justify-content:flex-end;gap:8px;padding:0 0 8px;display:flex}.tXjxsq_dialogSortBtn{font:inherit;color:var(--dsw-alias-label-secondary,#9a9aa6);cursor:pointer;background:0 0;border:0;padding:2px 0;font-size:13px}.tXjxsq_dialogSortBtn:hover{color:var(--dsw-alias-label-primary,#0f1115)}@media (max-width:820px){.tXjxsq_kpiGrid,.tXjxsq_kpiGrid[data-cards=\"8\"]{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:480px){.tXjxsq_kpiGrid,.tXjxsq_kpiGrid[data-cards=\"8\"]{gap:8px}.tXjxsq_gridTwo{grid-template-columns:1fr}.tXjxsq_panel{padding:10px}.tXjxsq_hist{height:84px}.tXjxsq_metricTabs{flex-wrap:wrap}.tXjxsq_heatScroll,.tXjxsq_hourScroll{-webkit-overflow-scrolling:touch;overflow-x:auto}.tXjxsq_heatScroll .tXjxsq_yearWrap{min-width:640px}.tXjxsq_hourScroll .tXjxsq_hourWrap{min-width:560px}}";
 		const tagId$11 = "dsh-key-usage/overview.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3982,6 +4010,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"kpiGrid": "tXjxsq_kpiGrid",
 			"kpiIcon": "tXjxsq_kpiIcon",
 			"kpiLabel": "tXjxsq_kpiLabel",
+			"kpiNote": "tXjxsq_kpiNote",
 			"kpiPrev": "tXjxsq_kpiPrev",
 			"kpiTop": "tXjxsq_kpiTop",
 			"kpiUnit": "tXjxsq_kpiUnit",
@@ -4227,6 +4256,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							className: overview_module_css_default.kpiUnit,
 							children: props.unit
 						})]
+					}),
+					props.note !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: overview_module_css_default.kpiNote,
+						children: props.note
 					})
 				]
 			});
@@ -4362,7 +4395,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: overview_module_css_default.panelHint,
-							children: t("overview.hoursLongTerm")
+							children: t("overview.hoursScope")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: overview_module_css_default.metricTabs,
@@ -4839,10 +4872,17 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (models.length === 0) continue;
 				days.push(mergedDayOf(models, day.date, day.provider));
 			}
+			const totals = days.length === 0 ? null : {
+				...totalsOfDays(days, raw.totals?.date ?? ""),
+				...raw.totals?.estimated === void 0 ? {} : { estimated: raw.totals.estimated },
+				...raw.totals?.officialIncomplete === void 0 ? {} : { officialIncomplete: raw.totals.officialIncomplete },
+				...raw.totals?.subEstimate === void 0 ? {} : { subEstimate: raw.totals.subEstimate },
+				...raw.totals?.unpricedTokens === void 0 ? {} : { unpricedTokens: raw.totals.unpricedTokens }
+			};
 			return {
 				...raw,
 				days,
-				totals: days.length === 0 ? null : totalsOfDays(days, raw.totals?.date ?? "")
+				totals
 			};
 		}
 		/**
@@ -4867,7 +4907,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		/**
 		* 总览：KPI 卡片行 + 使用趋势（「全部」看全年热力图，其余范围看柱状图）+ 项目 / 模型排行 + 按时段热力。
 		* 按原型不再列通道表：通道余额与配额在「额度与订阅」，这里只留结论。
-		* KPI 口径跟随页头范围：近 30 天取 `summary` 的月列（官方账单），其余范围取 `usage.totals`（同一窗口）；
+		* KPI 口径与使用明细同源：一律取当前窗口的 `usage.totals`（估算 / 订阅制估算 / 部分未计价都带角标）；
 		* 拿不到的字段一律显示 —，不编造，也不把两个窗口的数字拼进同一张卡。
 		*/
 		const TREND_METRICS = [
@@ -4913,43 +4953,30 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const [modelMetric, setModelMetric] = (0, react.useState)("cost");
 			const [hourMetric, setHourMetric] = (0, react.useState)("sessions");
 			const range = props.range ?? "month";
-			const summary = props.summary;
 			const modelFilter = props.modelFilter ?? "";
 			const projectFilter = props.projectFilter ?? "";
 			const channelFilter = props.channelFilter ?? "";
-			/** 任一筛选激活时，KPI 必须从过滤后的 usage 算：summary 的月列没有通道/项目/模型维度 */
-			const anyFilterActive = selectionOf(channelFilter).length > 0 || selectionOf(projectFilter).length > 0 || selectionOf(modelFilter).length > 0;
 			/** 模型维度只在 `/usage` 的逐日模型桶里：过滤后当场重算每天与合计（纯客户端聚合，不改请求、不新增数据源） */
 			const scopedUsage = filterUsageByModel(props.usage ?? null, modelFilter);
 			const scopedPrev = filterUsageByModel(filterUsageByChannels(props.previousUsage ?? null, channelFilter), modelFilter);
-			const isMonthRange = range === "month";
-			const monthRows = summary === null ? [] : summary.channels.map((row) => row.month);
-			const monthCost = monthCostTotalsOf(summary);
-			const monthTokens = monthRows.reduce((total, row) => total + row.tokens, 0);
-			const monthFrom = summary === null ? null : summary.range.monthFrom;
-			const monthTo = summary === null ? null : summary.range.today;
-			const activeDaysOfMonth = monthFrom === null || monthTo === null ? 0 : props.heatmap.filter((day) => day.date >= monthFrom && day.date <= monthTo).length;
-			const useSummaryKpi = isMonthRange && !anyFilterActive;
-			const rangeTotals = useSummaryKpi ? null : rangeTotalsOf(scopedUsage, range);
-			const splitTotals = useSummaryKpi ? props.usage?.totals ?? null : rangeTotals;
-			const costRow = useSummaryKpi ? summary === null ? null : monthCost : rangeTotals === null ? null : {
-				cost: rangeTotals.cost,
-				costsByCurrency: rangeTotals.costsByCurrency
+			const splitTotals = scopedUsage?.totals ?? null;
+			const costRow = splitTotals === null ? null : {
+				cost: splitTotals.cost,
+				costsByCurrency: splitTotals.costsByCurrency
 			};
 			const costAmount = costRow === null ? null : comparableMoneyOf(costRow);
-			const tokenCount = useSummaryKpi ? summary === null ? null : monthTokens : rangeTotals === null ? null : rangeTotals.inputTokens + rangeTotals.outputTokens + rangeTotals.cacheReadTokens;
+			const tokenCount = splitTotals === null ? null : splitTotals.inputTokens + splitTotals.outputTokens + splitTotals.cacheReadTokens;
 			const tokenValue = tokenCount === null ? null : tokenValueOf(tokenCount);
 			const hitRate = hitRateOf(splitTotals);
-			const activeDays = useSummaryKpi ? activeDaysOfMonth : usageDayCountOf(scopedUsage, range);
+			const activeDays = usageDayCountOf(scopedUsage, range);
 			const dailyCost = costAmount === null || activeDays === 0 ? null : costAmount / activeDays;
 			const dailyTokens = tokenCount === null || activeDays === 0 ? null : tokenCount / activeDays;
 			/** 会话数：窗口内有活动即计（列表被截断时退回服务端统计，不拿 — 冒充没有会话）。 */
-			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter);
+			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter, channelFilter);
 			const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length;
-			const sessionCount = sessionCountInWindowOf(scopedSessions, isMonthRange ? monthFrom === null || monthTo === null ? null : {
-				from: monthFrom,
-				to: monthTo
-			} : windowOfRange(range)) ?? (range === "total" ? sessionCountOf(scopedSessions, "all", rawSessionRowCount) : null);
+			const sessionCount = sessionCountInWindowOf(scopedSessions, props.bounds ?? windowOfRange(range)) ?? (range === "total" ? sessionCountOf(scopedSessions, "all", rawSessionRowCount) : null);
+			/** 成本口径角标：官方 / 估算 / 订阅制估算 / 仅估算 / 部分未计价（来源不明时也如实标）。 */
+			const costNote = splitTotals === null ? void 0 : costNoteOf(splitTotals);
 			const prevTotals = scopedPrev?.totals ?? null;
 			const prevCostRow = prevTotals === null ? null : {
 				cost: prevTotals.cost,
@@ -4969,6 +4996,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					icon: "cost",
 					label: t("overview.kpiCost"),
 					value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
+					note: costNote,
 					previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
 					...deltaOf$1(costAmount, prevCost, "warn")
 				},
@@ -5048,10 +5076,12 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}
 			].filter((card) => !(range === "today" && (card.key === "dailyTokens" || card.key === "dailyCost")));
 			const isAllRange = range === "total";
-			/** 「全部」范围画的是全年热力图（热力图口径 → 保持全量）；其余范围是台账柱状图，跟随模型筛选。
-			*  过滤时不能退回 heatmap：它没有模型维度，按它二次聚合就是凑数。 */
-			const rawTrendDays = trendDaysOf(props.usage, props.heatmap, props.sessions);
-			const trendDays = isAllRange ? rawTrendDays : selectionOf(modelFilter).length === 0 ? rawTrendDays : trendDaysOf(scopedUsage, [], props.sessions);
+			/** 趋势跟随顶部筛选：有项目 / 模型筛选时不能用台账热力图（它没有这两维），改由过滤后的 usage 重建；
+			*  没有筛选时才用 heatmap 的全量口径。 */
+			const trendFiltered = selectionOf(modelFilter).length > 0 || selectionOf(projectFilter).length > 0;
+			const trendHeatmap = trendFiltered ? heatmapDaysOfUsage(scopedUsage) : props.heatmap;
+			const rawTrendDays = trendDaysOf(props.usage, trendHeatmap, props.sessions);
+			const trendDays = trendFiltered ? trendDaysOf(scopedUsage, [], props.sessions) : rawTrendDays;
 			/** 活跃度只认按天调用数：`heatmap` 段没有这一项时该档不画柱（不拿 token 量冒充调用数）。 */
 			const hasDailyCalls = trendDays.some((day) => day.calls !== null);
 			const rangeWindow = windowOfRange(range);
@@ -5082,8 +5112,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				}),
 				granularDays === null && drawnDates.length > 0 ? t("overview.activeDays", { count: drawnDates.length }) : null
 			].filter((part) => part !== null).join(" · ");
-			const heatmapByDate = new Map(props.heatmap.map((day) => [day.date, day]));
-			const dataStart = props.heatmap.length > 0 ? props.heatmap[0].date : null;
+			const heatmapByDate = new Map(trendHeatmap.map((day) => [day.date, day]));
+			const dataStart = trendHeatmap.length > 0 ? trendHeatmap[0].date : null;
 			/** 热力图悬停：先讲当前指标的值，Tokens 类指标再补逐模型占比（模型构成只有 tokens 口径）。 */
 			const tipOfDay = (date) => {
 				const value = heatValues.get(date);
@@ -5322,17 +5352,29 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const toMs = (/* @__PURE__ */ new Date(range.to + "T23:59:59.999")).getTime();
 			return active.filter((row) => row.lastTime >= fromMs && row.lastTime <= toMs).length;
 		}
-		/** 柱状图：只有高度与日期，数值在悬停里看（不往柱子上堆文字）。 */
-		function monthCostTotalsOf(summary) {
-			const totals = {
-				cost: 0,
-				costsByCurrency: {}
-			};
-			for (const row of summary?.channels ?? []) {
-				totals.cost += row.month.cost;
-				for (const [currency, amount] of Object.entries(row.month.costsByCurrency ?? {})) totals.costsByCurrency[currency] = (totals.costsByCurrency[currency] ?? 0) + amount;
-			}
-			return totals;
+		/** 成本口径角标：先报「部分未计价」这种最影响解读的状态，再报来源。 */
+		function costNoteOf(totals) {
+			if (typeof totals.unpricedTokens === "number" && totals.unpricedTokens > 0) return t("overview.costNotePartial");
+			if (totals.officialIncomplete === true) return t("overview.costNoteEstimateOnly");
+			if (totals.subEstimate === true) return t("overview.costNoteSub");
+			if (totals.estimated === true) return t("overview.costNoteEstimate");
+			return t("overview.costNoteOfficial");
+		}
+		/** 用过滤后的 usage 逐日 bucket 重建热力图（项目 / 模型筛选时台账热力图没有这两个维度）。 */
+		function heatmapDaysOfUsage(usage) {
+			if (usage == null) return [];
+			return usage.days.map((day) => {
+				const models = day.models.map((model) => ({
+					provider: model.provider,
+					model: model.model,
+					totalTokens: model.inputTokens + model.outputTokens + model.cacheReadTokens
+				}));
+				return {
+					date: day.date,
+					totalTokens: models.reduce((total, model) => total + model.totalTokens, 0),
+					models
+				};
+			});
 		}
 		/** 缓存命中率 = 缓存读 ÷（输入 + 输出 + 缓存读）；没有拆分数据时给 null。 */
 		function hitRateOf(totals) {
@@ -5354,17 +5396,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (from === "all") return active.length;
 			const fromTime = (/* @__PURE__ */ new Date(from + "T00:00:00")).getTime();
 			return active.filter((row) => row.lastTime !== null && row.lastTime >= fromTime).length;
-		}
-		/**
-		* 非近 30 天范围的可信合计：父级按当前范围请求 `/usage`，分页时可能还没跟上；
-		* 逐日明细越出当前窗口就按没有数据处理（宁可显示 —，也不把上一个范围的数字贴到本范围）。
-		*/
-		function rangeTotalsOf(usage, range) {
-			const totals = usage?.totals ?? null;
-			if (totals === null) return null;
-			const window = windowOfRange(range);
-			if (window === null) return totals;
-			return (usage?.days ?? []).some((day) => day.date < window.from || day.date > window.to) ? null : totals;
 		}
 		/** 当前范围里有数据的天数（日均的分母）：`usage.days` 的日期去重，只数窗口内的日子。 */
 		function usageDayCountOf(usage, range) {
@@ -5558,11 +5589,14 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			};
 		}
 		/** 会话按维度收窄（会话行同时带 workspace 与模型桶）；两个筛选都为空时原样返回。 */
-		function sessionsOfScope(sessions, projectFilter, modelFilter) {
-			if (sessions == null || selectionOf(projectFilter).length === 0 && selectionOf(modelFilter).length === 0) return sessions ?? null;
+		function sessionsOfScope(sessions, projectFilter, modelFilter, channelFilter = "") {
+			const noProject = selectionOf(projectFilter).length === 0;
+			const noModel = selectionOf(modelFilter).length === 0;
+			const noChannel = selectionOf(channelFilter).length === 0;
+			if (sessions == null || noProject && noModel && noChannel) return sessions ?? null;
 			return {
 				...sessions,
-				rows: sessions.rows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter) && selectionMatches(row.models.map((model) => model.model), modelFilter))
+				rows: sessions.rows.filter((row) => selectionMatches(projectFilterValuesOf(row.workspace, void 0), projectFilter) && selectionMatches(row.models.map((model) => model.model), modelFilter) && selectionMatches(row.models.map((model) => model.provider), channelFilter))
 			};
 		}
 		function rankItemsOfProjects(projects, metric) {
@@ -10360,6 +10394,10 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const toolsFallbackRef = (0, react.useRef)(null);
 			/** 快照 `prompts` 段（近 30 天）：同上，参数化请求失败 / 索引未建好时回落它。 */
 			const promptsFallbackRef = (0, react.useRef)(null);
+			/** 快照 `projects` / `models` / `heatmap.hourly` 段：参数化请求失败的回落（与工具 / 提问同策略）。 */
+			const projectsFallbackRef = (0, react.useRef)(null);
+			const modelsFallbackRef = (0, react.useRef)(null);
+			const hourlyFallbackRef = (0, react.useRef)(null);
 			/** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
 			const [snapshotRevision, setSnapshotRevision] = (0, react.useState)(0);
 			const [projects, setProjects] = (0, react.useState)(null);
@@ -10477,12 +10515,18 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (sections.overview !== void 0) setSummary(sections.overview);
 				if (sections.heatmap !== void 0 && sections.heatmap !== null) {
 					setHeatmap(sections.heatmap.days ?? []);
-					setHourly(sections.heatmap.hourly ?? []);
-					setHourlyMetrics(sections.heatmap.hourlyMetrics ?? []);
+					hourlyFallbackRef.current = {
+						hourly: sections.heatmap.hourly ?? [],
+						hourlyMetrics: sections.heatmap.hourlyMetrics ?? []
+					};
+					setHourly((current) => current.length === 0 ? hourlyFallbackRef.current.hourly : current);
+					setHourlyMetrics((current) => current.length === 0 ? hourlyFallbackRef.current.hourlyMetrics : current);
 				}
 				if (sections.sessions !== void 0 && sections.sessions !== null) setSessions(sections.sessions);
-				if (sections.projects !== void 0 && sections.projects !== null) setProjects(sections.projects);
-				if (sections.models !== void 0 && sections.models !== null) setModels(sections.models);
+				if (sections.projects !== void 0) projectsFallbackRef.current = sections.projects;
+				if (sections.models !== void 0) modelsFallbackRef.current = sections.models;
+				setProjects((current) => current === null ? sections.projects ?? null : current);
+				setModels((current) => current === null ? sections.models ?? null : current);
 				if (sections.prompts !== void 0) {
 					promptsFallbackRef.current = sections.prompts;
 					setPrompts((current) => current === null ? sections.prompts : current);
@@ -10629,10 +10673,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [pricingRevision, applySnapshot]);
 			(0, react.useEffect)(() => {
 				if ((wantSessions || wantOverview) && sessions === null) loadSessions().then(setSessions);
-				if (wantDistribution) {
-					if (projects === null) loadProjects().then(setProjects);
-					if (models === null) loadModels().then(setModels);
-				}
 				if (wantWords && prompts === null) loadSnapshot(false, ["prompts"]).then((snapshot) => {
 					if (snapshot !== null) applySnapshot(snapshot);
 				});
@@ -10642,12 +10682,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [
 				wantSessions,
 				wantOverview,
-				wantDistribution,
 				wantWords,
 				wantTools,
 				sessions,
-				projects,
-				models,
 				prompts,
 				tools,
 				applySnapshot
@@ -10742,7 +10779,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					if (!wantTools && !wantWords || hasAvailable) return;
 				}
 				let cancelled = false;
-				loadUsage(bounds.from, bounds.to, "ALL").then((result) => {
+				loadUsage(bounds.from, bounds.to, selectionOf(channelFilter).join(",") || "ALL", { project: scopeProjectParam ?? void 0 }).then((result) => {
 					if (cancelled || result === null) return;
 					setUsage(result);
 					if (result.availableFrom !== null && result.availableTo !== null) setAvailable({
@@ -10762,7 +10799,73 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				hasAvailable,
 				bounds.from,
 				bounds.to,
-				pricingRevision
+				pricingRevision,
+				channelFilter,
+				projectFilter
+			]);
+			/** 项目筛选值（服务端按 workspace 匹配，'' = 未归入工作区；null = 不限）。 */
+			const scopeProjectParam = (0, react.useMemo)(() => {
+				const chosen = selectionOf(projectFilter);
+				return chosen.length === 0 ? null : chosen.map((value) => value === "__orphan__" ? "" : value).join(",");
+			}, [projectFilter]);
+			/** 三个筛选的请求形态：项目 / 模型 / 通道，空串 = 不限。 */
+			const scopeFilter = (0, react.useMemo)(() => ({
+				provider: selectionOf(channelFilter).join(","),
+				project: scopeProjectParam ?? void 0,
+				model: selectionOf(modelFilter).join(",")
+			}), [
+				channelFilter,
+				scopeProjectParam,
+				modelFilter
+			]);
+			/**
+			* 项目 / 模型排行跟随顶部范围与三个筛选：服务端按窗口切会话后重算（含成本）。
+			* 失败 / 索引未就绪时保留快照段作回落，并明确这是另一口径（不静默）。
+			*/
+			(0, react.useEffect)(() => {
+				if (!wantOverview && !wantDistribution) return;
+				let cancelled = false;
+				Promise.all([loadProjectsWindow(bounds.from, bounds.to, 200, scopeFilter), loadModelsWindow(bounds.from, bounds.to, 200, scopeFilter)]).then(([projectResult, modelResult]) => {
+					if (cancelled) return;
+					setProjects(projectResult ?? projectsFallbackRef.current);
+					setModels(modelResult ?? modelsFallbackRef.current);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				wantOverview,
+				wantDistribution,
+				bounds.from,
+				bounds.to,
+				scopeFilter,
+				pricingRevision,
+				snapshotRevision
+			]);
+			/** 按时段矩阵：跟随窗口与筛选，服务端按会话事件重算 7×24。 */
+			(0, react.useEffect)(() => {
+				if (!wantOverview) return;
+				let cancelled = false;
+				loadHourly(bounds.from, bounds.to, scopeFilter).then((result) => {
+					if (cancelled) return;
+					if (result === null) {
+						setHourly(hourlyFallbackRef.current?.hourly ?? []);
+						setHourlyMetrics(hourlyFallbackRef.current?.hourlyMetrics ?? []);
+						return;
+					}
+					setHourly(result.hourly);
+					setHourlyMetrics(result.hourlyMetrics);
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				wantOverview,
+				bounds.from,
+				bounds.to,
+				scopeFilter,
+				pricingRevision,
+				snapshotRevision
 			]);
 			/** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
 			const [previousUsage, setPreviousUsage] = (0, react.useState)(null);
@@ -10778,7 +10881,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				const previousFrom = isoDate(/* @__PURE__ */ new Date(fromMs - dayMs * length));
 				const previousTo = isoDate(/* @__PURE__ */ new Date(fromMs - dayMs));
 				let cancelled = false;
-				loadUsage(previousFrom, previousTo, "ALL").then((result) => {
+				loadUsage(previousFrom, previousTo, selectionOf(channelFilter).join(",") || "ALL", { project: scopeProjectParam ?? void 0 }).then((result) => {
 					if (!cancelled) setPreviousUsage(result);
 				});
 				return () => {
@@ -10787,7 +10890,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			}, [
 				bounds.from,
 				bounds.to,
-				pricingRevision
+				pricingRevision,
+				channelFilter,
+				projectFilter
 			]);
 			/** 通道用量：通道没有聚合接口，用 /usage 的逐日模型 token 相加，供筛选下拉排序 */
 			const channelUsage = (0, react.useMemo)(() => {

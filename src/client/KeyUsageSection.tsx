@@ -1,6 +1,6 @@
 /** 「使用情况」页外壳：Tab 路由、筛选状态与取数（会话类数据切到对应 Tab 时才首次拉取）。 */
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
-import { loadChannels, loadHeatmap, loadModels, loadProjects, loadPrompts, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH , loadUpdate, skipUpdate } from './core/api.ts'
+import { loadChannels, loadHeatmap, loadHourly, loadModels, loadModelsWindow, loadProjects, loadProjectsWindow, loadPrompts, loadQuota, loadSessions, loadSnapshot, loadSummary, loadTools, loadUsage, refreshAll, REFRESH_PATH , loadUpdate, skipUpdate } from './core/api.ts'
 import { useCurrencyDisplay } from './core/currency.ts'
 import { isoDate, shiftedIsoDate } from './core/format.ts'
 import { selectionOf } from './core/filter-selection.ts'
@@ -96,6 +96,10 @@ export function KeyUsageSection() {
   const toolsFallbackRef = useRef<ToolsResponse | null>(null)
   /** 快照 `prompts` 段（近 30 天）：同上，参数化请求失败 / 索引未建好时回落它。 */
   const promptsFallbackRef = useRef<PromptsResponse | null>(null)
+  /** 快照 `projects` / `models` / `heatmap.hourly` 段：参数化请求失败的回落（与工具 / 提问同策略）。 */
+  const projectsFallbackRef = useRef<ProjectsResponse | null>(null)
+  const modelsFallbackRef = useRef<ModelsResponse | null>(null)
+  const hourlyFallbackRef = useRef<{ hourly: WeekdayHours[]; hourlyMetrics: Array<{ weekday: number; hours: Array<{ calls: number; tokens: number; sessions: number; cost: number | null }> }> } | null>(null)
   /** 每次快照落地自增：工具段据此在索引刚建好时补取一次（首开可能先于本地重建拿到 null）。 */
   const [snapshotRevision, setSnapshotRevision] = useState(0)
   const [projects, setProjects] = useState<ProjectsResponse | null>(null)
@@ -215,13 +219,17 @@ export function KeyUsageSection() {
     if (sections.overview !== undefined) setSummary(sections.overview)
     if (sections.heatmap !== undefined && sections.heatmap !== null) {
       setHeatmap(sections.heatmap.days ?? [])
-      setHourly(sections.heatmap.hourly ?? [])
-      setHourlyMetrics(sections.heatmap.hourlyMetrics ?? [])
+      hourlyFallbackRef.current = { hourly: sections.heatmap.hourly ?? [], hourlyMetrics: sections.heatmap.hourlyMetrics ?? [] }
+      setHourly((current) => current.length === 0 ? hourlyFallbackRef.current!.hourly : current)
+      setHourlyMetrics((current) => current.length === 0 ? hourlyFallbackRef.current!.hourlyMetrics : current)
     }
     // 段为 null 说明这次构建失败（sections 全置 null）：此时不能覆盖已按需取来的数据
     if (sections.sessions !== undefined && sections.sessions !== null) setSessions(sections.sessions)
-    if (sections.projects !== undefined && sections.projects !== null) setProjects(sections.projects)
-    if (sections.models !== undefined && sections.models !== null) setModels(sections.models)
+    if (sections.projects !== undefined) projectsFallbackRef.current = sections.projects
+    if (sections.models !== undefined) modelsFallbackRef.current = sections.models
+    // 首屏先给快照（默认窗口 / 全通道）；筛选结果由下面的 effect 接管，轮询不覆盖
+    setProjects((current) => current === null ? sections.projects ?? null : current)
+    setModels((current) => current === null ? sections.models ?? null : current)
     // prompts 段同样是「筛选结果由下面那个 effect 接管」：快照只作首屏 / 回落，轮询不覆盖筛选结果
     if (sections.prompts !== undefined) {
       promptsFallbackRef.current = sections.prompts
@@ -346,14 +354,10 @@ export function KeyUsageSection() {
   useEffect(() => {
     // 概览的「会话数」KPI 也要会话段：切换/滚动到概览时就懒加载，不占首屏（会话段约 200 KB）
     if ((wantSessions || wantOverview) && sessions === null) void loadSessions().then(setSessions)
-    if (wantDistribution) {
-      if (projects === null) void loadProjects().then(setProjects)
-      if (models === null) void loadModels().then(setModels)
-    }
     // 词频只在词云页用：切到本页才第一次取（服务端已算好，读快照即可）
     if (wantWords && prompts === null) void loadSnapshot(false, ['prompts']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
     if (wantTools && tools === null) void loadSnapshot(false, ['tools']).then((snapshot) => { if (snapshot !== null) applySnapshot(snapshot) })
-  }, [wantSessions, wantOverview, wantDistribution, wantWords, wantTools, sessions, projects, models, prompts, tools, applySnapshot])
+  }, [wantSessions, wantOverview, wantWords, wantTools, sessions, prompts, tools, applySnapshot])
 
   const bounds = useMemo(() => {
     const today = isoDate(new Date())
@@ -421,7 +425,7 @@ export function KeyUsageSection() {
       if ((!wantTools && !wantWords) || hasAvailable) return
     }
     let cancelled = false
-    void loadUsage(bounds.from, bounds.to, 'ALL').then((result) => {
+    void loadUsage(bounds.from, bounds.to, selectionOf(channelFilter).join(',') || 'ALL', { project: scopeProjectParam ?? undefined }).then((result) => {
       if (cancelled || result === null) return
       setUsage(result)
       if (result.availableFrom !== null && result.availableTo !== null) {
@@ -429,7 +433,54 @@ export function KeyUsageSection() {
       }
     })
     return () => { cancelled = true }
-  }, [wantDetail, wantDistribution, wantOverview, wantTools, wantWords, hasAvailable, bounds.from, bounds.to, pricingRevision])
+  }, [wantDetail, wantDistribution, wantOverview, wantTools, wantWords, hasAvailable, bounds.from, bounds.to, pricingRevision, channelFilter, projectFilter])
+
+  /** 项目筛选值（服务端按 workspace 匹配，'' = 未归入工作区；null = 不限）。 */
+  const scopeProjectParam = useMemo(() => {
+    const chosen = selectionOf(projectFilter)
+    return chosen.length === 0 ? null : chosen.map((value) => value === ORPHAN_PROJECT_VALUE ? '' : value).join(',')
+  }, [projectFilter])
+  /** 三个筛选的请求形态：项目 / 模型 / 通道，空串 = 不限。 */
+  const scopeFilter = useMemo(() => ({
+    provider: selectionOf(channelFilter).join(','),
+    project: scopeProjectParam ?? undefined,
+    model: selectionOf(modelFilter).join(','),
+  }), [channelFilter, scopeProjectParam, modelFilter])
+
+  /**
+   * 项目 / 模型排行跟随顶部范围与三个筛选：服务端按窗口切会话后重算（含成本）。
+   * 失败 / 索引未就绪时保留快照段作回落，并明确这是另一口径（不静默）。
+   */
+  useEffect(() => {
+    if (!wantOverview && !wantDistribution) return
+    let cancelled = false
+    void Promise.all([
+      loadProjectsWindow(bounds.from, bounds.to, 200, scopeFilter),
+      loadModelsWindow(bounds.from, bounds.to, 200, scopeFilter),
+    ]).then(([projectResult, modelResult]) => {
+      if (cancelled) return
+      setProjects(projectResult ?? projectsFallbackRef.current)
+      setModels(modelResult ?? modelsFallbackRef.current)
+    })
+    return () => { cancelled = true }
+  }, [wantOverview, wantDistribution, bounds.from, bounds.to, scopeFilter, pricingRevision, snapshotRevision])
+
+  /** 按时段矩阵：跟随窗口与筛选，服务端按会话事件重算 7×24。 */
+  useEffect(() => {
+    if (!wantOverview) return
+    let cancelled = false
+    void loadHourly(bounds.from, bounds.to, scopeFilter).then((result) => {
+      if (cancelled) return
+      if (result === null) {
+        setHourly(hourlyFallbackRef.current?.hourly ?? [])
+        setHourlyMetrics(hourlyFallbackRef.current?.hourlyMetrics ?? [])
+        return
+      }
+      setHourly(result.hourly)
+      setHourlyMetrics(result.hourlyMetrics)
+    })
+    return () => { cancelled = true }
+  }, [wantOverview, bounds.from, bounds.to, scopeFilter, pricingRevision, snapshotRevision])
 
   /** 上一周期（同长度、紧邻前一个窗口）：概览 KPI 的环比用它，拿不到就不显示环比 */
   const [previousUsage, setPreviousUsage] = useState<UsageResponse | null>(null)
@@ -442,9 +493,9 @@ export function KeyUsageSection() {
     const previousFrom = isoDate(new Date(fromMs - dayMs * length))
     const previousTo = isoDate(new Date(fromMs - dayMs))
     let cancelled = false
-    void loadUsage(previousFrom, previousTo, 'ALL').then((result) => { if (!cancelled) setPreviousUsage(result) })
+    void loadUsage(previousFrom, previousTo, selectionOf(channelFilter).join(',') || 'ALL', { project: scopeProjectParam ?? undefined }).then((result) => { if (!cancelled) setPreviousUsage(result) })
     return () => { cancelled = true }
-  }, [bounds.from, bounds.to, pricingRevision])
+  }, [bounds.from, bounds.to, pricingRevision, channelFilter, projectFilter])
   /** 通道用量：通道没有聚合接口，用 /usage 的逐日模型 token 相加，供筛选下拉排序 */
   const channelUsage = useMemo(() => {
     const map = new Map<string, number>()

@@ -53,7 +53,11 @@ function countPricedChat(raw) {
     const output = value.output_cost_per_token
     if (!(typeof input === 'number' && input > 0) || !(typeof output === 'number' && output > 0)) continue
     entries += 1
-    names.add(key.split('/').pop().toLowerCase())
+    // 与实现的 lastSegmentOf 同口径：去版本尾巴（日期 / @版本 / -latest），否则「去重模型名数」会各算各的
+    names.add(key.split('/').pop().toLowerCase()
+      .replace(/@[\w.-]+$/, '')
+      .replace(/-(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/, '')
+      .replace(/-latest$/, ''))
   }
   return { entries, models: names.size }
 }
@@ -131,7 +135,7 @@ const status = aggregateStatus()
     countPricedChat(rawShipped),
     '可定价条目数与去重模型名数必须与独立复算一致',
   )
-  assert.ok(status.entries > 2600 && status.models > 1500, '实测规模：' + String(status.entries) + ' 条 / ' + String(status.models) + ' 个模型')
+  assert.ok(status.entries > 2600 && status.models > 1400, '实测规模：' + String(status.entries) + ' 条 / ' + String(status.models) + ' 个模型（版本尾巴归一后会比原始键数少）')
 
   // 来源说明与许可是随包交付的一部分，缺了就不该发版
   const dataDir = dirname(status.shippedPath)
