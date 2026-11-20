@@ -151,7 +151,7 @@
   color: var(--dsw-alias-label-tertiary, #67676f); font-size: var(--ov-body); line-height: 1;
 }
 .hourCell {
-  align-self: start; aspect-ratio: 1 / 1; border-radius: 2px;
+  align-self: start; aspect-ratio: 1 / 1; max-height: 40px; border-radius: 2px;
   background: var(--dsw-alias-interactive-bg-hover, rgba(128, 128, 140, .18)); cursor: default;
 }
 

@@ -15,11 +15,12 @@
 /* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
 [data-sidebar-right-open] .section,
 [data-sidebar-right-float-host] .section { padding: 16px; }
-/* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部） */
-.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: 960px; }
+/* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部）。
+   宽度不再锁死宿主原生的 960px：跟随 --ku-page-max（默认 none = 铺满，同 dsh-context）。 */
+.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: var(--ku-page-max, none); }
 .pageTitle { margin: 0; font-size: 20px; font-weight: 500; line-height: 28px; letter-spacing: normal; white-space: nowrap; color: var(--dsw-alias-label-primary, #0f1115); }
 /* 工具栏：三行（标题+范围+动作 / 筛选 / 区块导航），同类控件成组，窄面板按行换行 */
-.toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; max-width: 960px; margin-left: auto; margin-right: auto; }
+.toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; max-width: var(--ku-page-max, none); margin-left: auto; margin-right: auto; }
 .toolbarRow + .toolbarRow { margin-top: 8px; }
 .toolbarGroup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .rowSpacer { flex: 1 1 auto; }
@@ -205,7 +206,7 @@
 }
 .refreshSelect:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #0f1115); }
 .refreshSelect:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
-.sections { display: flex; flex-direction: column; gap: 32px; margin: 24px auto 0; max-width: 960px; }
+.sections { display: flex; flex-direction: column; gap: 32px; margin: 24px auto 0; max-width: var(--ku-page-max, none); }
 /* 分区不再套一层边框卡片：宿主页面是扁平分区，靠标题与留白分隔 */
 .pageSection { min-width: 0; }
 /* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
