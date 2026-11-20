@@ -59,31 +59,32 @@
 - **改了 `src/server/**` 必须重新编译 `lib/` 并退出重开 DSH**：服务端模块在宿主启动时进入 ESM 缓存，Hub `/restart` 在桌面端不可用，无热重载途径。
 - **改完默认只跑 `npm run verify`**（2026-10-15 用户明确）：**不要**自动起浏览器 / 无头浏览器做自检，**不要**重截 `docs/images/` 的图 —— 太耗时；浏览器实测、截图、重启宿主都要用户明说再做。`docs/images/` 里的图由用户自己截、自己更新，不要代劳。
 
-## 插件安装方式
+## 分支模型与安装方式
 
-**`desktop` profile 的插件来源有两种模式，动手前先确认当前是哪种**（`node_modules/dsh-key-usage` 是 Junction = `link:` 模式，是真目录 = registry 版）：
+分支：`main` = 已发布基线（只接受 `dev` 合并，发版从 `main` 走 CI），`dev` = 集成分支 / 验收基线（`lib/`、`client/` 产物随提交入库，永不 force push）。完整流程见 [`docs/开发与验收流程.md`](./docs/开发与验收流程.md)。
 
-- **`link:D:/EasyJob/.plugin/dsh-key-usage`**（本地开发 / 验收）：改本仓库即时可见、不用重装；服务端改动要退出重开 DSH 才生效；
-- **`dsh-key-usage@<版本>`**（registry 版）：界面跑的就是 npm 上那一份，**改本仓库不再影响它**。
+**`desktop` profile 只装「真实包」，不装 `link:`**（link 会把脏工作区暴露给日常 app、peer 依赖不解析、宿主按 link 模式处理）：
 
-两种模式互切都先 `pnpm remove dsh-key-usage` 再 `add` 目标：`pnpm remove dsh-key-usage` → `pnpm add "link:D:/EasyJob/.plugin/dsh-key-usage"` 或 `pnpm add dsh-key-usage@<版本>`。从 `link:` 直接 `add` registry 版会报 `ERR_PNPM_EPERM`（pnpm 去旧 junction 内部导入 peer 依赖），这时先把 `node_modules/dsh-key-usage` **改名让开**再装（详见 [`docs/开发与构建.md`](./docs/开发与构建.md) 的安装一节）。
+- **registry 版**（日常态）：`dsh-key-usage@<版本>`，界面跑 npm 上发布的那一份；
+- **dev 验收版**：`git+file:///D:/EasyJob/.plugin/dsh-key-usage#<dev 提交 sha>`，pnpm 真实安装 dev 分支某次提交的构建产物（hoisted 布局下是普通目录，不是 Junction），可追溯到具体提交。
 
-- `dsh plugin --profile desktop …` 被 CLI 硬编码拦截，不要用；Plugin Hub 不支持本地路径。
-- 需要重装/换协议时，用 DSH 自带 pnpm 在 profile 目录直接操作：
+两态互切统一用脚本，不要手敲：
 
 ```powershell
-$pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm\bin\pnpm.mjs'
-& $node $pnpm --dir "$env:USERPROFILE\.dsh\profiles\desktop" add "link:D:/EasyJob/.plugin/dsh-key-usage"
+D:\EasyJob\test\dsh_profile_recovery\switch-key-usage-mode.ps1 -Mode status    # 当前装的是哪一态
+D:\EasyJob\test\dsh_profile_recovery\switch-key-usage-mode.ps1 -Mode dev       # 装 dev 当前提交（验收）
+D:\EasyJob\test\dsh_profile_recovery\switch-key-usage-mode.ps1 -Mode registry  # 切回 npm 正式版
 ```
 
-- 确认 `~/.dsh/profiles/desktop/package.json` 里 `dependencies.dsh-key-usage` 与 `dsh.profile.bundles` **两处都在**；pnpm 不维护 `bundles`。
+- `dsh plugin --profile desktop …` 被 CLI 硬编码拦截，不要用；Plugin Hub 不支持本地路径；
+- 装完确认 `~/.dsh/profiles/desktop/package.json` 里 `dependencies.dsh-key-usage` 与 `dsh.profile.bundles` **两处都在**（pnpm 不维护 `bundles`），且 `node_modules/dsh-key-usage` 不是 Junction。
 
 ## 发版与推送
 
 ### 开发流程（2026-10-15 用户重新定义，优先级最高）
 
 1. **本地提交随意**：每批改动跑完 `npm run verify`（绿）即可直接本地 commit，不需要先征求同意；不要把半成品提交进去。
-2. **改完就装本地最新版**：本地开发期间把 `desktop` profile 换回 `link:D:/EasyJob/.plugin/dsh-key-usage` 指向本仓库（命令见「插件安装方式」），构建产物（`lib/`、`client/client.js`）就是用户界面上的东西 —— 改完 build 完即可让用户验收，**不必等推送**；服务端改动仍需用户退出重开 DSH。**profile 的默认状态是 registry 版**，动手前先确认当前是不是 link 模式，否则用户看到的还是发布出去的旧包。
+2. **验收走 dev 分支的真实安装**：`npm run verify` 全绿（会重建 `lib/`、`client/`）→ 提交到 `dev` → `switch-key-usage-mode.ps1 -Mode dev` 装 dev 当前提交 → 用户完全退出重开 DSH 验收（流程见 [`docs/开发与验收流程.md`](./docs/开发与验收流程.md)）。**不要**把 desktop 切成 `link:`，也不要用 web profile 代替验收（desktop profile 只有 Electron 能加载）。验收通过后把 `dev` 合回 `main`，再按发布指令发版。
 3. **推送 GitHub、CI 发布必须经用户明确授意 + 二次确认**：`git push`、`gh workflow run`（含 `publish.yml` 的 `dry_run`）都要先问一次、得到确认后再执行；「已验证 / 已验收」不等于授权。
 4. **版本号仍只由用户的发布指令推动**（见本节的版本号规则），CI 发布同样要单独确认。
 
@@ -91,7 +92,7 @@ $pnpm = 'C:\Users\Lenovo\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm
 - **本地 vs 远端（2026-10-13 用户明确）**：
   - **本地 commit 可以自行做**（用于留可回退基线），但仍要选在**验证通过、没有并行写入者**的时点，不要把半成品提交进去。
   - **任何远端动作都必须先获得用户明确授权**：`git push`、`npm publish`、以及会触发远端工作流的操作（`gh workflow run`，包括 `publish.yml` 的 dry_run）。授权要具体到「推送 / 发版」这类指令，不能由「已验证 / 已验收」推断出来。
-- **版本号只由用户的发布指令推动**：1.0 之前一律走 `patch`；**发版时读 npm 上最新已发布的版本号（`npm view dsh-key-usage version`），往后推一个 `.1`**（如 `0.1.7` → `0.1.8`），本地攒了多少提交都不改变这一步 —— 不要按提交数或自己的判断升版；未得到发布指令前**禁止自行升版、禁止自行发布**。某一版是否已发布，看 CHANGELOG 该节标题：没发时写「未发布」，发布后改成发布当天的日期。
+- **版本号只由用户的发布指令推动**：1.0 之前一律走 `patch`；**发版时读 npm 上最新已发布的版本号（`npm view dsh-key-usage version`），往后推一个 `.1`**（如 `0.1.7` → `0.1.8`），本地攒了多少提交都不改变这一步 —— 不要按提交数或自己的判断升版；未得到发布指令前**禁止自行升版、禁止自行发布**。某一版是否已发布，看 CHANGELOG 该节标题：没发时写「未发布」，发布后改成发布当天的日期。**`dev` 分支例外**：允许保留 `0.2.9-dev.N` 这类预发布号标识验收版，不发布、也不推动正式版本号；合并回 `main` 前按发布规则处理。
 - 本机发布：`npm version patch --no-git-tag-version` → `npm publish`；发布前跑完 `verify` / `pack:dry`。CI 发布成功后，把 CHANGELOG 该节标题的「未发布」改成发布当天的日期。
 - **CI 发布（长期做法）**：`.github/workflows/publish.yml` 手动触发，默认 `dry_run=true` 只校验打包；改成 false 才真正 `pnpm publish --provenance --no-git-checks`。**token 只放仓库 Secret `NPM_TOKEN`，本机不再放**。
 - 已发布的版本号**永久占用**（撤回了也不能复用），所以改版本号前先确认。
