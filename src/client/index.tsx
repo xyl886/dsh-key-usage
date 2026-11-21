@@ -9,6 +9,7 @@ import { installI18n, t, type LocaleFace } from './core/i18n.ts'
 import { logInfo } from './core/log.ts'
 import { UsageIcon } from './UsageIcon.tsx'
 import { UsagePage } from './UsagePage.tsx'
+import { TurnCostChip } from './components/TurnCostChip.tsx'
 
 const NS = 'dsh-key-usage'
 /** 侧边栏条目与 main 页面共用的面板标识（宿主 MainPanelId 域，命名空间化避免撞车）。 */
@@ -37,4 +38,12 @@ export function apply(ctx: SectionContext): void {
     label: () => t('nav.usage'),
     locale: NS,
   }, (props: { size?: number }) => h(UsageIcon, { size: props.size })))
+
+  // 对话区每条回答的操作行里显示「本轮费用」：金额来自服务端 /turns，与页面同一套价目与错峰规则
+  ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
+    name: 'conversation.chat.assistant-actions',
+    id: 'dsh-key-usage-turn-cost',
+    order: 20,
+    locale: NS,
+  }, (props: Record<string, unknown>) => h(TurnCostChip, props)))
 }

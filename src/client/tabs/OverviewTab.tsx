@@ -162,8 +162,8 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
   const sessionWindow = props.bounds ?? windowOfRange(range)
   const sessionCount = sessionCountInWindowOf(scopedSessions, sessionWindow)
     ?? (range === 'total' ? sessionCountOf(scopedSessions, 'all', rawSessionRowCount) : null)
-  /** 成本口径角标：官方 / 估算 / 订阅制估算 / 仅估算 / 部分未计价（来源不明时也如实标）。 */
-  const costNote = splitTotals === null ? undefined : costNoteOf(splitTotals)
+  /** 未计价用量：金额后面加一个 `*`（口径见「设置 → 口径」），不加任何文字。 */
+  const unpriced = (splitTotals?.unpricedTokens ?? 0) > 0
 
   // ===== 上期：同一组筛选、上一等长窗口 =====
   const prevTotals = scopedPrev?.totals ?? null
@@ -184,8 +184,7 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
       key: 'cost',
       icon: 'cost',
       label: t('overview.kpiCost'),
-      value: costRow === null ? '—' : moneyTotalsTextOf(costRow),
-      note: costNote,
+      value: costRow === null ? '—' : moneyTotalsTextOf(costRow) + (unpriced ? '*' : ''),
       previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
       ...deltaOf(costAmount, prevCost, 'warn'),
     },
@@ -489,7 +488,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
         weekdayKeys={WEEKDAY_KEYS}
         busiestHour={busiestHour}
         tooltip={props.tooltip}
-      />    </div>
+      />
+      <p className={styles.coverageLine}>{coverageLineOf(props.usage)}</p>
+    </div>
   )
 }
 
@@ -523,6 +524,20 @@ function dayRangeOfUsage(usage: UsageResponse | null | undefined): { from: strin
   return { from: dates[0], to: dates[dates.length - 1] }
 }
 
+/**
+ * 数据覆盖时间线：可查的起止日期，以及其中有多少天由会话事件补齐。
+ * 会话事件只覆盖保留期内的会话，台账停更后靠它补位 —— 把这件事写在页面上，
+ * 「为什么和侧边栏对不上」才有据可查，而不是让人怀疑数字错了。
+ */
+function coverageLineOf(usage: UsageResponse | null | undefined): string {
+  const from = usage?.availableFrom ?? null
+  const to = usage?.availableTo ?? null
+  if (from === null || to === null || from === '' || to === '') return ''
+  const ledgerDays = usage?.days.length ?? 0
+  const sessionDays = usage?.sessionDates.length ?? 0
+  return t('overview.coverageLine', { from, to, ledger: ledgerDays, session: sessionDays })
+}
+
 /** 窗口内有活动的会话数：末次活动落在 [from, to] 的行；上期没有可判定窗口时退化为「早于本期开始」的行数。 */
 function sessionCountInWindowOf(sessions: SessionsResponse | null | undefined, range: { from: string; to: string } | null): number | null {
   if (sessions == null || sessions.coverage.status === 'unavailable') return null
@@ -532,15 +547,6 @@ function sessionCountInWindowOf(sessions: SessionsResponse | null | undefined, r
   const fromMs = new Date(range.from + 'T00:00:00').getTime()
   const toMs = new Date(range.to + 'T23:59:59.999').getTime()
   return active.filter((row) => (row.lastTime as number) >= fromMs && (row.lastTime as number) <= toMs).length
-}
-
-/** 成本口径角标：先报「部分未计价」这种最影响解读的状态，再报来源。 */
-function costNoteOf(totals: UsageTotals): string {
-  if (typeof totals.unpricedTokens === 'number' && totals.unpricedTokens > 0) return t('overview.costNotePartial')
-  if (totals.officialIncomplete === true) return t('overview.costNoteEstimateOnly')
-  if (totals.subEstimate === true) return t('overview.costNoteSub')
-  if (totals.estimated === true) return t('overview.costNoteEstimate')
-  return t('overview.costNoteOfficial')
 }
 
 /** 用过滤后的 usage 逐日 bucket 重建热力图（项目 / 模型筛选时台账热力图没有这两个维度）。 */

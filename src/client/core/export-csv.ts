@@ -33,11 +33,17 @@ export function downloadCsv(filename: string, header: string[], rows: Array<Arra
 
 const todaySuffix = (): string => new Date().toISOString().slice(0, 10)
 
+/** 逐币种小计 → 导出用的币种串（多币种按字典序用「/」连接；没有金额时留空）。 */
+function currenciesOf(costsByCurrency: Record<string, number> | undefined): string {
+  if (costsByCurrency === undefined) return ''
+  return Object.keys(costsByCurrency).sort().join('/')
+}
+
 /** 使用明细（按天）：一行 = 一天 × 一个通道（与明细表同口径）。 */
 export function buildUsageCsv(usage: UsageResponse): CsvTable {
   return {
     filename: 'dsh-key-usage-使用明细-' + todaySuffix() + '.csv',
-    header: ['日期', '通道', 'calls', '输入 token', '输出 token', '缓存读 token', '缓存写 token', '成本', '成本来源', '部分计价'],
+    header: ['日期', '通道', 'calls', '输入 token', '输出 token', '缓存读 token', '缓存写 token', '成本', '币种', '成本来源', '部分计价'],
     rows: usage.days.map((day) => [
       day.date,
       day.provider,
@@ -47,6 +53,7 @@ export function buildUsageCsv(usage: UsageResponse): CsvTable {
       day.cacheReadTokens,
       day.cacheWriteTokens,
       day.cost,
+      currenciesOf(day.costsByCurrency),
       day.costSource,
       day.partial === true ? '是' : '否',
     ]),

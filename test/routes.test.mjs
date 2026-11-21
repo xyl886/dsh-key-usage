@@ -886,6 +886,42 @@ assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
     assert.ok(source.providers.length > 0 && source.count > 0)
   }
 
+  // ===== 每轮费用 /turns：按轮聚合、与页面同一套价目、缺参数与越权都拒绝 =====
+  {
+    const turnDay = new Date(2026, 9, 12, 21, 30, 0).getTime()
+    const turnUsage = (seq, turn, usage) => ({
+      seq, time: turnDay, type: 'assistant/chunk', data: { turn, step: 1, chunk: { type: 'usage', usage }, message: { id: 'msg-' + String(turn), source: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } },
+    })
+    const turnFixture = createFakePersistence([
+      ['session-turns', {
+        header: { id: 'session-turns', cwd: 'D:\\EasyJob', updatedAt: turnDay },
+        revision: Symbol('r1'),
+        events: [
+          turnUsage(0, 1, { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 0 }),
+          turnUsage(1, 2, { inputTokens: 2000, outputTokens: 200, cacheReadTokens: 8000 }),
+        ],
+      }],
+    ])
+    const turnSource = createSessionSource({ get: (name) => (name === 'sessionPersistence' ? turnFixture.service : undefined) })
+    const turnHandlers = new Map()
+    mountKeyUsageRoutes({ register: (route) => { turnHandlers.set(route.path, route.handler) } }, turnSource)
+    const turnCall = (path, remoteAddress) => callHandler(turnHandlers, path, remoteAddress)
+
+    assert.equal((await turnCall('/dsh-key-usage/turns?id=session-turns', '10.0.0.7')).status, 403, '按轮端点同样只允许回环')
+    const noTurnId = await turnCall('/dsh-key-usage/turns')
+    assert.equal(noTurnId.status, 400, '缺会话 id 时给出参数错误')
+    const turnBody = (await turnCall('/dsh-key-usage/turns?id=session-turns')).body
+    assert.equal(turnBody.status, 'ok')
+    assert.equal(turnBody.sessionId, 'session-turns')
+    assert.deepEqual(turnBody.turns.map((row) => row.turn), [1, 2], '按轮次升序下发')
+    assert.deepEqual(turnBody.turns[0].messageIds, ['msg-1'], '每轮带助手消息 id，界面按它挂金额')
+    assert.deepEqual(turnBody.turns[1].messageIds, ['msg-2'])
+    assert.equal(turnBody.turns[0].tokens, 1100, '展示口径 tokens = 输入 + 输出 + 缓存读')
+    assert.equal(turnBody.turns[1].tokens, 10200, '缓存读计入展示口径')
+    assert.equal(turnBody.turns[0].calls, 1)
+    assert.ok(turnBody.turns.every((row) => row.cost === null || typeof row.cost === 'number'), '金额要么是数字要么 null（没有价目依据）')
+  }
+
   // 端点表就是这些：新增统一快照 /snapshot、手动刷新 /refresh 与系统日志 /log，删掉 /pricing/rules
   assert.deepEqual([...contractHandlers.keys()].sort(), [
     '/dsh-key-usage/channels',
@@ -906,10 +942,11 @@ assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
     '/dsh-key-usage/snapshot',
     '/dsh-key-usage/summary',
     '/dsh-key-usage/tools',
+    '/dsh-key-usage/turns',
     '/dsh-key-usage/update',
     '/dsh-key-usage/update/skip',
     '/dsh-key-usage/usage',
-  ], '22 个端点 = 18 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
+  ], '23 个端点 = 19 个只读 GET + 4 个写 POST（手动刷新 / 价目刷新 / 日志 / 忽略版本）')
 
   // /update：npm dist-tags 桩 → 返回 latest；仓库内运行算 link 模式，hasUpdate 被压制（registry 模式由 update-check 单测覆盖）
   const realFetch = globalThis.fetch
@@ -1700,3 +1737,4 @@ rmSync(home, { recursive: true, force: true })
 }
 
 console.log('routes.test: 全部通过')
+

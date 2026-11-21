@@ -49,7 +49,7 @@ export interface CostCell {
   mixed: boolean
 }
 
-/** 成本单元格：按计费模式给文案；金额走 `costsByCurrency` 逐币种折算，缺该字段时由 currency.ts 兜底。 */
+/** 成本单元格：金额一律按逐币种小计折算；只有完全没有依据时才显示 —。 */
 export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell {
   const view = rowMoneyViewOf(row)
   const hasAmount = view.amount > 0
@@ -57,9 +57,9 @@ export function costCellOf(channel: Channel | null, row: CostRowLike): CostCell 
     ? { text: view.text, dim: false, amount: true, converted: view.converted, mixed: view.mixed }
     : { text: '—', dim: true, amount: false, converted: false, mixed: false }
   if (channel === null) return money
-  if (channel.costMode === 'sub') return { text: t('ch.inSub'), dim: true, amount: false, converted: false, mixed: false }
   if (channel.costMode === 'free') return { text: zeroMoneyTextOf(), dim: true, amount: false, converted: false, mixed: false }
   if (channel.costMode === 'none') return { text: t('ch.noBilling'), dim: true, amount: false, converted: false, mixed: false }
+  // 订阅制通道按官方价目折算等值金额：数值照常显示，不做任何标记（口径见「设置 → 口径」）
   return money
 }
 
@@ -79,7 +79,7 @@ export function quotaBarColor(percent: number): string {
 }
 
 export const COST_MODE_KEYS: Record<ChannelCostMode, string> = {
-  sub: 'ch.inSub',
+  sub: 'ch.subscription',
   perToken: 'ch.metered',
   free: 'ch.free',
   none: 'ch.noBilling',

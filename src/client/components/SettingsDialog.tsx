@@ -260,6 +260,7 @@ export function SettingsDialog(props: {
             <ul className={styles.caliberList}>
               <li>{t('caliber.source')}</li>
               <li>{t('caliber.cost')}</li>
+            <li>{t('caliber.subscription')}</li>
               <li>{t('caliber.hourly')}</li>
               <li>{t('caliber.sessions')}</li>
               <li>{t('caliber.logs')}</li>

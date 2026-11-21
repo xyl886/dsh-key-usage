@@ -334,6 +334,36 @@ export interface UpdateInfo {
   hasUpdate: boolean
 }
 
+/** 每轮费用的一行：金额与口径与页面同源（同一套价目 / 错峰 / 币种规则）。 */
+export interface TurnCostRow {
+  turn: number
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  tokens: number
+  models: string[]
+  /** 这一轮对应的助手消息 id（界面用它对上具体那条回答）。 */
+  messageIds?: string[]
+  cost: number | null
+  currency: string | null
+  costsByCurrency: Record<string, number>
+  source: string
+  partial: boolean
+  subEstimate: boolean
+  unpricedTokens: number
+  cacheSavings: number
+}
+
+/** GET /turns 的响应：一条会话的全部轮次费用。 */
+export interface TurnsResponse {
+  sessionId: string
+  status: 'ok' | 'degraded' | 'not-found' | 'unavailable'
+  reason: string | null
+  turns: TurnCostRow[]
+}
+
 // 数据段类型拆到 types-data.ts，这里统一再导出
 import type { ModelAggregateRow, ModelsResponse, ProjectRow, ProjectsResponse, SessionRow, SessionsResponse, SnapshotQuotaOutcome } from './types-data.ts'
 export type {

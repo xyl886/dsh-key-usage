@@ -2,6 +2,9 @@
 /* 整页基准：字号跟随宿主通用设置（body 上的 --dsh-content-font-size），正文 500 不再发细 */
 .page {
   font-size: calc(var(--dsh-content-font-size, 12px) * 1.05); font-weight: 500;
+  /* 页面内容最大宽度：默认 none = 铺满主区域（与 dsh-context 的全宽做法一致），
+     需要收窄时只改这一个变量即可（例如将来做成设置项写成 1440px）。 */
+  --ku-page-max: none;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -13,12 +16,14 @@
 .inner {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1240px;
+  max-width: var(--ku-page-max);
   margin: 0 auto;
-  padding: 20px 24px 28px;
+  /* 内边距统一由页壳（shared.module.css 的 .section）负责：这里再叠一层会和它以
+     相加，横向留白变成 72px，比宿主原生页面（最长 48px）明显更宽。 */
+  padding: 0;
 }
 
-/* ===== 移动端：页面内边距收紧 ===== */
+/* ===== 移动端：内边距收紧（由页壳统一处理） ===== */
 @media (max-width: 720px) {
-  .inner { padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .inner { padding: 0; }
 }

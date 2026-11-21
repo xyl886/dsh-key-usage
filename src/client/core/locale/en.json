@@ -254,7 +254,6 @@
   "ch.warn": "High",
   "ch.danger": "Alert",
   "ch.off": "Not set",
-  "ch.inSub": "In plan",
   "ch.noBilling": "No billing",
   "ch.subscription": "Subscription",
   "ch.metered": "Metered",
@@ -397,11 +396,6 @@
   "overview.kpiDailyTokens": "Daily tokens",
   "overview.hoursLongTerm": "Long-term",
   "overview.hoursScope": "Filtered",
-  "overview.costNoteOfficial": "Official bill",
-  "overview.costNoteEstimate": "Estimated",
-  "overview.costNoteSub": "Subscription estimate",
-  "overview.costNoteEstimateOnly": "Estimate only",
-  "overview.costNotePartial": "Partially unpriced",
   "overview.activeBuckets": "{count} active buckets",
   "detail.hourlyCost": "Hourly cost",
   "overview.kpiDailyCost": "Daily cost",
@@ -434,5 +428,11 @@
   "overview.legendMore": "More",
   "dist.windowFallback": "Range data unavailable",
   "d.channelFilter": "Filter by channel",
-  "quota.none": "None"
+  "quota.none": "None",
+  "turnCost.aria": "Turn cost",
+  "turnCost.unpriced": "No price basis for this turn",
+  "turnCost.unpricedMark": "—",
+  "overview.coverageLine": "Data coverage {from} ~ {to} · ledger {ledger} days / session backfill {session} days",
+  "detail.tokensHint": "Display caliber: input + output + cache read; cache write is billed but not counted here",
+  "caliber.subscription": "Subscription channels are converted to an equivalent amount at official rates, not actual billing; an asterisk marks totals that include unpriced usage and are therefore low."
 }

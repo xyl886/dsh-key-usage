@@ -42,6 +42,7 @@ import {
   type SessionLookup,
   type SessionMetaOptions,
   type SessionRow,
+  type SessionTurnRead,
 } from '../data/sessions.js'
 import { createArchiveSource, createSessionProjectionSource, createTitleSource, createWorkspaceSource, normalizeSessionId } from '../data/session-meta.js'
 import {
@@ -127,6 +128,8 @@ export interface SessionSource {
   collect(): Promise<SessionCollection>
   /** 单会话详情；旧的外部注入方可能没有这个能力，缺失时 `/session` 按「找不到」处理。 */
   detail?(id: string): Promise<SessionLookup>
+  /** 单会话按轮样本（每轮费用用）；缺失时 `/turns` 返回空结果。 */
+  turns?(id: string): Promise<SessionTurnRead>
   /** 上一次整表折叠的耗时明细（可选：外部注入方可能没有）。 */
   stats?(): { sessions: number; cached: number; read: number; listMs: number; readMs: number; totalMs: number }
 }

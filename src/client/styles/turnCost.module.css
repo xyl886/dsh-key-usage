@@ -1,0 +1,10 @@
+/* 对话操作行里的本轮费用：纯文本贴在同排图标之间，不加边框与底色，避免和图标抢视觉。
+   宿主把插槽内容排在「复制」之后、分支之前；用 flex order 把它挪到整行最后（用量与耗时之后）。 */
+.amount {
+  order: 1;
+  color: var(--dsw-alias-label-tertiary, #67676f);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
