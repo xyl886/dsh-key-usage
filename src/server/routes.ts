@@ -64,6 +64,7 @@ import {
   mergeToolStatsInWindow,
 } from './data/tool-stats.js'
 import { buildCostIndex, hoursByDateFiltered, tallyOf, type CostIndex, type PricedCell } from './data/costing.js'
+import { turnCostsOf } from './data/turn-cost.js'
 import { appendLogRecords, clearLogFile, logFilePath, readLogRecords } from './data/log-store.js'
 import type { LogQuery } from './storage/db.js'
 import { readQuotaSnapshots } from './quota/quota-snapshots.js'
@@ -1126,6 +1127,38 @@ export function mountKeyUsageRoutes(
           reason: lookup.reason,
         },
         priced: detailTally.cost !== null,
+      })
+    },
+  })
+
+  /**
+   * 每轮费用：对话操作行里的「本轮花了多少」用。
+   * 只读这一条会话的用量样本，价格 / 错峰 / 币种与页面走同一套规则（不另算一份）。
+   */
+  webServer.register({
+    kind: 'exact',
+    path: '/dsh-key-usage/turns',
+    handler: async (request, response) => {
+      if (!requireLoopback(request, response)) return
+      const url = new URL(request.url ?? '/', 'http://localhost')
+      const id = (url.searchParams.get('id') ?? '').trim()
+      if (id === '') {
+        sendJson(response, 400, { error: '缺少会话 id：请用 ?id=<sessionId>' })
+        return
+      }
+      if (sessionSource.turns === undefined) {
+        sendJson(response, 200, { sessionId: id, status: 'unavailable', reason: '当前注入的会话数据源不支持按轮查询', turns: [] })
+        return
+      }
+      const read = await sessionSource.turns(id)
+      const channels = await channelsWithQuota()
+      const knownProviders = channels.map((channel) => channel.provider)
+      const costModeOf = new Map(channels.map((channel) => [channel.provider, channel.costMode]))
+      sendJson(response, 200, {
+        sessionId: read.id,
+        status: read.status,
+        reason: read.reason,
+        turns: turnCostsOf(read.samples, knownProviders, costModeOf),
       })
     },
   })

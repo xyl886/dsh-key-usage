@@ -434,5 +434,9 @@
   "overview.legendMore": "多",
   "dist.windowFallback": "范围数据未取到",
   "d.channelFilter": "按通道筛选",
-  "quota.none": "无"
+  "quota.none": "无",
+  "turnCost.aria": "本轮费用",
+  "turnCost.unpriced": "本轮没有价目依据",
+  "turnCost.unpricedMark": "—",
+  "turnCost.subEstimate": "订阅制估算"
 }

@@ -51,7 +51,8 @@ export interface SessionEvent {
   }
 }
 
-interface UsageSample {
+/** 一条用量样本：键里带 turn 前缀（`turn:step#attempt`），按轮聚合时直接取前缀。 */
+export interface UsageSample {
   key: string
   day: string
   hour: number

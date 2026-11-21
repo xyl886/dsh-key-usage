@@ -21,6 +21,7 @@ import {
   type ModelUsageRow,
   type TokenBuckets,
   type ToolDayStat,
+  type UsageSample,
 } from './session-usage.js'
 import { normalizeSessionId } from './session-meta.js'
 
@@ -206,15 +207,31 @@ export interface SessionReadStats {
 }
 
 /**
+ * 单会话的按轮用量样本（对话操作行显示「本轮花了多少」用）。
+ * 折叠结果只保留汇总值、不保留逐条样本，所以这里单独读一次该会话并按 revision 缓存最近几份。
+ */
+export interface SessionTurnRead {
+  status: 'ok' | 'degraded' | 'not-found' | 'unavailable'
+  id: string
+  reason: string | null
+  samples: UsageSample[]
+}
+
+/**
  * 建立会话数据源（`host.get('sessionPersistence')` 缺失时降级为空态 + coverage 说明）。
  */
 export function createSessionSource(host: HostContextLike): {
   collect(): Promise<SessionCollection>
   detail(id: string): Promise<SessionLookup>
+  /** 单会话的按轮样本：未命中缓存才 open/read/close 一次。 */
+  turns(id: string): Promise<SessionTurnRead>
   /** 上一次整表折叠的耗时明细（写进快照的构建日志，用来判断慢在哪一步）。 */
   stats(): SessionReadStats
 } {
   const cache = new Map<string, CacheEntry>()
+  /** 按轮样本缓存：只留最近几份，避免把一个会话的全部样本常驻。 */
+  const turnCache = new Map<string, { revision: unknown; eventCount: number; samples: UsageSample[] }>()
+  const TURN_CACHE_LIMIT = 6
   let inFlight: Promise<SessionCollection> | null = null
   let lastStats: SessionReadStats = { sessions: 0, cached: 0, read: 0, listMs: 0, readMs: 0, totalMs: 0 }
 
@@ -431,7 +448,62 @@ export function createSessionSource(host: HostContextLike): {
     }
   }
 
-  return { collect, detail, stats: () => lastStats }
+  /** 单会话按轮样本：未命中缓存才读一次该会话（缓存按 revision + eventCount 失效）。 */
+  async function turns(rawId: string): Promise<SessionTurnRead> {
+    const id = rawId.trim()
+    const persistence = host.get('sessionPersistence') as PersistenceService | undefined
+    if (persistence === undefined || typeof persistence.list !== 'function') {
+      return { status: 'unavailable', id, reason: '宿主未提供会话服务，无法读取该会话', samples: [] }
+    }
+    try {
+      // 整表折叠进行中时先等它结束：宿主的解析 memo 只装 2 个会话，抢着 open 会把它挤掉
+      if (inFlight !== null) await inFlight
+      const snapshot = (await persistence.list()).find((entry) => {
+        const headerId = firstString(entry.header.id)
+        return headerId !== null && (headerId === id || normalizeSessionId(headerId) === normalizeSessionId(id))
+      })
+      if (snapshot === undefined) {
+        return { status: 'not-found', id, reason: '宿主会话列表里没有这个 id（可能已被删除）', samples: [] }
+      }
+      const sessionId = firstString(snapshot.header.id) ?? id
+      const revision = snapshot.revision
+      const eventCount = typeof snapshot.eventCount === 'number' ? snapshot.eventCount : -1
+      const cached = turnCache.get(sessionId)
+      if (cached !== undefined && cached.revision === revision && cached.eventCount === eventCount) {
+        return { status: 'ok', id: sessionId, reason: null, samples: cached.samples }
+      }
+      let events: SessionEvent[]
+      if (typeof persistence.open === 'function') {
+        const handle = await persistence.open(sessionId, 'read')
+        try {
+          const read = await handle.read(0)
+          const inherited = typeof handle.inheritedEventCount === 'number' ? handle.inheritedEventCount : 0
+          // 继承前缀只用于建立模型归属（同 readRecord），不计入本次用量
+          events = Number.isSafeInteger(inherited) && inherited > 0 && inherited <= read.events.length
+            ? [...read.events.slice(0, inherited).filter((event) => event.type === 'request/header'), ...read.events.slice(inherited)]
+            : read.events
+        } finally {
+          try { await handle.close() } catch { /* 关闭失败不影响已读到的样本 */ }
+        }
+      } else if (typeof persistence.readFrom === 'function') {
+        events = (await persistence.readFrom(sessionId, 0)).events
+      } else {
+        return { status: 'unavailable', id: sessionId, reason: '当前宿主只支持旧版会话接口，无法按轮读取', samples: [] }
+      }
+      const samples = [...foldSessionEvents(events).samples.values()]
+      turnCache.set(sessionId, { revision, eventCount, samples })
+      while (turnCache.size > TURN_CACHE_LIMIT) {
+        const oldest = turnCache.keys().next()
+        if (oldest.done === true) break
+        turnCache.delete(oldest.value)
+      }
+      return { status: 'ok', id: sessionId, reason: null, samples }
+    } catch (error) {
+      return { status: 'degraded', id, reason: readFailureText(error), samples: [] }
+    }
+  }
+
+  return { collect, detail, turns, stats: () => lastStats }
 }
 
 function readFailureText(error: unknown): string {

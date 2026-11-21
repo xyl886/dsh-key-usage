@@ -18,6 +18,7 @@ import type {
   SnapshotResponse,
   SummaryResponse,
   ToolsResponse,
+  TurnsResponse,
   UsageResponse,
   UpdateInfo,
 } from './types.ts'
@@ -111,8 +112,24 @@ export function loadSessionDetail(id: string): Promise<SessionDetailResponse | n
   return fetchJson<SessionDetailResponse>(sessionDetailPath(id))
 }
 
-export function loadProjects(limit = 200): Promise<ProjectsResponse | null> {
-  return fetchJson<ProjectsResponse>('/dsh-key-usage/projects?limit=' + String(limit))
+/**
+ * 每轮费用：同一会话只取一次（轮次编号在会话内稳定），失败不缓存、下次重试。
+ * 对话区每条回答都会读它，所以必须按 sessionId 去重，不能每条消息各发一次请求。
+ */
+const turnsCache = new Map<string, Promise<TurnsResponse | null>>()
+
+export function loadTurns(sessionId: string): Promise<TurnsResponse | null> {
+  const cached = turnsCache.get(sessionId)
+  if (cached !== undefined) return cached
+  const request = fetchJson<TurnsResponse>('/dsh-key-usage/turns?id=' + encodeURIComponent(sessionId))
+  turnsCache.set(sessionId, request)
+  void request.then((result) => {
+    if (result === null && turnsCache.get(sessionId) === request) turnsCache.delete(sessionId)
+  })
+  return request
+}
+
+export function loadProjects(limit = 200): Promise<ProjectsResponse | null> {  return fetchJson<ProjectsResponse>('/dsh-key-usage/projects?limit=' + String(limit))
 }
 
 export function loadModels(limit = 200): Promise<ModelsResponse | null> {

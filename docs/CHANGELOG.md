@@ -6,6 +6,10 @@
 
 ## [未发布]
 
+### 新增
+
+- **每轮费用**：对话区每条回答的操作行里显示这一轮花了多少钱（只放金额，没有价目依据显示 `—`）。服务端新增 `GET /dsh-key-usage/turns?id=<sessionId>`，按轮聚合用量样本并复用同一套价目 / 错峰 / 币种规则；客户端注册 `conversation.chat.assistant-actions` 插槽，按 messageId 反查轮次，每个会话只请求一次。
+
 ### 变更
 
 - **页面宽度铺满主区域（对齐 dsh-context）**：去掉页头 / 工具栏 / 内容区三处 `max-width: 960px` 与页面容器 `max-width: 1240px` 的上限，统一由页面变量 `--ku-page-max` 控制（默认 `none` = 全宽，将来可一键收窄）；按时段热力格补 `max-height`，避免全宽后 7×24 矩阵被拉得过高。

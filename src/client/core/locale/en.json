@@ -434,5 +434,9 @@
   "overview.legendMore": "More",
   "dist.windowFallback": "Range data unavailable",
   "d.channelFilter": "Filter by channel",
-  "quota.none": "None"
+  "quota.none": "None",
+  "turnCost.aria": "Turn cost",
+  "turnCost.unpriced": "No price basis for this turn",
+  "turnCost.unpricedMark": "—",
+  "turnCost.subEstimate": "Subscription estimate"
 }
