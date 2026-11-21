@@ -16,7 +16,7 @@ async function check(name, run) {
 
 const usage = {
   days: [
-    { date: '2026-10-30', provider: 'deepseek-official', calls: 3, inputTokens: 100, outputTokens: 40, cacheReadTokens: 60, cacheWriteTokens: 5, cost: 0.12, costSource: 'catalog', partial: true },
+    { date: '2026-10-30', provider: 'deepseek-official', calls: 3, inputTokens: 100, outputTokens: 40, cacheReadTokens: 60, cacheWriteTokens: 5, cost: 0.12, costsByCurrency: { CNY: 0.1, USD: 0.02 }, costSource: 'catalog', partial: true },
     { date: '2026-10-31', provider: '', calls: 1, inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0, costSource: 'official' },
   ],
   hoursByDate: {
@@ -32,14 +32,16 @@ const usage = {
   },
 }
 
-await check('逐日导出：表头与行一一对应，部分计价转「是」', async () => {
+await check('逐日导出：表头与行一一对应，部分计价转「是」，币种按小计列出', async () => {
   const table = buildUsageCsv(usage)
-  assert.equal(table.header.length, 10)
+  assert.equal(table.header.length, 11)
   assert.equal(table.header[0], '日期')
+  assert.equal(table.header[8], '币种')
   assert.equal(table.rows.length, 2)
   assert.equal(table.rows[0][0], '2026-10-30')
-  assert.equal(table.rows[0][9], '是')
-  assert.equal(table.rows[1][9], '否')
+  assert.equal(table.rows[0][8], 'CNY/USD')
+  assert.equal(table.rows[0][10], '是')
+  assert.equal(table.rows[1][10], '否')
   assert.match(table.filename, /使用明细/)
 })
 

@@ -8,6 +8,7 @@
 import type { ToolStatsRecord } from './tool-stats.js'
 import {
   attributeModelKey,
+  cacheHitRateOf,
   foldSessionEvents,
   preparePromptSegmenter,
   promptSnippetOf,
@@ -840,7 +841,7 @@ export function modelRowsOf(records: SessionUsageRecord[], knownProviders: strin
         model: accumulator.model,
         calls: accumulator.calls,
         tokens: displayTokens,
-        cacheHitRate: displayTokens > 0 ? Math.round(accumulator.cacheReadTokens / displayTokens * 1000) / 10 : null,
+        cacheHitRate: cacheHitRateOf(accumulator),
         sessionCount: accumulator.sessionCount,
         lastTime: accumulator.lastTime,
         buckets: {
@@ -923,7 +924,7 @@ export function sliceSessionRecords(
         calls,
         tokens,
         buckets,
-        cacheHitRate: promptTokens > 0 ? buckets.cacheReadTokens / promptTokens : null,
+        cacheHitRate: cacheHitRateOf(buckets),
         firstTime,
         lastTime,
         firstPrompt: record.summary.firstPrompt,
@@ -1003,7 +1004,7 @@ export function projectRowsOf(
         workspace: accumulator.workspace,
         calls: accumulator.calls,
         tokens: accumulator.tokens,
-        cacheHitRate: displayTokens > 0 ? Math.round(accumulator.cacheReadTokens / displayTokens * 1000) / 10 : null,
+        cacheHitRate: cacheHitRateOf(accumulator),
         sessionCount: accumulator.sessionCount,
         archivedSessionCount: accumulator.archivedSessionCount,
         lastTime: accumulator.lastTime,
@@ -1070,3 +1071,5 @@ export function hoursByDateOf(records: SessionUsageRecord[]): Map<string, HourSl
 export function hoursOfDate(records: SessionUsageRecord[], date: string): HourSlot[] {
   return hoursByDateOf(records).get(date) ?? emptyHourSlots()
 }
+
+

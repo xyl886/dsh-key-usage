@@ -1947,6 +1947,11 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			URL.revokeObjectURL(url);
 		}
 		const todaySuffix = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+		/** 逐币种小计 → 导出用的币种串（多币种按字典序用「/」连接；没有金额时留空）。 */
+		function currenciesOf(costsByCurrency) {
+			if (costsByCurrency === void 0) return "";
+			return Object.keys(costsByCurrency).sort().join("/");
+		}
 		/** 使用明细（按天）：一行 = 一天 × 一个通道（与明细表同口径）。 */
 		function buildUsageCsv(usage) {
 			return {
@@ -1960,6 +1965,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					"缓存读 token",
 					"缓存写 token",
 					"成本",
+					"币种",
 					"成本来源",
 					"部分计价"
 				],
@@ -1972,6 +1978,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					day.cacheReadTokens,
 					day.cacheWriteTokens,
 					day.cost,
+					currenciesOf(day.costsByCurrency),
 					day.costSource,
 					day.partial === true ? "是" : "否"
 				])
