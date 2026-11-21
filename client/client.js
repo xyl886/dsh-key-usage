@@ -11334,7 +11334,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/page.module.css.mjs
-		const css$1 = ".Zd1J4W_page{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);--ku-page-max:none;box-sizing:border-box;overscroll-behavior:contain;width:100%;height:100%;min-height:0;font-weight:500;overflow-x:hidden;overflow-y:auto}.Zd1J4W_inner{box-sizing:border-box;width:100%;max-width:var(--ku-page-max);margin:0 auto;padding:20px 24px 28px}@media (max-width:720px){.Zd1J4W_inner{padding:12px 12px calc(24px + env(safe-area-inset-bottom))}}";
+		const css$1 = ".Zd1J4W_page{font-size:calc(var(--dsh-content-font-size,12px) * 1.05);--ku-page-max:none;box-sizing:border-box;overscroll-behavior:contain;width:100%;height:100%;min-height:0;font-weight:500;overflow-x:hidden;overflow-y:auto}.Zd1J4W_inner{box-sizing:border-box;width:100%;max-width:var(--ku-page-max);margin:0 auto;padding:0}@media (max-width:720px){.Zd1J4W_inner{padding:0}}";
 		const tagId$1 = "dsh-key-usage/page.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -11403,6 +11403,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		*/
 		/** 快照对象 → messageId 到轮次的索引：同一次快照只扫一遍节点，避免每条消息各扫一次。 */
 		const indexCache = /* @__PURE__ */ new WeakMap();
+		/** 已为哪些会话记过「解析不到轮次」的日志：一个会话只记一条，避免刷屏。 */
+		const loggedSessions = /* @__PURE__ */ new Set();
 		function turnIndexOfSnapshot(snapshot) {
 			const key = snapshot;
 			const cached = indexCache.get(key);
@@ -11410,8 +11412,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const index = /* @__PURE__ */ new Map();
 			const nodes = snapshot.nodes?.values?.();
 			if (nodes !== void 0) for (const node of nodes) {
-				const messageId = node.data?.finalNode?.messageId;
-				const turn = node.location?.turn;
+				const messageId = node.data?.closing?.finalNode?.messageId ?? node.data?.finalNode?.messageId;
+				const turn = node.location?.turn ?? node.data?.turn;
 				if (typeof messageId !== "string" || typeof turn !== "number") continue;
 				index.set(messageId, turn);
 			}
@@ -11431,12 +11433,21 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				if (sessionId === void 0 || sessionId === "") return;
 				let alive = true;
 				loadTurns(sessionId).then((result) => {
-					if (alive) setPayload(result);
+					if (!alive) return;
+					setPayload(result);
+					if (turn === null && result !== null && result.turns.length > 0 && !loggedSessions.has(sessionId)) {
+						loggedSessions.add(sessionId);
+						logWarn("turn-cost", t("turnCost.aria"), "消息 " + String(messageId) + " 未能映射到轮次，本轮费用不显示");
+					}
 				});
 				return () => {
 					alive = false;
 				};
-			}, [sessionId]);
+			}, [
+				sessionId,
+				turn,
+				messageId
+			]);
 			if (turn === null || payload === null) return null;
 			const row = payload.turns.find((item) => item.turn === turn);
 			if (row === void 0) return null;

@@ -9,12 +9,18 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { loadTurns } from '../core/api.ts'
 import { moneyTextOf } from '../core/currency.ts'
 import { t } from '../core/i18n.ts'
-import type { TurnCostRow, TurnsResponse } from '../core/types.ts'
+import { logWarn } from '../core/log.ts'
+import type { TurnsResponse } from '../core/types.ts'
 import styles from '../styles/turnCost.module.css'
 
 interface ChatNodeLike {
   kind?: string
-  data?: { finalNode?: { messageId?: string } }
+  /** turn-tail 节点把「这一轮最后一条消息」放在 `closing.finalNode`；step 节点也可能直接带 `finalNode`。 */
+  data?: {
+    turn?: number
+    finalNode?: { messageId?: string }
+    closing?: { finalNode?: { messageId?: string } }
+  }
   location?: { turn?: number }
 }
 
@@ -34,6 +40,8 @@ interface TurnCostProps {
 
 /** 快照对象 → messageId 到轮次的索引：同一次快照只扫一遍节点，避免每条消息各扫一次。 */
 const indexCache = new WeakMap<object, Map<string, number>>()
+/** 已为哪些会话记过「解析不到轮次」的日志：一个会话只记一条，避免刷屏。 */
+const loggedSessions = new Set<string>()
 
 function turnIndexOfSnapshot(snapshot: ChatSnapshotLike): Map<string, number> {
   const key = snapshot as unknown as object
@@ -43,8 +51,8 @@ function turnIndexOfSnapshot(snapshot: ChatSnapshotLike): Map<string, number> {
   const nodes = snapshot.nodes?.values?.()
   if (nodes !== undefined) {
     for (const node of nodes) {
-      const messageId = node.data?.finalNode?.messageId
-      const turn = node.location?.turn
+      const messageId = node.data?.closing?.finalNode?.messageId ?? node.data?.finalNode?.messageId
+      const turn = node.location?.turn ?? node.data?.turn
       if (typeof messageId !== 'string' || typeof turn !== 'number') continue
       index.set(messageId, turn)
     }
@@ -70,12 +78,18 @@ export function TurnCostChip(props: TurnCostProps): ReactElement | null {
     if (sessionId === undefined || sessionId === '') return
     let alive = true
     void loadTurns(sessionId).then((result) => {
-      if (alive) setPayload(result)
+      if (!alive) return
+      setPayload(result)
+      // 费用取回来了但这条消息映射不到轮次：只记一条日志（系统日志里可查），界面保持不显示
+      if (turn === null && result !== null && result.turns.length > 0 && !loggedSessions.has(sessionId)) {
+        loggedSessions.add(sessionId)
+        logWarn('turn-cost', t('turnCost.aria'), '消息 ' + String(messageId) + ' 未能映射到轮次，本轮费用不显示')
+      }
     })
     return () => {
       alive = false
     }
-  }, [sessionId])
+  }, [sessionId, turn, messageId])
 
   if (turn === null || payload === null) return null
   const row = payload.turns.find((item) => item.turn === turn)

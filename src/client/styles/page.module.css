@@ -18,10 +18,12 @@
   width: 100%;
   max-width: var(--ku-page-max);
   margin: 0 auto;
-  padding: 20px 24px 28px;
+  /* 内边距统一由页壳（shared.module.css 的 .section）负责：这里再叠一层会和它以
+     相加，横向留白变成 72px，比宿主原生页面（最长 48px）明显更宽。 */
+  padding: 0;
 }
 
-/* ===== 移动端：页面内边距收紧 ===== */
+/* ===== 移动端：内边距收紧（由页壳统一处理） ===== */
 @media (max-width: 720px) {
-  .inner { padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .inner { padding: 0; }
 }
