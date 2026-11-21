@@ -254,7 +254,6 @@
   "ch.warn": "偏高",
   "ch.danger": "告警",
   "ch.off": "未配置",
-  "ch.inSub": "订阅内",
   "ch.noBilling": "无计费",
   "ch.subscription": "订阅制",
   "ch.metered": "按量计费",
@@ -397,11 +396,6 @@
   "overview.kpiDailyTokens": "日均 Tokens",
   "overview.hoursLongTerm": "长期",
   "overview.hoursScope": "随筛选",
-  "overview.costNoteOfficial": "官方账单",
-  "overview.costNoteEstimate": "估算",
-  "overview.costNoteSub": "订阅制估算",
-  "overview.costNoteEstimateOnly": "仅估算",
-  "overview.costNotePartial": "部分未计价",
   "overview.activeBuckets": "活跃 {count} 个时段",
   "detail.hourlyCost": "分时成本",
   "overview.kpiDailyCost": "日均成本",
@@ -438,7 +432,7 @@
   "turnCost.aria": "本轮费用",
   "turnCost.unpriced": "本轮没有价目依据",
   "turnCost.unpricedMark": "—",
-  "turnCost.subEstimate": "订阅制估算",
   "overview.coverageLine": "数据覆盖 {from} ~ {to} · 台账 {ledger} 天 / 会话补 {session} 天",
-  "detail.tokensHint": "展示口径：输入 + 输出 + 缓存读，不含缓存写（缓存写仍参与计费）"
+  "detail.tokensHint": "展示口径：输入 + 输出 + 缓存读，不含缓存写（缓存写仍参与计费）",
+  "caliber.subscription": "订阅制通道的金额按官方价目折算，是等值金额而非实际扣费；带 * 的金额含未计价用量，合计偏小。"
 }

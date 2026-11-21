@@ -152,7 +152,7 @@ export function ModelsTab(props: {
                   </span> {percent}%
                 </td>
                 <td>{row.cacheHitRate === null ? '—' : row.cacheHitRate.toFixed(1) + '%'}</td>
-                <td>{row.cost === null || channel?.costMode !== 'perToken'
+                <td>{row.cost === null
                   ? <span className={styles.dim}>{costCell.text}</span>
                   : <>{costCell.text}{costCell.amount && <CostSourceChip source={row.costSource} partial={row.partial} />}</>}</td>
                 <td>{fmtRelative(row.lastTime, nowMs)}</td>

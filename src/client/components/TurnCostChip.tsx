@@ -109,11 +109,7 @@ export function TurnCostChip(props: TurnCostProps): ReactElement | null {
   }
   const text = moneyTextOf(row.currency, row.cost)
   return (
-    <span
-      className={row.subEstimate ? styles.amount + ' ' + styles.estimated : styles.amount}
-      title={label + (row.subEstimate ? ' · ' + t('turnCost.subEstimate') : '')}
-      aria-label={label}
-    >
+    <span className={styles.amount} title={label} aria-label={label}>
       {text}
     </span>
   )

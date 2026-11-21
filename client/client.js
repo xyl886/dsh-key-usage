@@ -263,7 +263,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"ch.warn": "High",
 			"ch.danger": "Alert",
 			"ch.off": "Not set",
-			"ch.inSub": "In plan",
 			"ch.noBilling": "No billing",
 			"ch.subscription": "Subscription",
 			"ch.metered": "Metered",
@@ -406,11 +405,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiDailyTokens": "Daily tokens",
 			"overview.hoursLongTerm": "Long-term",
 			"overview.hoursScope": "Filtered",
-			"overview.costNoteOfficial": "Official bill",
-			"overview.costNoteEstimate": "Estimated",
-			"overview.costNoteSub": "Subscription estimate",
-			"overview.costNoteEstimateOnly": "Estimate only",
-			"overview.costNotePartial": "Partially unpriced",
 			"overview.activeBuckets": "{count} active buckets",
 			"detail.hourlyCost": "Hourly cost",
 			"overview.kpiDailyCost": "Daily cost",
@@ -447,9 +441,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"turnCost.aria": "Turn cost",
 			"turnCost.unpriced": "No price basis for this turn",
 			"turnCost.unpricedMark": "—",
-			"turnCost.subEstimate": "Subscription estimate",
 			"overview.coverageLine": "Data coverage {from} ~ {to} · ledger {ledger} days / session backfill {session} days",
-			"detail.tokensHint": "Display caliber: input + output + cache read; cache write is billed but not counted here"
+			"detail.tokensHint": "Display caliber: input + output + cache read; cache write is billed but not counted here",
+			"caliber.subscription": "Subscription channels are converted to an equivalent amount at official rates, not actual billing; an asterisk marks totals that include unpriced usage and are therefore low."
 		};
 		//#endregion
 		//#region src/client/core/copy.ts
@@ -714,7 +708,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"ch.warn": "偏高",
 			"ch.danger": "告警",
 			"ch.off": "未配置",
-			"ch.inSub": "订阅内",
 			"ch.noBilling": "无计费",
 			"ch.subscription": "订阅制",
 			"ch.metered": "按量计费",
@@ -857,11 +850,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"overview.kpiDailyTokens": "日均 Tokens",
 			"overview.hoursLongTerm": "长期",
 			"overview.hoursScope": "随筛选",
-			"overview.costNoteOfficial": "官方账单",
-			"overview.costNoteEstimate": "估算",
-			"overview.costNoteSub": "订阅制估算",
-			"overview.costNoteEstimateOnly": "仅估算",
-			"overview.costNotePartial": "部分未计价",
 			"overview.activeBuckets": "活跃 {count} 个时段",
 			"detail.hourlyCost": "分时成本",
 			"overview.kpiDailyCost": "日均成本",
@@ -898,9 +886,9 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			"turnCost.aria": "本轮费用",
 			"turnCost.unpriced": "本轮没有价目依据",
 			"turnCost.unpricedMark": "—",
-			"turnCost.subEstimate": "订阅制估算",
 			"overview.coverageLine": "数据覆盖 {from} ~ {to} · 台账 {ledger} 天 / 会话补 {session} 天",
-			"detail.tokensHint": "展示口径：输入 + 输出 + 缓存读，不含缓存写（缓存写仍参与计费）"
+			"detail.tokensHint": "展示口径：输入 + 输出 + 缓存读，不含缓存写（缓存写仍参与计费）",
+			"caliber.subscription": "订阅制通道的金额按官方价目折算，是等值金额而非实际扣费；带 * 的金额含未计价用量，合计偏小。"
 		};
 		const en = en_default;
 		//#endregion
@@ -3995,6 +3983,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.source") }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.cost") }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.subscription") }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.hourly") }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.sessions") }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: t("caliber.logs") })
@@ -4325,7 +4314,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			if (provider === null) return null;
 			return channels.find((channel) => channel.provider === provider) ?? null;
 		}
-		/** 成本单元格：按计费模式给文案；金额走 `costsByCurrency` 逐币种折算，缺该字段时由 currency.ts 兜底。 */
+		/** 成本单元格：金额一律按逐币种小计折算；只有完全没有依据时才显示 —。 */
 		function costCellOf(channel, row) {
 			const view = rowMoneyViewOf(row);
 			const money = view.amount > 0 ? {
@@ -4342,13 +4331,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 				mixed: false
 			};
 			if (channel === null) return money;
-			if (channel.costMode === "sub") return {
-				text: t("ch.inSub"),
-				dim: true,
-				amount: false,
-				converted: false,
-				mixed: false
-			};
 			if (channel.costMode === "free") return {
 				text: zeroMoneyTextOf(),
 				dim: true,
@@ -4379,7 +4361,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			return "var(--dsw-alias-state-success-primary, #3fb96f)";
 		}
 		const COST_MODE_KEYS = {
-			sub: "ch.inSub",
+			sub: "ch.subscription",
 			perToken: "ch.metered",
 			free: "ch.free",
 			none: "ch.noBilling",
@@ -5010,8 +4992,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const scopedSessions = sessionsOfScope(props.sessions, projectFilter, modelFilter, channelFilter);
 			const rawSessionRowCount = props.sessions == null ? 0 : props.sessions.rows.length;
 			const sessionCount = sessionCountInWindowOf(scopedSessions, props.bounds ?? windowOfRange(range)) ?? (range === "total" ? sessionCountOf(scopedSessions, "all", rawSessionRowCount) : null);
-			/** 成本口径角标：官方 / 估算 / 订阅制估算 / 仅估算 / 部分未计价（来源不明时也如实标）。 */
-			const costNote = splitTotals === null ? void 0 : costNoteOf(splitTotals);
+			/** 未计价用量：金额后面加一个 `*`（口径见「设置 → 口径」），不加任何文字。 */
+			const unpriced = (splitTotals?.unpricedTokens ?? 0) > 0;
 			const prevTotals = scopedPrev?.totals ?? null;
 			const prevCostRow = prevTotals === null ? null : {
 				cost: prevTotals.cost,
@@ -5030,8 +5012,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 					key: "cost",
 					icon: "cost",
 					label: t("overview.kpiCost"),
-					value: costRow === null ? "—" : moneyTotalsTextOf(costRow),
-					note: costNote,
+					value: costRow === null ? "—" : moneyTotalsTextOf(costRow) + (unpriced ? "*" : ""),
 					previousText: prevCost === null ? null : moneyTextOf(display, prevCost),
 					...deltaOf$1(costAmount, prevCost, "warn")
 				},
@@ -5405,14 +5386,6 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			const fromMs = (/* @__PURE__ */ new Date(range.from + "T00:00:00")).getTime();
 			const toMs = (/* @__PURE__ */ new Date(range.to + "T23:59:59.999")).getTime();
 			return active.filter((row) => row.lastTime >= fromMs && row.lastTime <= toMs).length;
-		}
-		/** 成本口径角标：先报「部分未计价」这种最影响解读的状态，再报来源。 */
-		function costNoteOf(totals) {
-			if (typeof totals.unpricedTokens === "number" && totals.unpricedTokens > 0) return t("overview.costNotePartial");
-			if (totals.officialIncomplete === true) return t("overview.costNoteEstimateOnly");
-			if (totals.subEstimate === true) return t("overview.costNoteSub");
-			if (totals.estimated === true) return t("overview.costNoteEstimate");
-			return t("overview.costNoteOfficial");
 		}
 		/** 用过滤后的 usage 逐日 bucket 重建热力图（项目 / 模型筛选时台账热力图没有这两个维度）。 */
 		function heatmapDaysOfUsage(usage) {
@@ -6164,7 +6137,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: detail_module_css_default.alignRight,
-									children: props.totalCostText
+									children: (props.safeTotals.unpricedTokens ?? 0) > 0 ? props.totalCostText + "*" : props.totalCostText
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", {
 									className: detail_module_css_default.alignRight,
@@ -7180,8 +7153,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("th", { children: t("m.lastActive") })
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
 							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
-							const channel = channelOf(props.channels, row.provider);
-							const costCell = costCellOf(channel, row);
+							const costCell = costCellOf(channelOf(props.channels, row.provider), row);
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: lists_module_css_default.listTitle,
@@ -7220,7 +7192,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									"%"
 								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cacheHitRate === null ? "—" : row.cacheHitRate.toFixed(1) + "%" }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode !== "perToken" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: costCell.text
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
@@ -7443,8 +7415,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 						] }) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tbody", { children: [visible.map((row) => {
 							const percent = totalTokens > 0 ? Math.round(row.tokens / totalTokens * 100) : 0;
 							const dominant = row.dominantProvider;
-							const channel = channelOf(props.channels, dominant);
-							const costCell = costCellOf(channel, row);
+							const costCell = costCellOf(channelOf(props.channels, dominant), row);
 							const paths = row.paths ?? [row.workspace];
 							const isOrphan = row.registered === false;
 							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("tr", { children: [
@@ -7485,7 +7456,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 									percent,
 									"%"
 								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null || channel?.costMode === "sub" || channel?.costMode === "free" || channel?.costMode === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("td", { children: row.cost === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: shared_module_css_default.dim,
 									children: costCell.text
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [costCell.text, costCell.amount && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CostSourceChip, {
@@ -11374,7 +11345,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 		}
 		//#endregion
 		//#region \0dsh-css:src/client/styles/turnCost.module.css.mjs
-		const css = ".WXD0gG_amount{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}.WXD0gG_estimated{color:var(--dsw-alias-label-tertiary,#67676f)}";
+		const css = ".WXD0gG_amount{color:var(--dsw-alias-label-tertiary,#67676f);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}";
 		const tagId = "dsh-key-usage/turnCost.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -11388,10 +11359,7 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			tagId,
 			css
 		});
-		var turnCost_module_css_default = {
-			"amount": "WXD0gG_amount",
-			"estimated": "WXD0gG_estimated"
-		};
+		var turnCost_module_css_default = { "amount": "WXD0gG_amount" };
 		//#endregion
 		//#region src/client/components/TurnCostChip.tsx
 		/**
@@ -11460,8 +11428,8 @@ window.__ModuleLoader__.load({ id: "dsh-key-usage", factory: (require) => {
 			});
 			const text = moneyTextOf(row.currency, row.cost);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: row.subEstimate ? turnCost_module_css_default.amount + " " + turnCost_module_css_default.estimated : turnCost_module_css_default.amount,
-				title: label + (row.subEstimate ? " · " + t("turnCost.subEstimate") : ""),
+				className: turnCost_module_css_default.amount,
+				title: label,
 				"aria-label": label,
 				children: text
 			});

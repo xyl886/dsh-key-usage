@@ -5,5 +5,4 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* 订阅制通道的按量估算：与按量计费同色，只靠 title 说明口径，不额外加角标 */
-.estimated { color: var(--dsw-alias-label-tertiary, #67676f); }
+

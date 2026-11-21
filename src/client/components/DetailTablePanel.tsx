@@ -156,7 +156,7 @@ export function DetailTablePanel(props: {
                       <td className={detailStyles.alignRight}>{fmtTokens(props.safeTotals.inputTokens)}</td>
                       <td className={detailStyles.alignRight}>{fmtTokens(props.safeTotals.outputTokens)}</td>
                       <td className={detailStyles.alignRight}>{fmtTokens(props.safeTotals.cacheReadTokens)}</td>
-                      <td className={detailStyles.alignRight}>{props.totalCostText}</td>
+                      <td className={detailStyles.alignRight}>{(props.safeTotals.unpricedTokens ?? 0) > 0 ? props.totalCostText + '*' : props.totalCostText}</td>
                       <td className={detailStyles.alignRight}>{props.totalDeltaCell}</td>
                       <td className={detailStyles.alignRight}>—</td>
                     </tr>
