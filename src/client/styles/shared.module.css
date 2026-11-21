@@ -3,7 +3,9 @@
    宿主 main 容器本身不带内边距，页面自己负责，所以这里必须给。 */
 .section {
   box-sizing: border-box; min-height: 0; overflow: visible;
-  padding: 28px 48px 48px;
+  /* 页面留白对齐 dsh-context 的紧凑密度（它整页只用 7px gap），不再用宿主整页式的 48px 大边距 */
+  --ku-page-gap: 10px;
+  padding: 12px var(--ku-page-gap) 24px;
   /* 页面字号刻度：正文 / 小字 / 区块标题 / 数字 / 控件高 —— 一处定义，全页与各区块共用 */
   --ku-body: max(14px, var(--dsh-content-font-size, 14px));
   --ku-sub: max(13px, calc(var(--dsh-content-font-size, 14px) * .92));
@@ -14,7 +16,7 @@
 }
 /* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
 [data-sidebar-right-open] .section,
-[data-sidebar-right-float-host] .section { padding: 16px; }
+[data-sidebar-right-float-host] .section { padding: 12px var(--ku-page-gap) 24px; }
 /* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部）。
    宽度不再锁死宿主原生的 960px：跟随 --ku-page-max（默认 none = 铺满，同 dsh-context）。 */
 .pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: var(--ku-page-max, none); }
@@ -50,12 +52,12 @@
   position: sticky;
   top: 0;
   z-index: 6;
-  margin: -28px -48px 0;
-  padding: 4px 48px 8px;
+  margin: -12px calc(var(--ku-page-gap) * -1) 0;
+  padding: 4px var(--ku-page-gap) 8px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
-@media (min-width: 0px) { [data-sidebar-right-open] .stickyHead, [data-sidebar-right-float-host] .stickyHead { margin: -16px -16px 0; padding: 14px 16px 10px; } }
+@media (min-width: 0px) { [data-sidebar-right-open] .stickyHead, [data-sidebar-right-float-host] .stickyHead { margin: -12px calc(var(--ku-page-gap) * -1) 0; padding: 10px var(--ku-page-gap) 8px; } }
 /* 仓库链接：与其它图标控件同规格（跳外站，但外观不特殊） */
 .ghLink {
   display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
@@ -276,8 +278,8 @@
 
 /* ===== 移动端（≤720px）：内边距收紧、工具栏换行、标题压缩、浮层贴边 ===== */
 @media (max-width: 720px) {
-  .section { padding: 12px 12px 24px; }
-  .stickyHead { margin: -12px -12px 0; padding: 4px 12px 8px; }
+  .section { --ku-page-gap: 8px; padding: 10px var(--ku-page-gap) 20px; }
+  .stickyHead { margin: -10px calc(var(--ku-page-gap) * -1) 0; padding: 4px var(--ku-page-gap) 8px; }
   .pageHead { gap: 8px; margin-bottom: 12px; }
   .pageTitle { font-size: 18px; line-height: 24px; white-space: normal; }
   .toolbarRow { gap: 8px; row-gap: 8px; }
@@ -299,3 +301,4 @@
   .tabBar button, .rangeTab, .rangeTabActive { min-height: 40px; }
   .headBtn, .exportItem, .refreshSelect, .resetBtn { min-height: 40px; }
 }
+

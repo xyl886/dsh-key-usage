@@ -40,7 +40,7 @@ export interface SessionEvent {
     content?: unknown
     /** `user/message` 的来源标签：`kind === "user"` 才是人类输入，其余都是宿主 / 插件注入。 */
     source?: { kind?: unknown }
-    message?: { content?: unknown; source?: { provider?: string; model?: string; kind?: unknown } }
+    message?: { id?: unknown; content?: unknown; source?: { provider?: string; model?: string; kind?: unknown } }
     header?: { config?: { provider?: string; model?: string } }
     /** `tool/call` 的工具名（v4 事件流里工具调用是独立事件，没有 `tool_use` 内容块）。 */
     name?: unknown
@@ -57,6 +57,8 @@ export interface UsageSample {
   day: string
   hour: number
   model: string
+  /** 这次上报所属的助手消息 id（宿主事件里的 `data.message.id`）；旧数据可能没有。 */
+  messageId: string | null
   buckets: TokenBuckets
 }
 
@@ -223,6 +225,12 @@ interface UsagePayload {
   usage: Partial<TokenBuckets> | undefined
 }
 
+/** 助手消息 id：宿主在 `assistant/message` / 流式 chunk 的 `data.message.id` 上带它（每轮费用按它对账）。 */
+function messageIdOf(event: SessionEvent): string | null {
+  const id = event.data?.message?.id
+  return typeof id === 'string' && id !== '' ? id : null
+}
+
 /**
  * 取事件携带的用量样本；与「哪些事件算样本」的口径一一对应（见 docs/01 §3.10）。
  * 注意 `assistant/attempt` 不认 `data.usage`，只认 `data.stream` 里的样本，与旧实现一致。
@@ -312,6 +320,8 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
   // `llm/retry-started` 终结当前 (turn, step) 的覆盖槽：重试是新的上报，与原尝试累加而不是覆盖
   const attemptCounts = new Map<string, number>()
   let currentModel: string | null = null
+  /** 当前这条助手消息的 id：chunk 事件不一定重复带它，跟着最近一次 `data.message.id` 走。 */
+  let currentMessageId: string | null = null
   let firstTime: number | null = null
   let lastTime: number | null = null
   // 会话标题在宿主侧只对有投影的会话可见，其余用「首条用户提问」兜底
@@ -348,6 +358,8 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
     }
     // 先按类型分流：整段日志里绝大多数事件与用量无关，不必为它们拼 (turn, step) 键
     const type = event.type
+    const eventMessageId = messageIdOf(event)
+    if (eventMessageId !== null) currentMessageId = eventMessageId
     if (type === 'assistant/chunk' || type === 'assistant/message' || type === 'assistant/attempt') {
       const payload = usagePayloadOf(event)
       if (payload === null || time === null) continue
@@ -362,6 +374,7 @@ export function foldSessionEvents(events: SessionEvent[]): SessionFold {
         day: dayKeyOf(time),
         hour: hourOfTime(time),
         model,
+        messageId: messageIdOf(event) ?? currentMessageId,
         buckets: bucketsOf(payload.usage),
       })
       continue

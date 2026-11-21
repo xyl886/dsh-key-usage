@@ -890,7 +890,7 @@ assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
   {
     const turnDay = new Date(2026, 9, 12, 21, 30, 0).getTime()
     const turnUsage = (seq, turn, usage) => ({
-      seq, time: turnDay, type: 'assistant/chunk', data: { turn, step: 1, chunk: { type: 'usage', usage }, message: { source: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } },
+      seq, time: turnDay, type: 'assistant/chunk', data: { turn, step: 1, chunk: { type: 'usage', usage }, message: { id: 'msg-' + String(turn), source: { provider: 'pi-ai/opencode-go', model: 'GLM-5.3-Flash' } } },
     })
     const turnFixture = createFakePersistence([
       ['session-turns', {
@@ -914,6 +914,8 @@ assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
     assert.equal(turnBody.status, 'ok')
     assert.equal(turnBody.sessionId, 'session-turns')
     assert.deepEqual(turnBody.turns.map((row) => row.turn), [1, 2], '按轮次升序下发')
+    assert.deepEqual(turnBody.turns[0].messageIds, ['msg-1'], '每轮带助手消息 id，界面按它挂金额')
+    assert.deepEqual(turnBody.turns[1].messageIds, ['msg-2'])
     assert.equal(turnBody.turns[0].tokens, 1100, '展示口径 tokens = 输入 + 输出 + 缓存读')
     assert.equal(turnBody.turns[1].tokens, 10200, '缓存读计入展示口径')
     assert.equal(turnBody.turns[0].calls, 1)
@@ -1735,3 +1737,4 @@ rmSync(home, { recursive: true, force: true })
 }
 
 console.log('routes.test: 全部通过')
+

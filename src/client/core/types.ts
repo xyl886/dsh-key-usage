@@ -344,6 +344,8 @@ export interface TurnCostRow {
   cacheWriteTokens: number
   tokens: number
   models: string[]
+  /** 这一轮对应的助手消息 id（界面用它对上具体那条回答）。 */
+  messageIds?: string[]
   cost: number | null
   currency: string | null
   costsByCurrency: Record<string, number>

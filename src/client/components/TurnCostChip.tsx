@@ -74,25 +74,30 @@ export function TurnCostChip(props: TurnCostProps): ReactElement | null {
   const turn = typeof props.useChat === 'function' ? props.useChat(selectTurn) : null
   const [payload, setPayload] = useState<TurnsResponse | null>(null)
 
+  // 优先按服务端给的 messageId 对账（不依赖快照里的轮次编号）；旧数据没有 id 时再退回轮次
+  const row = payload?.turns.find((item) =>
+    (messageId !== undefined && item.messageIds?.includes(messageId) === true)
+    || (turn !== null && item.turn === turn))
+
   useEffect(() => {
     if (sessionId === undefined || sessionId === '') return
     let alive = true
     void loadTurns(sessionId).then((result) => {
       if (!alive) return
       setPayload(result)
-      // 费用取回来了但这条消息映射不到轮次：只记一条日志（系统日志里可查），界面保持不显示
-      if (turn === null && result !== null && result.turns.length > 0 && !loggedSessions.has(sessionId)) {
+      // 接口有数据但这条消息对不上：记一条可查的日志（每会话只记一次），界面保持不显示
+      if (result !== null && result.turns.length > 0 && !loggedSessions.has(sessionId)) {
         loggedSessions.add(sessionId)
-        logWarn('turn-cost', t('turnCost.aria'), '消息 ' + String(messageId) + ' 未能映射到轮次，本轮费用不显示')
+        const sampleIds = result.turns.slice(0, 3).map((item) => item.messageIds?.join(',') ?? '-').join(' / ')
+        logWarn('turn-cost', t('turnCost.aria'), '会话 ' + sessionId + ' 轮次数 ' + String(result.turns.length)
+          + '；本消息 id ' + String(messageId) + ' 轮次 ' + String(turn) + '；接口前几条 messageIds: ' + sampleIds)
       }
     })
     return () => {
       alive = false
     }
-  }, [sessionId, turn, messageId])
+  }, [sessionId, messageId, turn])
 
-  if (turn === null || payload === null) return null
-  const row = payload.turns.find((item) => item.turn === turn)
   if (row === undefined) return null
   const label = t('turnCost.aria')
   if (row.cost === null) {

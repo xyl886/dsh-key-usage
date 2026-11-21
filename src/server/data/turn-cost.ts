@@ -27,6 +27,8 @@ export interface TurnCostRow {
   tokens: number
   /** 这一轮用到的 `provider/model`（归一名）。 */
   models: string[]
+  /** 这一轮对应的助手消息 id（界面按它把金额挂到具体那条回答上）；旧数据可能为空。 */
+  messageIds: string[]
   cost: number | null
   currency: string | null
   costsByCurrency: MoneyByCurrency
@@ -106,6 +108,7 @@ export function turnCostsOf(
     const totals = emptySum()
     const costsByCurrency: MoneyByCurrency = {}
     const modelNames: string[] = []
+    const messageIds = new Set<string>()
     let mixedCost: number | null = null
     let source: CostSource | null = null
     let partial = false
@@ -117,6 +120,7 @@ export function turnCostsOf(
       // 24 小时槽里只填该模型样本实际落的小时，价目层据此判定错峰（与按天索引同一算法）
       const hours: PricingUsageRow[] = Array.from({ length: 24 }, emptyRow)
       for (const sample of modelSamples) {
+        if (sample.messageId !== null) messageIds.add(sample.messageId)
         addIntoSample(sum, sample.buckets)
         addIntoSample(totals, sample.buckets)
         const slot = hours[Math.min(23, Math.max(0, sample.hour))]
@@ -167,6 +171,7 @@ export function turnCostsOf(
       cacheWriteTokens: totals.cacheWriteTokens,
       tokens: displayTokensOfSum(totals),
       models: modelNames,
+      messageIds: [...messageIds],
       cost: mixedCost,
       currency: currencies.length === 1 ? currencies[0] : null,
       costsByCurrency,
