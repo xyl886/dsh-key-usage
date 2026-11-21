@@ -438,5 +438,7 @@
   "turnCost.aria": "本轮费用",
   "turnCost.unpriced": "本轮没有价目依据",
   "turnCost.unpricedMark": "—",
-  "turnCost.subEstimate": "订阅制估算"
+  "turnCost.subEstimate": "订阅制估算",
+  "overview.coverageLine": "数据覆盖 {from} ~ {to} · 台账 {ledger} 天 / 会话补 {session} 天",
+  "detail.tokensHint": "展示口径：输入 + 输出 + 缓存读，不含缓存写（缓存写仍参与计费）"
 }

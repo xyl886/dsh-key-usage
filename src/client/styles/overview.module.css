@@ -158,6 +158,9 @@
 /* KPI 副标一行内截断：卡片更矮更齐，长文案不再把卡片撑成两行 */
 
 
+/* 数据覆盖时间线：概览底部一行口径说明，不抢图表视觉 */
+.coverageLine { margin: 2px 0 0; color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; }
+
 /* 口径标签（按时段是长期画像，不随范围变） */
 .panelHint { color: var(--dsw-alias-label-tertiary, #67676f); font-size: 13px; margin-left: 6px; font-weight: 400; }
 

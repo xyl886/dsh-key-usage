@@ -124,7 +124,7 @@ export function DetailTablePanel(props: {
                                     <tr>
                                       <th scope="col" className={detailStyles.alignLeft}>{t('detail.model')}</th>
                                       <th scope="col" className={detailStyles.alignRight}>{t('c.calls')}</th>
-                                      <th scope="col" className={detailStyles.alignRight}>Tokens</th>
+                                      <th scope="col" className={detailStyles.alignRight} title={t('detail.tokensHint')}>Tokens</th>
                                       <th scope="col" className={detailStyles.alignRight}>{t('c.cost')}</th>
                                     </tr>
                                   </thead>

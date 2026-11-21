@@ -438,5 +438,7 @@
   "turnCost.aria": "Turn cost",
   "turnCost.unpriced": "No price basis for this turn",
   "turnCost.unpricedMark": "—",
-  "turnCost.subEstimate": "Subscription estimate"
+  "turnCost.subEstimate": "Subscription estimate",
+  "overview.coverageLine": "Data coverage {from} ~ {to} · ledger {ledger} days / session backfill {session} days",
+  "detail.tokensHint": "Display caliber: input + output + cache read; cache write is billed but not counted here"
 }

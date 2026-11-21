@@ -489,7 +489,9 @@ export function OverviewTab(props: OverviewTabProps): ReactNode {
         weekdayKeys={WEEKDAY_KEYS}
         busiestHour={busiestHour}
         tooltip={props.tooltip}
-      />    </div>
+      />
+      <p className={styles.coverageLine}>{coverageLineOf(props.usage)}</p>
+    </div>
   )
 }
 
@@ -521,6 +523,20 @@ function dayRangeOfUsage(usage: UsageResponse | null | undefined): { from: strin
   const dates = (usage?.days ?? []).map((day) => day.date).sort()
   if (dates.length === 0) return null
   return { from: dates[0], to: dates[dates.length - 1] }
+}
+
+/**
+ * 数据覆盖时间线：可查的起止日期，以及其中有多少天由会话事件补齐。
+ * 会话事件只覆盖保留期内的会话，台账停更后靠它补位 —— 把这件事写在页面上，
+ * 「为什么和侧边栏对不上」才有据可查，而不是让人怀疑数字错了。
+ */
+function coverageLineOf(usage: UsageResponse | null | undefined): string {
+  const from = usage?.availableFrom ?? null
+  const to = usage?.availableTo ?? null
+  if (from === null || to === null || from === '' || to === '') return ''
+  const ledgerDays = usage?.days.length ?? 0
+  const sessionDays = usage?.sessionDates.length ?? 0
+  return t('overview.coverageLine', { from, to, ledger: ledgerDays, session: sessionDays })
 }
 
 /** 窗口内有活动的会话数：末次活动落在 [from, to] 的行；上期没有可判定窗口时退化为「早于本期开始」的行数。 */
