@@ -183,3 +183,9 @@
   .heatScroll .yearWrap { min-width: 640px; }
   .hourScroll .hourWrap { min-width: 560px; }
 }
+/* 手机竖屏（≤360）：KPI 单列、图表压到一屏内可读 */
+@media (max-width: 360px) {
+  .kpiGrid, .kpiGrid[data-cards="8"] { grid-template-columns: 1fr; }
+  .hist { height: 72px; }
+  .rankRow { grid-template-columns: minmax(64px, 92px) minmax(0, 1fr) 64px 48px; }
+}

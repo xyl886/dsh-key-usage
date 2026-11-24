@@ -302,3 +302,9 @@
   .headBtn, .exportItem, .refreshSelect, .resetBtn { min-height: 40px; }
 }
 
+/* 手机竖屏（≤480）：标题降到 16px（刻度内），工具栏与 Tab 条更紧 */
+@media (max-width: 480px) {
+  .pageTitle { font-size: 16px; line-height: 22px; }
+  .toolbarRow { gap: 6px; row-gap: 6px; }
+  .sections { gap: 16px; margin-top: 12px; }
+}

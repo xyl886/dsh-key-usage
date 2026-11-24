@@ -75,6 +75,7 @@ import {
   summarizeMergedByProvider,
   totalsOfMerged,
 } from '../data/merge.js'
+import type { CostIndex, PricedCell } from '../data/costing.js'
 import {
   alignMoneyWithCost,
   costsByCurrencyOf,
@@ -191,6 +192,13 @@ export interface QuotaProviderRow {
   error: string | null
   balance: Record<string, unknown> | null
   plan: { windows: LiveWindow[] } | null
+}
+
+/** 快照配额段里的 providers[]：形状不对时按空数组处理（老快照 / 首次构建）。 */
+export function quotaRowsOf(quota: unknown): QuotaProviderRow[] {
+  if (typeof quota !== 'object' || quota === null) return []
+  const providers = (quota as { providers?: unknown }).providers
+  return Array.isArray(providers) ? providers as QuotaProviderRow[] : []
 }
 
 /** 一天里最弱的那一格决定整天的角标：宁可标弱，也不把估算冒充成官方价。 */
@@ -652,6 +660,47 @@ export function parseMultiFilter(raw: string | null): string[] | null {
   const values = new Set<string>()
   for (const piece of raw.split(',')) values.add(piece.trim())
   return values.size === 0 ? null : [...values]
+}
+
+/** 顶部筛选的多选值：通道 / 模型 / 项目（逗号分隔，空 = 不限）。 */
+export interface CostFilterInput {
+  providers: string[] | null
+  models: string[] | null
+  projects: string[] | null
+}
+
+export function emptyFilter(): CostFilterInput {
+  return { providers: null, models: null, projects: null }
+}
+
+export function hasCostFilter(filter: CostFilterInput): boolean {
+  return filter.providers !== null || filter.models !== null || filter.projects !== null
+}
+
+/** 项目筛选值：'' 表示「未归入工作区」；其余按工作区路径比对（大小写不敏感）。 */
+export function projectMatches(filter: CostFilterInput, workspace: string | null, titles: Map<string, string>): boolean {
+  if (filter.projects === null) return true
+  const path = (workspace ?? '').toLowerCase()
+  const registered = path !== '' && titles.has(path)
+  for (const value of filter.projects) {
+    if (value === '') { if (!registered) return true; continue }
+    if (path !== '' && value.toLowerCase() === path) return true
+  }
+  return false
+}
+
+export function cellMatches(filter: CostFilterInput, cell: { provider: string; model: string }): boolean {
+  return (filter.providers === null || filter.providers.includes(cell.provider))
+    && (filter.models === null || filter.models.includes(cell.model))
+}
+
+/** 过滤后的计价格：先按通道 / 模型筛格，项目由调用方按记录范围筛。 */
+export function scopedCells(index: CostIndex, recordIds: Iterable<string>, filter: CostFilterInput): PricedCell[] {
+  const kept: PricedCell[] = []
+  for (const id of recordIds) {
+    for (const cell of index.byRecord.get(id) ?? []) if (cellMatches(filter, cell)) kept.push(cell)
+  }
+  return kept
 }
 
 /** `/snapshot` 可以按需下发的段（= `sections` 的键）；顶层其余字段一律原样保留。 */

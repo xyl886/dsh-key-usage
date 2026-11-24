@@ -99,6 +99,10 @@
   .detailTable th, .detailTable td { padding: 6px 6px; }
 }
 
+@media (max-width: 480px) {
+  .tableScroll table { min-width: 560px; }
+}
+
 @media (pointer: coarse) {
   .sortBtn, .expandBtn { min-height: 40px; }
 }

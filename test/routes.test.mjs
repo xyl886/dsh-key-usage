@@ -919,6 +919,22 @@ assert.ok(Math.abs(spanning.body.totals.costsByCurrency.USD - 0.00008) < 1e-6)
     assert.equal(turnBody.turns[1].tokens, 10200, '缓存读计入展示口径')
     assert.equal(turnBody.turns[0].calls, 1)
     assert.ok(turnBody.turns.every((row) => row.cost === null || typeof row.cost === 'number'), '金额要么是数字要么 null（没有价目依据）')
+
+    // 数据源没有 turns 能力（外部注入的旧实现）：200 + unavailable，不抛错、不返回假数据
+    const noTurnCapability = new Map()
+    mountKeyUsageRoutes({ register: (route) => { noTurnCapability.set(route.path, route.handler) } }, { collect: sessionSource.collect })
+    const unsupportedTurns = await callHandler(noTurnCapability, '/dsh-key-usage/turns?id=session-turns')
+    assert.equal(unsupportedTurns.status, 200)
+    assert.equal(unsupportedTurns.body.status, 'unavailable')
+    assert.deepEqual(unsupportedTurns.body.turns, [])
+    assert.equal(unsupportedTurns.body.sessionId, 'session-turns', '降级时仍回显请求的会话 id')
+
+    // 找不到的会话：200 + not-found + 空轮次表（与 /session 的 404 口径不同：这里不报错）
+    const missingTurns = await turnCall('/dsh-key-usage/turns?id=session-nope')
+    assert.equal(missingTurns.status, 200)
+    assert.equal(missingTurns.body.status, 'not-found')
+    assert.deepEqual(missingTurns.body.turns, [])
+    assert.equal(missingTurns.body.sessionId, 'session-nope')
   }
 
   // 端点表就是这些：新增统一快照 /snapshot、手动刷新 /refresh 与系统日志 /log，删掉 /pricing/rules
