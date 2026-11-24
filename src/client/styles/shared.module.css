@@ -5,7 +5,7 @@
   box-sizing: border-box; min-height: 0; overflow: visible;
   /* 页面留白对齐 dsh-context 的紧凑密度（它整页只用 7px gap），不再用宿主整页式的 48px 大边距 */
   --ku-page-gap: 10px;
-  padding: 12px var(--ku-page-gap) 24px;
+  padding: 8px var(--ku-page-gap) 16px;
   /* 页面字号刻度：正文 / 小字 / 区块标题 / 数字 / 控件高 —— 一处定义，全页与各区块共用 */
   --ku-body: max(14px, var(--dsh-content-font-size, 14px));
   --ku-sub: max(13px, calc(var(--dsh-content-font-size, 14px) * .92));
@@ -16,14 +16,14 @@
 }
 /* 右侧栏 / 浮层打开时可用宽度被压缩，跟着宿主一起收窄内边距 */
 [data-sidebar-right-open] .section,
-[data-sidebar-right-float-host] .section { padding: 12px var(--ku-page-gap) 24px; }
+[data-sidebar-right-float-host] .section { padding: 8px var(--ku-page-gap) 16px; }
 /* 页头：大标题在左、操作按钮在右（对齐宿主「插件」「自动化任务」页的头部）。
    宽度不再锁死宿主原生的 960px：跟随 --ku-page-max（默认 none = 铺满，同 dsh-context）。 */
-.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 16px; max-width: var(--ku-page-max, none); }
+.pageHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 auto 8px; max-width: var(--ku-page-max, none); }
 .pageTitle { margin: 0; font-size: 20px; font-weight: 500; line-height: 28px; letter-spacing: normal; white-space: nowrap; color: var(--dsw-alias-label-primary, #0f1115); }
 /* 工具栏：三行（标题+范围+动作 / 筛选 / 区块导航），同类控件成组，窄面板按行换行 */
 .toolbarRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; max-width: var(--ku-page-max, none); margin-left: auto; margin-right: auto; }
-.toolbarRow + .toolbarRow { margin-top: 8px; }
+.toolbarRow + .toolbarRow { margin-top: 6px; }
 .toolbarGroup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .rowSpacer { flex: 1 1 auto; }
 /* 组之间一条细竖线（筛选组与操作组分隔） */
@@ -53,7 +53,7 @@
   top: 0;
   z-index: 6;
   margin: -12px calc(var(--ku-page-gap) * -1) 0;
-  padding: 4px var(--ku-page-gap) 8px;
+  padding: 4px var(--ku-page-gap) 6px;
   background: var(--dsw-alias-bg-layer-2, #1d1d22);
   border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2c34);
 }
@@ -208,7 +208,7 @@
 }
 .refreshSelect:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,140,.1)); color: var(--dsw-alias-label-primary, #0f1115); }
 .refreshSelect:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #5b8cff); outline-offset: 1px; }
-.sections { display: flex; flex-direction: column; gap: 32px; margin: 24px auto 0; max-width: var(--ku-page-max, none); }
+.sections { display: flex; flex-direction: column; gap: 12px; margin: 8px auto 0; max-width: var(--ku-page-max, none); }
 /* 分区不再套一层边框卡片：宿主页面是扁平分区，靠标题与留白分隔 */
 .pageSection { min-width: 0; }
 /* 区块标题：滚动式下五块上下堆叠，靠这一行分隔（分页式同样保留，位置一致） */
@@ -280,7 +280,7 @@
 @media (max-width: 720px) {
   .section { --ku-page-gap: 8px; padding: 10px var(--ku-page-gap) 20px; }
   .stickyHead { margin: -10px calc(var(--ku-page-gap) * -1) 0; padding: 4px var(--ku-page-gap) 8px; }
-  .pageHead { gap: 8px; margin-bottom: 12px; }
+  .pageHead { gap: 8px; margin-bottom: 8px; }
   .pageTitle { font-size: 18px; line-height: 24px; white-space: normal; }
   .toolbarRow { gap: 8px; row-gap: 8px; }
   .rowSpacer { display: none; }
@@ -288,7 +288,7 @@
   .rangeTabs::-webkit-scrollbar { display: none; }
   .tabBar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
   .tabBar::-webkit-scrollbar { display: none; }
-  .sections { gap: 20px; margin-top: 16px; }
+  .sections { gap: 12px; margin-top: 8px; }
   .pageSection { scroll-margin-top: 120px; }
   .exportPanel { max-width: calc(100vw - 24px); }
   .tooltip { min-width: 0; max-width: calc(100vw - 32px); padding: 8px 10px; }
@@ -306,5 +306,5 @@
 @media (max-width: 480px) {
   .pageTitle { font-size: 16px; line-height: 22px; }
   .toolbarRow { gap: 6px; row-gap: 6px; }
-  .sections { gap: 16px; margin-top: 12px; }
+  .sections { gap: 12px; margin-top: 6px; }
 }
