@@ -115,8 +115,6 @@ export interface UsageTotals extends DaySummary {
   estimated?: boolean
   /** 项目筛选下台账没有 workspace 维度：只剩会话事件估算，官方账单不完整。 */
   officialIncomplete?: boolean
-  /** 金额里包含订阅制通道的按量估算。 */
-  subEstimate?: boolean
   /** 没有价目依据的 tokens（有它就应该标「部分未计价」）。 */
   unpricedTokens?: number
   /** 官方天 / 估算天的逐币种小计。 */
@@ -351,7 +349,6 @@ export interface TurnCostRow {
   costsByCurrency: Record<string, number>
   source: string
   partial: boolean
-  subEstimate: boolean
   unpricedTokens: number
   cacheSavings: number
 }

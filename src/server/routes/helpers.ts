@@ -172,7 +172,6 @@ export type AnnotatedDaySummary = ChannelDailySummary & {
   /** 这一天是不是按价目估算的（false = 台账官方成本）。 */
   estimated: boolean
   /** 金额里是否包含订阅制通道的按量估算。 */
-  subEstimate: boolean
   /** 这一天没有价目依据的 tokens。 */
   unpricedTokens: number
   models: AnnotatedModelSummary[]
@@ -751,7 +750,6 @@ export function collapseOrphanProjects<Row extends CollapsibleProjectRow>(rows: 
     partial: orphans.some((row) => row.partial === true),
     // 合并行同样保留口径标记：未计价 tokens 求和；订阅制估算只要有一行就标
     unpricedTokens: orphans.reduce((sum, row) => sum + ((row as { unpricedTokens?: number }).unpricedTokens ?? 0), 0),
-    subEstimate: orphans.some((row) => (row as { subEstimate?: boolean }).subEstimate === true),
     costMode: orphans.some((row) => (row as { costMode?: string | null }).costMode === 'sub')
       ? 'sub'
       : (orphans[0] as { costMode?: string | null }).costMode ?? null,

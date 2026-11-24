@@ -37,8 +37,6 @@ export interface PricedCell {
   cacheSavings: number
   /** 该格没有价目依据的 tokens（有依据时为 0）。 */
   unpricedTokens: number
-  /** 该格来自订阅制通道（金额是按量价估算的）。 */
-  subEstimate: boolean
 }
 
 export interface CostTally {
@@ -52,8 +50,6 @@ export interface CostTally {
   cacheSavingsByCurrency: MoneyByCurrency
   /** 没有价目依据的 tokens 合计。 */
   unpricedTokens: number
-  /** 金额里包含订阅制通道的按量估算。 */
-  subEstimate: boolean
   /** 已定价的 tokens（用于「部分未计价」占比）。 */
   pricedTokens: number
 }
@@ -69,7 +65,6 @@ export const emptyTally = (): CostTally => ({
   cacheSavings: 0,
   cacheSavingsByCurrency: {},
   unpricedTokens: 0,
-  subEstimate: false,
   pricedTokens: 0,
 })
 
@@ -80,7 +75,6 @@ export function tallyOf(cells: Iterable<PricedCell>): CostTally {
   let partial = false
   let cacheSavings = 0
   let unpricedTokens = 0
-  let subEstimate = false
   let pricedTokens = 0
   const costsByCurrency: MoneyByCurrency = {}
   const savingsByCurrency: MoneyByCurrency = {}
@@ -97,7 +91,6 @@ export function tallyOf(cells: Iterable<PricedCell>): CostTally {
       savingsByCurrency[cell.currency] = round6((savingsByCurrency[cell.currency] ?? 0) + cell.cacheSavings)
     }
     if (cell.partial) partial = true
-    if (cell.subEstimate) subEstimate = true
     pricedTokens += cell.tokens
   }
   const source = sources.length === 0 ? 'none' : sources.reduce(weakestOf, sources[0])
@@ -109,7 +102,6 @@ export function tallyOf(cells: Iterable<PricedCell>): CostTally {
     cacheSavings,
     cacheSavingsByCurrency: savingsByCurrency,
     unpricedTokens,
-    subEstimate,
     pricedTokens,
   }
 }
@@ -203,7 +195,6 @@ export interface CostIndex {
 
 /**
  * 建索引：每条会话的每一天、每个模型各算一次，错峰按「那一天的星期几 + 该模型当天的小时曲线」加权。
- * @param costModeOf - 通道 → 计费模式（订阅制的金额要标「订阅制估算」）
  */
 export function buildCostIndex(
   records: SessionUsageRecord[],
@@ -250,8 +241,7 @@ export function buildCostIndex(
           partial: priced.partial,
           cacheSavings: priced.cacheSavings,
           unpricedTokens: priced.cost === null ? tokens : 0,
-          subEstimate: priced.cost !== null && costModeOf.get(attribution.provider) === 'sub',
-        }
+          }
         cells.push(cell)
         recordCells.push(cell)
         byDateModel.set(cell.date + '|' + cell.provider + '|' + cell.model, cell)

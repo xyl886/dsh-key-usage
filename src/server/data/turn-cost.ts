@@ -34,8 +34,6 @@ export interface TurnCostRow {
   costsByCurrency: MoneyByCurrency
   source: CostSource
   partial: boolean
-  /** 金额里含订阅制通道的按量估算。 */
-  subEstimate: boolean
   unpricedTokens: number
   cacheSavings: number
 }
@@ -112,7 +110,6 @@ export function turnCostsOf(
     let mixedCost: number | null = null
     let source: CostSource | null = null
     let partial = false
-    let subEstimate = false
     let unpricedTokens = 0
     let cacheSavings = 0
     for (const [rawKey, modelSamples] of models) {
@@ -159,7 +156,6 @@ export function turnCostsOf(
       const currency = priced.rule.currency
       costsByCurrency[currency] = round6((costsByCurrency[currency] ?? 0) + cost)
       mixedCost = round6((mixedCost ?? 0) + cost)
-      if (costModeOf.get(attribution.provider) === 'sub') subEstimate = true
     }
     const currencies = Object.keys(costsByCurrency)
     rows.push({
@@ -177,7 +173,6 @@ export function turnCostsOf(
       costsByCurrency,
       source: source ?? 'none',
       partial,
-      subEstimate,
       unpricedTokens,
       cacheSavings,
     })

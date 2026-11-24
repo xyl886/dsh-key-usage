@@ -166,8 +166,7 @@ function filterUsageOf(usage: UsageResponse | null | undefined, keep: (model: Mo
       ...totalsOfDays(days, raw.totals?.date ?? ''),
       ...(raw.totals?.estimated === undefined ? {} : { estimated: raw.totals.estimated }),
       ...(raw.totals?.officialIncomplete === undefined ? {} : { officialIncomplete: raw.totals.officialIncomplete }),
-      ...(raw.totals?.subEstimate === undefined ? {} : { subEstimate: raw.totals.subEstimate }),
-      ...(raw.totals?.unpricedTokens === undefined ? {} : { unpricedTokens: raw.totals.unpricedTokens }),
+          ...(raw.totals?.unpricedTokens === undefined ? {} : { unpricedTokens: raw.totals.unpricedTokens }),
     }
   return { ...raw, days, totals }
 }

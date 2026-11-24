@@ -232,7 +232,7 @@ export function createSessionSource(host: HostContextLike): {
   const cache = new Map<string, CacheEntry>()
   /** 按轮样本缓存：只留最近几份，避免把一个会话的全部样本常驻。 */
   const turnCache = new Map<string, { revision: unknown; eventCount: number; samples: UsageSample[] }>()
-  const TURN_CACHE_LIMIT = 6
+  const TURN_CACHE_LIMIT = 24
   let inFlight: Promise<SessionCollection> | null = null
   let lastStats: SessionReadStats = { sessions: 0, cached: 0, read: 0, listMs: 0, readMs: 0, totalMs: 0 }
 

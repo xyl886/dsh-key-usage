@@ -12,7 +12,6 @@ export interface KpiCardDescriptor {
   value: string
   unit?: string
   /** 口径角标：官方 / 估算 / 订阅制估算 / 部分未计价（成本卡用）。 */
-  note?: string
   previousText: string | null
   deltaText: string | null
   tone: 'warn' | 'good' | 'neutral'
@@ -40,7 +39,6 @@ export function KpiStat(props: {
   label: string
   value: string
   unit?: string
-  note?: string
   previousText: string | null
   deltaText: string | null
   tone: 'warn' | 'good' | 'neutral'
@@ -69,8 +67,7 @@ export function KpiStat(props: {
         {props.value}
         {props.unit !== undefined && <span className={styles.kpiUnit}>{props.unit}</span>}
       </div>
-      {props.note !== undefined && <span className={styles.kpiNote}>{props.note}</span>}
-    </div>
+          </div>
   )
 }
 

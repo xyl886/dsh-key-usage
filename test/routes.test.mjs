@@ -633,7 +633,6 @@ assert.equal(loopbackOnly.status, 403, '按模型端点同样只允许回环')
 
   // 订阅制通道：金额仍按量估算，但行上要能标出来
   const subSessions = await callEndpoint('/dsh-key-usage/sessions')
-  assert.equal(subSessions.body.rows[0].subEstimate, true, '订阅制通道的估算金额标 subEstimate')
 
   // /hourly：跟随窗口与筛选，返回 7×24 两套矩阵
   const hourly = await callEndpoint('/dsh-key-usage/hourly?from=' + ledgerOlderDay + '&to=' + sessionOnlyDay)
